@@ -1,8 +1,5 @@
 package horseshoe;
 
-import horseshoe.actions.IAction;
-import horseshoe.actions.RenderText;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -10,210 +7,254 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import horseshoe.internal.CharSequenceUtils;
+import horseshoe.internal.Loader;
+import horseshoe.internal.ParsedLine;
+import horseshoe.internal.PersistentStack;
+
 public class Template {
 
-	private static class Stack<T> extends java.util.ArrayList<T> {
-		private class Iterator implements java.util.Iterator<T> {
-			int i = size();
-
-			@Override
-			public boolean hasNext() {
-				return i != 0;
-			}
-
-			@Override
-			public T next() {
-				return get(--i);
-			}
-		}
-
-		@Override
-		public java.util.Iterator<T> iterator() {
-			return new Iterator();
-		}
-
-		public T peek() {
-			return get(size() - 1);
-		}
-
-		public T pop() {
-			return remove(size() - 1);
-		}
-
-		public T push(T obj) {
-			add(obj);
-			return obj;
-		}
-	}
-
 	private static class Delimiter {
-		private static final String DEFAULT_START = "{{";
-		private static final String DEFAULT_END = "}}";
-		private static final Pattern DEFAULT_START_PATTERN = Pattern.compile(Pattern.quote(DEFAULT_START));
-		private static final Pattern DEFAULT_END_PATTERN = Pattern.compile(Pattern.quote(DEFAULT_END));
+		private static final Pattern DEFAULT_START = Pattern.compile(Pattern.quote("{{"));
+		private static final Pattern DEFAULT_END = Pattern.compile(Pattern.quote("}}"));
+		private static final Pattern DEFAULT_UNESCAPED_END = Pattern.compile(Pattern.quote("}}}"));
 
-		private final String start;
-		private final String end;
-		private final Pattern startPattern;
-		private final Pattern endPattern;
+		private final Pattern start;
+		private final Pattern end;
+		private final Pattern unescapedEnd;
 
 		public Delimiter() {
 			this.start = DEFAULT_START;
 			this.end = DEFAULT_END;
-			this.startPattern = DEFAULT_START_PATTERN;
-			this.endPattern = DEFAULT_END_PATTERN;
+			this.unescapedEnd = DEFAULT_UNESCAPED_END;
 		}
 
 		public Delimiter(final String start, final String end) {
-			this.start = start;
-			this.end = end;
-			this.startPattern = Pattern.compile(Pattern.quote(start));
-			this.endPattern = Pattern.compile(Pattern.quote(end));
+			this.start = Pattern.compile(Pattern.quote(start));
+			this.end = Pattern.compile(Pattern.quote(end));
+			this.unescapedEnd = Pattern.compile(Pattern.quote("}" + end));
 		}
 	}
 
-	private static class ParseContext {
-		public final Stack<FileFrame> fileStack = new Stack<>();
-		public final Stack<Section> sectionStack = new Stack<>();
+	private static final Pattern ONLY_WHITESPACE_PATTERN = Pattern.compile("\\s*");
+	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*([^\\s]+)\\s+([^\\s]+)\\s*=");
 
-		public ParseContext(Path firstFile) {
-			fileStack.push(new FileFrame(firstFile));
-			sectionStack.push(new Section(null));
-		}
-	}
+	/**
+	 * Loads and returns a list of actions to be performed by when rendering the associated template
+	 *
+	 * @param context the context used to load the template
+	 * @param loader the item being loaded
+	 * @return a list of actions to be performed by when rendering the associated template
+	 * @throws LoadException if an error is encountered while loading the template
+	 * @throws IOException if an error is encountered while reading from a file or stream
+	 */
+	private static List<Action> load(final LoadContext context, final Loader loader) throws LoadException, IOException {
+		final List<Action> templateActions = new ArrayList<>();
+		final PersistentStack<Expression> resolvers = new PersistentStack<>();
+		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
 
-	private static class Section {
-		private final String name;
-		private final List<IAction> actions = new ArrayList<>();
-
-		public Section(String name) {
-			this.name = name;
-		}
-	}
-
-	private final Pattern ONLY_WHITESPACE_PATTERN = Pattern.compile("\\s*");
-	private final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*([^\\s]+)\\s+([^\\s]+)\\s*=");
-
-	private final List<IAction> actions;
-
-	public Template(final Path file, final Charset charset) throws ParseException {
-		final ParseContext context = new ParseContext(file);
-
-		try (final Scanner scanner = new Scanner(file, charset.name())) {
-			if (!load(scanner, context)) {
-				throw new ParseException(context.fileStack, "Unexpected end of file, unmatched start tag");
-			}
-		} catch (IOException e) {
-			throw new ParseException(context.fileStack, "File could not be opened (" + e.getMessage() + ")");
-		}
-
-		this.actions = context.sectionStack.pop().actions;
-	}
-
-	public Template(final InputStream stream, final Charset charset) throws ParseException {
-		final ParseContext context = new ParseContext(null);
-
-		try (final Scanner scanner = new Scanner(stream, charset.name())) {
-			if (!load(scanner, context)) {
-				throw new ParseException(context.fileStack, "Unexpected end of stream, unmatched start tag");
-			}
-		}
-
-		this.actions = context.sectionStack.pop().actions;
-	}
-
-	private boolean load(final Scanner scanner, final ParseContext context) throws ParseException {
-		final FileFrame fileFrame = context.fileStack.peek();
-		Section section = context.sectionStack.peek();
 		Delimiter delimiter = new Delimiter();
-		Delimiter activeDelimiter = delimiter;
-		RenderText previousText = null;
+		RenderStaticContent textBeforeStandaloneTag = null;
 
-		fileFrame.initialize();
+		context.pushLoader(loader);
+		actionStack.push(templateActions);
 
 		// Parse all tags
-		for (scanner.useDelimiter(delimiter.startPattern); scanner.hasNext(); scanner.skip(activeDelimiter.endPattern)) {
+		while (true) {
 			// Get text before this tag
-			RenderText currentText = null;
-			final String text = scanner.next();
+			final CharSequence freeText = loader.next(delimiter.start);
+			final int length = freeText.length();
 
-			if (!text.isEmpty()) {
-				final String[] lines = fileFrame.advance(text);
-				currentText = new RenderText(lines);
+			if (length == 0) {
+				loader.advanceInternalPointer(0);
 
-				// Check for standalone tags
-				if (previousText != null && lines.length > 1 && (previousText.isMultiline() || previousText == section.actions.get(0)) &&
-						ONLY_WHITESPACE_PATTERN.matcher(previousText.getLastLine()).matches() &&
-						ONLY_WHITESPACE_PATTERN.matcher(lines[0]).matches()) {
-					currentText.ignoreFirstLine();
-					previousText.ignoreLastLine();
+				// The text can only be following a stand-alone tag if it is at the very end of the template
+				if (!loader.hasNext() && textBeforeStandaloneTag != null && ONLY_WHITESPACE_PATTERN.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
+					textBeforeStandaloneTag.ignoreLastLine();
 				}
 
-				section.actions.add(currentText);
+				// Empty text can never be just before a stand-alone tag
+				textBeforeStandaloneTag = null;
+			} else {
+				final List<ParsedLine> lines = new ArrayList<>();
+				loader.advanceInternalPointer(length, lines);
+				final RenderStaticContent currentText = new RenderStaticContent(lines);
+				actionStack.peek().add(currentText);
+
+				// Check for stand-alone tags
+				if (textBeforeStandaloneTag != null && currentText.isMultiline() &&
+						ONLY_WHITESPACE_PATTERN.matcher(textBeforeStandaloneTag.getLastLine()).matches() &&
+						ONLY_WHITESPACE_PATTERN.matcher(currentText.getFirstLine()).matches()) {
+					textBeforeStandaloneTag.ignoreLastLine();
+					currentText.ignoreFirstLine();
+				}
+
+				if (currentText.isMultiline() || templateActions.size() == 1) {
+					textBeforeStandaloneTag = currentText;
+				} else {
+					textBeforeStandaloneTag = null;
+				}
 			}
 
-			if (!scanner.useDelimiter(delimiter.endPattern).hasNext()) {
-				return true;
-			}
+			if (!loader.hasNext()) {
+				if (!resolvers.isEmpty()) {
+					new LoadException(context.reset(), "Unexpected end of stream, unmatched section start tag: \"" + resolvers.peek().toString() + "\"");
+				}
 
-			previousText = currentText;
-			activeDelimiter = delimiter;
-			fileFrame.advance(delimiter.start);
+				context.popLoader();
+				return templateActions;
+			}
 
 			// Parse the expression
-			final String expression = scanner.skip(delimiter.startPattern).next();
+			final CharSequence expression = loader.next(loader.peek("{") ? delimiter.unescapedEnd : delimiter.end);
 
-			if (!expression.isEmpty()) {
+			if (expression.length() != 0) {
 				switch (expression.charAt(0)) {
 				case '!': // Comments are completely ignored
 					break;
 
-				case '#': // Start a new section, or repeat the previous section
-					break;
-				case '^':
-					break;
-				case '/':
+				case '>': // Load partial
+					actionStack.peek().addAll(context.loadPartial(CharSequenceUtils.trim(expression, 1, expression.length()).toString()).actions);
 					break;
 
-				case '=': // Set delimiter
+				case '#': { // Start a new section, or repeat the previous section
+					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+
+					if (sectionExpression.length() == 0) { // Repeat the previous section
+						if (resolvers.size() == resolvers.largestSize()) {
+							throw new LoadException(context.reset(), "Repeat section without prior section");
+						}
+
+						resolvers.push();
+					} else { // Start a new section
+						resolvers.push(Expression.load(context, sectionExpression, resolvers.size()));
+					}
+
+					// Add a new render section action
+					final Section section = new Section();
+
+					actionStack.peek().add(RenderSection.FACTORY.create(resolvers.peek(), section));
+					actionStack.push(section.getActions());
+					break;
+				}
+
+				case '^': { // Start a new inverted section, or else block for the current section
+					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+
+					if (sectionExpression.length() == 0) { // Else block for the current section
+						if (resolvers.isEmpty()) {
+							throw new LoadException(context.reset(), "Section else tag outside section start tag");
+						}
+
+						actionStack.pop();
+					} else { // Start a new inverted section
+						resolvers.push(Expression.load(context, sectionExpression, resolvers.size()));
+						actionStack.peek().add(RenderSection.FACTORY.create(resolvers.peek(), new Section()));
+					}
+
+					// Grab the inverted action list from the section
+					final List<Action> actions = actionStack.peek();
+
+					actionStack.push(((RenderSection)actions.get(actions.size() - 1)).getSection().getInvertedActions());
+					break;
+				}
+
+				case '/': { // Close the current section
+					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+
+					if (resolvers.isEmpty()) {
+						throw new LoadException(context.reset(), "Section close tag without matching section start tag");
+					}
+
+					final Expression resolver = resolvers.pop();
+
+					if (sectionExpression.length() != 0 && !resolver.equals(sectionExpression)) {
+						throw new LoadException(context.reset(), "Unmatched section start tag, expecting: \"" + resolver.toString() + "\"");
+					}
+
+					actionStack.pop();
+					break;
+				}
+
+				case '=': { // Set delimiter
 					final Matcher matcher = SET_DELIMITER_PATTERN.matcher(expression);
 
 					if (!matcher.matches()) {
-						throw new ParseException(context.fileStack, "Invalid set delimiter tag");
+						throw new LoadException(context.reset(), "Invalid set delimiter tag");
 					}
 
 					delimiter = new Delimiter(matcher.group(1), matcher.group(2));
 					break;
+				}
 
-				default:
-					previousText = null;
-					throw new ParseException(context.fileStack, "Unrecognized tag starting with '" + expression.charAt(0) + "'");
+				case '{':
+				case '&': {
+					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+
+					textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
+					actionStack.peek().add(new RenderDynamicContent(Expression.load(context, sectionExpression, resolvers.size()), false));
+					break;
+				}
+
+				default: {
+					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 0, expression.length());
+
+					textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
+					actionStack.peek().add(new RenderDynamicContent(Expression.load(context, sectionExpression, resolvers.size()), true));
+					break;
+				}
 				}
 			}
 
-			if (!scanner.useDelimiter(delimiter.startPattern).hasNext()) {
-				return false;
+			if (!loader.hasNext()) {
+				throw new LoadException(context.reset(), "Unexpected end of stream, unclosed tag");
 			}
 
 			// Advance past the end delimiter
-			fileFrame.advance(expression + activeDelimiter.end);
+			loader.advanceInternalPointer(expression.length());
 		}
-
-		if (previousText != null && ONLY_WHITESPACE_PATTERN.matcher(previousText.getLastLine()).matches()) {
-			previousText.ignoreLastLine();
-		}
-
-		return true;
 	}
 
-	public void render(final Context context, final PrintStream stream) {
-		for (final IAction action : actions) {
+	private final List<Action> actions;
+
+	public Template() {
+		this.actions = new ArrayList<>();
+	}
+
+	public Template(final String name, final CharSequence value, final LoadContext context) throws LoadException {
+		try (final Loader loader = new Loader(name, value)) {
+			this.actions = load(context, loader);
+		} catch (final IOException e) {
+			// This should never happen, since we are loading from a string
+			throw new RuntimeException("An internal error occurred while loading a template from a character sequence", e);
+		}
+	}
+
+	public Template(final Path file, final Charset charset, final LoadContext context) throws LoadException {
+		try (final Loader loader = new Loader(file.toString(), file, charset)) {
+			this.actions = load(context, loader);
+		} catch (final IOException e) {
+			throw new LoadException(context.reset(), "File could not be opened (" + e.getMessage() + ")");
+		}
+	}
+
+	public Template(final String name, final InputStream stream, final Charset charset, final LoadContext context) throws LoadException, IOException {
+		try (final Loader loader = new Loader(name, stream, charset)) {
+			this.actions = load(context, loader);
+		}
+	}
+
+	public void render(final RenderContext context, final PrintStream stream) {
+		context.getSectionData().push(context.getGlobalData());
+
+		for (final Action action : actions) {
 			action.perform(context, stream);
 		}
+
+		context.getSectionData().pop();
 	}
 
 }
