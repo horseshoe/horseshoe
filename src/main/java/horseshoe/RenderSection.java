@@ -9,7 +9,14 @@ import horseshoe.internal.Properties;
 class RenderSection implements Action {
 
 	static interface Factory {
-		Action create(final Expression resolver, final Section section);
+		/**
+		 * Creates a new render section action using the specified resolver and section.
+		 *
+		 * @param expression the expression used in the section
+		 * @param section the section to be rendered
+		 * @return the created render section action
+		 */
+		RenderSection create(final Expression expression, final Section section);
 	}
 
 	static final Factory FACTORY;
@@ -17,8 +24,8 @@ class RenderSection implements Action {
 	static {
 		Factory factory = new Factory() {
 			@Override
-			public Action create(final Expression resolver, final Section section) {
-				return new RenderSection(resolver, section);
+			public RenderSection create(final Expression expression, final Section section) {
+				return new RenderSection(expression, section);
 			}
 		};
 
@@ -32,7 +39,15 @@ class RenderSection implements Action {
 		FACTORY = factory;
 	}
 
-	protected static void executeActionsWith(final RenderContext context, final Object data, final PrintStream stream, final List<Action> actions) {
+	/**
+	 * Renders the actions using the specified context, data, and stream.
+	 *
+	 * @param context the render context
+	 * @param data the data to render
+	 * @param stream the stream used for rendering
+	 * @param actions the actions to render
+	 */
+	protected static void renderActions(final RenderContext context, final Object data, final PrintStream stream, final List<Action> actions) {
 		context.getSectionData().push(data);
 
 		for (final Action action : actions) {
@@ -42,35 +57,48 @@ class RenderSection implements Action {
 		context.getSectionData().pop();
 	}
 
-	protected final Expression resolver;
+	protected final Expression expression;
 	protected final Section section;
 
-	RenderSection(final Expression resolver, final Section section) {
-		this.resolver = resolver;
+	/**
+	 * Creates a new render section action using the specified resolver and section.
+	 *
+	 * @param expression the expression used in the section
+	 * @param section the section to be rendered
+	 */
+	RenderSection(final Expression expression, final Section section) {
+		this.expression = expression;
 		this.section = section;
 	}
 
+	/**
+	 * Dispatches the data for rendering using the appropriate transformation for the specified data. Lists are iterated, booleans are evaluated, etc.
+	 *
+	 * @param context the render context
+	 * @param data the data to render
+	 * @param stream the stream used for rendering
+	 */
 	protected void dispatchData(final RenderContext context, final Object data, final PrintStream stream) {
 		if (data instanceof Iterable<?>) {
 			final Iterator<?> it = ((Iterable<?>)data).iterator();
 
 			if (it.hasNext()) {
 				do {
-					executeActionsWith(context, it.next(), stream, section.getActions());
+					renderActions(context, it.next(), stream, section.getActions());
 				} while (it.hasNext());
 			} else {
-				executeActionsWith(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+				renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
 			}
 		} else if (data instanceof Boolean) {
 			if ((Boolean)data) {
-				executeActionsWith(context, data, stream, section.getActions());
+				renderActions(context, context.getSectionData().peek(), stream, section.getActions());
 			} else {
-				executeActionsWith(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+				renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
 			}
 		} else if (data != null) {
-			executeActionsWith(context, data, stream, section.getActions());
+			renderActions(context, data, stream, section.getActions());
 		} else {
-			executeActionsWith(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+			renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
 		}
 	}
 
@@ -85,7 +113,7 @@ class RenderSection implements Action {
 
 	@Override
 	public final void perform(final RenderContext context, final PrintStream stream) {
-		dispatchData(context, resolver.evaluate(context), stream);
+		dispatchData(context, expression.evaluate(context), stream);
 	}
 
 }

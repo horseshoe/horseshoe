@@ -57,8 +57,10 @@ public class RenderContext {
 
 	private EscapeFunction escapeFunction = NO_ESCAPE_FUNCTION;
 	private final Map<String, Object> globalData = new LinkedHashMap<>();
-	private String lineEnding = DEFAULT_LINE_ENDING;
 	private final PersistentStack<Object> sectionData = new PersistentStack<>();
+
+	private final PersistentStack<String> indentation = new PersistentStack<>();
+	private String lineEnding = DEFAULT_LINE_ENDING;
 
 	/**
 	 * Creates a default render context.
@@ -91,6 +93,15 @@ public class RenderContext {
 	 */
 	Map<String, Object> getGlobalData() {
 		return globalData;
+	}
+
+	/**
+	 * Gets the indentation used by the rendering process.
+	 *
+	 * @return the indentation used by the rendering process
+	 */
+	PersistentStack<String> getIndentation() {
+		return indentation;
 	}
 
 	/**
@@ -135,6 +146,7 @@ public class RenderContext {
 
 	void reset() {
 		sectionData.clear();
+		indentation.clear();
 	}
 
 	/**

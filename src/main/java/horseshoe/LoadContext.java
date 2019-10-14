@@ -6,10 +6,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import horseshoe.internal.Loader;
 import horseshoe.internal.PersistentStack;
@@ -18,8 +18,8 @@ public class LoadContext {
 
 	public static final String PARTIAL_EXTENSION = ".U";
 
-	private static final Template EMPTY_TEMPLATE = new Template();
-	private static final Template RECURSIVE_TEMPLATE_DETECTED = new Template();
+	static final Template EMPTY_TEMPLATE = new Template();
+	static final Template RECURSIVE_TEMPLATE_DETECTED = new Template();
 
 	/**
 	 * Creates a new mustache-compatible load context using the specified string partials.
@@ -37,7 +37,7 @@ public class LoadContext {
 	 * @return a new mustache-compatible load context
 	 */
 	public static LoadContext newMustacheLoadContext() {
-		return newMustacheLoadContext(Collections.emptyMap());
+		return newMustacheLoadContext(new HashMap<String, String>());
 	}
 
 	private final PersistentStack<Loader> loaders = new PersistentStack<>();
@@ -77,14 +77,14 @@ public class LoadContext {
 	 * @param includeDirectories the list of directories used to locate partial files included in a template
 	 */
 	public LoadContext(final Iterable<? extends Path> includeDirectories) {
-		this(Collections.emptyMap(), includeDirectories);
+		this(new HashMap<String, String>(), includeDirectories);
 	}
 
 	/**
 	 * Creates a default load context. The default list of include directories contains only the current directory.
 	 */
 	public LoadContext() {
-		this(Collections.emptyMap());
+		this(new HashMap<String, String>());
 	}
 
 	/**
@@ -136,6 +136,7 @@ public class LoadContext {
 		}
 
 		this.loaders.clear();
+		this.partials.clear();
 		return loaders;
 	}
 
@@ -192,14 +193,6 @@ public class LoadContext {
 					}
 				}
 			}
-		} else if (found == RECURSIVE_TEMPLATE_DETECTED) {
-			for (final Entry<String, Template> entry : partials.entrySet()) {
-				if (entry.getValue() == RECURSIVE_TEMPLATE_DETECTED) {
-					entry.setValue(null);
-				}
-			}
-
-			throw new LoadException(reset(), "Recursive template detected: " + name);
 		}
 
 		return found;

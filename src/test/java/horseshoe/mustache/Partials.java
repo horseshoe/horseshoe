@@ -36,7 +36,7 @@ public class Partials {
 		Helper.executeMustacheTest(">\n  {{>partial}}", Helper.loadMap(), Helper.loadMap("partial", ">\n>"), ">\n  >\n  >");
 
 		/* Standalone Indentation - Each line of the partial should be indented before rendering. */
-		Helper.executeMustacheTest("\\n {{>partial}}\n/\n", Helper.loadMap("content", "<\n->"), Helper.loadMap("partial", "|\n{{{content}}}\n|\n"), "\\n |\n <\n->\n |\n/\n");
+		Helper.executeMustacheTest("\\\n {{>partial}}\n/\n", Helper.loadMap("content", "<\n->"), Helper.loadMap("partial", "|\n{{{content}}}\n|\n"), "\\\n |\n <\n->\n |\n/\n");
 
 		/* Padding Whitespace - Superfluous in-tag whitespace should be ignored. */
 		Helper.executeMustacheTest("|{{> partial }}|", Helper.loadMap("boolean", true), Helper.loadMap("partial", "[]"), "|[]|");

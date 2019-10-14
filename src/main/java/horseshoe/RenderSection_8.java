@@ -10,13 +10,19 @@ class RenderSection_8 extends RenderSection {
 
 	static class Factory implements RenderSection.Factory {
 		@Override
-		public Action create(final Expression resolver, final Section section) {
-			return new RenderSection_8(resolver, section);
+		public RenderSection_8 create(final Expression expression, final Section section) {
+			return new RenderSection_8(expression, section);
 		}
 	}
 
-	RenderSection_8(final Expression resolver, final Section section) {
-		super(resolver, section);
+	/**
+	 * Creates a new render section action using the specified resolver and section.
+	 *
+	 * @param expression the expression used in the section
+	 * @param section the section to be rendered
+	 */
+	RenderSection_8(final Expression expression, final Section section) {
+		super(expression, section);
 	}
 
 	@Override
@@ -26,18 +32,18 @@ class RenderSection_8 extends RenderSection {
 
 			if (!list.isEmpty()) {
 				for (final Object obj : list) {
-					executeActionsWith(context, obj, stream, section.getActions());
+					renderActions(context, obj, stream, section.getActions());
 				}
 			} else {
-				executeActionsWith(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+				renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
 			}
 		} else if (data instanceof Optional<?>) {
 			final Optional<?> optional = (Optional<?>)data;
 
 			if (optional.isPresent()) {
-				executeActionsWith(context, optional.get(), stream, section.getActions());
+				renderActions(context, optional.get(), stream, section.getActions());
 			} else {
-				executeActionsWith(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+				renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
 			}
 		} else {
 			super.dispatchData(context, data, stream);

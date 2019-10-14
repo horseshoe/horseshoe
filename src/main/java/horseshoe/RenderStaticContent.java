@@ -7,32 +7,58 @@ import horseshoe.internal.ParsedLine;
 
 class RenderStaticContent implements Action {
 
-	private final List<ParsedLine> lines;
+	private static final ParsedLine EMPTY_LINES[] = new ParsedLine[0];
+
+	private final ParsedLine lines[];
 	private boolean ignoreFirstLine = false;
 	private boolean ignoreLastLine = false;
 
+	/**
+	 * Creates a new render static content action using the specified lines. The list of lines must contain at least one line.
+	 *
+	 * @param lines the list of lines
+	 */
 	RenderStaticContent(final List<ParsedLine> lines) {
-		this.lines = lines;
+		this.lines = lines.toArray(EMPTY_LINES);
 	}
 
 	@Override
 	public void perform(final RenderContext context, final PrintStream stream) {
-		for (int i = (ignoreFirstLine ? 1 : 0); i < lines.size() - 1; i++ ) {
-			final ParsedLine line = lines.get(i);
-			stream.print(lines.get(i).getLine() + (context.getLineEnding() == null ? line.getEnding() : context.getLineEnding()));
+		final String indentation = context.getIndentation().peek();
+
+		// No indentation on first line
+		if (!ignoreFirstLine && lines.length > 1) {
+			final ParsedLine line = lines[0];
+
+			stream.print(line.getLine());
+			stream.print(context.getLineEnding() == null ? line.getEnding() : context.getLineEnding());
 		}
 
+		// Indent all remaining lines
+		for (int i = 1; i < lines.length - 1; i++ ) {
+			final ParsedLine line = lines[i];
+
+			if (!line.getLine().isEmpty()) {
+				stream.print(indentation);
+				stream.print(line.getLine());
+			}
+
+			stream.print(context.getLineEnding() == null ? line.getEnding() : context.getLineEnding());
+		}
+
+		// Skip line ending on the last line
 		if (!ignoreLastLine) {
-			stream.print(lines.get(lines.size() - 1).getLine());
+			stream.print(indentation);
+			stream.print(lines[lines.length - 1].getLine());
 		}
 	}
 
 	String getFirstLine() {
-		return lines.get(0).getLine();
+		return lines[0].getLine();
 	}
 
 	String getLastLine() {
-		return lines.get(lines.size() - 1).getLine();
+		return lines[lines.length - 1].getLine();
 	}
 
 	void ignoreFirstLine() {
@@ -44,7 +70,7 @@ class RenderStaticContent implements Action {
 	}
 
 	boolean isMultiline() {
-		return lines.size() > 1;
+		return lines.length > 1;
 	}
 
 }

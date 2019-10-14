@@ -173,7 +173,7 @@ public class Loader implements AutoCloseable {
 			streamBuffer = new Buffer(oldBuffer.capacity() * 2, oldBuffer.length() - bufferOffset);
 			buffer = streamBuffer;
 
-			for (int i = 0, j = bufferOffset; j < oldBuffer.length(); i++, j++) {
+			for (int oldBufferLength = oldBuffer.length(), i = 0, j = bufferOffset; j < oldBufferLength; i++, j++) {
 				streamBuffer.getBuffer()[i] = oldBuffer.getBuffer()[j];
 			}
 
@@ -181,7 +181,7 @@ public class Loader implements AutoCloseable {
 			matcher.reset(streamBuffer);
 		} else if (bufferOffset >= streamBuffer.capacity() / 8) {
 			// Move data to start of buffer
-			for (int i = 0, j = bufferOffset; j < streamBuffer.length(); i++, j++) {
+			for (int streamBufferLength = streamBuffer.length(), i = 0, j = bufferOffset; j < streamBufferLength; i++, j++) {
 				streamBuffer.getBuffer()[i] = streamBuffer.getBuffer()[j];
 			}
 

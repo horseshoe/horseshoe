@@ -6,6 +6,7 @@ import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,8 +40,8 @@ public class Template {
 		}
 	}
 
-	private static final Pattern ONLY_WHITESPACE_PATTERN = Pattern.compile("\\s*");
-	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*([^\\s]+)\\s+([^\\s]+)\\s*=");
+	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
+	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*([^\\s]+)\\s+([^\\s]+)\\s*=");
 
 	/**
 	 * Loads and returns a list of actions to be performed by when rendering the associated template
@@ -57,7 +58,7 @@ public class Template {
 		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
 
 		Delimiter delimiter = new Delimiter();
-		RenderStaticContent textBeforeStandaloneTag = null;
+		RenderStaticContent textBeforeStandaloneTag = new RenderStaticContent(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))));
 
 		context.pushLoader(loader);
 		actionStack.push(templateActions);
@@ -69,15 +70,17 @@ public class Template {
 			final int length = freeText.length();
 
 			if (length == 0) {
-				loader.advanceInternalPointer(0);
+				if (!templateActions.isEmpty()) {
+					loader.advanceInternalPointer(0);
 
-				// The text can only be following a stand-alone tag if it is at the very end of the template
-				if (!loader.hasNext() && textBeforeStandaloneTag != null && ONLY_WHITESPACE_PATTERN.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
-					textBeforeStandaloneTag.ignoreLastLine();
+					// The text can only be following a stand-alone tag if it is at the very end of the template
+					if (!loader.hasNext() && textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
+						textBeforeStandaloneTag.ignoreLastLine();
+					}
+
+					// Empty text can never be just before a stand-alone tag, unless it is the first content in the template
+					textBeforeStandaloneTag = null;
 				}
-
-				// Empty text can never be just before a stand-alone tag
-				textBeforeStandaloneTag = null;
 			} else {
 				final List<ParsedLine> lines = new ArrayList<>();
 				loader.advanceInternalPointer(length, lines);
@@ -86,12 +89,13 @@ public class Template {
 
 				// Check for stand-alone tags
 				if (textBeforeStandaloneTag != null && currentText.isMultiline() &&
-						ONLY_WHITESPACE_PATTERN.matcher(textBeforeStandaloneTag.getLastLine()).matches() &&
-						ONLY_WHITESPACE_PATTERN.matcher(currentText.getFirstLine()).matches()) {
+						ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches() &&
+						ONLY_WHITESPACE.matcher(currentText.getFirstLine()).matches()) {
 					textBeforeStandaloneTag.ignoreLastLine();
 					currentText.ignoreFirstLine();
 				}
 
+				// Use the current text as the basis for future stand-alone tag detection if the currentText is multiline or it is the first line in the template
 				if (currentText.isMultiline() || templateActions.size() == 1) {
 					textBeforeStandaloneTag = currentText;
 				} else {
@@ -102,6 +106,11 @@ public class Template {
 			if (!loader.hasNext()) {
 				if (!resolvers.isEmpty()) {
 					new LoadException(context.reset(), "Unexpected end of stream, unmatched section start tag: \"" + resolvers.peek().toString() + "\"");
+				}
+
+				// Check for empty last line of template, so that indentation is not applied
+				if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
+					textBeforeStandaloneTag.ignoreLastLine();
 				}
 
 				context.popLoader();
@@ -116,9 +125,29 @@ public class Template {
 				case '!': // Comments are completely ignored
 					break;
 
-				case '>': // Load partial
-					actionStack.peek().addAll(context.loadPartial(CharSequenceUtils.trim(expression, 1, expression.length()).toString()).actions);
+				case '>': { // Load partial
+					final Template partial = context.loadPartial(CharSequenceUtils.trim(expression, 1, expression.length()).toString());
+					final List<Action> actions;
+
+					if (partial == LoadContext.RECURSIVE_TEMPLATE_DETECTED) {
+						if (resolvers.isEmpty()) {
+							new LoadException(context.reset(), "Partial recursion detected outside of section");
+						}
+
+						actions = templateActions;
+					} else {
+						actions = partial.actions;
+					}
+
+					if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
+						textBeforeStandaloneTag.ignoreLastLine();
+						actionStack.peek().add(new RenderPartial(actions, textBeforeStandaloneTag.getLastLine()));
+					} else {
+						actionStack.peek().add(new RenderPartial(actions, ""));
+					}
+
 					break;
+				}
 
 				case '#': { // Start a new section, or repeat the previous section
 					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
@@ -180,7 +209,7 @@ public class Template {
 				}
 
 				case '=': { // Set delimiter
-					final Matcher matcher = SET_DELIMITER_PATTERN.matcher(expression);
+					final Matcher matcher = SET_DELIMITER.matcher(expression);
 
 					if (!matcher.matches()) {
 						throw new LoadException(context.reset(), "Invalid set delimiter tag");
@@ -249,11 +278,13 @@ public class Template {
 
 	public void render(final RenderContext context, final PrintStream stream) {
 		context.getSectionData().push(context.getGlobalData());
+		context.getIndentation().push("");
 
 		for (final Action action : actions) {
 			action.perform(context, stream);
 		}
 
+		context.getIndentation().pop();
 		context.getSectionData().pop();
 	}
 

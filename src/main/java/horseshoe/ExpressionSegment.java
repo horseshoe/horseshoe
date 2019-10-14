@@ -51,11 +51,11 @@ class ExpressionSegment {
 	*/
 
 	private static final class Context {
-		private final Class<?> context;
+		private final Class<?> object;
 		private final Class<?> args[];
 
-		private Context(final Class<?> context, final Class<?> args[]) {
-			this.context = context;
+		public Context(final Class<?> object, final Class<?> args[]) {
+			this.object = object;
 			this.args = args;
 		}
 
@@ -67,12 +67,12 @@ class ExpressionSegment {
 
 			final ExpressionSegment.Context other = (ExpressionSegment.Context)obj;
 
-			return context == other.context && Arrays.equals(args, other.args);
+			return object == other.object && Arrays.equals(args, other.args);
 		}
 
 		@Override
 		public int hashCode() {
-			int hash = context.hashCode();
+			int hash = object.hashCode();
 
 			if (args != null) {
 				for (int i = 0; i < args.length; i++) {
@@ -125,7 +125,7 @@ class ExpressionSegment {
 		}
 
 		// Get resolver
-		final Context expressionContext = new Context(obj == null ? null : obj.getClass(), evaluatedClasses);
+		final Context expressionContext = new Context(obj.getClass(), evaluatedClasses);
 		Resolver resolver = resolverDatabase.get(expressionContext);
 
 		if (resolver == null) {
@@ -136,8 +136,14 @@ class ExpressionSegment {
 		return resolver.resolve(obj, evaluatedArgs);
 	}
 
-	private Resolver createResolver(final Context expressionContext) {
-		return new MapResolver(identifier);
+	private Resolver createResolver(final Context context) {
+		if (Map.class.isAssignableFrom(context.object)) {
+			return new MapResolver(identifier);
+		} else if (Map.class.isAssignableFrom(context.object)) {
+			return null;
+		}
+
+		return null;
 	}
 
 	@Override

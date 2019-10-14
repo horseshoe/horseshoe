@@ -1,6 +1,7 @@
 package horseshoe;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -11,6 +12,7 @@ class Expression {
 
 	private static final Pattern SEGMENT_BACKREACH = Pattern.compile("\\s[.][.]\\s/");
 	private static final Pattern SEGMENT_LOADER_TOKEN = Pattern.compile("[.(,)]");
+	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 
 	static Expression load(final LoadContext context, final CharSequence value, final Matcher matcher, final int maxBackreach) {
 		final int length = value.length();
@@ -28,9 +30,20 @@ class Expression {
 		// Load all segments
 		for (matcher.usePattern(SEGMENT_LOADER_TOKEN); matcher.find(); matcher.region(matcher.end(), length)) {
 			switch (value.charAt(matcher.start())) {
-			case '.':
-				resolver.segments.add(new ExpressionSegment(CharSequenceUtils.trim(value, matcher.regionStart(), matcher.start()).toString(), null));
+			case '.': {
+				final String identifier = CharSequenceUtils.trim(value, matcher.regionStart(), matcher.start()).toString();
+
+				if (!identifier.isEmpty()) {
+					resolver.segments.add(new ExpressionSegment(identifier, null));
+				} else if (resolver.segments.isEmpty() && matcher.region(matcher.end(), length).usePattern(ONLY_WHITESPACE).matches()) {
+					// A single dot resolves to the current object
+					return resolver;
+				} else {
+					; // TODO: throw exception
+				}
+
 				break;
+			}
 
 			default: break;
 			}
@@ -66,17 +79,33 @@ class Expression {
 	}
 
 	Object evaluate(final RenderContext context) {
-		Object obj = context.getSectionData().peek(backreach);
+		nextContext:
+		for (final Object contextObject : context.getSectionData()) {
+			final Iterator<ExpressionSegment> iterator = segments.iterator();
 
-		for (final ExpressionSegment segment : segments) {
-			if (obj == null) {
-				return null;
+			if (iterator.hasNext()) {
+				Object obj = iterator.next().evaluate(context, contextObject);
+
+				// Only continue with the next context if the first segment fails to load an object.
+				if (obj == null) {
+					continue nextContext;
+				}
+
+				while (iterator.hasNext()) {
+					obj = iterator.next().evaluate(context, obj);
+
+					if (obj == null) {
+						return null;
+					}
+				}
+
+				return obj;
 			}
 
-			obj = segment.evaluate(context, obj);
+			return contextObject;
 		}
 
-		return obj;
+		return null;
 	}
 
 	@Override
