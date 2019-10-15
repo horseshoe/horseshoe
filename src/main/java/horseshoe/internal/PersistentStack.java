@@ -1,7 +1,5 @@
 package horseshoe.internal;
 
-import java.util.ArrayList;
-
 /**
  * A stack that persists items popped off the top, so that they can be repushed when needed.
  *
@@ -9,8 +7,9 @@ import java.util.ArrayList;
  */
 public class PersistentStack<T> implements Iterable<T> {
 
-	private final ArrayList<T> list = new ArrayList<>();
-	private int size;
+	@SuppressWarnings("unchecked")
+	private T array[] = (T[])new Object[8];
+	private int size = 0;
 
 	private class LIFOIterator implements java.util.Iterator<T> {
 		int i = size;
@@ -22,7 +21,7 @@ public class PersistentStack<T> implements Iterable<T> {
 
 		@Override
 		public T next() {
-			return list.get(--i);
+			return array[--i];
 		}
 	}
 
@@ -32,11 +31,19 @@ public class PersistentStack<T> implements Iterable<T> {
 	}
 
 	/**
-	 * Clears the stack.
+	 * Clears the stack. This functions the same as calling pop() until the stack is empty.
 	 */
 	public void clear() {
-		list.clear();
 		size = 0;
+	}
+
+	/**
+	 * Checks if a previously popped item exists in the stack. An item only exists if it is non-null.
+	 *
+	 * @return true if a previously popped item exists in the stack, otherwise false
+	 */
+	public boolean hasPoppedItem() {
+		return size < array.length && array[size] != null;
 	}
 
 	/**
@@ -49,21 +56,12 @@ public class PersistentStack<T> implements Iterable<T> {
 	}
 
 	/**
-	 * Gets the largest size of the stack since the last clear.
-	 *
-	 * @return the largest size of the stack since the last clear
-	 */
-	public int largestSize() {
-		return list.size();
-	}
-
-	/**
 	 * Returns the item on the top of the stack.
 	 *
 	 * @return the item on the top of the stack
 	 */
 	public T peek() {
-		return list.get(size - 1);
+		return array[size - 1];
 	}
 
 	/**
@@ -73,7 +71,7 @@ public class PersistentStack<T> implements Iterable<T> {
 	 * @return the item at the specified index of the stack
 	 */
 	public T peek(final int index) {
-		return list.get(size - 1 - index);
+		return array[size - 1 - index];
 	}
 
 	/**
@@ -82,7 +80,7 @@ public class PersistentStack<T> implements Iterable<T> {
 	 * @return the item popped off the top of the stack
 	 */
 	public T pop() {
-		return list.get(--size);
+		return array[--size];
 	}
 
 	/**
@@ -92,7 +90,7 @@ public class PersistentStack<T> implements Iterable<T> {
 	 * @return the item that was replaced
 	 */
 	public T replace(final T item) {
-		return list.set(size - 1, item);
+		return array[size - 1] = item;
 	}
 
 	/**
@@ -102,14 +100,19 @@ public class PersistentStack<T> implements Iterable<T> {
 	 * @return the object placed on the stack
 	 */
 	public T push(final T obj) {
-		if (size == list.size()) {
-			list.add(obj);
-			size++;
-		} else {
-			list.set(size++, obj);
+		// Check if the array needs to be resized
+		if (size == array.length) {
+			@SuppressWarnings("unchecked")
+			final T newArray[] = (T[])new Object[array.length * 2];
+
+			for (int i = 0; i < size; i++) {
+				newArray[i] = array[i];
+			}
+
+			array = newArray;
 		}
 
-		return obj;
+		return array[size++] = obj;
 	}
 
 	/**
@@ -118,7 +121,7 @@ public class PersistentStack<T> implements Iterable<T> {
 	 * @return the object pushed back on the stack
 	 */
 	public T push() {
-		return list.get(size++);
+		return array[size++];
 	}
 
 	/**

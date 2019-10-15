@@ -52,13 +52,14 @@ public class RenderContext {
 	 * @return a new mustache-compatible render context
 	 */
 	public static RenderContext newMustacheRenderContext() {
-		return new RenderContext().setEscapeFunction(HTML_ESCAPE_FUNCTION).setLineEnding(KEEP_TEMPLATE_LINE_ENDINGS);
+		return new RenderContext().setAllowAccessToFullContextStack(true).setEscapeFunction(HTML_ESCAPE_FUNCTION).setLineEnding(KEEP_TEMPLATE_LINE_ENDINGS);
 	}
 
 	private EscapeFunction escapeFunction = NO_ESCAPE_FUNCTION;
 	private final Map<String, Object> globalData = new LinkedHashMap<>();
 	private final PersistentStack<Object> sectionData = new PersistentStack<>();
 
+	private boolean allowAccessToFullContextStack = false;
 	private final PersistentStack<String> indentation = new PersistentStack<>();
 	private String lineEnding = DEFAULT_LINE_ENDING;
 
@@ -75,6 +76,15 @@ public class RenderContext {
 	 */
 	public Object get(final String key) {
 		return globalData.get(key);
+	}
+
+	/**
+	 * Gets whether or not expressions have full access to the context stack.
+	 *
+	 * @return true if expressions have full access to the context stack, otherwise false
+	 */
+	public boolean getAllowAccessToFullContextStack() {
+		return allowAccessToFullContextStack;
 	}
 
 	/**
@@ -144,9 +154,23 @@ public class RenderContext {
 		return this;
 	}
 
+	/**
+	 * Resets the context, so it can be reused
+	 */
 	void reset() {
 		sectionData.clear();
 		indentation.clear();
+	}
+
+	/**
+	 * Sets whether or not expressions have full access to the context stack.
+	 *
+	 * @param allowAccessToFullContextStack true to allow expressions have full access to the context stack, otherwise false
+	 * @return this render context
+	 */
+	public RenderContext setAllowAccessToFullContextStack(final boolean allowAccessToFullContextStack) {
+		this.allowAccessToFullContextStack = allowAccessToFullContextStack;
+		return this;
 	}
 
 	/**

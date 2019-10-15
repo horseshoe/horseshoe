@@ -8,7 +8,7 @@ import java.util.stream.Stream;
 
 class RenderSection_8 extends RenderSection {
 
-	static class Factory implements RenderSection.Factory {
+	public static class Factory extends RenderSection.Factory {
 		@Override
 		public RenderSection_8 create(final Expression expression, final Section section) {
 			return new RenderSection_8(expression, section);
@@ -21,7 +21,7 @@ class RenderSection_8 extends RenderSection {
 	 * @param expression the expression used in the section
 	 * @param section the section to be rendered
 	 */
-	RenderSection_8(final Expression expression, final Section section) {
+	protected RenderSection_8(final Expression expression, final Section section) {
 		super(expression, section);
 	}
 

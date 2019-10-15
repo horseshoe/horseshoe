@@ -8,7 +8,8 @@ import horseshoe.internal.Properties;
 
 class RenderSection implements Action {
 
-	static interface Factory {
+	public static class Factory {
+
 		/**
 		 * Creates a new render section action using the specified resolver and section.
 		 *
@@ -16,18 +17,16 @@ class RenderSection implements Action {
 		 * @param section the section to be rendered
 		 * @return the created render section action
 		 */
-		RenderSection create(final Expression expression, final Section section);
+		RenderSection create(final Expression expression, final Section section){
+			return new RenderSection(expression, section);
+		}
+
 	}
 
 	static final Factory FACTORY;
 
 	static {
-		Factory factory = new Factory() {
-			@Override
-			public RenderSection create(final Expression expression, final Section section) {
-				return new RenderSection(expression, section);
-			}
-		};
+		Factory factory = new Factory();
 
 		try { // Try to load the Java 8+ version
 			if (Properties.JAVA_VERSION >= 8.0) {
@@ -66,7 +65,7 @@ class RenderSection implements Action {
 	 * @param expression the expression used in the section
 	 * @param section the section to be rendered
 	 */
-	RenderSection(final Expression expression, final Section section) {
+	protected RenderSection(final Expression expression, final Section section) {
 		this.expression = expression;
 		this.section = section;
 	}

@@ -153,7 +153,7 @@ public class Template {
 					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
 					if (sectionExpression.length() == 0) { // Repeat the previous section
-						if (resolvers.size() == resolvers.largestSize()) {
+						if (!resolvers.hasPoppedItem()) {
 							throw new LoadException(context.reset(), "Repeat section without prior section");
 						}
 

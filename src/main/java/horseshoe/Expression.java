@@ -1,7 +1,6 @@
 package horseshoe;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -10,11 +9,13 @@ import horseshoe.internal.CharSequenceUtils;
 
 class Expression {
 
+	private static final ExpressionSegment EMPTY_SEGMENTS[] = new ExpressionSegment[0];
+
 	private static final Pattern SEGMENT_BACKREACH = Pattern.compile("\\s[.][.]\\s/");
 	private static final Pattern SEGMENT_LOADER_TOKEN = Pattern.compile("[.(,)]");
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 
-	static Expression load(final LoadContext context, final CharSequence value, final Matcher matcher, final int maxBackreach) {
+	public static Expression load(final LoadContext context, final CharSequence value, final Matcher matcher, final int maxBackreach) {
 		final int length = value.length();
 		final int parentheses = 0;
 		int backreach = 0;
@@ -25,6 +26,7 @@ class Expression {
 		}
 
 		final Expression resolver = new Expression(backreach);
+		final List<ExpressionSegment> segments = new ArrayList<>();
 		// final List<ExpressionResolver> args = new ArrayList<>();
 
 		// Load all segments
@@ -34,9 +36,10 @@ class Expression {
 				final String identifier = CharSequenceUtils.trim(value, matcher.regionStart(), matcher.start()).toString();
 
 				if (!identifier.isEmpty()) {
-					resolver.segments.add(new ExpressionSegment(identifier, null));
-				} else if (resolver.segments.isEmpty() && matcher.region(matcher.end(), length).usePattern(ONLY_WHITESPACE).matches()) {
+					segments.add(new ExpressionSegment(identifier, null));
+				} else if (segments.isEmpty() && matcher.region(matcher.end(), length).usePattern(ONLY_WHITESPACE).matches()) {
 					// A single dot resolves to the current object
+					resolver.segments = EMPTY_SEGMENTS;
 					return resolver;
 				} else {
 					; // TODO: throw exception
@@ -49,86 +52,101 @@ class Expression {
 			}
 		}
 
-		resolver.segments.add(new ExpressionSegment(CharSequenceUtils.trim(value, matcher.regionStart(), length).toString(), null));
-
+		segments.add(new ExpressionSegment(CharSequenceUtils.trim(value, matcher.regionStart(), length).toString(), null));
+		resolver.segments = segments.toArray(EMPTY_SEGMENTS);
 		return resolver;
 	}
 
-	static Expression load(final LoadContext context, final CharSequence value, final int maxBackreach) {
+	public static Expression load(final LoadContext context, final CharSequence value, final int maxBackreach) {
 		return load(context, value, SEGMENT_BACKREACH.matcher(value), maxBackreach);
 	}
 
 	private final int backreach;
-	private final List<ExpressionSegment> segments = new ArrayList<>();
+	private ExpressionSegment segments[];
 
 	private Expression(final int backreach) {
 		this.backreach = backreach;
 	}
 
 	@Override
-	public boolean equals(final Object obj) {
-		if (this == obj) {
+	public boolean equals(final Object object) {
+		if (this == object) {
 			return true;
-		} else if (obj instanceof Expression) {
-			return backreach == ((Expression)obj).backreach && segments.equals(((Expression)obj).segments);
-		} else if (obj instanceof CharSequence) {
+		} else if (object instanceof Expression) {
+			return backreach == ((Expression)object).backreach && segments.equals(((Expression)object).segments);
+		} else if (object instanceof CharSequence) {
 			return true; // TODO
 		}
 
 		return false;
 	}
 
-	Object evaluate(final RenderContext context) {
-		nextContext:
-		for (final Object contextObject : context.getSectionData()) {
-			final Iterator<ExpressionSegment> iterator = segments.iterator();
+	public Object evaluate(final RenderContext context) {
+		if (context.getAllowAccessToFullContextStack()) {
+			nextContext:
+			for (final Object contextObject : context.getSectionData()) {
+				if (segments.length > 0) {
+					Object object = segments[0].evaluate(context, contextObject);
 
-			if (iterator.hasNext()) {
-				Object obj = iterator.next().evaluate(context, contextObject);
-
-				// Only continue with the next context if the first segment fails to load an object.
-				if (obj == null) {
-					continue nextContext;
-				}
-
-				while (iterator.hasNext()) {
-					obj = iterator.next().evaluate(context, obj);
-
-					if (obj == null) {
-						return null;
+					// Only continue with the next context if the first segment fails to load an object.
+					if (object == null) {
+						continue nextContext;
 					}
+
+					for (int i = 1; i < segments.length; i++) {
+						object = segments[i].evaluate(context, object);
+
+						if (object == null) {
+							return null;
+						}
+					}
+
+					return object;
 				}
 
-				return obj;
+				return contextObject;
+			}
+		} else { // Only allow access to context at the specified scope
+			Object object = context.getSectionData().peek(backreach);
+
+			for (int i = 0; object != null && i < segments.length; i++) {
+				object = segments[i].evaluate(context, object);
 			}
 
-			return contextObject;
+			return object;
 		}
 
 		return null;
 	}
 
 	@Override
-	public int hashCode() { // TODO
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + backreach;
-		result = prime * result + ((segments == null) ? 0 : segments.hashCode());
-		return result;
+	public int hashCode() {
+		int hash = backreach;
+
+		for (final ExpressionSegment segment : segments) {
+			hash = hash * 31 + segment.hashCode();
+		}
+
+		return hash;
 	}
 
 	@Override
 	public String toString() {
 		final StringBuilder sb = new StringBuilder();
-		String separator = "";
 
 		for (int i = 0; i < backreach; i++) {
 			sb.append("../");
 		}
 
-		for (final ExpressionSegment segment : segments) {
-			sb.append(separator).append(segment.toString());
-			separator = ".";
+		// Append all the segments (or "." if none exist)
+		if (segments.length > 0) {
+			sb.append(segments[0].toString());
+
+			for (int i = 1; i < segments.length; i++) {
+				sb.append(".").append(segments[i].toString());
+			}
+		} else {
+			sb.append(".");
 		}
 
 		return sb.toString();
