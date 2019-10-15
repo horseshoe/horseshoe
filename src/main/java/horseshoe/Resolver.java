@@ -92,9 +92,9 @@ abstract class Resolver {
 
 		try { // Try to load the Java 8+ version
 			if (Properties.JAVA_VERSION >= 8.0) {
-				factory = (Factory)Factory.class.getClassLoader().loadClass(Factory.class.getName().replace("Resolver", "Resolver_8")).newInstance();
+				factory = (Factory)Factory.class.getClassLoader().loadClass(Factory.class.getName().replace("Resolver", "Resolver_8")).getConstructor().newInstance();
 			}
-		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+		} catch (final ReflectiveOperationException e) {
 		}
 
 		FACTORY = factory;
