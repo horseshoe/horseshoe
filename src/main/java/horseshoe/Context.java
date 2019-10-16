@@ -95,10 +95,10 @@ public class Context {
 	 * @param stringPartials the string partials to use when a partial is included in a template
 	 * @param includeDirectories the list of directories used to locate partial files included in a template
 	 */
-	public Context(final Map<String, String> stringPartials, final Iterable<? extends Path> partialDirectories) {
+	public Context(final Map<String, String> stringPartials, final Iterable<? extends Path> includeDirectories) {
 		this.stringPartials.putAll(stringPartials);
 
-		for (final Path path : partialDirectories) {
+		for (final Path path : includeDirectories) {
 			this.includeDirectories.add(path);
 		}
 	}

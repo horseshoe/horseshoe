@@ -17,7 +17,6 @@ final class Expression {
 
 	public static Expression load(final Context context, final CharSequence value, final Matcher matcher, final int maxBackreach) {
 		final int length = value.length();
-		final int parentheses = 0;
 		int backreach = 0;
 
 		// Determine the backreach

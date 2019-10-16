@@ -45,8 +45,7 @@ public final class Loader implements AutoCloseable {
 	 * Creates a new loader from an input stream.
 	 *
 	 * @param name the name of the loader
-	 * @param stream the stream to load
-	 * @param charset the character set to use while loading the stream
+	 * @param reader the reader to load
 	 * @throws IOException if the stream cannot be read
 	 */
 	public Loader(final String name, final Reader reader) throws IOException {
