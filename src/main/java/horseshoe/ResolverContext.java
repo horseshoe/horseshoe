@@ -2,7 +2,7 @@ package horseshoe;
 
 import java.util.Arrays;
 
-class ResolverContext {
+final class ResolverContext {
 
 	private final Class<?> objectClass;
 	private final Class<?> argumentClasses[];

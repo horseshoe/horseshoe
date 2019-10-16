@@ -1,11 +1,12 @@
 package horseshoe;
 
-import java.io.PrintStream;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.List;
 
 import horseshoe.internal.ParsedLine;
 
-class RenderStaticContent implements Action {
+final class RenderStaticContent implements Action {
 
 	private static final ParsedLine EMPTY_LINES[] = new ParsedLine[0];
 
@@ -23,15 +24,15 @@ class RenderStaticContent implements Action {
 	}
 
 	@Override
-	public void perform(final RenderContext context, final PrintStream stream) {
+	public void perform(final RenderContext context, final Writer writer) throws IOException {
 		final String indentation = context.getIndentation().peek();
 
 		// No indentation on first line
 		if (!ignoreFirstLine && lines.length > 1) {
 			final ParsedLine line = lines[0];
 
-			stream.print(line.getLine());
-			stream.print(context.getLineEnding() == null ? line.getEnding() : context.getLineEnding());
+			writer.write(line.getLine());
+			writer.write(context.getUserContext().getLineEnding() == null ? line.getEnding() : context.getUserContext().getLineEnding());
 		}
 
 		// Indent all remaining lines
@@ -39,17 +40,17 @@ class RenderStaticContent implements Action {
 			final ParsedLine line = lines[i];
 
 			if (!line.getLine().isEmpty()) {
-				stream.print(indentation);
-				stream.print(line.getLine());
+				writer.write(indentation);
+				writer.write(line.getLine());
 			}
 
-			stream.print(context.getLineEnding() == null ? line.getEnding() : context.getLineEnding());
+			writer.write(context.getUserContext().getLineEnding() == null ? line.getEnding() : context.getUserContext().getLineEnding());
 		}
 
 		// Skip line ending on the last line
 		if (!ignoreLastLine) {
-			stream.print(indentation);
-			stream.print(lines[lines.length - 1].getLine());
+			writer.write(indentation);
+			writer.write(lines[lines.length - 1].getLine());
 		}
 	}
 

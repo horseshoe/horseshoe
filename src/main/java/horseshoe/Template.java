@@ -1,10 +1,10 @@
 package horseshoe;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.nio.charset.Charset;
+import java.io.Reader;
+import java.io.Writer;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -18,7 +18,16 @@ import horseshoe.internal.PersistentStack;
 
 public class Template {
 
-	private static class Delimiter {
+	private static final class LoadContext {
+		private final Context userContext;
+		private final PersistentStack<Loader> loaders = new PersistentStack<>();
+
+		public LoadContext(final Context userContext) {
+			this.userContext = userContext;
+		}
+	}
+
+	private static final class Delimiter {
 		private static final Pattern DEFAULT_START = Pattern.compile(Pattern.quote("{{"));
 		private static final Pattern DEFAULT_END = Pattern.compile(Pattern.quote("}}"));
 		private static final Pattern DEFAULT_UNESCAPED_END = Pattern.compile(Pattern.quote("}}}"));
@@ -43,6 +52,9 @@ public class Template {
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*([^\\s]+)\\s+([^\\s]+)\\s*=");
 
+	private static final Template EMPTY_TEMPLATE = new Template();
+	private static final Template RECURSIVE_TEMPLATE_DETECTED = new Template();
+
 	/**
 	 * Loads and returns a list of actions to be performed by when rendering the associated template
 	 *
@@ -60,7 +72,7 @@ public class Template {
 		Delimiter delimiter = new Delimiter();
 		RenderStaticContent textBeforeStandaloneTag = new RenderStaticContent(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))));
 
-		context.pushLoader(loader);
+		context.loaders.push(loader);
 		actionStack.push(templateActions);
 
 		// Parse all tags
@@ -105,7 +117,7 @@ public class Template {
 
 			if (!loader.hasNext()) {
 				if (!resolvers.isEmpty()) {
-					new LoadException(context.reset(), "Unexpected end of stream, unmatched section start tag: \"" + resolvers.peek().toString() + "\"");
+					new LoadException(context.loaders, "Unexpected end of stream, unmatched section start tag: \"" + resolvers.peek().toString() + "\"");
 				}
 
 				// Check for empty last line of template, so that indentation is not applied
@@ -113,7 +125,7 @@ public class Template {
 					textBeforeStandaloneTag.ignoreLastLine();
 				}
 
-				context.popLoader();
+				context.loaders.pop();
 				return templateActions;
 			}
 
@@ -126,12 +138,12 @@ public class Template {
 					break;
 
 				case '>': { // Load partial
-					final Template partial = context.loadPartial(CharSequenceUtils.trim(expression, 1, expression.length()).toString());
+					final Template partial = loadPartial(context, CharSequenceUtils.trim(expression, 1, expression.length()).toString());
 					final List<Action> actions;
 
-					if (partial == LoadContext.RECURSIVE_TEMPLATE_DETECTED) {
+					if (partial == RECURSIVE_TEMPLATE_DETECTED) {
 						if (resolvers.isEmpty()) {
-							new LoadException(context.reset(), "Partial recursion detected outside of section");
+							new LoadException(context.loaders, "Partial recursion detected outside of section");
 						}
 
 						actions = templateActions;
@@ -154,12 +166,12 @@ public class Template {
 
 					if (sectionExpression.length() == 0) { // Repeat the previous section
 						if (!resolvers.hasPoppedItem()) {
-							throw new LoadException(context.reset(), "Repeat section without prior section");
+							throw new LoadException(context.loaders, "Repeat section without prior section");
 						}
 
 						resolvers.push();
 					} else { // Start a new section
-						resolvers.push(Expression.load(context, sectionExpression, resolvers.size()));
+						resolvers.push(Expression.load(context.userContext, sectionExpression, resolvers.size()));
 					}
 
 					// Add a new render section action
@@ -175,12 +187,12 @@ public class Template {
 
 					if (sectionExpression.length() == 0) { // Else block for the current section
 						if (resolvers.isEmpty()) {
-							throw new LoadException(context.reset(), "Section else tag outside section start tag");
+							throw new LoadException(context.loaders, "Section else tag outside section start tag");
 						}
 
 						actionStack.pop();
 					} else { // Start a new inverted section
-						resolvers.push(Expression.load(context, sectionExpression, resolvers.size()));
+						resolvers.push(Expression.load(context.userContext, sectionExpression, resolvers.size()));
 						actionStack.peek().add(RenderSection.FACTORY.create(resolvers.peek(), new Section()));
 					}
 
@@ -195,13 +207,13 @@ public class Template {
 					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
 					if (resolvers.isEmpty()) {
-						throw new LoadException(context.reset(), "Section close tag without matching section start tag");
+						throw new LoadException(context.loaders, "Section close tag without matching section start tag");
 					}
 
 					final Expression resolver = resolvers.pop();
 
-					if (sectionExpression.length() != 0 && !resolver.equals(sectionExpression)) {
-						throw new LoadException(context.reset(), "Unmatched section start tag, expecting: \"" + resolver.toString() + "\"");
+					if (sectionExpression.length() != 0 && !resolver.matches(sectionExpression)) {
+						throw new LoadException(context.loaders, "Unmatched section start tag, expecting: \"" + resolver.toString() + "\"");
 					}
 
 					actionStack.pop();
@@ -212,7 +224,7 @@ public class Template {
 					final Matcher matcher = SET_DELIMITER.matcher(expression);
 
 					if (!matcher.matches()) {
-						throw new LoadException(context.reset(), "Invalid set delimiter tag");
+						throw new LoadException(context.loaders, "Invalid set delimiter tag");
 					}
 
 					delimiter = new Delimiter(matcher.group(1), matcher.group(2));
@@ -224,7 +236,7 @@ public class Template {
 					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
 					textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-					actionStack.peek().add(new RenderDynamicContent(Expression.load(context, sectionExpression, resolvers.size()), false));
+					actionStack.peek().add(new RenderDynamicContent(Expression.load(context.userContext, sectionExpression, resolvers.size()), false));
 					break;
 				}
 
@@ -232,14 +244,14 @@ public class Template {
 					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 0, expression.length());
 
 					textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-					actionStack.peek().add(new RenderDynamicContent(Expression.load(context, sectionExpression, resolvers.size()), true));
+					actionStack.peek().add(new RenderDynamicContent(Expression.load(context.userContext, sectionExpression, resolvers.size()), true));
 					break;
 				}
 				}
 			}
 
 			if (!loader.hasNext()) {
-				throw new LoadException(context.reset(), "Unexpected end of stream, unclosed tag");
+				throw new LoadException(context.loaders, "Unexpected end of stream, unclosed tag");
 			}
 
 			// Advance past the end delimiter
@@ -247,45 +259,112 @@ public class Template {
 		}
 	}
 
+	/**
+	 * Loads a partial by name.
+	 *
+	 * @param name the name of the partial
+	 * @return The loaded partial
+	 * @throws LoadException if an error is encountered while loading the partial
+	 */
+	private static Template loadPartial(final LoadContext context, final String name) throws LoadException {
+		// First, try to load the partial from an existing template
+		Template found = context.userContext.partials.get(name);
+
+		if (found == null) {
+			// Next, try to load the partial from an internal string
+			final String templateText = context.userContext.getStringPartials().get(name);
+
+			if (templateText != null) {
+				context.userContext.partials.put(name, RECURSIVE_TEMPLATE_DETECTED);
+				found = new Template(name, templateText, context.userContext);
+				context.userContext.partials.put(name, found);
+			} else {
+				// Lastly, try to load the partial from file
+				final Path currentDirectoryFile = Paths.get(name);
+
+				// Try to load the partial from the current directory
+				if (currentDirectoryFile.toFile().isFile()) {
+					context.userContext.partials.put(name, RECURSIVE_TEMPLATE_DETECTED);
+					found = new Template(currentDirectoryFile, context.userContext);
+					context.userContext.partials.put(name, found);
+					return found;
+				}
+
+				// Try to load the partial from the list of include directories
+				for (final Path directory : context.userContext.getIncludeDirectories()) {
+					final Path file = directory.resolve(name);
+
+					if (file.toFile().isFile()) {
+						context.userContext.partials.put(name, RECURSIVE_TEMPLATE_DETECTED);
+						found = new Template(file, context.userContext);
+						context.userContext.partials.put(name, found);
+						return found;
+					}
+				}
+
+				if (found == null) {
+					if (context.userContext.getThrowOnPartialNotFound()) {
+						throw new LoadException(context.loaders, "Partial not found: " + name);
+					} else {
+						return EMPTY_TEMPLATE;
+					}
+				}
+			}
+		}
+
+		return found;
+	}
+
 	private final List<Action> actions;
 
-	public Template() {
+	private Template() {
 		this.actions = new ArrayList<>();
 	}
 
-	public Template(final String name, final CharSequence value, final LoadContext context) throws LoadException {
+	public Template(final String name, final CharSequence value, final Context context) throws LoadException {
 		try (final Loader loader = new Loader(name, value)) {
-			this.actions = load(context, loader);
+			this.actions = load(new LoadContext(context), loader);
 		} catch (final IOException e) {
 			// This should never happen, since we are loading from a string
 			throw new RuntimeException("An internal error occurred while loading a template from a character sequence", e);
 		}
 	}
 
-	public Template(final Path file, final Charset charset, final LoadContext context) throws LoadException {
-		try (final Loader loader = new Loader(file.toString(), file, charset)) {
-			this.actions = load(context, loader);
+	public Template(final Path file, final Context context) throws LoadException {
+		final LoadContext loadContext = new LoadContext(context);
+
+		try (final Loader loader = new Loader(file.toString(), file, context.getCharset())) {
+			this.actions = load(loadContext, loader);
 		} catch (final IOException e) {
-			throw new LoadException(context.reset(), "File could not be opened (" + e.getMessage() + ")");
+			throw new LoadException(loadContext.loaders, "File could not be opened (" + e.getMessage() + ")");
 		}
 	}
 
-	public Template(final String name, final InputStream stream, final Charset charset, final LoadContext context) throws LoadException, IOException {
-		try (final Loader loader = new Loader(name, stream, charset)) {
-			this.actions = load(context, loader);
+	public Template(final String name, final Reader reader, final Context context) throws LoadException, IOException {
+		try (final Loader loader = new Loader(name, reader)) {
+			this.actions = load(new LoadContext(context), loader);
 		}
 	}
 
-	public void render(final RenderContext context, final PrintStream stream) {
-		context.getSectionData().push(context.getGlobalData());
-		context.getIndentation().push("");
+	/**
+	 * Renders the template to the specified writer using the specified context
+	 *
+	 * @param context the context used while rendering
+	 * @param writer the writer used to render the template
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	public void render(final Context context, final Writer writer) throws IOException {
+		final RenderContext renderContext = new RenderContext(context);
+
+		renderContext.getSectionData().push(context.getGlobalData());
+		renderContext.getIndentation().push("");
 
 		for (final Action action : actions) {
-			action.perform(context, stream);
+			action.perform(renderContext, writer);
 		}
 
-		context.getIndentation().pop();
-		context.getSectionData().pop();
+		renderContext.getIndentation().pop();
+		renderContext.getSectionData().pop();
 	}
 
 }

@@ -1,6 +1,7 @@
 package horseshoe;
 
-import java.io.PrintStream;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.Iterator;
 import java.util.List;
 
@@ -43,14 +44,15 @@ class RenderSection implements Action {
 	 *
 	 * @param context the render context
 	 * @param data the data to render
-	 * @param stream the stream used for rendering
+	 * @param writer the writer used for rendering
 	 * @param actions the actions to render
+	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	protected static void renderActions(final RenderContext context, final Object data, final PrintStream stream, final List<Action> actions) {
+	protected static void renderActions(final RenderContext context, final Object data, final Writer writer, final List<Action> actions) throws IOException {
 		context.getSectionData().push(data);
 
 		for (final Action action : actions) {
-			action.perform(context, stream);
+			action.perform(context, writer);
 		}
 
 		context.getSectionData().pop();
@@ -75,29 +77,30 @@ class RenderSection implements Action {
 	 *
 	 * @param context the render context
 	 * @param data the data to render
-	 * @param stream the stream used for rendering
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	protected void dispatchData(final RenderContext context, final Object data, final PrintStream stream) {
+	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
 		if (data instanceof Iterable<?>) {
 			final Iterator<?> it = ((Iterable<?>)data).iterator();
 
 			if (it.hasNext()) {
 				do {
-					renderActions(context, it.next(), stream, section.getActions());
+					renderActions(context, it.next(), writer, section.getActions());
 				} while (it.hasNext());
 			} else {
-				renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 			}
 		} else if (data instanceof Boolean) {
 			if ((Boolean)data) {
-				renderActions(context, context.getSectionData().peek(), stream, section.getActions());
+				renderActions(context, context.getSectionData().peek(), writer, section.getActions());
 			} else {
-				renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 			}
 		} else if (data != null) {
-			renderActions(context, data, stream, section.getActions());
+			renderActions(context, data, writer, section.getActions());
 		} else {
-			renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 		}
 	}
 
@@ -111,8 +114,8 @@ class RenderSection implements Action {
 	}
 
 	@Override
-	public final void perform(final RenderContext context, final PrintStream stream) {
-		dispatchData(context, expression.evaluate(context), stream);
+	public final void perform(final RenderContext context, final Writer writer) throws IOException {
+		dispatchData(context, expression.evaluate(context), writer);
 	}
 
 }

@@ -1,6 +1,7 @@
 package horseshoe;
 
-import java.io.PrintStream;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -26,27 +27,27 @@ class RenderSection_8 extends RenderSection {
 	}
 
 	@Override
-	protected void dispatchData(final RenderContext context, final Object data, final PrintStream stream) {
+	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
 		if (data instanceof Stream<?>) {
 			final List<Object> list = ((Stream<?>)data).collect(Collectors.toList()); // TODO: Stream.forEach().orElse()?
 
 			if (!list.isEmpty()) {
 				for (final Object obj : list) {
-					renderActions(context, obj, stream, section.getActions());
+					renderActions(context, obj, writer, section.getActions());
 				}
 			} else {
-				renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 			}
 		} else if (data instanceof Optional<?>) {
 			final Optional<?> optional = (Optional<?>)data;
 
 			if (optional.isPresent()) {
-				renderActions(context, optional.get(), stream, section.getActions());
+				renderActions(context, optional.get(), writer, section.getActions());
 			} else {
-				renderActions(context, context.getSectionData().peek(), stream, section.getInvertedActions());
+				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 			}
 		} else {
-			super.dispatchData(context, data, stream);
+			super.dispatchData(context, data, writer);
 		}
 	}
 

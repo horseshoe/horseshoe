@@ -2,7 +2,6 @@ package horseshoe.internal;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
@@ -11,7 +10,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Loader implements AutoCloseable {
+public final class Loader implements AutoCloseable {
 
 	private static final Pattern NEW_LINE = Pattern.compile("\\r\\n?|\\n");
 
@@ -50,9 +49,9 @@ public class Loader implements AutoCloseable {
 	 * @param charset the character set to use while loading the stream
 	 * @throws IOException if the stream cannot be read
 	 */
-	public Loader(final String name, final InputStream stream, final Charset charset) throws IOException {
+	public Loader(final String name, final Reader reader) throws IOException {
 		this.name = name;
-		this.reader = new InputStreamReader(stream, charset);
+		this.reader = reader;
 		this.streamBuffer = new Buffer(4096);
 		this.buffer = this.streamBuffer;
 
@@ -70,7 +69,7 @@ public class Loader implements AutoCloseable {
 	 * @throws IOException if the file cannot be opened or read
 	 */
 	public Loader(final String name, final Path file, final Charset charset) throws IOException {
-		this(name, new FileInputStream(file.toFile()), charset);
+		this(name, new InputStreamReader(new FileInputStream(file.toFile()), charset));
 	}
 
 	/**

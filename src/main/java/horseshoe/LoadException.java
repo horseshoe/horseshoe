@@ -1,5 +1,6 @@
 package horseshoe;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class LoadException extends Exception {
 	 * @param error the error associated with the exception
 	 * @return an exception message containing the error and a trace of where the exception occurred
 	 */
-	private static String createMessage(final List<Loader> loaders, final String error) {
+	private static String createMessage(final Iterable<Loader> loaders, final String error) {
 		final StringBuilder sb = new StringBuilder(error);
 		final Iterator<Loader> it = loaders.iterator();
 
@@ -33,7 +34,7 @@ public class LoadException extends Exception {
 		return sb.toString();
 	}
 
-	private final List<Loader> loaders;
+	private final List<Loader> loaders = new ArrayList<>();
 
 	/**
 	 * Creates a new load exception
@@ -41,9 +42,12 @@ public class LoadException extends Exception {
 	 * @param loaders the items being loaded with the exception occurred
 	 * @param error the error associated with the exception
 	 */
-	public LoadException(final List<Loader> loaders, final String error) {
+	public LoadException(final Iterable<Loader> loaders, final String error) {
 		super(createMessage(loaders, error));
-		this.loaders = loaders;
+
+		for (final Loader loader : loaders) {
+			this.loaders.add(loader);
+		}
 	}
 
 	/**

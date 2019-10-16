@@ -1,8 +1,9 @@
 package horseshoe;
 
-import java.io.PrintStream;
+import java.io.IOException;
+import java.io.Writer;
 
-class RenderDynamicContent implements Action {
+final class RenderDynamicContent implements Action {
 
 	private final Expression resolver;
 	private final boolean escaped;
@@ -13,18 +14,18 @@ class RenderDynamicContent implements Action {
 	 * @param resolver the resolver for the expression
 	 * @param escaped true if the rendered content will be escaped, otherwise false
 	 */
-	RenderDynamicContent(final Expression resolver, final boolean escaped) {
+	public RenderDynamicContent(final Expression resolver, final boolean escaped) {
 		this.resolver = resolver;
 		this.escaped = escaped;
 	}
 
 	@Override
-	public void perform(final RenderContext context, final PrintStream stream) {
+	public void perform(final RenderContext context, final Writer writer) throws IOException {
 		final Object obj = resolver.evaluate(context);
 
 		if (obj != null) {
 			final String value = obj.toString();
-			stream.append(escaped && context.getEscapeFunction() != null ? context.getEscapeFunction().escape(value) : value);
+			writer.write(escaped && context.getUserContext().getEscapeFunction() != null ? context.getUserContext().getEscapeFunction().escape(value) : value);
 		}
 	}
 

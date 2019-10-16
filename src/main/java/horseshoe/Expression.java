@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 import horseshoe.internal.CharSequenceUtils;
 
-class Expression {
+final class Expression {
 
 	private static final ExpressionSegment EMPTY_SEGMENTS[] = new ExpressionSegment[0];
 
@@ -15,7 +15,7 @@ class Expression {
 	private static final Pattern SEGMENT_LOADER_TOKEN = Pattern.compile("[.(,)]");
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 
-	public static Expression load(final LoadContext context, final CharSequence value, final Matcher matcher, final int maxBackreach) {
+	public static Expression load(final Context context, final CharSequence value, final Matcher matcher, final int maxBackreach) {
 		final int length = value.length();
 		final int parentheses = 0;
 		int backreach = 0;
@@ -57,7 +57,7 @@ class Expression {
 		return resolver;
 	}
 
-	public static Expression load(final LoadContext context, final CharSequence value, final int maxBackreach) {
+	public static Expression load(final Context context, final CharSequence value, final int maxBackreach) {
 		return load(context, value, SEGMENT_BACKREACH.matcher(value), maxBackreach);
 	}
 
@@ -74,15 +74,13 @@ class Expression {
 			return true;
 		} else if (object instanceof Expression) {
 			return backreach == ((Expression)object).backreach && segments.equals(((Expression)object).segments);
-		} else if (object instanceof CharSequence) {
-			return true; // TODO
 		}
 
 		return false;
 	}
 
 	public Object evaluate(final RenderContext context) {
-		if (context.getAllowAccessToFullContextStack()) {
+		if (context.getUserContext().getAllowAccessToFullContextStack()) {
 			nextContext:
 			for (final Object contextObject : context.getSectionData()) {
 				if (segments.length > 0) {
@@ -107,7 +105,7 @@ class Expression {
 				return contextObject;
 			}
 		} else { // Only allow access to context at the specified scope
-			Object object = context.getSectionData().peek(backreach);
+			Object object = context.getSectionData().peek(backreach); // TODO: Allow access to global data
 
 			for (int i = 0; object != null && i < segments.length; i++) {
 				object = segments[i].evaluate(context, object);
@@ -128,6 +126,11 @@ class Expression {
 		}
 
 		return hash;
+	}
+
+	public boolean matches(final CharSequence sectionExpression) {
+		// TODO Auto-generated method stub
+		return true;
 	}
 
 	@Override

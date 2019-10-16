@@ -2,10 +2,8 @@ package horseshoe;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,15 +26,13 @@ public class Helper {
 		return map;
 	}
 
-	public static void executeTest(final String template, final LoadContext parseContext, final RenderContext renderContext, final String expected) throws LoadException, IOException {
-		final Template t = new Template("Test", template, parseContext);
-		final ByteArrayOutputStream os = new ByteArrayOutputStream();
+	public static void executeTest(final String template, final Context context, final String expected) throws LoadException, IOException {
+		final Template t = new Template("Test", template, context);
 
-		try (PrintStream ps = new PrintStream(os, true, StandardCharsets.UTF_16.name())) {
-			t.render(renderContext, ps);
+		try (StringWriter writer = new StringWriter()) {
+			t.render(context, writer);
+			assertEquals(expected, writer.toString());
 		}
-
-		assertEquals(expected, os.toString(StandardCharsets.UTF_16.name()));
 	}
 
 	public static void executeMustacheTest(final String template, final Map<String, Object> data, final Map<String, Object> partialMap, final String expected) throws LoadException, IOException {
@@ -46,7 +42,7 @@ public class Helper {
 			partials.put(partial.getKey(), partial.getValue().toString());
 		}
 
-		executeTest(template, LoadContext.newMustacheLoadContext(partials), RenderContext.newMustacheRenderContext().put(data), expected);
+		executeTest(template, Context.newMustacheContext(partials).put(data), expected);
 	}
 
 }

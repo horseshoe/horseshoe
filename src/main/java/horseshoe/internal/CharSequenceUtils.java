@@ -1,6 +1,12 @@
 package horseshoe.internal;
 
-public class CharSequenceUtils {
+public final class CharSequenceUtils {
+
+	/**
+	 * Disables creation of the character sequence utils class.
+	 */
+	private CharSequenceUtils() {
+	}
 
 	/**
 	 * Creates a trimmed character sequence from the specified start and end.

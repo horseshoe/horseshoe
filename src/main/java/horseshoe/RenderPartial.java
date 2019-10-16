@@ -1,9 +1,10 @@
 package horseshoe;
 
-import java.io.PrintStream;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.List;
 
-class RenderPartial implements Action {
+final class RenderPartial implements Action {
 
 	private final List<Action> actions;
 	private final String indentation;
@@ -14,20 +15,20 @@ class RenderPartial implements Action {
 	 * @param actions the list of actions for the partial
 	 * @param indentation the indentation for the partial
 	 */
-	RenderPartial(final List<Action> actions, final String indentation) {
+	public RenderPartial(final List<Action> actions, final String indentation) {
 		this.actions = actions;
 		this.indentation = indentation;
 	}
 
 	@Override
-	public void perform(final RenderContext context, final PrintStream stream) {
+	public void perform(final RenderContext context, final Writer writer) throws IOException {
 		final String newIndentation = context.getIndentation().peek() + indentation;
 
 		context.getIndentation().push(newIndentation);
-		stream.print(newIndentation); // Always indent the first line manually
+		writer.write(newIndentation); // Always indent the first line manually
 
 		for (final Action action : actions) {
-			action.perform(context, stream);
+			action.perform(context, writer);
 		}
 
 		context.getIndentation().pop();

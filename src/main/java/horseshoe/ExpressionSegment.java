@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-class ExpressionSegment {
+final class ExpressionSegment {
 
 	private final Map<ResolverContext, Resolver> resolverDatabase = new LinkedHashMap<>();
 	private final String identifier;
@@ -28,6 +28,13 @@ class ExpressionSegment {
 		return false;
 	}
 
+	/**
+	 * Evaluates the expression segment given the render context and the result of the previous segment
+	 *
+	 * @param context the render context to use for evaluation
+	 * @param object the result of the previous segment
+	 * @return the result of the current expression
+	 */
 	public Object evaluate(final RenderContext context, final Object object) {
 		// Evaluate arguments
 		Object evaluatedArgs[] = null;
