@@ -18,31 +18,26 @@ public class Helper {
 
 	public static Map<String, Object> loadMap(final Object... values) {
 		final Map<String, Object> map = new LinkedHashMap<>();
-
 		for (int i = 0; i < values.length; i += 2) {
 			map.put(values[i].toString(), values[i + 1]);
 		}
-
 		return map;
 	}
 
-	public static void executeTest(final String template, final Context context, final String expected) throws LoadException, IOException {
+	public static void executeTest(final String template, final Context context, final Map<String, Object> data, final String expected) throws LoadException, IOException {
 		final Template t = new Template("Test", template, context);
-
 		try (StringWriter writer = new StringWriter()) {
-			t.render(context, writer);
+			t.render(data, writer);
 			assertEquals(expected, writer.toString());
 		}
 	}
 
 	public static void executeMustacheTest(final String template, final Map<String, Object> data, final Map<String, Object> partialMap, final String expected) throws LoadException, IOException {
-		final Map<String, String> partials = new LinkedHashMap<>();
-
+		final Partials partials = new Partials();
 		for (final Entry<String, Object> partial : partialMap.entrySet()) {
-			partials.put(partial.getKey(), partial.getValue().toString());
+			partials.add(partial.getKey(), partial.getValue().toString());
 		}
-
-		executeTest(template, Context.newMustacheContext(partials).put(data), expected);
+		executeTest(template, Context.newMustacheContext(partials), data, expected);
 	}
 
 }

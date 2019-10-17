@@ -3,14 +3,16 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import horseshoe.Partials.LazyTemplate;
 import horseshoe.internal.CharSequenceUtils;
 import horseshoe.internal.Loader;
 import horseshoe.internal.ParsedLine;
@@ -53,7 +55,7 @@ public class Template {
 	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*([^\\s]+)\\s+([^\\s]+)\\s*=");
 
 	private static final Template EMPTY_TEMPLATE = new Template();
-	private static final Template RECURSIVE_TEMPLATE_DETECTED = new Template();
+	static final Template RECURSIVE_TEMPLATE_DETECTED = new Template();
 
 	/**
 	 * Loads and returns a list of actions to be performed by when rendering the associated template
@@ -262,66 +264,34 @@ public class Template {
 	/**
 	 * Loads a partial by name.
 	 *
+	 * @param context the context used while loading the partial
 	 * @param name the name of the partial
 	 * @return The loaded partial
 	 * @throws LoadException if an error is encountered while loading the partial
 	 */
-	private static Template loadPartial(final LoadContext context, final String name) throws LoadException {
-		// First, try to load the partial from an existing template
-		Template found = context.userContext.partials.get(name);
-
-		if (found == null) {
-			// Next, try to load the partial from an internal string
-			final String templateText = context.userContext.getStringPartials().get(name);
-
-			if (templateText != null) {
-				context.userContext.partials.put(name, RECURSIVE_TEMPLATE_DETECTED);
-				found = new Template(name, templateText, context.userContext);
-				context.userContext.partials.put(name, found);
+	private static Template loadPartial(final LoadContext context, final String name) throws IOException, LoadException {
+		final LazyTemplate template = context.userContext.partials.map.get(name);
+		if (template == null) {
+			if (context.userContext.getThrowOnPartialNotFound()) {
+				throw new LoadException(context.loaders, "Partial not found: " + name);
 			} else {
-				// Lastly, try to load the partial from file
-				final Path currentDirectoryFile = Paths.get(name);
-
-				// Try to load the partial from the current directory
-				if (currentDirectoryFile.toFile().isFile()) {
-					context.userContext.partials.put(name, RECURSIVE_TEMPLATE_DETECTED);
-					found = new Template(currentDirectoryFile, context.userContext);
-					context.userContext.partials.put(name, found);
-					return found;
-				}
-
-				// Try to load the partial from the list of include directories
-				for (final Path directory : context.userContext.getIncludeDirectories()) {
-					final Path file = directory.resolve(name);
-
-					if (file.toFile().isFile()) {
-						context.userContext.partials.put(name, RECURSIVE_TEMPLATE_DETECTED);
-						found = new Template(file, context.userContext);
-						context.userContext.partials.put(name, found);
-						return found;
-					}
-				}
-
-				if (found == null) {
-					if (context.userContext.getThrowOnPartialNotFound()) {
-						throw new LoadException(context.loaders, "Partial not found: " + name);
-					} else {
-						return EMPTY_TEMPLATE;
-					}
-				}
+				return EMPTY_TEMPLATE;
 			}
+		} else {
+			return template.get(context.userContext);
 		}
-
-		return found;
 	}
 
 	private final List<Action> actions;
+	private final Context context;
 
 	private Template() {
 		this.actions = new ArrayList<>();
+		this.context = new Context();
 	}
 
 	public Template(final String name, final CharSequence value, final Context context) throws LoadException {
+		this.context = context;
 		try (final Loader loader = new Loader(name, value)) {
 			this.actions = load(new LoadContext(context), loader);
 		} catch (final IOException e) {
@@ -330,10 +300,10 @@ public class Template {
 		}
 	}
 
-	public Template(final Path file, final Context context) throws LoadException {
+	public Template(final Path file, final Charset charset, final Context context) throws LoadException {
+		this.context = context;
 		final LoadContext loadContext = new LoadContext(context);
-
-		try (final Loader loader = new Loader(file.toString(), file, context.getCharset())) {
+		try (final Loader loader = new Loader(file.toString(), file, charset)) {
 			this.actions = load(loadContext, loader);
 		} catch (final IOException e) {
 			throw new LoadException(loadContext.loaders, "File could not be opened (" + e.getMessage() + ")");
@@ -341,6 +311,7 @@ public class Template {
 	}
 
 	public Template(final String name, final Reader reader, final Context context) throws LoadException, IOException {
+		this.context = context;
 		try (final Loader loader = new Loader(name, reader)) {
 			this.actions = load(new LoadContext(context), loader);
 		}
@@ -349,14 +320,14 @@ public class Template {
 	/**
 	 * Renders the template to the specified writer using the specified context
 	 *
-	 * @param context the context used while rendering
+	 * @param globalData the global data used to render the template
 	 * @param writer the writer used to render the template
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	public void render(final Context context, final Writer writer) throws IOException {
+	public void render(final Map<String, Object> globalData, final Writer writer) throws IOException {
 		final RenderContext renderContext = new RenderContext(context);
 
-		renderContext.getSectionData().push(context.getGlobalData());
+		renderContext.getSectionData().push(globalData);
 		renderContext.getIndentation().push("");
 
 		for (final Action action : actions) {

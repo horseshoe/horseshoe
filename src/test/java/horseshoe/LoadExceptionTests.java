@@ -3,6 +3,7 @@ package horseshoe;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Collections;
 
 import org.junit.Test;
 
@@ -14,7 +15,7 @@ public class LoadExceptionTests {
 	@Test
 	public void testLoadUnclosedTag() throws IOException {
 		try {
-			Helper.executeTest("This is a {{#Test}} test template {{/}", new Context(), INVALID);
+			Helper.executeTest("This is a {{#Test}} test template {{/}", new Context(), Collections.emptyMap(), INVALID);
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(1, e.getLoaders().get(0).getLine());
@@ -25,7 +26,7 @@ public class LoadExceptionTests {
 	@Test
 	public void testLoadUnrecognizedTag() throws IOException {
 		try {
-			Helper.executeTest("This is a" + LS + " {{#Test}} " + LS + "test template" + LS + " {{" + LS + LS + "/}", new Context(), INVALID);
+			Helper.executeTest("This is a" + LS + " {{#Test}} " + LS + "test template" + LS + " {{" + LS + LS + "/}", new Context(), Collections.emptyMap(), INVALID);
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(4, e.getLoaders().get(0).getLine());
