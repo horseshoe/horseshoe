@@ -1,9 +1,14 @@
 plugins {
 	id 'java-library'
+	id 'jacoco'
 }
 
 repositories {
 	jcenter()
+}
+
+test {
+	finalizedBy jacocoTestReport
 }
 
 dependencies {

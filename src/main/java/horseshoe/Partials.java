@@ -76,4 +76,15 @@ public final class Partials {
 		return this;
 	}
 
+	public Partials add(final String name, final Template template) {
+		// TODO: seems bizarre to have to specify the name of a template when its an argument (either implicitly through the file name or explicitly)
+		map.put(name, new LazyTemplate() {
+			@Override
+			public Template get(final Context context) {
+				return template;
+			}
+		});
+		return this;
+	}
+
 }
