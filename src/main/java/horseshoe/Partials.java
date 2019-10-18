@@ -58,13 +58,14 @@ public final class Partials {
 				final Path f = file.getFileName();
 				final String fileName;
 				if (f != null && (fileName = f.toString()).endsWith(fileExtension)) {
-					map.put(fileName.substring(0, fileName.lastIndexOf('.')), new LazyTemplate() {
+					final String fileNameNoExtension = fileName.substring(0, fileName.lastIndexOf('.'));
+					map.put(fileNameNoExtension, new LazyTemplate() {
 						private Template t = null;
 						@Override
 						public synchronized Template get(final Context context) throws IOException, LoadException {
 							if (t == null) {
 								t = Template.RECURSIVE_TEMPLATE_DETECTED;
-								t = new Template(file, charset, context);
+								t = new Template(fileNameNoExtension, file, charset, context);
 							}
 							return t;
 						}

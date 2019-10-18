@@ -1,18 +1,32 @@
 package horseshoe;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import horseshoe.internal.PersistentStack;
 
 final class RenderContext {
 
 	private final Context userContext;
+	private final Map<String, Object> globalData;
 	private final PersistentStack<Object> sectionData = new PersistentStack<>();
 	private final PersistentStack<String> indentation = new PersistentStack<>();
 
 	/**
 	 * Creates a default render context.
 	 */
-	public RenderContext(final Context userContext) {
+	public RenderContext(final Context userContext, final Map<String, Object> globalData) {
 		this.userContext = userContext;
+		this.globalData = new HashMap<>(globalData);
+	}
+
+	/**
+	 * Gets the global data used by the rendering process.
+	 *
+	 * @return the global data used by the rendering process
+	 */
+	Map<String, Object> getGlobalData() {
+		return globalData;
 	}
 
 	/**

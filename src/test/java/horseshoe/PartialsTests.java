@@ -20,7 +20,7 @@ public final class PartialsTests {
 		final StringWriter writer = new StringWriter();
 		t.render(loadMap("a", loadMap("b", 2, "x", false), "x", true), writer);
 		Assert.assertEquals("2true", writer.toString());
-		// FIXME: This test does not pass properly, replace 'x=false' with 'x=null' and it passes
+		// FIXME: StackOverflowError
 	}
 
 	@Test
@@ -31,6 +31,7 @@ public final class PartialsTests {
 		final StringWriter writer = new StringWriter();
 		t.render(loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
 		Assert.assertEquals("324", writer.toString());
+		// FIXME: StackOverflowError
 	}
 
 }

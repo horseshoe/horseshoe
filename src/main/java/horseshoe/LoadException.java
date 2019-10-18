@@ -51,6 +51,21 @@ public class LoadException extends Exception {
 	}
 
 	/**
+	 * Creates a new load exception
+	 *
+	 * @param loaders the items being loaded with the exception occurred
+	 * @param error the error associated with the exception
+	 * @param throwable the associated exception
+	 */
+	public LoadException(final Iterable<Loader> loaders, final String error, final Throwable throwable) {
+		super(createMessage(loaders, error), throwable);
+
+		for (final Loader loader : loaders) {
+			this.loaders.add(loader);
+		}
+	}
+
+	/**
 	 * Gets the list of active loaders when the exception occurred.
 	 *
 	 * @return the list of active loaders when the exception occurred
