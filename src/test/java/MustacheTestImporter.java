@@ -12,7 +12,7 @@ import java.util.Map.Entry;
 
 import org.yaml.snakeyaml.Yaml;
 
-public class TestImporter {
+public class MustacheTestImporter {
 
 	private static String capitalize(final String value) {
 		return value.substring(0, 1).toUpperCase() + value.substring(1);
@@ -90,7 +90,8 @@ public class TestImporter {
 
 		Files.newDirectoryStream(Paths.get(args[0]), path -> !path.getFileName().toString().startsWith("~") && path.toString().endsWith(".yml")).
 			forEach(path -> {
-				final String className = capitalize(path.getFileName().toString().replace(".yml", ""));
+				final String filename = path.getFileName().toString();
+				final String className = capitalize((filename.startsWith("~") ? filename.substring(1) : filename).replace(".yml", ""));
 				final Yaml yaml = new Yaml();
 
 				System.out.println("Loading " + path.toString() + "...");

@@ -9,8 +9,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class Helper {
+
+	public static Object loadLambda(final Supplier<Object> value) {
+		return value;
+	}
+
+	public static Object loadLambda(final Function<String, Object> value) {
+		return value;
+	}
 
 	public static List<Object> loadList(final Object... values) {
 		return Arrays.asList(values);

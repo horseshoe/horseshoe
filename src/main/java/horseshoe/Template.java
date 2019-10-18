@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -133,120 +132,124 @@ public class Template {
 			final CharSequence expression = loader.next(loader.peek("{") ? delimiter.unescapedEnd : delimiter.end);
 
 			if (expression.length() != 0) {
-				switch (expression.charAt(0)) {
-				case '!': // Comments are completely ignored
-					break;
+				try {
+					switch (expression.charAt(0)) {
+					case '!': // Comments are completely ignored
+						break;
 
-				case '>': { // Load partial
-					final Template partial = loadPartial(context, CharSequenceUtils.trim(expression, 1, expression.length()).toString());
-					final List<Action> actions;
+					case '>': { // Load partial
+						final Template partial = loadPartial(context, CharSequenceUtils.trim(expression, 1, expression.length()).toString());
+						final List<Action> actions;
 
-					if (partial == RECURSIVE_TEMPLATE_DETECTED) {
-						if (resolvers.isEmpty()) {
-							new LoadException(context.loaders, "Partial recursion detected outside of section");
+						if (partial == RECURSIVE_TEMPLATE_DETECTED) {
+							if (resolvers.isEmpty()) {
+								new LoadException(context.loaders, "Partial recursion detected outside of section");
+							}
+
+							actions = templateActions;
+						} else {
+							actions = partial.actions;
 						}
 
-						actions = templateActions;
-					} else {
-						actions = partial.actions;
-					}
-
-					if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
-						textBeforeStandaloneTag.ignoreLastLine();
-						actionStack.peek().add(new RenderPartial(actions, textBeforeStandaloneTag.getLastLine()));
-					} else {
-						actionStack.peek().add(new RenderPartial(actions, ""));
-					}
-
-					break;
-				}
-
-				case '#': { // Start a new section, or repeat the previous section
-					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
-
-					if (sectionExpression.length() == 0) { // Repeat the previous section
-						if (!resolvers.hasPoppedItem()) {
-							throw new LoadException(context.loaders, "Repeat section without prior section");
+						if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
+							textBeforeStandaloneTag.ignoreLastLine();
+							actionStack.peek().add(new RenderPartial(actions, textBeforeStandaloneTag.getLastLine()));
+						} else {
+							actionStack.peek().add(new RenderPartial(actions, ""));
 						}
 
-						resolvers.push();
-					} else { // Start a new section
-						resolvers.push(Expression.load(context.userContext, sectionExpression, resolvers.size()));
+						break;
 					}
 
-					// Add a new render section action
-					final Section section = new Section();
+					case '#': { // Start a new section, or repeat the previous section
+						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
-					actionStack.peek().add(RenderSection.FACTORY.create(resolvers.peek(), section));
-					actionStack.push(section.getActions());
-					break;
-				}
+						if (sectionExpression.length() == 0) { // Repeat the previous section
+							if (!resolvers.hasPoppedItem()) {
+								throw new LoadException(context.loaders, "Repeat section without prior section");
+							}
 
-				case '^': { // Start a new inverted section, or else block for the current section
-					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+							resolvers.push();
+						} else { // Start a new section
+							resolvers.push(Expression.load(sectionExpression, resolvers.size()));
+						}
 
-					if (sectionExpression.length() == 0) { // Else block for the current section
+						// Add a new render section action
+						final Section section = new Section();
+
+						actionStack.peek().add(RenderSection.FACTORY.create(resolvers.peek(), section));
+						actionStack.push(section.getActions());
+						break;
+					}
+
+					case '^': { // Start a new inverted section, or else block for the current section
+						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+
+						if (sectionExpression.length() == 0) { // Else block for the current section
+							if (resolvers.isEmpty()) {
+								throw new LoadException(context.loaders, "Section else tag outside section start tag");
+							}
+
+							actionStack.pop();
+						} else { // Start a new inverted section
+							resolvers.push(Expression.load(sectionExpression, resolvers.size()));
+							actionStack.peek().add(RenderSection.FACTORY.create(resolvers.peek(), new Section()));
+						}
+
+						// Grab the inverted action list from the section
+						final List<Action> actions = actionStack.peek();
+
+						actionStack.push(((RenderSection)actions.get(actions.size() - 1)).getSection().getInvertedActions());
+						break;
+					}
+
+					case '/': { // Close the current section
+						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+
 						if (resolvers.isEmpty()) {
-							throw new LoadException(context.loaders, "Section else tag outside section start tag");
+							throw new LoadException(context.loaders, "Section close tag without matching section start tag");
+						}
+
+						final Expression resolver = resolvers.pop();
+
+						if (sectionExpression.length() != 0 && !resolver.exactlyMatches(sectionExpression)) {
+							throw new LoadException(context.loaders, "Unmatched section start tag, expecting: \"" + resolver.toString() + "\"");
 						}
 
 						actionStack.pop();
-					} else { // Start a new inverted section
-						resolvers.push(Expression.load(context.userContext, sectionExpression, resolvers.size()));
-						actionStack.peek().add(RenderSection.FACTORY.create(resolvers.peek(), new Section()));
+						break;
 					}
 
-					// Grab the inverted action list from the section
-					final List<Action> actions = actionStack.peek();
+					case '=': { // Set delimiter
+						final Matcher matcher = SET_DELIMITER.matcher(expression);
 
-					actionStack.push(((RenderSection)actions.get(actions.size() - 1)).getSection().getInvertedActions());
-					break;
-				}
+						if (!matcher.matches()) {
+							throw new LoadException(context.loaders, "Invalid set delimiter tag");
+						}
 
-				case '/': { // Close the current section
-					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
-
-					if (resolvers.isEmpty()) {
-						throw new LoadException(context.loaders, "Section close tag without matching section start tag");
+						delimiter = new Delimiter(matcher.group(1), matcher.group(2));
+						break;
 					}
 
-					final Expression resolver = resolvers.pop();
+					case '{':
+					case '&': {
+						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
-					if (sectionExpression.length() != 0 && !resolver.matches(sectionExpression)) {
-						throw new LoadException(context.loaders, "Unmatched section start tag, expecting: \"" + resolver.toString() + "\"");
+						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
+						actionStack.peek().add(new RenderDynamicContent(Expression.load(sectionExpression, resolvers.size()), false));
+						break;
 					}
 
-					actionStack.pop();
-					break;
-				}
+					default: {
+						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 0, expression.length());
 
-				case '=': { // Set delimiter
-					final Matcher matcher = SET_DELIMITER.matcher(expression);
-
-					if (!matcher.matches()) {
-						throw new LoadException(context.loaders, "Invalid set delimiter tag");
+						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
+						actionStack.peek().add(new RenderDynamicContent(Expression.load(sectionExpression, resolvers.size()), true));
+						break;
 					}
-
-					delimiter = new Delimiter(matcher.group(1), matcher.group(2));
-					break;
-				}
-
-				case '{':
-				case '&': {
-					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
-
-					textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-					actionStack.peek().add(new RenderDynamicContent(Expression.load(context.userContext, sectionExpression, resolvers.size()), false));
-					break;
-				}
-
-				default: {
-					final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 0, expression.length());
-
-					textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-					actionStack.peek().add(new RenderDynamicContent(Expression.load(context.userContext, sectionExpression, resolvers.size()), true));
-					break;
-				}
+					}
+				} catch (final Exception e) {
+					throw new LoadException(context.loaders, "Invalid expression: " + expression.subSequence(1, expression.length()), e);
 				}
 			}
 
@@ -279,24 +282,13 @@ public class Template {
 				found = new Template(name, templateText, context.userContext);
 				context.userContext.partials.put(name, found);
 			} else {
-				// Lastly, try to load the partial from file
-				final Path currentDirectoryFile = Paths.get(name);
-
-				// Try to load the partial from the current directory
-				if (currentDirectoryFile.toFile().isFile()) {
-					context.userContext.partials.put(name, RECURSIVE_TEMPLATE_DETECTED);
-					found = new Template(currentDirectoryFile, context.userContext);
-					context.userContext.partials.put(name, found);
-					return found;
-				}
-
 				// Try to load the partial from the list of include directories
 				for (final Path directory : context.userContext.getIncludeDirectories()) {
 					final Path file = directory.resolve(name);
 
 					if (file.toFile().isFile()) {
 						context.userContext.partials.put(name, RECURSIVE_TEMPLATE_DETECTED);
-						found = new Template(file, context.userContext);
+						found = new Template(file.toString(), file, context.userContext);
 						context.userContext.partials.put(name, found);
 						return found;
 					}
@@ -315,13 +307,28 @@ public class Template {
 		return found;
 	}
 
+	private final String name;
 	private final List<Action> actions;
 
+	/**
+	 * Creates an empty template with no name.
+	 */
 	private Template() {
+		this.name = "";
 		this.actions = new ArrayList<>();
 	}
 
+	/**
+	 * Creates a new template from a string.
+	 *
+	 * @param name the name of the template
+	 * @param value the string value to load as a template
+	 * @param context the context to use while loading the template
+	 * @throws LoadException if an error is encountered while loading the template
+	 */
 	public Template(final String name, final CharSequence value, final Context context) throws LoadException {
+		this.name = name;
+
 		try (final Loader loader = new Loader(name, value)) {
 			this.actions = load(new LoadContext(context), loader);
 		} catch (final IOException e) {
@@ -330,20 +337,49 @@ public class Template {
 		}
 	}
 
-	public Template(final Path file, final Context context) throws LoadException {
+	/**
+	 * Creates a new template from a file.
+	 *
+	 * @param name the name of the template
+	 * @param file the file to load as a template
+	 * @param context the context to use while loading the template
+	 * @throws LoadException if an error is encountered while loading the template
+	 */
+	public Template(final String name, final Path file, final Context context) throws LoadException {
+		this.name = name;
+
 		final LoadContext loadContext = new LoadContext(context);
 
-		try (final Loader loader = new Loader(file.toString(), file, context.getCharset())) {
+		try (final Loader loader = new Loader(name, file, context.getCharset())) {
 			this.actions = load(loadContext, loader);
 		} catch (final IOException e) {
 			throw new LoadException(loadContext.loaders, "File could not be opened (" + e.getMessage() + ")");
 		}
 	}
 
+	/**
+	 * Creates a new template using a reader.
+	 *
+	 * @param name the name of the template
+	 * @param reader the reader to use to load as a template
+	 * @param context the context to use while loading the template
+	 * @throws LoadException if an error is encountered while loading the template
+	 */
 	public Template(final String name, final Reader reader, final Context context) throws LoadException, IOException {
+		this.name = name;
+
 		try (final Loader loader = new Loader(name, reader)) {
 			this.actions = load(new LoadContext(context), loader);
 		}
+	}
+
+	/**
+	 * Gets the name of the template.
+	 *
+	 * @return the name of the template
+	 */
+	public String getName() {
+		return name;
 	}
 
 	/**
