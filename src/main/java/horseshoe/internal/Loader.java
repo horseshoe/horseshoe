@@ -165,25 +165,22 @@ public final class Loader implements AutoCloseable {
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
 	private int loadMoreData() throws IOException {
+		// If the current data is using more than 25% of the buffer, then double the size of the buffer
+		// Otherwise, if the data starts more than 50% into the buffer then move the data to the beginning of the buffer
 		if (streamBuffer.length() - bufferOffset >= streamBuffer.capacity() / 4) {
-			// Resize buffer
+			// Create a new buffer twice as big
 			final Buffer oldBuffer = streamBuffer;
 			streamBuffer = new Buffer(oldBuffer.capacity() * 2, oldBuffer.length() - bufferOffset);
 			buffer = streamBuffer;
 
-			for (int oldBufferLength = oldBuffer.length(), i = 0, j = bufferOffset; j < oldBufferLength; i++, j++) {
-				streamBuffer.getBuffer()[i] = oldBuffer.getBuffer()[j];
-			}
-
+			// Copy data to the new buffer
+			System.arraycopy(oldBuffer.getBuffer(), bufferOffset, streamBuffer.getBuffer(), 0, streamBuffer.length());
 			bufferOffset = 0;
 			matcher.reset(streamBuffer);
-		} else if (bufferOffset >= streamBuffer.capacity() / 8) {
-			// Move data to start of buffer
-			for (int streamBufferLength = streamBuffer.length(), i = 0, j = bufferOffset; j < streamBufferLength; i++, j++) {
-				streamBuffer.getBuffer()[i] = streamBuffer.getBuffer()[j];
-			}
-
+		} else if (bufferOffset >= streamBuffer.capacity() / 2) {
+			// Move the data to the beginning of the buffer
 			streamBuffer.setLength(streamBuffer.length() - bufferOffset);
+			System.arraycopy(streamBuffer.getBuffer(), bufferOffset, streamBuffer.getBuffer(), 0, streamBuffer.length());
 			bufferOffset = 0;
 			matcher.reset(streamBuffer);
 		}
