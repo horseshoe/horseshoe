@@ -1,9 +1,11 @@
 package horseshoe;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Context {
+public class Settings {
 
 	public static interface EscapeFunction {
 		/**
@@ -49,53 +51,37 @@ public class Context {
 	};
 
 	/**
-	 * Creates a new mustache-compatible context using the specified string partials.
+	 * Creates new mustache-compatible settings.
 	 *
-	 * @param partials the partials to use when a partial is included in a template
-	 * @return a new mustache-compatible context
+	 * @return new mustache-compatible settings
 	 */
-	public static Context newMustacheContext(final Partials partials) {
-		return new Context(partials).setAllowAccessToFullContextStack(true).setEscapeFunction(HTML_ESCAPE_FUNCTION).setLineEnding(KEEP_TEMPLATE_LINE_ENDINGS).setThrowOnPartialNotFound(false);
+	public static Settings newMustacheSettings() {
+		return new Settings().setAllowAccessToFullContextStack(true).setEscapeFunction(HTML_ESCAPE_FUNCTION).setLineEnding(KEEP_TEMPLATE_LINE_ENDINGS).setThrowOnTemplateNotFound(false);
 	}
 
-	/**
-	 * Creates a new mustache-compatible context.
-	 *
-	 * @return a new mustache-compatible context
-	 */
-	public static Context newMustacheContext() {
-		return newMustacheContext(new Partials());
-	}
-
+	private Charset charset = StandardCharsets.UTF_8;
 	private EscapeFunction escapeFunction = NO_ESCAPE_FUNCTION;
+
 	private boolean allowAccessToFullContextStack = false;
 	private String lineEnding = DEFAULT_LINE_ENDING;
-	private boolean throwOnPartialNotFound = true;
-	final Partials partials;
+	private boolean throwOnTemplateNotFound = true;
 
 	/**
-	 * Creates a context using the specified partials.
+	 * Gets whether or not expressions have full access to the settings stack during rendering.
 	 *
-	 * @param partials the partials to use when a partial is included in a template
-	 */
-	public Context(final Partials partials) {
-		this.partials = partials;
-	}
-
-	/**
-	 * Creates a new default context.
-	 */
-	public Context() {
-		this(new Partials());
-	}
-
-	/**
-	 * Gets whether or not expressions have full access to the context stack during rendering.
-	 *
-	 * @return true if expressions have full access to the context stack, otherwise false
+	 * @return true if expressions have full access to the settings stack, otherwise false
 	 */
 	public boolean getAllowAccessToFullContextStack() {
 		return allowAccessToFullContextStack;
+	}
+
+	/**
+	 * Gets the character set used for loading templates.
+	 *
+	 * @return the character set used for loading templates
+	 */
+	public Charset getCharset() {
+		return charset;
 	}
 
 	/**
@@ -117,22 +103,33 @@ public class Context {
 	}
 
 	/**
-	 * Gets whether or not an exception will be thrown when a partial is not found during loading.
+	 * Gets whether or not an exception will be thrown when a template is not found during loading.
 	 *
-	 * @return true if an exception will be thrown when a partial is not found, otherwise false
+	 * @return true if an exception will be thrown when a template is not found, otherwise false
 	 */
-	public boolean getThrowOnPartialNotFound() {
-		return throwOnPartialNotFound;
+	public boolean getThrowOnTemplateNotFound() {
+		return throwOnTemplateNotFound;
 	}
 
 	/**
 	 * Sets whether or not expressions have full access to the context stack during rendering.
 	 *
 	 * @param allowAccessToFullContextStack true to allow expressions have full access to the context stack, otherwise false
-	 * @return this context
+	 * @return this object
 	 */
-	public Context setAllowAccessToFullContextStack(final boolean allowAccessToFullContextStack) {
+	public Settings setAllowAccessToFullContextStack(final boolean allowAccessToFullContextStack) {
 		this.allowAccessToFullContextStack = allowAccessToFullContextStack;
+		return this;
+	}
+
+	/**
+	 * Sets the character set used for loading templates
+	 *
+	 * @param charset the character set used for loading templates
+	 * @return this object
+	 */
+	public Settings setCharset(final Charset charset) {
+		this.charset = charset;
 		return this;
 	}
 
@@ -142,7 +139,7 @@ public class Context {
 	 * @param escapeFunction the escape function used by the rendering process. If null, the rendering process will not escape the text.
 	 * @return this object
 	 */
-	public Context setEscapeFunction(final EscapeFunction escapeFunction) {
+	public Settings setEscapeFunction(final EscapeFunction escapeFunction) {
 		this.escapeFunction = escapeFunction;
 		return this;
 	}
@@ -153,19 +150,19 @@ public class Context {
 	 * @param lineEnding the line ending used by the rendering process. If null, the rendering process will use the line endings in the template.
 	 * @return this object
 	 */
-	public Context setLineEnding(final String lineEnding) {
+	public Settings setLineEnding(final String lineEnding) {
 		this.lineEnding = lineEnding;
 		return this;
 	}
 
 	/**
-	 * Sets whether or not an exception will be thrown when a partial is not found during loading.
+	 * Sets whether or not an exception will be thrown when a template is not found during loading.
 	 *
-	 * @param throwOnPartialNotFound true to throw an exception when a partial is not found, otherwise false
-	 * @return this context
+	 * @param throwOnTemplateNotFound true to throw an exception when a template is not found, otherwise false
+	 * @return this object
 	 */
-	public Context setThrowOnPartialNotFound(final boolean throwOnPartialNotFound) {
-		this.throwOnPartialNotFound = throwOnPartialNotFound;
+	public Settings setThrowOnTemplateNotFound(final boolean throwOnTemplateNotFound) {
+		this.throwOnTemplateNotFound = throwOnTemplateNotFound;
 		return this;
 	}
 

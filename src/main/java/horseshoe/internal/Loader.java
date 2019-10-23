@@ -1,6 +1,7 @@
 package horseshoe.internal;
 
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -46,15 +47,12 @@ public final class Loader implements AutoCloseable {
 	 *
 	 * @param name the name of the loader
 	 * @param reader the reader to load
-	 * @throws IOException if the stream cannot be read
 	 */
-	public Loader(final String name, final Reader reader) throws IOException {
+	public Loader(final String name, final Reader reader) {
 		this.name = name;
 		this.reader = reader;
 		this.streamBuffer = new Buffer(4096);
 		this.buffer = this.streamBuffer;
-
-		streamBuffer.setLength(reader.read(streamBuffer.getBuffer()));
 		this.matcher = NEW_LINE.matcher(streamBuffer);
 		this.newLineMatcher = NEW_LINE.matcher(streamBuffer);
 	}
@@ -65,9 +63,9 @@ public final class Loader implements AutoCloseable {
 	 * @param name the name of the loader
 	 * @param file the file to load
 	 * @param charset the character set to use while loading the file
-	 * @throws IOException if the file cannot be opened or read
+	 * @throws FileNotFoundException if the file does not exist
 	 */
-	public Loader(final String name, final Path file, final Charset charset) throws IOException {
+	public Loader(final String name, final Path file, final Charset charset) throws FileNotFoundException {
 		this(name, new InputStreamReader(new FileInputStream(file.toFile()), charset));
 	}
 

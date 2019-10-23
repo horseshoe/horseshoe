@@ -115,7 +115,7 @@ final class Expression {
 	 * @return the evaluated expression or null if the expression could not be evaluated
 	 */
 	public Object evaluate(final RenderContext context) {
-		if (context.getUserContext().getAllowAccessToFullContextStack()) {
+		if (context.getSettings().getAllowAccessToFullContextStack()) {
 			nextContext:
 			for (int i = Integer.min(backreach, context.getSectionData().size()); i < context.getSectionData().size(); i++) {
 				Object object = context.getSectionData().peek(i);

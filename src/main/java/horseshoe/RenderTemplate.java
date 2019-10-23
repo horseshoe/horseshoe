@@ -2,21 +2,20 @@ package horseshoe;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.List;
 
-final class RenderPartial implements Action {
+final class RenderTemplate implements Action {
 
-	private final List<Action> actions;
+	private final Template template;
 	private final String indentation;
 
 	/**
-	 * Creates a new render partial action
+	 * Creates a new render template action
 	 *
-	 * @param actions the list of actions for the partial
-	 * @param indentation the indentation for the partial
+	 * @param template the template to render
+	 * @param indentation the indentation for the template
 	 */
-	public RenderPartial(final List<Action> actions, final String indentation) {
-		this.actions = actions;
+	public RenderTemplate(final Template template, final String indentation) {
+		this.template = template;
 		this.indentation = indentation;
 	}
 
@@ -27,7 +26,7 @@ final class RenderPartial implements Action {
 		context.getIndentation().push(newIndentation);
 		writer.write(newIndentation); // Always indent the first line manually
 
-		for (final Action action : actions) {
+		for (final Action action : template.getActions()) {
 			action.perform(context, writer);
 		}
 

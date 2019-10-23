@@ -21,23 +21,27 @@ Horseshoe does not have the same design goals as Mustache, resulting in many dif
 Horseshoe does not support Mustache lambdas. It supplements lambdas with a more sophisticated expression system.
 
 ## Example
-First, a new context must be created. Contexts are used to provide properties for how templates are loaded and rendered. A different context can be used for loading and rendering.
+First, new horseshoe settings must be created. Settings are used to provide properties for how templates are loaded and rendered. Different settings can be used for loading and rendering.
 ```java
-final horseshoe.Context context = new horseshoe.Context();
-// final horseshoe.Context mustacheContext = horseshoe.Context.newMustacheContext();
+final horseshoe.Settings settings = new horseshoe.Settings();
+// final horseshoe.Settings mustacheSettings = horseshoe.Settings.newMustacheSettings();
 ```
 
-Next, a template is loaded using the template class constructor. A template can be loaded from a string, a file, or a reader.
+Then, a template is loaded using the template loader class. Templates can be loaded from a string, a file, or a reader.
 ```java
-final horseshoe.Template template = new horseshoe.Template("Hello World", "{{{salutation}}}, {{ recipient }}!", context);
+final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!", settings);
 ```
 
-Finally, the template is rendered to a writer using the context. The context must contain all data used to render the template.
+Next, a data map is created that contains all the data used to render the template.
 ```java
-context.put("salutation", "Hello");
-context.put("recipient", "world");
+final java.util.Map<String, Object> data = new java.util.HashMap<>();
+data.put("salutation", "Hello");
+data.put("recipient", "world");
+```
 
+Finally, the template is rendered to a writer using the settings and the data.
+```java
 final java.io.StringWriter writer = new java.io.StringWriter();
-template.render(context, writer);
+template.render(settings, data, writer);
 System.out.println(writer.toString()); // Prints "Hello, world!"
 ```

@@ -2,25 +2,22 @@ package horseshoe;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.junit.Test;
 
 public class ExampleTest {
 
 	@Test
 	public void testExample() throws java.io.IOException, LoadException {
-		// final horseshoe.Context mustacheContext = horseshoe.Context.newMustacheContext();
+		final horseshoe.Settings settings = new horseshoe.Settings();
+		// final horseshoe.Settings mustacheSettings = horseshoe.Settings.newMustacheSettings();
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!", settings);
 
-		final horseshoe.Template template = new horseshoe.Template("Hello World", "{{{salutation}}}, {{ recipient }}!", new horseshoe.Context());
-
-		final Map<String, Object> data = new HashMap<>();
+		final java.util.Map<String, Object> data = new java.util.HashMap<>();
 		data.put("salutation", "Hello");
 		data.put("recipient", "world");
 
 		final java.io.StringWriter writer = new java.io.StringWriter();
-		template.render(data, writer);
+		template.render(settings, data, writer);
 		assertEquals("Hello, world!", writer.toString());
 	}
 

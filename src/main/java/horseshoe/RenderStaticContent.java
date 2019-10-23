@@ -32,7 +32,7 @@ final class RenderStaticContent implements Action {
 			final ParsedLine line = lines[0];
 
 			writer.write(line.getLine());
-			writer.write(context.getUserContext().getLineEnding() == null ? line.getEnding() : context.getUserContext().getLineEnding());
+			writer.write(context.getSettings().getLineEnding() == null ? line.getEnding() : context.getSettings().getLineEnding());
 		}
 
 		// Indent all remaining lines
@@ -44,7 +44,7 @@ final class RenderStaticContent implements Action {
 				writer.write(line.getLine());
 			}
 
-			writer.write(context.getUserContext().getLineEnding() == null ? line.getEnding() : context.getUserContext().getLineEnding());
+			writer.write(context.getSettings().getLineEnding() == null ? line.getEnding() : context.getSettings().getLineEnding());
 		}
 
 		// Skip line ending on the last line

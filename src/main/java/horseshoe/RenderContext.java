@@ -7,16 +7,19 @@ import horseshoe.internal.PersistentStack;
 
 final class RenderContext {
 
-	private final Context userContext;
+	private final Settings settings;
 	private final Map<String, Object> globalData;
 	private final PersistentStack<Object> sectionData = new PersistentStack<>();
 	private final PersistentStack<String> indentation = new PersistentStack<>();
 
 	/**
-	 * Creates a default render context.
+	 * Creates a render context.
+	 *
+	 * @param settings the settings that will be used as part of the render context
+	 * @param globalData the global data that will be used as part of the render context
 	 */
-	public RenderContext(final Context userContext, final Map<String, Object> globalData) {
-		this.userContext = userContext;
+	public RenderContext(final Settings settings, final Map<String, Object> globalData) {
+		this.settings = settings;
 		this.globalData = new HashMap<>(globalData);
 	}
 
@@ -48,12 +51,12 @@ final class RenderContext {
 	}
 
 	/**
-	 * Gets the user context used by the rendering process.
+	 * Gets the settings used by the rendering process.
 	 *
-	 * @return the user context used by the rendering process
+	 * @return the settings used by the rendering process
 	 */
-	Context getUserContext() {
-		return userContext;
+	Settings getSettings() {
+		return settings;
 	}
 
 	/**

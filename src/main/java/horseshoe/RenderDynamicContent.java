@@ -25,7 +25,7 @@ final class RenderDynamicContent implements Action {
 
 		if (obj != null) {
 			final String value = obj.toString();
-			writer.write(escaped && context.getUserContext().getEscapeFunction() != null ? context.getUserContext().getEscapeFunction().escape(value) : value);
+			writer.write(escaped && context.getSettings().getEscapeFunction() != null ? context.getSettings().getEscapeFunction().escape(value) : value);
 		}
 	}
 

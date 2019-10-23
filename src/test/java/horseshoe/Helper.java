@@ -28,26 +28,31 @@ public class Helper {
 
 	public static Map<String, Object> loadMap(final Object... values) {
 		final Map<String, Object> map = new LinkedHashMap<>();
+
 		for (int i = 0; i < values.length; i += 2) {
 			map.put(values[i].toString(), values[i + 1]);
 		}
+
 		return map;
 	}
 
-	public static void executeTest(final String template, final Context context, final Map<String, Object> data, final String expected) throws LoadException, IOException {
-		final Template t = new Template("Test", template, context);
-		try (StringWriter writer = new StringWriter()) {
-			t.render(data, writer);
+	public static void executeTest(final String template, final Map<String, String> partials, final Settings settings, final Map<String, Object> data, final String expected) throws LoadException, IOException {
+		final Template t = new TemplateLoader().add(partials).load("Test", template, settings);
+
+		try (final StringWriter writer = new StringWriter()) {
+			t.render(settings, data, writer);
 			assertEquals(expected, writer.toString());
 		}
 	}
 
 	public static void executeMustacheTest(final String template, final Map<String, Object> data, final Map<String, Object> partialMap, final String expected) throws LoadException, IOException {
-		final Partials partials = new Partials();
+		final Map<String, String> partials = new LinkedHashMap<>();
+
 		for (final Entry<String, Object> partial : partialMap.entrySet()) {
-			partials.add(partial.getKey(), partial.getValue().toString());
+			partials.put(partial.getKey(), partial.getValue().toString());
 		}
-		executeTest(template, Context.newMustacheContext(partials), data, expected);
+
+		executeTest(template, partials, Settings.newMustacheSettings(), data, expected);
 	}
 
 }
