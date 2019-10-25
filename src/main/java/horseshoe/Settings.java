@@ -1,11 +1,15 @@
 package horseshoe;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Settings {
+
+	public static enum ContextAccess {
+		FULL,
+		CURRENT_AND_ROOT,
+		CURRENT_ONLY
+	}
 
 	public static interface EscapeFunction {
 		/**
@@ -56,32 +60,20 @@ public class Settings {
 	 * @return new mustache-compatible settings
 	 */
 	public static Settings newMustacheSettings() {
-		return new Settings().setAllowAccessToFullContextStack(true).setEscapeFunction(HTML_ESCAPE_FUNCTION).setLineEnding(KEEP_TEMPLATE_LINE_ENDINGS).setThrowOnTemplateNotFound(false);
+		return new Settings().setContextAccess(ContextAccess.FULL).setEscapeFunction(HTML_ESCAPE_FUNCTION).setLineEnding(KEEP_TEMPLATE_LINE_ENDINGS);
 	}
 
-	private Charset charset = StandardCharsets.UTF_8;
 	private EscapeFunction escapeFunction = NO_ESCAPE_FUNCTION;
-
-	private boolean allowAccessToFullContextStack = false;
+	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
 	private String lineEnding = DEFAULT_LINE_ENDING;
-	private boolean throwOnTemplateNotFound = true;
 
 	/**
-	 * Gets whether or not expressions have full access to the settings stack during rendering.
+	 * Gets the type of access to the context stack allowed during rendering.
 	 *
-	 * @return true if expressions have full access to the settings stack, otherwise false
+	 * @return true the type of access to the context stack allowed during rendering
 	 */
-	public boolean getAllowAccessToFullContextStack() {
-		return allowAccessToFullContextStack;
-	}
-
-	/**
-	 * Gets the character set used for loading templates.
-	 *
-	 * @return the character set used for loading templates
-	 */
-	public Charset getCharset() {
-		return charset;
+	public ContextAccess getContextAccess() {
+		return contextAccess;
 	}
 
 	/**
@@ -103,33 +95,13 @@ public class Settings {
 	}
 
 	/**
-	 * Gets whether or not an exception will be thrown when a template is not found during loading.
+	 * Sets the type of access to the context stack allowed during rendering.
 	 *
-	 * @return true if an exception will be thrown when a template is not found, otherwise false
-	 */
-	public boolean getThrowOnTemplateNotFound() {
-		return throwOnTemplateNotFound;
-	}
-
-	/**
-	 * Sets whether or not expressions have full access to the context stack during rendering.
-	 *
-	 * @param allowAccessToFullContextStack true to allow expressions have full access to the context stack, otherwise false
+	 * @param contextAccess the type of access to the context stack allowed during rendering
 	 * @return this object
 	 */
-	public Settings setAllowAccessToFullContextStack(final boolean allowAccessToFullContextStack) {
-		this.allowAccessToFullContextStack = allowAccessToFullContextStack;
-		return this;
-	}
-
-	/**
-	 * Sets the character set used for loading templates
-	 *
-	 * @param charset the character set used for loading templates
-	 * @return this object
-	 */
-	public Settings setCharset(final Charset charset) {
-		this.charset = charset;
+	public Settings setContextAccess(final ContextAccess contextAccess) {
+		this.contextAccess = contextAccess;
 		return this;
 	}
 
@@ -152,17 +124,6 @@ public class Settings {
 	 */
 	public Settings setLineEnding(final String lineEnding) {
 		this.lineEnding = lineEnding;
-		return this;
-	}
-
-	/**
-	 * Sets whether or not an exception will be thrown when a template is not found during loading.
-	 *
-	 * @param throwOnTemplateNotFound true to throw an exception when a template is not found, otherwise false
-	 * @return this object
-	 */
-	public Settings setThrowOnTemplateNotFound(final boolean throwOnTemplateNotFound) {
-		this.throwOnTemplateNotFound = throwOnTemplateNotFound;
 		return this;
 	}
 

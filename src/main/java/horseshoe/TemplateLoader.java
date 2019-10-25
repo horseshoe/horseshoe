@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -25,12 +26,7 @@ public class TemplateLoader {
 
 	private static final class LoadContext {
 
-		private final Settings settings;
 		private final PersistentStack<Loader> loaders = new PersistentStack<>();
-
-		public LoadContext(final Settings settings) {
-			this.settings = settings;
-		}
 
 	}
 
@@ -61,9 +57,21 @@ public class TemplateLoader {
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*([^\\s]+)\\s+([^\\s]+)\\s*=");
 
+	/**
+	 * Creates a new template loader that is mustache-compatible
+	 *
+	 * @return the new mustache loader
+	 */
+	public static TemplateLoader newMustacheLoader() {
+		return new TemplateLoader().setThrowOnPartialNotFound(false);
+	}
+
 	private final Map<String, Template> templates = new HashMap<>();
 	private final Map<String, Loader> templateLoaders = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
+	private Charset charset = StandardCharsets.UTF_8;
+	private boolean preventPartialPathTraversal = true;
+	private boolean throwOnPartialNotFound = true;
 
 	/**
 	 * Creates a template loader using the specified include directories.
@@ -81,15 +89,6 @@ public class TemplateLoader {
 	 */
 	public TemplateLoader() {
 		this(Collections.singletonList(Paths.get(".")));
-	}
-
-	/**
-	 * Gets the list of directories used to locate partial files included in a template. The list of string partials is always searched first.
-	 *
-	 * @return the list of directories used to locate partial files included in a template
-	 */
-	public List<Path> getIncludeDirectories() {
-		return includeDirectories;
 	}
 
 	/**
@@ -126,10 +125,25 @@ public class TemplateLoader {
 	}
 
 	/**
+	 * Adds a template to the loader. If the template is already loaded, this has no effect.
+	 *
+	 * @param template the template to add to the loader
+	 * @return this loader
+	 */
+	public TemplateLoader add(final Template template) {
+		if (!templates.containsKey(template.getName())) {
+			templates.put(template.getName(), template);
+		}
+
+		return this;
+	}
+
+	/**
 	 * Adds a template from a file. If the template is already loaded, this has no effect.
 	 *
 	 * @param name the name of the template
 	 * @param file the file to load as a template
+	 * @param charset the character set to use when loading the file
 	 * @return this loader
 	 * @throws FileNotFoundException if the file does not exist
 	 */
@@ -143,6 +157,18 @@ public class TemplateLoader {
 		}
 
 		return this;
+	}
+
+	/**
+	 * Adds a template from a file. If the template is already loaded, this has no effect.
+	 *
+	 * @param name the name of the template
+	 * @param file the file to load as a template
+	 * @return this loader
+	 * @throws FileNotFoundException if the file does not exist
+	 */
+	public TemplateLoader add(final String name, final Path file) throws FileNotFoundException {
+		return add(name, file, charset);
 	}
 
 	/**
@@ -181,16 +207,51 @@ public class TemplateLoader {
 	}
 
 	/**
+	 * Gets the character set used for loading additional templates.
+	 *
+	 * @return the character set used for loading additional templates
+	 */
+	public Charset getCharset() {
+		return charset;
+	}
+
+	/**
+	 * Gets the list of directories used to locate partial files included in a template. The list of string partials is always searched first.
+	 *
+	 * @return the list of directories used to locate partial files included in a template
+	 */
+	public List<Path> getIncludeDirectories() {
+		return includeDirectories;
+	}
+
+	/**
+	 * Gets whether or not traversing paths ("/..." or "../...") is prevented when loading partials.
+	 *
+	 * @return true if traversing paths is prevented when loading partials, otherwise false
+	 */
+	public boolean getPreventPartialPathTraversal() {
+		return preventPartialPathTraversal;
+	}
+
+	/**
+	 * Gets whether or not an exception will be thrown when a partial is not found during loading.
+	 *
+	 * @return true if an exception will be thrown when a partial is not found, otherwise false
+	 */
+	public boolean getThrowOnPartialNotFound() {
+		return throwOnPartialNotFound;
+	}
+
+	/**
 	 * Loads a template from a string. If the template is already loaded, this has no effect.
 	 *
 	 * @param name the name of the template
 	 * @param value the string value to load as a template
-	 * @param settings the settings used to load the template
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	public Template load(final String name, final CharSequence value, final Settings settings) throws LoadException {
-		return add(name, value).load(name, settings);
+	public Template load(final String name, final CharSequence value) throws LoadException {
+		return add(name, value).load(name);
 	}
 
 	/**
@@ -198,13 +259,12 @@ public class TemplateLoader {
 	 *
 	 * @param name the name of the template
 	 * @param file the file to load as a template
-	 * @param settings the settings used to load the template
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
 	 * @throws FileNotFoundException if the file does not exist
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	public Template load(final String name, final Path file, final Charset charset, final Settings settings) throws FileNotFoundException, LoadException {
-		return add(name, file, charset).load(name, settings);
+	public Template load(final String name, final Path file, final Charset charset) throws FileNotFoundException, LoadException {
+		return add(name, file, charset).load(name);
 	}
 
 	/**
@@ -212,24 +272,22 @@ public class TemplateLoader {
 	 *
 	 * @param name the name of the template
 	 * @param reader the reader to use to load as a template
-	 * @param settings the settings used to load the template
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	public Template load(final String name, final Reader reader, final Settings settings) throws LoadException {
-		return add(name, reader).load(name, settings);
+	public Template load(final String name, final Reader reader) throws LoadException {
+		return add(name, reader).load(name);
 	}
 
 	/**
 	 * Loads the specified template using the specified settings. If the template is already loaded the settings are ignored.
 	 *
 	 * @param name the name of the template to load
-	 * @param settings the settings used to load the template
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	public Template load(final String name, final Settings settings) throws LoadException {
-		return load(name, new LoadContext(settings));
+	public Template load(final String name) throws LoadException {
+		return load(name, new LoadContext(), 0);
 	}
 
 	/**
@@ -237,32 +295,51 @@ public class TemplateLoader {
 	 *
 	 * @param name the name of the template to load
 	 * @param context the context used to load the template
+	 * @param recursionLevel the current recursion level of the loading template
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	private Template load(final String name, final LoadContext context) throws LoadException {
+	private Template load(final String name, final LoadContext context, final int recursionLevel) throws LoadException {
 		Template template = templates.get(name);
 
 		if (template == null) {
-			template = new Template(name);
+			template = new Template(name, recursionLevel);
 			templates.put(name, template);
 
 			Loader loader = templateLoaders.remove(name);
 
 			try {
 				if (loader == null) {
-					// Try to load the template from the list of include directories
-					for (final Path directory : includeDirectories) {
-						final Path file = directory.resolve(name);
+					// Try to load the template from the current template directory
+					final Path baseDirectory = context.loaders.isEmpty() ? Paths.get(".") : context.loaders.peek().getFile();
+					final Path toLoadFromBase = baseDirectory == null ? null : baseDirectory.resolve(name).normalize();
 
-						if (file.toFile().isFile()) {
-							loader = new Loader(name, file, context.settings.getCharset());
-							break;
+					if (toLoadFromBase != null && toLoadFromBase.toFile().isFile()) {
+						if (!preventPartialPathTraversal || toLoadFromBase.startsWith(baseDirectory)) {
+							loader = new Loader(name, toLoadFromBase, charset);
+						} else {
+							for (final Path directory : includeDirectories) {
+								if (toLoadFromBase.startsWith(directory)) {
+									loader = new Loader(name, toLoadFromBase, charset);
+									break;
+								}
+							}
+						}
+					}
+
+					if (loader == null) { // Try to load the template from the list of include directories
+						for (final Path directory : includeDirectories) {
+							final Path toLoad = directory.resolve(name).normalize();
+
+							if ((!preventPartialPathTraversal || toLoad.startsWith(directory)) && toLoad.toFile().isFile()) {
+								loader = new Loader(name, toLoad, charset);
+								break;
+							}
 						}
 					}
 
 					if (loader == null) {
-						if (context.settings.getThrowOnTemplateNotFound()) {
+						if (throwOnPartialNotFound) {
 							throw new LoadException(context.loaders, "Template \"" + name + "\" could not be found");
 						} else {
 							return template; // Return empty template, per mustache spec
@@ -270,16 +347,19 @@ public class TemplateLoader {
 					}
 				}
 
-				loadTemplate(template, context, loader);
-			} catch (final IOException e) {
-				if (context.settings.getThrowOnTemplateNotFound()) {
-					throw new LoadException(context.loaders, "Template \"" + name + "\" could not be loaded due to an I/O error: " + e.getMessage(), e);
+				loadTemplate(template, context, loader, recursionLevel);
+				template.recursionLevel = -1;
+			} catch (final IOException | RuntimeException e) {
+				if (throwOnPartialNotFound) {
+					throw new LoadException(context.loaders, "Template \"" + name + "\" could not be loaded: " + e.getMessage(), e);
 				}
 			} finally {
 				if (loader != null) {
 					loader.close();
 				}
 			}
+		} else if (template.recursionLevel == recursionLevel) {
+			throw new LoadException(context.loaders, "Invalid recursion detected in template \"" + name + "\"");
 		}
 
 		return template;
@@ -288,13 +368,13 @@ public class TemplateLoader {
 	/**
 	 * Loads the list of actions to be performed when rendering the template
 	 *
+	 * @param template the template to load
 	 * @param context the context used to load the template
 	 * @param loader the item being loaded
-	 * @return a list of actions to be performed by when rendering the associated template
 	 * @throws LoadException if an error is encountered while loading the template
 	 * @throws IOException if an error is encountered while reading from a file or stream
 	 */
-	private void loadTemplate(final Template template, final LoadContext context, final Loader loader) throws LoadException, IOException {
+	private void loadTemplate(final Template template, final LoadContext context, final Loader loader, final int recursionLevel) throws LoadException, IOException {
 		final PersistentStack<Expression> resolvers = new PersistentStack<>();
 		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
 
@@ -372,7 +452,7 @@ public class TemplateLoader {
 						break;
 
 					case '>': { // Load partial
-						final Template partial = load(CharSequenceUtils.trim(expression, 1, expression.length()).toString(), context);
+						final Template partial = load(CharSequenceUtils.trim(expression, 1, expression.length()).toString(), context, recursionLevel + resolvers.size());
 
 						if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
 							textBeforeStandaloneTag.ignoreLastLine();
@@ -479,6 +559,39 @@ public class TemplateLoader {
 			// Advance past the end delimiter
 			loader.advanceInternalPointer(expression.length());
 		}
+	}
+
+	/**
+	 * Sets the character set used for loading additional templates
+	 *
+	 * @param charset the character set used for loading additional templates
+	 * @return this object
+	 */
+	public TemplateLoader setCharset(final Charset charset) {
+		this.charset = charset;
+		return this;
+	}
+
+	/**
+	 * Sets whether or not traversing paths ("/..." or "../...") is prevented when loading partials.
+	 *
+	 * @param preventPartialPathTraversal true to prevent traversing paths when loading partials, otherwise false
+	 * @return this object
+	 */
+	public TemplateLoader setPreventPartialPathTraversal(final boolean preventPartialPathTraversal) {
+		this.preventPartialPathTraversal = preventPartialPathTraversal;
+		return this;
+	}
+
+	/**
+	 * Sets whether or not an exception will be thrown when a partial is not found during loading.
+	 *
+	 * @param throwOnPartialNotFound true to throw an exception when a partial is not found, otherwise false
+	 * @return this object
+	 */
+	public TemplateLoader setThrowOnPartialNotFound(final boolean throwOnPartialNotFound) {
+		this.throwOnPartialNotFound = throwOnPartialNotFound;
+		return this;
 	}
 
 }

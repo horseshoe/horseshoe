@@ -21,15 +21,10 @@ Horseshoe does not have the same design goals as Mustache, resulting in many dif
 Horseshoe does not support Mustache lambdas. It supplements lambdas with a more sophisticated expression system.
 
 ## Example
-First, new horseshoe settings must be created. Settings are used to provide properties for how templates are loaded and rendered. Different settings can be used for loading and rendering.
+First, a template is loaded using the template loader class. Templates can be loaded from a string, a file, or a reader.
 ```java
-final horseshoe.Settings settings = new horseshoe.Settings();
-// final horseshoe.Settings mustacheSettings = horseshoe.Settings.newMustacheSettings();
-```
-
-Then, a template is loaded using the template loader class. Templates can be loaded from a string, a file, or a reader.
-```java
-final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!", settings);
+final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!");
+// final horseshoe.Template mustacheTemplate = horseshoe.TemplateLoader.newMustacheLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!");
 ```
 
 Next, a data map is created that contains all the data used to render the template.
@@ -41,7 +36,10 @@ data.put("recipient", "world");
 
 Finally, the template is rendered to a writer using the settings and the data.
 ```java
+final horseshoe.Settings settings = new horseshoe.Settings();
+// final horseshoe.Settings mustacheSettings = horseshoe.Settings.newMustacheSettings();
 final java.io.StringWriter writer = new java.io.StringWriter();
+
 template.render(settings, data, writer);
 System.out.println(writer.toString()); // Prints "Hello, world!"
 ```

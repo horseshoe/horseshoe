@@ -16,6 +16,7 @@ public final class Loader implements AutoCloseable {
 	private static final Pattern NEW_LINE = Pattern.compile("\\r\\n?|\\n");
 
 	private final String name;
+	private final Path file;
 	private final Reader reader;
 	private Buffer streamBuffer;
 	private CharSequence buffer;
@@ -35,6 +36,7 @@ public final class Loader implements AutoCloseable {
 	 */
 	public Loader(final String name, final CharSequence value) {
 		this.name = name;
+		this.file = null;
 		this.reader = null;
 		this.buffer = value;
 		this.isFullyLoaded = true;
@@ -46,15 +48,27 @@ public final class Loader implements AutoCloseable {
 	 * Creates a new loader from an input stream.
 	 *
 	 * @param name the name of the loader
+	 * @param file the file being loaded
 	 * @param reader the reader to load
 	 */
-	public Loader(final String name, final Reader reader) {
+	private Loader(final String name, final Path file, final Reader reader) {
 		this.name = name;
+		this.file = file;
 		this.reader = reader;
 		this.streamBuffer = new Buffer(4096);
 		this.buffer = this.streamBuffer;
 		this.matcher = NEW_LINE.matcher(streamBuffer);
 		this.newLineMatcher = NEW_LINE.matcher(streamBuffer);
+	}
+
+	/**
+	 * Creates a new loader from an input stream.
+	 *
+	 * @param name the name of the loader
+	 * @param reader the reader to load
+	 */
+	public Loader(final String name, final Reader reader) {
+		this(name, null, reader);
 	}
 
 	/**
@@ -66,7 +80,7 @@ public final class Loader implements AutoCloseable {
 	 * @throws FileNotFoundException if the file does not exist
 	 */
 	public Loader(final String name, final Path file, final Charset charset) throws FileNotFoundException {
-		this(name, new InputStreamReader(new FileInputStream(file.toFile()), charset));
+		this(name, file, new InputStreamReader(new FileInputStream(file.toFile()), charset));
 	}
 
 	/**
@@ -145,6 +159,15 @@ public final class Loader implements AutoCloseable {
 	 */
 	public String getName() {
 		return name;
+	}
+
+	/**
+	 * Gets the file being loaded.
+	 *
+	 * @return the file being loaded
+	 */
+	public Path getFile() {
+		return file;
 	}
 
 	/**

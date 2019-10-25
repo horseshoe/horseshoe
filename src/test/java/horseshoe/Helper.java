@@ -36,13 +36,15 @@ public class Helper {
 		return map;
 	}
 
-	public static void executeTest(final String template, final Map<String, String> partials, final Settings settings, final Map<String, Object> data, final String expected) throws LoadException, IOException {
-		final Template t = new TemplateLoader().add(partials).load("Test", template, settings);
-
+	public static void executeTest(final Template template, final Settings settings, final Map<String, Object> data, final String expected) throws LoadException, IOException {
 		try (final StringWriter writer = new StringWriter()) {
-			t.render(settings, data, writer);
+			template.render(settings, data, writer);
 			assertEquals(expected, writer.toString());
 		}
+	}
+
+	public static void executeTest(final String template, final Map<String, String> partials, final Settings settings, final Map<String, Object> data, final String expected) throws LoadException, IOException {
+		executeTest(new TemplateLoader().add(partials).load("Test", template), settings, data, expected);
 	}
 
 	public static void executeMustacheTest(final String template, final Map<String, Object> data, final Map<String, Object> partialMap, final String expected) throws LoadException, IOException {
@@ -52,7 +54,7 @@ public class Helper {
 			partials.put(partial.getKey(), partial.getValue().toString());
 		}
 
-		executeTest(template, partials, Settings.newMustacheSettings(), data, expected);
+		executeTest(TemplateLoader.newMustacheLoader().add(partials).load("Mustache Test", template), Settings.newMustacheSettings(), data, expected);
 	}
 
 }

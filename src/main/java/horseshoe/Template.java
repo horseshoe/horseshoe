@@ -10,14 +10,17 @@ public final class Template {
 
 	private final String name;
 	private final List<Action> actions = new ArrayList<>();
+	int recursionLevel;
 
 	/**
 	 * Creates an empty template with the specified name.
 	 *
 	 * @param name the name of the template
+	 * @param recursionLevel the recursion level of the template
 	 */
-	Template(final String name) {
+	Template(final String name, final int recursionLevel) {
 		this.name = name;
+		this.recursionLevel = recursionLevel;
 	}
 
 	/**

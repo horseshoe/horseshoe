@@ -115,7 +115,7 @@ final class Expression {
 	 * @return the evaluated expression or null if the expression could not be evaluated
 	 */
 	public Object evaluate(final RenderContext context) {
-		if (context.getSettings().getAllowAccessToFullContextStack()) {
+		if (context.getSettings().getContextAccess() == Settings.ContextAccess.FULL) {
 			nextContext:
 			for (int i = Integer.min(backreach, context.getSectionData().size()); i < context.getSectionData().size(); i++) {
 				Object object = context.getSectionData().peek(i);
@@ -142,7 +142,7 @@ final class Expression {
 				Object object = segments[0].evaluate(context, contextObject);
 
 				// Only search the global data if the context access fails on the first lookup
-				if (object == null && backreach < context.getSectionData().size()) {
+				if (object == null && context.getSettings().getContextAccess() == Settings.ContextAccess.CURRENT_AND_ROOT && backreach < context.getSectionData().size()) {
 					object = segments[0].evaluate(context, context.getGlobalData());
 				}
 
