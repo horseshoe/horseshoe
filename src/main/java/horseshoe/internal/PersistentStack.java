@@ -84,16 +84,6 @@ public class PersistentStack<T> implements Iterable<T> {
 	}
 
 	/**
-	 * Replaces the top item on the stack.
-	 *
-	 * @param item the item to place of the stack
-	 * @return the item that was replaced
-	 */
-	public T replace(final T item) {
-		return array[size - 1] = item;
-	}
-
-	/**
 	 * Pushes an item onto the stack.
 	 *
 	 * @param obj the object to place on the stack
@@ -125,12 +115,37 @@ public class PersistentStack<T> implements Iterable<T> {
 	}
 
 	/**
+	 * Replaces the top item on the stack.
+	 *
+	 * @param item the item to place of the stack
+	 * @return the item that was replaced
+	 */
+	public T replace(final T item) {
+		return array[size - 1] = item;
+	}
+
+	/**
 	 * Gets the current size of the stack.
 	 *
 	 * @return the current size of the stack
 	 */
 	public int size() {
 		return size;
+	}
+
+	@Override
+	public String toString() {
+		final StringBuilder sb = new StringBuilder("[");
+
+		if (size > 0) {
+			sb.append(array[size - 1]);
+
+			for (int i = size - 2; i >= 0; i--) {
+				sb.append(", ").append(array[i]);
+			}
+		}
+
+		return sb.append(']').toString();
 	}
 
 }

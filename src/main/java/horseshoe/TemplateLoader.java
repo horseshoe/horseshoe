@@ -379,7 +379,7 @@ public class TemplateLoader {
 		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
 
 		Delimiter delimiter = new Delimiter();
-		RenderStaticContent textBeforeStandaloneTag = new RenderStaticContent(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))));
+		StaticContentRenderer textBeforeStandaloneTag = new StaticContentRenderer(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))));
 
 		context.loaders.push(loader);
 		actionStack.push(template.getActions());
@@ -405,7 +405,7 @@ public class TemplateLoader {
 			} else {
 				final List<ParsedLine> lines = new ArrayList<>();
 				loader.advanceInternalPointer(length, lines);
-				final RenderStaticContent currentText = new RenderStaticContent(lines);
+				final StaticContentRenderer currentText = new StaticContentRenderer(lines);
 				actionStack.peek().add(currentText);
 
 				// Check for stand-alone tags
@@ -425,17 +425,7 @@ public class TemplateLoader {
 			}
 
 			if (!loader.hasNext()) {
-				if (!resolvers.isEmpty()) {
-					new LoadException(context.loaders, "Unexpected end of stream, unmatched section start tag: \"" + resolvers.peek().toString() + "\"");
-				}
-
-				// Check for empty last line of template, so that indentation is not applied
-				if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
-					textBeforeStandaloneTag.ignoreLastLine();
-				}
-
-				context.loaders.pop();
-				return;
+				break;
 			}
 
 			// Parse the expression
@@ -456,9 +446,9 @@ public class TemplateLoader {
 
 						if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
 							textBeforeStandaloneTag.ignoreLastLine();
-							actionStack.peek().add(new RenderTemplate(partial, textBeforeStandaloneTag.getLastLine()));
+							actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag.getLastLine()));
 						} else {
-							actionStack.peek().add(new RenderTemplate(partial, ""));
+							actionStack.peek().add(new TemplateRenderer(partial, ""));
 						}
 
 						break;
@@ -466,6 +456,7 @@ public class TemplateLoader {
 
 					case '#': { // Start a new section, or repeat the previous section
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+						final Section section;
 
 						if (sectionExpression.length() == 0) { // Repeat the previous section
 							if (!resolvers.hasPoppedItem()) {
@@ -473,14 +464,17 @@ public class TemplateLoader {
 							}
 
 							resolvers.push();
+							section = new Section();
+						} else if (sectionExpression.charAt(0) == '>') {
+							resolvers.push(Expression.newEmptyExpression(sectionExpression.toString()));
+							section = new Section(sectionExpression.subSequence(1, sectionExpression.length()).toString());
 						} else { // Start a new section
 							resolvers.push(Expression.load(sectionExpression, resolvers.size()));
+							section = new Section();
 						}
 
 						// Add a new render section action
-						final Section section = new Section();
-
-						actionStack.peek().add(RenderSection.FACTORY.create(resolvers.peek(), section));
+						actionStack.peek().add(SectionRenderer.FACTORY.create(resolvers.peek(), section));
 						actionStack.push(section.getActions());
 						break;
 					}
@@ -496,13 +490,13 @@ public class TemplateLoader {
 							actionStack.pop();
 						} else { // Start a new inverted section
 							resolvers.push(Expression.load(sectionExpression, resolvers.size()));
-							actionStack.peek().add(RenderSection.FACTORY.create(resolvers.peek(), new Section()));
+							actionStack.peek().add(SectionRenderer.FACTORY.create(resolvers.peek(), new Section()));
 						}
 
 						// Grab the inverted action list from the section
 						final List<Action> actions = actionStack.peek();
 
-						actionStack.push(((RenderSection)actions.get(actions.size() - 1)).getSection().getInvertedActions());
+						actionStack.push(((SectionRenderer)actions.get(actions.size() - 1)).getSection().getInvertedActions());
 						break;
 					}
 
@@ -539,7 +533,7 @@ public class TemplateLoader {
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new RenderDynamicContent(Expression.load(sectionExpression, resolvers.size()), false));
+						actionStack.peek().add(new DynamicContentRenderer(Expression.load(sectionExpression, resolvers.size()), false));
 						break;
 					}
 
@@ -547,7 +541,7 @@ public class TemplateLoader {
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 0, expression.length());
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new RenderDynamicContent(Expression.load(sectionExpression, resolvers.size()), true));
+						actionStack.peek().add(new DynamicContentRenderer(Expression.load(sectionExpression, resolvers.size()), true));
 						break;
 					}
 					}
@@ -559,6 +553,17 @@ public class TemplateLoader {
 			// Advance past the end delimiter
 			loader.advanceInternalPointer(expression.length());
 		}
+
+		if (!resolvers.isEmpty()) {
+			new LoadException(context.loaders, "Unexpected end of stream, unmatched section start tag: \"" + resolvers.peek().toString() + "\"");
+		}
+
+		// Check for empty last line of template, so that indentation is not applied
+		if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
+			textBeforeStandaloneTag.ignoreLastLine();
+		}
+
+		context.loaders.pop();
 	}
 
 	/**

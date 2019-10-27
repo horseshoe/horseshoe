@@ -3,7 +3,7 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
-final class RenderTemplate implements Action {
+final class TemplateRenderer implements Action {
 
 	private final Template template;
 	private final String indentation;
@@ -14,7 +14,7 @@ final class RenderTemplate implements Action {
 	 * @param template the template to render
 	 * @param indentation the indentation for the template
 	 */
-	public RenderTemplate(final Template template, final String indentation) {
+	public TemplateRenderer(final Template template, final String indentation) {
 		this.template = template;
 		this.indentation = indentation;
 	}

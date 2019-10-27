@@ -6,7 +6,7 @@ import java.util.List;
 
 import horseshoe.internal.ParsedLine;
 
-final class RenderStaticContent implements Action {
+final class StaticContentRenderer implements Action {
 
 	private static final ParsedLine EMPTY_LINES[] = new ParsedLine[0];
 
@@ -19,7 +19,7 @@ final class RenderStaticContent implements Action {
 	 *
 	 * @param lines the list of lines
 	 */
-	RenderStaticContent(final List<ParsedLine> lines) {
+	StaticContentRenderer(final List<ParsedLine> lines) {
 		this.lines = lines.toArray(EMPTY_LINES);
 	}
 

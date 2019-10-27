@@ -3,7 +3,7 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
-final class RenderDynamicContent implements Action {
+final class DynamicContentRenderer implements Action {
 
 	private final Expression resolver;
 	private final boolean escaped;
@@ -14,7 +14,7 @@ final class RenderDynamicContent implements Action {
 	 * @param resolver the resolver for the expression
 	 * @param escaped true if the rendered content will be escaped, otherwise false
 	 */
-	public RenderDynamicContent(final Expression resolver, final boolean escaped) {
+	public DynamicContentRenderer(final Expression resolver, final boolean escaped) {
 		this.resolver = resolver;
 		this.escaped = escaped;
 	}

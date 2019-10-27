@@ -4,15 +4,17 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-class RenderSection_8 extends RenderSection {
+class SectionRenderer_8 extends SectionRenderer {
 
-	public static class Factory extends RenderSection.Factory {
+	public static class Factory extends SectionRenderer.Factory {
 		@Override
-		public RenderSection_8 create(final Expression expression, final Section section) {
-			return new RenderSection_8(expression, section);
+		public SectionRenderer_8 create(final Expression expression, final Section section) {
+			return new SectionRenderer_8(expression, section);
 		}
 	}
 
@@ -22,13 +24,28 @@ class RenderSection_8 extends RenderSection {
 	 * @param expression the expression used in the section
 	 * @param section the section to be rendered
 	 */
-	protected RenderSection_8(final Expression expression, final Section section) {
+	protected SectionRenderer_8(final Expression expression, final Section section) {
 		super(expression, section);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
-		if (data instanceof Stream<?>) {
+		if (data instanceof Supplier<?>) {
+			dispatchData(context, ((Supplier<Object>)data).get(), writer);
+			return;
+		} else if (data instanceof Function<?, ?>) {
+			final Function<String, Object> function = (Function<String, Object>)data;
+
+			/*
+			if (!list.isEmpty()) {
+				for (final Object obj : list) {
+					renderActions(context, obj, writer, section.getActions());
+				}
+			} else {
+				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			}//*/
+		} else if (data instanceof Stream<?>) {
 			final List<Object> list = ((Stream<?>)data).collect(Collectors.toList()); // TODO: Stream.forEach().orElse()?
 
 			if (!list.isEmpty()) {

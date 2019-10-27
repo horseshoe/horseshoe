@@ -33,4 +33,14 @@ public final class PartialsTests {
 		Assert.assertEquals("324", writer.toString());
 	}
 
+	@Test (expected = LoadException.class)
+	public void testBadRecursivePartial() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Template template = new TemplateLoader()
+				.add("f", "{{b}}{{>Test}}")
+				.load("Test", "{{>f}}");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
+	}
+
 }

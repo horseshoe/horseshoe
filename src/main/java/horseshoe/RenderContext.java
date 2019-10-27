@@ -9,6 +9,7 @@ final class RenderContext {
 
 	private final Settings settings;
 	private final Map<String, Object> globalData;
+	private final Template.WriterMap writerMap;
 	private final PersistentStack<Object> sectionData = new PersistentStack<>();
 	private final PersistentStack<String> indentation = new PersistentStack<>();
 
@@ -18,9 +19,10 @@ final class RenderContext {
 	 * @param settings the settings that will be used as part of the render context
 	 * @param globalData the global data that will be used as part of the render context
 	 */
-	public RenderContext(final Settings settings, final Map<String, Object> globalData) {
+	public RenderContext(final Settings settings, final Map<String, Object> globalData, final Template.WriterMap writerMap) {
 		this.settings = settings;
 		this.globalData = new HashMap<>(globalData);
+		this.writerMap = writerMap;
 	}
 
 	/**
@@ -57,6 +59,15 @@ final class RenderContext {
 	 */
 	Settings getSettings() {
 		return settings;
+	}
+
+	/**
+	 * Gets the writer map used by the rendering process.
+	 *
+	 * @return the writer map used by the rendering process
+	 */
+	Template.WriterMap getWriterMap() {
+		return writerMap;
 	}
 
 	/**

@@ -84,6 +84,13 @@ final class Expression {
 		return expression;
 	}
 
+	public static Expression newEmptyExpression(final String originalString) {
+		final Expression expression = new Expression(0);
+
+		expression.originalString = originalString;
+		return expression;
+	}
+
 	private final int backreach;
 	private String originalString;
 	private ExpressionSegment segments[] = EMPTY_SEGMENTS;

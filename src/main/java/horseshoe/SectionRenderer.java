@@ -7,7 +7,7 @@ import java.util.List;
 
 import horseshoe.internal.Properties;
 
-class RenderSection implements Action {
+class SectionRenderer implements Action {
 
 	public static class Factory {
 
@@ -18,8 +18,8 @@ class RenderSection implements Action {
 		 * @param section the section to be rendered
 		 * @return the created render section action
 		 */
-		RenderSection create(final Expression expression, final Section section){
-			return new RenderSection(expression, section);
+		SectionRenderer create(final Expression expression, final Section section){
+			return new SectionRenderer(expression, section);
 		}
 
 	}
@@ -31,7 +31,7 @@ class RenderSection implements Action {
 
 		try { // Try to load the Java 8+ version
 			if (Properties.JAVA_VERSION >= 8.0) {
-				factory = (Factory)Factory.class.getClassLoader().loadClass(Factory.class.getName().replace("RenderSectionAction", "RenderSectionAction_8")).getConstructor().newInstance();
+				factory = (Factory)Factory.class.getClassLoader().loadClass(Factory.class.getName().replace(SectionRenderer.class.getSimpleName(), SectionRenderer.class.getSimpleName() + "_8")).getConstructor().newInstance();
 			}
 		} catch (final ReflectiveOperationException e) {
 		}
@@ -40,7 +40,7 @@ class RenderSection implements Action {
 	}
 
 	/**
-	 * Renders the actions using the specified context, data, and stream.
+	 * Renders the actions using the specified context, data, and writer.
 	 *
 	 * @param context the render context
 	 * @param data the data to render
@@ -67,7 +67,7 @@ class RenderSection implements Action {
 	 * @param expression the expression used in the section
 	 * @param section the section to be rendered
 	 */
-	protected RenderSection(final Expression expression, final Section section) {
+	protected SectionRenderer(final Expression expression, final Section section) {
 		this.expression = expression;
 		this.section = section;
 	}
@@ -85,9 +85,16 @@ class RenderSection implements Action {
 			final Iterator<?> it = ((Iterable<?>)data).iterator();
 
 			if (it.hasNext()) {
-				do {
-					renderActions(context, it.next(), writer, section.getActions());
-				} while (it.hasNext());
+				for (; true; ) {
+					final Object object = it.next();
+
+					if (it.hasNext()) {
+						renderActions(context, object, writer, section.getActions());
+					} else {
+						renderActions(context, object, writer, section.getActions());
+						break;
+					}
+				}
 			} else {
 				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 			}
@@ -114,7 +121,15 @@ class RenderSection implements Action {
 	}
 
 	@Override
-	public final void perform(final RenderContext context, final Writer writer) throws IOException {
+	public final void perform(final RenderContext context, Writer writer) throws IOException {
+		if (section.getWriterName() != null) {
+			final Writer newWriter = context.getWriterMap().getWriter(section.getWriterName());
+
+			if (newWriter != null) {
+				writer = newWriter;
+			}
+		}
+
 		dispatchData(context, expression.evaluate(context), writer);
 	}
 
