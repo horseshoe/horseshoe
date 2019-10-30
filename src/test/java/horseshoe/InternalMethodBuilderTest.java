@@ -29,7 +29,7 @@ public class InternalMethodBuilderTest {
 		final short helloWorld = mb.addConstant("Hello, world!");
 		final byte bytecode[] = { LDC, (byte)helloWorld, ARETURN };
 
-		final SimpleInterface instance = mb.load(getClass().getClassLoader(), bytecode, (short)1, (short)1).getConstructor().newInstance();
+		final SimpleInterface instance = mb.load(bytecode, (short)1, (short)1).getConstructor().newInstance();
 		assertEquals("Hello, world!", instance.run());
 	}
 
@@ -48,7 +48,7 @@ public class InternalMethodBuilderTest {
 				ARETURN
 		};
 
-		final SimpleInterface instance = mb.load(getClass().getClassLoader(), bytecode, (short)1, (short)1).getConstructor().newInstance();
+		final SimpleInterface instance = mb.load(bytecode, (short)1, (short)1).getConstructor().newInstance();
 		assertEquals(name, instance.run());
 	}
 
@@ -79,7 +79,7 @@ public class InternalMethodBuilderTest {
 				DRETURN
 		};
 
-		final ComplexInterface instance = mb.load(getClass().getClassLoader(), bytecode, (short)4, (short)6).getConstructor().newInstance();
+		final ComplexInterface instance = mb.load(bytecode, (short)4, (short)6).getConstructor().newInstance();
 
 		assertEquals(3.14159 + 5 + 6 + 15.4 + 1.0, instance.calculate(new SimpleInterface() {
 			@Override

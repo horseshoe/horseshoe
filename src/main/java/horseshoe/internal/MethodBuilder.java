@@ -31,6 +31,19 @@ public final class MethodBuilder<T> {
 		}
 	}
 
+	private static class DynamicLoader<U> extends ClassLoader {
+		public DynamicLoader(final ClassLoader parent) {
+			super(parent);
+		}
+
+		@SuppressWarnings("unchecked")
+		public Class<U> defineClass(final String name, final byte[] bytecode) {
+			return (Class<U>)super.defineClass(name, bytecode, 0, bytecode.length);
+		}
+	}
+
+	private final DynamicLoader<T> loader = new DynamicLoader<>(MethodBuilder.class.getClassLoader());
+
 	public static final byte AALOAD = (byte)0x32; // (stack: arrayref, index -> value)
 	public static final byte AASTORE = (byte)0x53; // (stack: arrayref, index, value ->)
 	public static final byte ACONST_NULL = (byte)0x01; // (stack: -> null)
@@ -236,20 +249,6 @@ public final class MethodBuilder<T> {
 	public static final byte SWAP = (byte)0x5F; // (stack: value2, value1 -> value1, value2)
 	public static final byte TABLESWITCH = (byte)0xAA; // 16+: [0–3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, lowbyte1, lowbyte2, lowbyte3, lowbyte4, highbyte1, highbyte2, highbyte3, highbyte4, jump offsets... (stack: index ->)
 	public static final byte WIDE = (byte)0xC4; // 3/5: opcode, indexbyte1, indexbyte2 (stack: [same as for corresponding instructions])
-
-	private static final Method DEFINE_CLASS_METHOD;
-
-	static {
-		Method defineClass = null;
-
-		try {
-			defineClass = ClassLoader.class.getDeclaredMethod("defineClass", String.class, byte[].class, int.class, int.class);
-		} catch (final NoSuchMethodException e) {
-		}
-
-		DEFINE_CLASS_METHOD = defineClass;
-		DEFINE_CLASS_METHOD.setAccessible(true);
-	}
 
 	/**
 	 * Gets the string signature of a member (constructor or method).
@@ -538,7 +537,6 @@ public final class MethodBuilder<T> {
 	/**
 	 * Loads the specified method bytecode into the interface method and returns the new class.
 	 *
-	 * @param loader the loader to use for loading the new class
 	 * @param bytecode the bytecode of the method
 	 * @param end the ending index (exclusive) of the bytecode to load
 	 * @param stackSize the maximum size of the operand stack in the bytecode
@@ -547,8 +545,7 @@ public final class MethodBuilder<T> {
 	 * @throws IllegalAccessException if the loader cannot load the bytecode due to the current security setup
 	 * @throws InvocationTargetException if the loader throws an exception while loading the bytecode
 	 */
-	@SuppressWarnings("unchecked")
-	public Class<T> load(final ClassLoader loader, final byte[] bytecode, final int end, final short stackSize, final short variableSize) throws IllegalAccessException, InvocationTargetException {
+	public Class<T> load(final byte[] bytecode, final int end, final short stackSize, final short variableSize) throws IllegalAccessException, InvocationTargetException {
 		final int SUPER = 0x20; // Internal flag
 
 		final short ctorNameI = addString("<init>");
@@ -694,13 +691,12 @@ public final class MethodBuilder<T> {
 		classBytecode[attributeIndex]     = 0x00;
 		classBytecode[attributeIndex + 1] = 0x00;
 
-		return (Class<T>)DEFINE_CLASS_METHOD.invoke(loader, name, classBytecode, 0, classBytecode.length);
+		return loader.defineClass(name, classBytecode);
 	}
 
 	/**
 	 * Loads the specified method bytecode into the interface method and returns the new class.
 	 *
-	 * @param loader the loader to use for loading the new class
 	 * @param bytecode the bytecode of the method
 	 * @param stackSize the maximum size of the operand stack in the bytecode
 	 * @param variableSize the maximum size of the local variables array in the bytecode
@@ -708,8 +704,8 @@ public final class MethodBuilder<T> {
 	 * @throws IllegalAccessException if the loader cannot load the bytecode due to the current security setup
 	 * @throws InvocationTargetException if the loader throws an exception while loading the bytecode
 	 */
-	public Class<T> load(final ClassLoader loader, final byte[] bytecode, final short stackSize, final short variableSize) throws IllegalAccessException, InvocationTargetException {
-		return load(loader, bytecode, bytecode.length, stackSize, variableSize);
+	public Class<T> load(final byte[] bytecode, final short stackSize, final short variableSize) throws IllegalAccessException, InvocationTargetException {
+		return load(bytecode, bytecode.length, stackSize, variableSize);
 	}
 
 }

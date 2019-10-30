@@ -15,6 +15,22 @@ public final class Loader implements AutoCloseable {
 
 	private static final Pattern NEW_LINE = Pattern.compile("\\r\\n?|\\n");
 
+	private static class Location {
+		public static final int FIRST_COLUMN = 1;
+
+		public final int line;
+		public final int column;
+
+		public Location(final int line, final int column) {
+			this.line = line;
+			this.column = column;
+		}
+
+		public Location() {
+			this(1, FIRST_COLUMN);
+		}
+	}
+
 	private final String name;
 	private final Path file;
 	private final Reader reader;
@@ -25,8 +41,8 @@ public final class Loader implements AutoCloseable {
 	private final Matcher matcher;
 
 	private final Matcher newLineMatcher;
-	private int line = 1;
-	private int column = 1;
+	private Location location = new Location();
+	private Location nextLocation = location;
 
 	/**
 	 * Creates a new loader from a character sequence.
@@ -84,43 +100,22 @@ public final class Loader implements AutoCloseable {
 	}
 
 	/**
-	 * Advances the internal loader pointer the specified length. This should be called after every call to next() if maintaining the line and column count is needed. The length should be the length of the subsequence returned by next().
+	 * Checks if the expected character sequence matches the upcoming sequence in the buffer. Any previous results are invalidated through the use of this function.
 	 *
-	 * @param length the length to advance the internal loader pointer
-	 * @param lines a list that will be populated with the lines parsed from the string
+	 * @param expected the expected character sequence
+	 * @return true if the expected character sequence matches the upcoming sequence in the buffer
+	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	public void advanceInternalPointer(final int length, final List<ParsedLine> lines) {
-		final int endOfBuffer = matcher.hitEnd() ? matcher.regionEnd() : matcher.start();
-		int startOfBuffer = endOfBuffer - length;
-
-		for (newLineMatcher.reset(buffer).region(startOfBuffer, bufferOffset); newLineMatcher.find(); line++, column = 1) {
-			final int newLineStart = Math.min(newLineMatcher.start(), endOfBuffer);
-			final int newLineEnd = Math.min(newLineMatcher.end(), endOfBuffer);
-
-			lines.add(new ParsedLine(buffer.subSequence(startOfBuffer, newLineStart).toString(), buffer.subSequence(newLineStart, newLineEnd).toString()));
-			startOfBuffer = newLineMatcher.end();
+	public boolean checkNext(final CharSequence expected) throws IOException {
+		while (expected.length() > buffer.length() - bufferOffset) {
+			if (isFullyLoaded) { // Check if we've reached the end
+				return false;
+			} else { // If we haven't reached the end, then attempt to pull in more data
+				loadMoreData();
+			}
 		}
 
-		if (startOfBuffer <= endOfBuffer) {
-			lines.add(new ParsedLine(buffer.subSequence(startOfBuffer, endOfBuffer).toString(), ""));
-		}
-
-		column += bufferOffset - startOfBuffer;
-	}
-
-	/**
-	 * Advances the internal loader pointer the specified length. This should be called after every call to next() if maintaining the line and column count is needed. The length should be the length of the subsequence returned by next().
-	 *
-	 * @param length the length to advance the internal loader pointer
-	 */
-	public void advanceInternalPointer(final int length) {
-		int startOfBuffer = (matcher.hitEnd() ? matcher.regionEnd() : matcher.start()) - length;
-
-		for (newLineMatcher.reset(buffer).region(startOfBuffer, bufferOffset); newLineMatcher.find(); line++, column = 1) {
-			startOfBuffer = newLineMatcher.end();
-		}
-
-		column += bufferOffset - startOfBuffer;
+		return CharSequenceUtils.matches(buffer, bufferOffset, expected);
 	}
 
 	@Override
@@ -140,7 +135,7 @@ public final class Loader implements AutoCloseable {
 	 * @return the column within the current line being loaded
 	 */
 	public int getColumn() {
-		return column;
+		return location.column;
 	}
 
 	/**
@@ -149,7 +144,7 @@ public final class Loader implements AutoCloseable {
 	 * @return the current line being loaded
 	 */
 	public int getLine() {
-		return line;
+		return location.line;
 	}
 
 	/**
@@ -186,88 +181,102 @@ public final class Loader implements AutoCloseable {
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
 	private int loadMoreData() throws IOException {
-		// If the current data is using more than 25% of the buffer, then double the size of the buffer
-		// Otherwise, if the data starts more than 50% into the buffer then move the data to the beginning of the buffer
-		if (streamBuffer.length() - bufferOffset >= streamBuffer.capacity() / 4) {
-			// Create a new buffer twice as big
-			final Buffer oldBuffer = streamBuffer;
-			streamBuffer = new Buffer(oldBuffer.capacity() * 2, oldBuffer.length() - bufferOffset);
-			buffer = streamBuffer;
+		final int length = streamBuffer.length() - bufferOffset;
 
-			// Copy data to the new buffer
-			System.arraycopy(oldBuffer.getBuffer(), bufferOffset, streamBuffer.getBuffer(), 0, streamBuffer.length());
-			bufferOffset = 0;
-			matcher.reset(streamBuffer);
-		} else if (bufferOffset >= streamBuffer.capacity() / 2) {
-			// Move the data to the beginning of the buffer
-			streamBuffer.setLength(streamBuffer.length() - bufferOffset);
-			System.arraycopy(streamBuffer.getBuffer(), bufferOffset, streamBuffer.getBuffer(), 0, streamBuffer.length());
-			bufferOffset = 0;
-			matcher.reset(streamBuffer);
+		if (length > 0) {
+			final Buffer oldBuffer = streamBuffer;
+
+			// If the current data is using more than 50% of the buffer, then double the size of the buffer
+			if (length >= oldBuffer.capacity() / 2) {
+				buffer = streamBuffer = new Buffer(oldBuffer.capacity() * 2);
+			}
+
+			// Copy the data to the beginning of the buffer and try to read more data
+			System.arraycopy(oldBuffer.getBuffer(), bufferOffset, streamBuffer.getBuffer(), 0, length);
 		}
 
-		final int read = reader.read(streamBuffer.getBuffer(), streamBuffer.length(), streamBuffer.capacity() - streamBuffer.length());
+		final int read = reader.read(streamBuffer.getBuffer(), length, streamBuffer.capacity() - length);
 
 		if (read < 0) {
+			streamBuffer.setLength(length);
 			isFullyLoaded = true;
 		} else {
-			streamBuffer.setLength(streamBuffer.length() + read);
+			streamBuffer.setLength(length + read);
 		}
 
+		bufferOffset = 0;
+		matcher.reset(streamBuffer);
 		return read;
 	}
 
 	/**
-	 * Gets the next character sequence up to the next matching delimiter or end-of-stream. On construction, the delimiter is initialized as a new line.
+	 * Gets the next character sequence up to the next matching delimiter or end-of-stream. On construction, the delimiter is initialized as a new line. Any previous results are invalidated through the use of this function.
 	 *
+	 * @param lines the list of lines to be updated as part of the call (may be null)
 	 * @return the next character sequence up to the next matching delimiter or end-of-stream
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	public CharSequence next() throws IOException {
-		while (!matcher.find()) {
-			if (isFullyLoaded) { // Check if we've reached the end
-				final int start = bufferOffset;
-				bufferOffset = buffer.length();
-				return buffer.subSequence(start, bufferOffset);
+	public CharSequence next(final List<ParsedLine> lines) throws IOException {
+		int start = bufferOffset;
+		int end;
+
+		while (true) {
+			if (matcher.find()) {
+				end = matcher.start();
+				bufferOffset = matcher.end();
+				break;
+			} else if (isFullyLoaded) { // Check if we've reached the end
+				end = bufferOffset = buffer.length();
+				break;
 			} else { // If we haven't reached the end, then attempt to pull in more data
 				loadMoreData();
+				start = bufferOffset;
 			}
 		}
 
-		final int start = bufferOffset;
-		bufferOffset = matcher.end();
-		return buffer.subSequence(start, matcher.start());
+		// Match the new lines
+		int startOfLine = start;
+		int line = nextLocation.line;
+		int column = nextLocation.column;
+		location = nextLocation;
+		newLineMatcher.reset(buffer).region(start, bufferOffset);
+
+		if (lines != null) {
+			for (; newLineMatcher.find(); line++, column = Location.FIRST_COLUMN) {
+				final int newLineStart = Math.min(newLineMatcher.start(), end);
+				final int newLineEnd = Math.min(newLineMatcher.end(), end);
+
+				if (startOfLine <= end) {
+					lines.add(new ParsedLine(buffer.subSequence(startOfLine, newLineStart).toString(), buffer.subSequence(newLineStart, newLineEnd).toString()));
+				}
+
+				startOfLine = newLineMatcher.end();
+			}
+
+			if (startOfLine <= end) {
+				lines.add(new ParsedLine(buffer.subSequence(startOfLine, end).toString(), ""));
+			}
+		} else {
+			for (; newLineMatcher.find(); line++, column = Location.FIRST_COLUMN) {
+				startOfLine = newLineMatcher.end();
+			}
+		}
+
+		nextLocation = new Location(line, column + bufferOffset - startOfLine);
+		return buffer.subSequence(start, end);
 	}
 
 	/**
-	 * Replaces the delimiter and gets the next character sequence up to the next match or end-of-stream. The delimiter will be used in subsequent calls to next().
+	 * Replaces the delimiter and gets the next character sequence up to the next match or end-of-stream. The delimiter will be used in subsequent calls to next(). Any previous results are invalidated through the use of this function.
 	 *
 	 * @param delimiter the replacement delimiter used for subsequent calls to next()
+	 * @param lines the list of lines to be updated as part of the call (may be null)
 	 * @return the next character sequence up to the next matching delimiter or end-of-stream
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	public CharSequence next(final Pattern delimiter) throws IOException {
+	public CharSequence next(final Pattern delimiter, final List<ParsedLine> lines) throws IOException {
 		matcher.usePattern(delimiter);
-		return next();
-	}
-
-	/**
-	 * Peeks into the buffer to see if the specified character sequence matches the expected value.
-	 *
-	 * @param expected the expected value
-	 * @return true if the expected value matches the upcoming sequence in the buffer
-	 * @throws IOException if an error was encountered while trying to read more data into the buffer
-	 */
-	public boolean peek(final CharSequence expected) throws IOException {
-		while (expected.length() > buffer.length() - bufferOffset) {
-			if (isFullyLoaded) { // Check if we've reached the end
-				return false;
-			} else { // If we haven't reached the end, then attempt to pull in more data
-				loadMoreData();
-			}
-		}
-
-		return CharSequenceUtils.matches(buffer, bufferOffset, expected);
+		return next(lines);
 	}
 
 	@Override

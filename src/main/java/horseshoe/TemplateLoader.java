@@ -387,13 +387,12 @@ public class TemplateLoader {
 		// Parse all tags
 		while (true) {
 			// Get text before this tag
-			final CharSequence freeText = loader.next(delimiter.start);
+			final List<ParsedLine> lines = new ArrayList<>();
+			final CharSequence freeText = loader.next(delimiter.start, lines);
 			final int length = freeText.length();
 
 			if (length == 0) {
 				if (!template.getActions().isEmpty()) {
-					loader.advanceInternalPointer(0);
-
 					// The text can only be following a stand-alone tag if it is at the very end of the template
 					if (!loader.hasNext() && textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
 						textBeforeStandaloneTag.ignoreLastLine();
@@ -403,8 +402,6 @@ public class TemplateLoader {
 					textBeforeStandaloneTag = null;
 				}
 			} else {
-				final List<ParsedLine> lines = new ArrayList<>();
-				loader.advanceInternalPointer(length, lines);
 				final StaticContentRenderer currentText = new StaticContentRenderer(lines);
 				actionStack.peek().add(currentText);
 
@@ -429,10 +426,10 @@ public class TemplateLoader {
 			}
 
 			// Parse the expression
-			final CharSequence expression = loader.next(loader.peek("{") ? delimiter.unescapedEnd : delimiter.end);
+			final CharSequence expression = loader.next(loader.checkNext("{") ? delimiter.unescapedEnd : delimiter.end, null);
 
 			if (!loader.hasNext()) {
-				throw new LoadException(context.loaders, "Unexpected end of stream, unclosed tag");
+				throw new LoadException(context.loaders, "Unclosed tag, unexpected end of stream");
 			}
 
 			if (expression.length() != 0) {
@@ -510,7 +507,7 @@ public class TemplateLoader {
 						final Expression resolver = resolvers.pop();
 
 						if (sectionExpression.length() != 0 && !resolver.exactlyMatches(sectionExpression)) {
-							throw new LoadException(context.loaders, "Unmatched section start tag, expecting: \"" + resolver.toString() + "\"");
+							throw new LoadException(context.loaders, "Unmatched section start tag, expecting \"" + resolver.toString() + "\"");
 						}
 
 						actionStack.pop();
@@ -549,13 +546,11 @@ public class TemplateLoader {
 					throw new LoadException(context.loaders, "Invalid expression: " + expression.subSequence(1, expression.length()), e);
 				}
 			}
-
-			// Advance past the end delimiter
-			loader.advanceInternalPointer(expression.length());
 		}
 
 		if (!resolvers.isEmpty()) {
-			new LoadException(context.loaders, "Unexpected end of stream, unmatched section start tag: \"" + resolvers.peek().toString() + "\"");
+			loader.getName();
+			throw new LoadException(context.loaders, "Unmatched section tag \"" + resolvers.peek().toString() + "\", unexpected end of stream");
 		}
 
 		// Check for empty last line of template, so that indentation is not applied
