@@ -95,7 +95,6 @@ public final class Template {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	public void render(final Settings settings, final Map<String, Object> globalData, final Writer writer, final WriterMap writerMap) throws IOException {
-		// TODO: Linking of variables
 		final RenderContext renderContext = new RenderContext(settings, globalData, writerMap);
 
 		renderContext.getIndentation().push("");

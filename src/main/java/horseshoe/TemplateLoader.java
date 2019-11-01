@@ -54,6 +54,7 @@ public class TemplateLoader {
 
 	}
 
+	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))));
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*([^\\s]+)\\s+([^\\s]+)\\s*=");
 
@@ -379,7 +380,7 @@ public class TemplateLoader {
 		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
 
 		Delimiter delimiter = new Delimiter();
-		StaticContentRenderer textBeforeStandaloneTag = new StaticContentRenderer(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))));
+		StaticContentRenderer textBeforeStandaloneTag = EMPTY_STATIC_CONTENT_RENDERER;
 
 		context.loaders.push(loader);
 		actionStack.push(template.getActions());
@@ -441,11 +442,10 @@ public class TemplateLoader {
 					case '>': { // Load partial
 						final Template partial = load(CharSequenceUtils.trim(expression, 1, expression.length()).toString(), context, recursionLevel + resolvers.size());
 
-						if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
-							textBeforeStandaloneTag.ignoreLastLine();
-							actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag.getLastLine()));
+						if (textBeforeStandaloneTag != null) {
+							actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag));
 						} else {
-							actionStack.peek().add(new TemplateRenderer(partial, ""));
+							actionStack.peek().add(new TemplateRenderer(partial, EMPTY_STATIC_CONTENT_RENDERER));
 						}
 
 						break;

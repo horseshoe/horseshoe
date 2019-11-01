@@ -27,30 +27,35 @@ final class StaticContentRenderer implements Action {
 	public void perform(final RenderContext context, final Writer writer) throws IOException {
 		final String indentation = context.getIndentation().peek();
 
-		// No indentation on first line
-		if (!ignoreFirstLine && lines.length > 1) {
-			final ParsedLine line = lines[0];
-
-			writer.write(line.getLine());
-			writer.write(context.getSettings().getLineEnding() == null ? line.getEnding() : context.getSettings().getLineEnding());
-		}
-
-		// Indent all remaining lines
-		for (int i = 1; i < lines.length - 1; i++ ) {
-			final ParsedLine line = lines[i];
-
-			if (!line.getLine().isEmpty()) {
-				writer.write(indentation);
-				writer.write(line.getLine());
+		if (lines.length == 1) {
+			// No indentation on first line
+			if (!(ignoreFirstLine | ignoreLastLine)) {
+				writer.write(lines[0].getLine());
+			}
+		} else {
+			// No indentation on first line
+			if (!ignoreFirstLine) {
+				writer.write(lines[0].getLine());
+				writer.write(context.getSettings().getLineEnding() == null ? lines[0].getEnding() : context.getSettings().getLineEnding());
 			}
 
-			writer.write(context.getSettings().getLineEnding() == null ? line.getEnding() : context.getSettings().getLineEnding());
-		}
+			// Indent all remaining lines
+			for (int i = 1; i < lines.length - 1; i++) {
+				final ParsedLine line = lines[i];
 
-		// Skip line ending on the last line
-		if (!ignoreLastLine) {
-			writer.write(indentation);
-			writer.write(lines[lines.length - 1].getLine());
+				if (!line.getLine().isEmpty()) {
+					writer.write(indentation);
+					writer.write(line.getLine());
+				}
+
+				writer.write(context.getSettings().getLineEnding() == null ? line.getEnding() : context.getSettings().getLineEnding());
+			}
+
+			// Skip line ending on the last line
+			if (!ignoreLastLine) {
+				writer.write(indentation);
+				writer.write(lines[lines.length - 1].getLine());
+			}
 		}
 	}
 
@@ -68,6 +73,10 @@ final class StaticContentRenderer implements Action {
 
 	void ignoreLastLine() {
 		ignoreLastLine = true;
+	}
+
+	boolean isLastLineIgnored() {
+		return ignoreLastLine;
 	}
 
 	boolean isMultiline() {
