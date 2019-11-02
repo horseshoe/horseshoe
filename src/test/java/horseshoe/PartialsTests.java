@@ -47,12 +47,50 @@ public final class PartialsTests {
 		Assert.assertEquals("324", writer.toString());
 	}
 
-	@Test (expected = LoadException.class)
+	@Test (expected = StackOverflowError.class)
 	public void testBadRecursivePartial() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
 		final Template template = new TemplateLoader()
 				.add("f", "{{b}}{{>Test}}")
 				.load("Test", "{{>f}}");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
+	}
+
+	@Test
+	public void testInlinePartials() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Template template = new TemplateLoader()
+				.load("Test", "{{<g}}{{#a}}{{b}}{{x}}{{/a}}{{/g}}{{>g}}{{#a}}{{>g}}{{/a}}");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("a", loadMap("b", 2, "x", false), "x", true), writer);
+		Assert.assertEquals("2false", writer.toString());
+	}
+
+	@Test
+	public void testInlineRecursivePartial() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Template template = new TemplateLoader()
+				.load("Test", "{{<f}}\n{{b}}\n{{#a}}\n{{>f}}\n{{/a}}\n{{/f}}\n{{>f}}");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
+		Assert.assertEquals("3" + LS + "2" + LS + "4" + LS, writer.toString());
+	}
+
+	@Test (expected = StackOverflowError.class)
+	public void testInlineBadRecursivePartial() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Template template = new TemplateLoader()
+				.load("Test", "{{<f}}\n{{b}}{{>Test}}\n{{/f}}\n{{>f}}");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
+	}
+
+	@Test (expected = LoadException.class)
+	public void testInlineBadPartial() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Template template = new TemplateLoader()
+				.load("Test", "{{#a}}{{<f}}\n{{b}}{{>Test}}\n{{/f}}{{/a}}\n{{>f}}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
 	}

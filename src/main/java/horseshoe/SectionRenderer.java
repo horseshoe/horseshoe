@@ -12,14 +12,13 @@ class SectionRenderer implements Action {
 	public static class Factory {
 
 		/**
-		 * Creates a new render section action using the specified resolver and section.
+		 * Creates a new section renderer using the specified section.
 		 *
-		 * @param expression the expression used in the section
 		 * @param section the section to be rendered
-		 * @return the created render section action
+		 * @return the created section renderer
 		 */
-		SectionRenderer create(final Expression expression, final Section section){
-			return new SectionRenderer(expression, section);
+		SectionRenderer create(final Section section){
+			return new SectionRenderer(section);
 		}
 
 	}
@@ -58,17 +57,14 @@ class SectionRenderer implements Action {
 		context.getSectionData().pop();
 	}
 
-	protected final Expression expression;
 	protected final Section section;
 
 	/**
-	 * Creates a new render section action using the specified resolver and section.
+	 * Creates a new section renderer using the specified resolver and section.
 	 *
-	 * @param expression the expression used in the section
 	 * @param section the section to be rendered
 	 */
-	protected SectionRenderer(final Expression expression, final Section section) {
-		this.expression = expression;
+	protected SectionRenderer(final Section section) {
 		this.section = section;
 	}
 
@@ -130,7 +126,7 @@ class SectionRenderer implements Action {
 			}
 		}
 
-		dispatchData(context, expression.evaluate(context), writer);
+		dispatchData(context, section.getExpression().evaluate(context), writer);
 	}
 
 }

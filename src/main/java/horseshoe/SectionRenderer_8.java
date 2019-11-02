@@ -13,19 +13,18 @@ class SectionRenderer_8 extends SectionRenderer {
 
 	public static class Factory extends SectionRenderer.Factory {
 		@Override
-		public SectionRenderer_8 create(final Expression expression, final Section section) {
-			return new SectionRenderer_8(expression, section);
+		public SectionRenderer_8 create(final Section section) {
+			return new SectionRenderer_8(section);
 		}
 	}
 
 	/**
-	 * Creates a new render section action using the specified resolver and section.
+	 * Creates a new section renderer using the specified section.
 	 *
-	 * @param expression the expression used in the section
 	 * @param section the section to be rendered
 	 */
-	protected SectionRenderer_8(final Expression expression, final Section section) {
-		super(expression, section);
+	protected SectionRenderer_8(final Section section) {
+		super(section);
 	}
 
 	@SuppressWarnings("unchecked")

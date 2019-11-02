@@ -304,7 +304,7 @@ public class TemplateLoader {
 		Template template = templates.get(name);
 
 		if (template == null) {
-			template = new Template(name, recursionLevel);
+			template = new Template(name);
 			templates.put(name, template);
 
 			Loader loader = templateLoaders.remove(name);
@@ -349,7 +349,6 @@ public class TemplateLoader {
 				}
 
 				loadTemplate(template, context, loader, recursionLevel);
-				template.recursionLevel = -1;
 			} catch (final IOException | RuntimeException e) {
 				if (throwOnPartialNotFound) {
 					throw new LoadException(context.loaders, "Template \"" + name + "\" could not be loaded: " + e.getMessage(), e);
@@ -359,8 +358,6 @@ public class TemplateLoader {
 					loader.close();
 				}
 			}
-		} else if (template.recursionLevel == recursionLevel) {
-			throw new LoadException(context.loaders, "Invalid recursion detected in template \"" + name + "\"");
 		}
 
 		return template;
@@ -376,7 +373,8 @@ public class TemplateLoader {
 	 * @throws IOException if an error is encountered while reading from a file or stream
 	 */
 	private void loadTemplate(final Template template, final LoadContext context, final Loader loader, final int recursionLevel) throws LoadException, IOException {
-		final PersistentStack<Expression> resolvers = new PersistentStack<>();
+		final Map<String, Template> rootLocalPartials = new HashMap<>();
+		final PersistentStack<Section> sections = new PersistentStack<>();
 		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
 
 		Delimiter delimiter = new Delimiter();
@@ -439,8 +437,21 @@ public class TemplateLoader {
 					case '!': // Comments are completely ignored
 						break;
 
+					case '<': { // Local partial
+						final String name = CharSequenceUtils.trim(expression, 1, expression.length()).toString();
+						final Template partial = new Template(name);
+						final Map<String, Template> localPartials = sections.isEmpty() ? rootLocalPartials : sections.peek().getLocalPartials();
+
+						localPartials.put(name, partial);
+						sections.push(new Section(name, localPartials));
+						actionStack.push(partial.getActions());
+						break;
+					}
+
 					case '>': { // Load partial
-						final Template partial = load(CharSequenceUtils.trim(expression, 1, expression.length()).toString(), context, recursionLevel + resolvers.size());
+						final String name = CharSequenceUtils.trim(expression, 1, expression.length()).toString();
+						final Template localPartial = sections.isEmpty() ? rootLocalPartials.get(name) : sections.peek().getLocalPartials().get(name);
+						final Template partial = localPartial == null ? load(name, context, recursionLevel + sections.size()) : localPartial;
 
 						if (textBeforeStandaloneTag != null) {
 							actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag));
@@ -453,26 +464,23 @@ public class TemplateLoader {
 
 					case '#': { // Start a new section, or repeat the previous section
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
-						final Section section;
+						final Map<String, Template> localPartials = sections.isEmpty() ? rootLocalPartials : sections.peek().getLocalPartials();
 
 						if (sectionExpression.length() == 0) { // Repeat the previous section
-							if (!resolvers.hasPoppedItem()) {
+							if (!sections.hasPoppedItem()) {
 								throw new LoadException(context.loaders, "Repeat section without prior section");
 							}
 
-							resolvers.push();
-							section = new Section();
+							sections.push();
 						} else if (sectionExpression.charAt(0) == '>') {
-							resolvers.push(Expression.newEmptyExpression(sectionExpression.toString()));
-							section = new Section(sectionExpression.subSequence(1, sectionExpression.length()).toString());
+							sections.push(new Section(CharSequenceUtils.trim(sectionExpression, 1, sectionExpression.length()), sections.size() + 1, localPartials));
 						} else { // Start a new section
-							resolvers.push(Expression.load(sectionExpression, resolvers.size()));
-							section = new Section();
+							sections.push(new Section(Expression.load(sectionExpression, sections.size() + 1), localPartials));
 						}
 
 						// Add a new render section action
-						actionStack.peek().add(SectionRenderer.FACTORY.create(resolvers.peek(), section));
-						actionStack.push(section.getActions());
+						actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
+						actionStack.push(sections.peek().getActions());
 						break;
 					}
 
@@ -480,18 +488,18 @@ public class TemplateLoader {
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
 						if (sectionExpression.length() == 0) { // Else block for the current section
-							if (resolvers.isEmpty()) {
+							if (sections.isEmpty() || sections.peek().getExpression() == null) {
 								throw new LoadException(context.loaders, "Section else tag outside section start tag");
 							}
 
 							actionStack.pop();
 						} else { // Start a new inverted section
-							resolvers.push(Expression.load(sectionExpression, resolvers.size()));
-							actionStack.peek().add(SectionRenderer.FACTORY.create(resolvers.peek(), new Section()));
+							sections.push(new Section(Expression.load(sectionExpression, sections.size()), sections.isEmpty() ? rootLocalPartials : sections.peek().getLocalPartials()));
+							actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
 						}
 
 						// Grab the inverted action list from the section
-						final List<Action> actions = actionStack.peek();
+						final List<Action> actions = actionStack.peek(); // TODO: fix
 
 						actionStack.push(((SectionRenderer)actions.get(actions.size() - 1)).getSection().getInvertedActions());
 						break;
@@ -500,14 +508,14 @@ public class TemplateLoader {
 					case '/': { // Close the current section
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
-						if (resolvers.isEmpty()) {
+						if (sections.isEmpty()) {
 							throw new LoadException(context.loaders, "Section close tag without matching section start tag");
 						}
 
-						final Expression resolver = resolvers.pop();
+						final Section section = sections.pop();
 
-						if (sectionExpression.length() != 0 && !resolver.exactlyMatches(sectionExpression)) {
-							throw new LoadException(context.loaders, "Unmatched section start tag, expecting \"" + resolver.toString() + "\"");
+						if (sectionExpression.length() != 0 && !section.matches(sectionExpression)) {
+							throw new LoadException(context.loaders, "Unmatched section start tag, expecting \"" + section.getExpression().toString() + "\"");
 						}
 
 						actionStack.pop();
@@ -530,7 +538,7 @@ public class TemplateLoader {
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(Expression.load(sectionExpression, resolvers.size()), false));
+						actionStack.peek().add(new DynamicContentRenderer(Expression.load(sectionExpression, sections.size()), false));
 						break;
 					}
 
@@ -538,7 +546,7 @@ public class TemplateLoader {
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 0, expression.length());
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(Expression.load(sectionExpression, resolvers.size()), true));
+						actionStack.peek().add(new DynamicContentRenderer(Expression.load(sectionExpression, sections.size()), true));
 						break;
 					}
 					}
@@ -548,9 +556,8 @@ public class TemplateLoader {
 			}
 		}
 
-		if (!resolvers.isEmpty()) {
-			loader.getName();
-			throw new LoadException(context.loaders, "Unmatched section tag \"" + resolvers.peek().toString() + "\", unexpected end of stream");
+		if (!sections.isEmpty()) {
+			throw new LoadException(context.loaders, "Unmatched section tag \"" + sections.peek().toString() + "\", unexpected end of stream");
 		}
 
 		// Check for empty last line of template, so that indentation is not applied
