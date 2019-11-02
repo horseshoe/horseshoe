@@ -95,4 +95,15 @@ public final class PartialsTests {
 		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
 	}
 
+	@Test
+	public void testClashingPartialsAndData() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Template template = new TemplateLoader()
+				.add("f", "{{f.b}}")
+				.load("Test", "{{#f}}{{<f}}{{a}}{{/f}}{{>f}}{{/f}}{{>f}}");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("f", loadMap("a", "123", "b", "456")), writer);
+		Assert.assertEquals("123456", writer.toString());
+	}
+
 }
