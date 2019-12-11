@@ -11,6 +11,7 @@ final class StaticContentRenderer implements Action {
 	private static final ParsedLine EMPTY_LINES[] = new ParsedLine[0];
 
 	private final ParsedLine lines[];
+	private final boolean indentFirstLine;
 	private boolean ignoreFirstLine = false;
 	private boolean ignoreLastLine = false;
 
@@ -18,9 +19,11 @@ final class StaticContentRenderer implements Action {
 	 * Creates a new render static content action using the specified lines. The list of lines must contain at least one line.
 	 *
 	 * @param lines the list of lines
+	 * @param indentFirstLine true to indent the first line, otherwise false
 	 */
-	StaticContentRenderer(final List<ParsedLine> lines) {
+	StaticContentRenderer(final List<ParsedLine> lines, final boolean indentFirstLine) {
 		this.lines = lines.toArray(EMPTY_LINES);
+		this.indentFirstLine = indentFirstLine;
 	}
 
 	@Override
@@ -28,13 +31,21 @@ final class StaticContentRenderer implements Action {
 		final String indentation = context.getIndentation().peek();
 
 		if (lines.length == 1) {
-			// No indentation on first line
+			// Only write the line if it is not ignored
 			if (!(ignoreFirstLine | ignoreLastLine)) {
+				if (indentFirstLine) {
+					writer.write(indentation);
+				}
+
 				writer.write(lines[0].getLine());
 			}
 		} else {
-			// No indentation on first line
+			// Only write the first line if it is not ignored
 			if (!ignoreFirstLine) {
+				if (indentFirstLine) {
+					writer.write(indentation);
+				}
+
 				writer.write(lines[0].getLine());
 				writer.write(context.getSettings().getLineEnding() == null ? lines[0].getEnding() : context.getSettings().getLineEnding());
 			}

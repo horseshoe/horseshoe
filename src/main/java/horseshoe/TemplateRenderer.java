@@ -25,7 +25,6 @@ final class TemplateRenderer implements Action {
 			final String indentation = context.getIndentation().peek() + priorStaticContent.getLastLine();
 
 			context.getIndentation().push(indentation);
-			writer.write(indentation);
 		} else { // This is not a stand-alone tag, so don't use the indentation (also, the indentation for the first line is already written).
 			context.getIndentation().push(context.getIndentation().peek());
 		}

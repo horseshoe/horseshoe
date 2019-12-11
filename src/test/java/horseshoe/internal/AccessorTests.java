@@ -1,11 +1,15 @@
-package horseshoe;
+package horseshoe.internal;
 
 import java.io.IOException;
 import java.util.Collections;
 
 import org.junit.Test;
 
-public class ResolverTests {
+import horseshoe.Helper;
+import horseshoe.LoadException;
+import horseshoe.Settings;
+
+public class AccessorTests {
 
 	@Test
 	public void testStaticFieldAllMAX_VALUEs() throws IOException, LoadException {
@@ -14,7 +18,7 @@ public class ResolverTests {
 
 	@Test
 	public void testStaticMethod() throws IOException, LoadException {
-		Helper.executeTest("Min: {{Math.min(Integer.MAX_VALUE, 0)}}, Max: {{Math.max(Integer.MIN_VALUE, 0)}}, Max: {{Math.max(Integer.MIN_VALUE, Byte.MAX_VALUE)}}", Collections.emptyMap(), new Settings(), Helper.loadMap("Math", Math.class, "Integer", Integer.class, "Byte", Byte.class), "Min: 0, Max: 0, Max: " + Byte.MAX_VALUE);
+		Helper.executeTest("Min: {{Math.`min:int,int`(Integer.MAX_VALUE, 0)}}, Max: {{Math.`max:float,float`(Integer.MIN_VALUE, 0)}}, Max: {{Math.`max:int,int`(Integer.MIN_VALUE, Byte.MAX_VALUE)}}", Collections.emptyMap(), new Settings(), Helper.loadMap("Math", Math.class, "Integer", Integer.class, "Byte", Byte.class), "Min: 0, Max: 0.0, Max: " + Byte.MAX_VALUE);
 	}
 
 }

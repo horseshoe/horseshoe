@@ -1,4 +1,4 @@
-package horseshoe;
+package horseshoe.internal;
 
 import static org.junit.Assert.assertEquals;
 
@@ -11,7 +11,7 @@ import org.junit.Test;
 
 import horseshoe.internal.Loader;
 
-public class InternalLoader {
+public class LoaderTests {
 
 	private static final Random rand = new Random();
 

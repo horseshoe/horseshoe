@@ -75,12 +75,32 @@ public class PersistentStack<T> implements Iterable<T> {
 	}
 
 	/**
+	 * Returns the item on the bottom of the stack.
+	 *
+	 * @return the item on the bottom of the stack
+	 */
+	public T peekBase() {
+		return array[0];
+	}
+
+	/**
 	 * Pops the top item off the stack.
 	 *
 	 * @return the item popped off the top of the stack
 	 */
 	public T pop() {
 		return array[--size];
+	}
+
+	/**
+	 * Pops the specified number of items off the stack.
+	 *
+	 * @param size the number of items to pop off the stack
+	 * @return this stack
+	 */
+	public PersistentStack<T> pop(final int size) {
+		this.size -= size;
+		return this;
 	}
 
 	/**

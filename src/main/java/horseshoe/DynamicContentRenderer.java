@@ -3,29 +3,31 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
+import horseshoe.internal.Expression;
+
 final class DynamicContentRenderer implements Action {
 
-	private final Expression resolver;
+	private final Expression expression;
 	private final boolean escaped;
 
 	/**
 	 * Creates a new render dynamic content action.
 	 *
-	 * @param resolver the resolver for the expression
+	 * @param expression the expression for the dynamic content
 	 * @param escaped true if the rendered content will be escaped, otherwise false
 	 */
-	public DynamicContentRenderer(final Expression resolver, final boolean escaped) {
-		this.resolver = resolver;
+	public DynamicContentRenderer(final Expression expression, final boolean escaped) {
+		this.expression = expression;
 		this.escaped = escaped;
 	}
 
 	@Override
 	public void perform(final RenderContext context, final Writer writer) throws IOException {
-		final Object obj = resolver.evaluate(context);
+		final Object value = expression.evaluate(context.getSectionData(), context.getSettings().getContextAccess());
 
-		if (obj != null) {
-			final String value = obj.toString();
-			writer.write(escaped && context.getSettings().getEscapeFunction() != null ? context.getSettings().getEscapeFunction().escape(value) : value);
+		if (value != null) {
+			final String string = value.toString();
+			writer.write(escaped && context.getSettings().getEscapeFunction() != null ? context.getSettings().getEscapeFunction().escape(string) : string);
 		}
 	}
 

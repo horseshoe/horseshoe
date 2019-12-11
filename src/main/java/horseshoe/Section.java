@@ -5,8 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import horseshoe.internal.Expression;
+
 final class Section {
 
+	private final String name;
 	private final Expression expression;
 	private final String writerName;
 	private final Map<String, Template> localPartials;
@@ -16,10 +19,13 @@ final class Section {
 	/**
 	 * Creates a new section using the specified expression and specified writer.
 	 *
+	 * @param name the name for the section
 	 * @param expression the expression for the section
 	 * @param writerName the name of the writer to use for the section, or null to use the current writer
+	 * @param localPartials the local partials for the section
 	 */
-	public Section(final Expression expression, final String writerName, final Map<String, Template> localPartials) {
+	public Section(final String name, final Expression expression, final String writerName, final Map<String, Template> localPartials) {
+		this.name = name;
 		this.expression = expression;
 		this.writerName = writerName;
 		this.localPartials = new HashMap<>(localPartials);
@@ -31,24 +37,14 @@ final class Section {
 	 * @param expression the expression for the section
 	 */
 	public Section(final Expression expression, final Map<String, Template> localPartials) {
-		this(expression, null, localPartials);
-	}
-
-	/**
-	 * Creates a new section using the specified writer.
-	 *
-	 * @param writerName the name of the writer to use for the section, or null to use the current writer
-	 * @throws Exception
-	 */
-	public Section(final CharSequence writerName, final int maxBackreach, final Map<String, Template> localPartials) throws Exception {
-		this(Expression.newEmptyExpression(writerName.toString()), writerName.toString(), localPartials); // TODO: fix
+		this(expression.toString(), expression, null, localPartials);
 	}
 
 	/**
 	 * Creates a new section using an empty expression.
 	 */
 	public Section(final String name, final Map<String, Template> localPartials) {
-		this(Expression.newEmptyExpression(name), null, localPartials);
+		this(name, null, null, localPartials);
 	}
 
 	/**
@@ -79,12 +75,21 @@ final class Section {
 	}
 
 	/**
-	 * Gets the template for the section.
+	 * Gets the local partials for the section.
 	 *
-	 * @return the template for the section, or null if one does not exist
+	 * @return the local partials for the section
 	 */
 	public Map<String, Template> getLocalPartials() {
 		return localPartials;
+	}
+
+	/**
+	 * Gets the name of the section.
+	 *
+	 * @return the name of the section
+	 */
+	public String getName() {
+		return name;
 	}
 
 	/**
@@ -94,22 +99,6 @@ final class Section {
 	 */
 	public String getWriterName() {
 		return writerName;
-	}
-
-	/**
-	 * Checks if the specified character sequence matches this section.
-	 *
-	 * @param value the character sequence to check
-	 * @return true if the specified character sequence matches this section, otherwise false
-	 */
-	public boolean matches(final CharSequence value) {
-		if (expression != null) {
-			return expression.exactlyMatches(value);
-		} else if (writerName != null) {
-			return writerName.equals(value);
-		}
-
-		return false;
 	}
 
 }

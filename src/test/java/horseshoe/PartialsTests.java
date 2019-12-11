@@ -68,6 +68,16 @@ public final class PartialsTests {
 	}
 
 	@Test
+	public void testInlineRecursivePartialIndentation() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Template template = new TemplateLoader()
+				.load("Test", "{{<g}}\n{{x}}:\n{{#a}}\n\t{{>g}}\n{{/a}}\n{{/g}}\n\t{{>g}}\n");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("a", loadMap("a", loadMap("x", 3), "x", 2), "x", 1), writer);
+		Assert.assertEquals("\t1:" + LS + "\t\t2:" + LS + "\t\t\t3:" + LS, writer.toString());
+	}
+
+	@Test
 	public void testInlineRecursivePartial() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
 		final Template template = new TemplateLoader()

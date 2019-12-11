@@ -81,7 +81,7 @@ class SectionRenderer implements Action {
 			final Iterator<?> it = ((Iterable<?>)data).iterator();
 
 			if (it.hasNext()) {
-				for (; true; ) {
+				while (true) {
 					final Object object = it.next();
 
 					if (it.hasNext()) {
@@ -118,15 +118,21 @@ class SectionRenderer implements Action {
 
 	@Override
 	public final void perform(final RenderContext context, Writer writer) throws IOException {
+		final Object value;
+
 		if (section.getWriterName() != null) {
 			final Writer newWriter = context.getWriterMap().getWriter(section.getWriterName());
 
 			if (newWriter != null) {
 				writer = newWriter;
 			}
+
+			value = context.getSectionData().peek();
+		} else {
+			value = section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess());
 		}
 
-		dispatchData(context, section.getExpression().evaluate(context), writer);
+		dispatchData(context, value, writer);
 	}
 
 }
