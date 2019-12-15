@@ -31,6 +31,15 @@ public class PersistentStack<T> implements Iterable<T> {
 	}
 
 	/**
+	 * Gets the current capacity of the stack.
+	 *
+	 * @return the current capacity of the stack
+	 */
+	public int capacity() {
+		return array.length;
+	}
+
+	/**
 	 * Clears the stack. This functions the same as calling pop() until the stack is empty.
 	 */
 	public void clear() {

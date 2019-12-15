@@ -16,9 +16,13 @@ dependencies {
 	testImplementation 'org.yaml:snakeyaml:1.+'
 }
 
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
+}
+
 compileJava {
 	sourceCompatibility = 1.7
 	targetCompatibility = 1.7
 }
 
-version = '0.1.0'
+version = '0.1.1'

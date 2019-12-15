@@ -9,7 +9,6 @@ import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -40,7 +39,6 @@ public final class MethodBuilder {
 	private static final byte GETFIELD = (byte)0xB4; // 2: indexbyte1, indexbyte2 (stack: objectref -> value)
 	private static final byte GETSTATIC = (byte)0xB2; // 2: indexbyte1, indexbyte2 (stack: -> value)
 	private static final byte INSTANCEOF = (byte)0xC1; // 2: indexbyte1, indexbyte2 (stack: objectref -> result)
-	private static final byte INVOKEDYNAMIC = (byte)0xBA; // 4: indexbyte1, indexbyte2, 0, 0 (stack: [arg1, [arg2 ...]] -> result)
 	private static final byte INVOKEINTERFACE = (byte)0xB9; // 4: indexbyte1, indexbyte2, count, 0 (stack: objectref, [arg1, arg2, ...] -> result)
 	private static final byte INVOKESPECIAL = (byte)0xB7; // 2: indexbyte1, indexbyte2 (stack: objectref, [arg1, arg2, ...] -> result)
 	private static final byte INVOKESTATIC = (byte)0xB8; // 2: indexbyte1, indexbyte2 (stack: [arg1, arg2, ...] -> result)
@@ -48,13 +46,16 @@ public final class MethodBuilder {
 	private static final byte LDC = (byte)0x12; // 1: index (stack: -> value)
 	private static final byte LDC_W = (byte)0x13; // 2: indexbyte1, indexbyte2 (stack: -> value)
 	private static final byte LDC2_W = (byte)0x14; // 2: indexbyte1, indexbyte2 (stack: -> value)
-	private static final byte LOOKUPSWITCH = (byte)0xAB; // 8+: <0–3 bytes padding>, defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, npairs1, npairs2, npairs3, npairs4, match-offset pairs... (stack: key ->)
+	private static final byte LOOKUPSWITCH = (byte)0xAB; // 8+: [0-3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, npairs1, npairs2, npairs3, npairs4, match-offset pairs... (stack: key ->)
 	private static final byte MULTIANEWARRAY = (byte)0xC5; // 3: indexbyte1, indexbyte2, dimensions (stack: count1, [count2,...] -> arrayref)
 	private static final byte NEW = (byte)0xBB; // 2: indexbyte1, indexbyte2 (stack: -> objectref)
 	private static final byte NEWARRAY = (byte)0xBC; // 1: atype (stack: count -> arrayref)
 	private static final byte PUTFIELD = (byte)0xB5; // 2: indexbyte1, indexbyte2 (stack: objectref, value ->)
 	private static final byte PUTSTATIC = (byte)0xB3; // 2: indexbyte1, indexbyte2 (stack: value ->)
-	private static final byte TABLESWITCH = (byte)0xAA; // 16+: [0–3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, lowbyte1, lowbyte2, lowbyte3, lowbyte4, highbyte1, highbyte2, highbyte3, highbyte4, jump offsets... (stack: index ->)
+	private static final byte TABLESWITCH = (byte)0xAA; // 16+: [0-3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, lowbyte1, lowbyte2, lowbyte3, lowbyte4, highbyte1, highbyte2, highbyte3, highbyte4, jump offsets... (stack: index ->)
+
+	// Do not use, added in Java 7, but we only support Java 6
+	private static final byte INVOKEDYNAMIC = (byte)0xBA; // 4: indexbyte1, indexbyte2, 0, 0 (stack: [arg1, [arg2 ...]] -> result)
 
 	// Instructions that can be added as code
 	public static final byte AALOAD = (byte)0x32; // (stack: arrayref, index -> value)
@@ -244,9 +245,9 @@ public final class MethodBuilder {
 	public static final byte WIDE = (byte)0xC4; // 3/5: opcode, indexbyte1, indexbyte2 (stack: [same as for corresponding instructions])
 
 	private static final class Location {
-		public final Object container;
-		public final int offset;
-		public final int updateOffset;
+		public Object container;
+		public int offset;
+		public int updateOffset;
 
 		/**
 		 * Creates a new location using a builder as the container.
@@ -283,6 +284,20 @@ public final class MethodBuilder {
 			this.container = container;
 			this.offset = offset;
 			this.updateOffset = offset;
+		}
+
+		/**
+		 * Updates the location using the specified values.
+		 *
+		 * @param container the builder that contains the location
+		 * @param additionalOffset the additional offset within the byte buffer of the container used in offset calculations
+		 * @return this location
+		 */
+		public Location update(final MethodBuilder container, final int additionalOffset) {
+			this.container = container;
+			this.offset += additionalOffset;
+			this.updateOffset += additionalOffset;
+			return this;
 		}
 	}
 
@@ -388,7 +403,7 @@ public final class MethodBuilder {
 		 *
 		 * @return an iterator to all references to the label
 		 */
-		public abstract Iterator<Location> getReferences();
+		public abstract Iterable<Location> getReferences();
 
 		/**
 		 * Gets the target for the label.
@@ -1176,18 +1191,17 @@ public final class MethodBuilder {
 
 			// Update the target if needed
 			if (target.container == other) {
-				label.setTarget(new Location(this, oldLength + target.offset));
+				target.update(this, oldLength);
 			}
 
 			// Update each location if needed
-			for (final Iterator<Location> it = label.getReferences(); it.hasNext(); ) {
-				final Location location = it.next();
-
+			for (final Location location : label.getReferences()) {
 				if (location.container == other) {
-					label.addReference(this, oldLength + location.offset, oldLength + location.updateOffset);
-					it.remove();
+					location.update(this, oldLength);
 				}
 			}
+
+			labels.add(label);
 		}
 
 		// Pull in constants from the other builder
@@ -1201,7 +1215,7 @@ public final class MethodBuilder {
 						newLocations = getConstant(entry.getKey()).locations;
 					}
 
-					newLocations.add(new Location(this, oldLength + location.offset));
+					newLocations.add(location.update(this, oldLength));
 				}
 			}
 		}
@@ -1259,18 +1273,22 @@ public final class MethodBuilder {
 					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
 		} else if (value instanceof Long) {
 			final long number = (Long)value;
-			return constantPool.add(value, LONG_CONSTANT,
+			final ConstantPoolEntry entry = constantPool.add(value, LONG_CONSTANT,
 					(byte)(number >>> 56), (byte)(number >>> 48), (byte)(number >>> 40), (byte)(number >>> 32),
 					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
+			constantPool.add(new Object());
+			return entry;
 		} else if (value instanceof Float) {
 			final long number = Float.floatToRawIntBits((Float)value);
 			return constantPool.add(value, FLOAT_CONSTANT,
 					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
 		} else if (value instanceof Double) {
 			final long number = Double.doubleToRawLongBits((Double)value);
-			return constantPool.add(value, DOUBLE_CONSTANT,
+			final ConstantPoolEntry entry = constantPool.add(value, DOUBLE_CONSTANT,
 					(byte)(number >>> 56), (byte)(number >>> 48), (byte)(number >>> 40), (byte)(number >>> 32),
 					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
+			constantPool.add(new Object());
+			return entry;
 		} else if (value instanceof UTF8String) {
 			final byte[] utfChars = value.toString().getBytes(StandardCharsets.UTF_8); // Note no length or invalid character checks
 			final byte[] data = Arrays.copyOf(new byte[] { STRING_CONSTANT, (byte)(utfChars.length >>> 8), (byte)(utfChars.length) }, 3 + utfChars.length);
@@ -1320,7 +1338,7 @@ public final class MethodBuilder {
 		final ConstantPoolEntry baseConstructorInfo;
 		final ConstantPoolEntry interfaceClassInfo;
 
-		if (base.isInterface()) {
+		if (base.isInterface()) { // This method is implementing an interface
 			for (final Method check : base.getMethods()) {
 				if (!Modifier.isStatic(check.getModifiers())) {
 					if (method != null) {
@@ -1334,7 +1352,7 @@ public final class MethodBuilder {
 			baseClassInfo = getConstant(Object.class);
 			baseConstructorInfo = getConstant(Object.class.getDeclaredConstructor());
 			interfaceClassInfo = getConstant(base);
-		} else {
+		} else { // This method is extending a class
 			for (final Method check : base.getMethods()) {
 				if (Modifier.isAbstract(check.getModifiers())) {
 					if (method != null) {
@@ -1403,7 +1421,7 @@ public final class MethodBuilder {
 		classBytecode[4] = 0x00;
 		classBytecode[5] = 0x00;
 		classBytecode[6] = 0x00;
-		classBytecode[7] = (byte)0x33;
+		classBytecode[7] = (byte)0x32; // Use Java 1.6, so we don't have to generate stackmaps
 
 		// Constants count
 		classBytecode[8] = (byte)(constantPool.count() >>> 8);
@@ -1562,8 +1580,8 @@ public final class MethodBuilder {
 			}
 
 			@Override
-			public Iterator<Location> getReferences() {
-				return references.iterator();
+			public Iterable<Location> getReferences() {
+				return references;
 			}
 
 			@Override
@@ -1634,22 +1652,37 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder pushConstant(final long value) {
-		if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
-			switch ((int)value) {
-			case -1: return addCode(ICONST_M1, I2L);
-			case 0:  return addCode(LCONST_0);
-			case 1:  return addCode(LCONST_1);
-			case 2:  return addCode(ICONST_2, I2L);
-			case 3:  return addCode(ICONST_3, I2L);
-			case 4:  return addCode(ICONST_4, I2L);
-			case 5:  return addCode(ICONST_5, I2L);
-			default: return addCode(SIPUSH, (byte)(value >>> 8), (byte)value, I2L);
-			}
+		if (value == 0) {
+			return addCode(LCONST_0);
+		} else if (value == 1) {
+			return addCode(LCONST_1);
+		} else if (value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
+			return pushConstant((int)value).addCode(I2L);
 		}
 
 		getConstant(value).add(new Location(this, length + 1));
 		maxStackSize = Math.max(maxStackSize, stackSize += 2);
 		return append(LDC2_W, B0, B0);
+	}
+
+	/**
+	 * Pushes a float onto the stack. The value will be added to the constants pool only if there is not a more efficient way to push the value onto the stack.
+	 *
+	 * @param value the value to push onto the stack
+	 * @return this builder
+	 */
+	public MethodBuilder pushConstant(final float value) {
+		if (value == 0.0f) {
+			return addCode(FCONST_0);
+		} else if (value == 1.0f) {
+			return addCode(FCONST_1);
+		} else if (value == 2.0f) {
+			return addCode(FCONST_2, F2D);
+		}
+
+		getConstant(value).add(new Location(this, length + 1));
+		maxStackSize = Math.max(maxStackSize, ++stackSize);
+		return append(LDC_W, B0, B0);
 	}
 
 	/**
@@ -1663,8 +1696,8 @@ public final class MethodBuilder {
 			return addCode(DCONST_0);
 		} else if (value == 1.0) {
 			return addCode(DCONST_1);
-		} else if (value == 2.0) {
-			return addCode(FCONST_2, F2D);
+		} else if (value == (float)value) {
+			return pushConstant((float)value).addCode(F2D);
 		}
 
 		getConstant(value).add(new Location(this, length + 1));
@@ -1732,6 +1765,7 @@ public final class MethodBuilder {
 		}
 
 		getConstant(type).add(new Location(this, length + 1));
+		maxStackSize = Math.max(maxStackSize, ++stackSize);
 		return append(NEW, B0, B0);
 	}
 
@@ -1751,6 +1785,11 @@ public final class MethodBuilder {
 		return this;
 	}
 
+	@Override
+	public String toString() {
+		return bytes.toString();
+	}
+
 	/**
 	 * Updates the label to target the current offset in the builder.
 	 *
@@ -1758,7 +1797,9 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder updateLabel(final Label label) {
-		label.setTarget(new Location(this, length));
+		final Location target = label.getTarget();
+
+		target.update(this, length - target.offset);
 		return this;
 	}
 

@@ -3,6 +3,7 @@ package horseshoe;
 import java.util.HashMap;
 import java.util.Map;
 
+import horseshoe.internal.Expression;
 import horseshoe.internal.PersistentStack;
 
 final class RenderContext {
@@ -11,6 +12,7 @@ final class RenderContext {
 	private final Map<String, Object> globalData;
 	private final Template.WriterMap writerMap;
 	private final PersistentStack<Object> sectionData = new PersistentStack<>();
+	private final PersistentStack<Expression.Indexed> indexedData = new PersistentStack<>();
 	private final PersistentStack<String> indentation = new PersistentStack<>();
 
 	/**
@@ -41,6 +43,15 @@ final class RenderContext {
 	 */
 	PersistentStack<String> getIndentation() {
 		return indentation;
+	}
+
+	/**
+	 * Gets the indexed data used by the rendering process.
+	 *
+	 * @return the indexed data used by the rendering process
+	 */
+	PersistentStack<Expression.Indexed> getIndexedData() {
+		return indexedData;
 	}
 
 	/**

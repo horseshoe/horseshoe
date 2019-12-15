@@ -13,7 +13,7 @@ public class AccessorTests {
 
 	@Test
 	public void testStaticFieldAllMAX_VALUEs() throws IOException, LoadException {
-		Helper.executeTest("Values: {{#Values}}{{#[]}}, {{/}}{{MAX_VALUE}}{{/}}", Collections.emptyMap(), new Settings(), Helper.loadMap("Values", Helper.loadList(Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class)), "Values: " + Byte.MAX_VALUE + ", " + Short.MAX_VALUE + ", " + Integer.MAX_VALUE + ", " + Long.MAX_VALUE + ", " + Float.MAX_VALUE + ", " + Double.MAX_VALUE);
+		Helper.executeTest("Values: {{#Values}}{{.index}}) {{MAX_VALUE}}{{#.hasNext}}, {{/}}{{/}}", Collections.emptyMap(), new Settings(), Helper.loadMap("Values", Helper.loadList(Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class)), "Values: 0) " + Byte.MAX_VALUE + ", 1) " + Short.MAX_VALUE + ", 2) " + Integer.MAX_VALUE + ", 3) " + Long.MAX_VALUE + ", 4) " + Float.MAX_VALUE + ", 5) " + Double.MAX_VALUE);
 	}
 
 	@Test

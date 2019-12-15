@@ -102,7 +102,7 @@ public final class Identifier {
 	 * @throws ReflectiveOperationException
 	 */
 	public Object getValue(final Object context) throws ReflectiveOperationException {
-		final Class<?> objectClass = context.getClass();
+		final Class<?> objectClass = Class.class.equals(context.getClass()) ? (Class<?>)context : context.getClass();
 		Accessor accessor = accessorDatabase.get(objectClass);
 
 		if (accessor == null) {
@@ -122,7 +122,7 @@ public final class Identifier {
 	 * @throws ReflectiveOperationException
 	 */
 	public Object getValue(final Object context, final Object... parameters) throws ReflectiveOperationException {
-		final Class<?> objectClass = context.getClass();
+		final Class<?> objectClass = Class.class.equals(context.getClass()) ? (Class<?>)context : context.getClass();
 		Accessor accessor = accessorDatabase.get(objectClass);
 
 		if (accessor == null) {

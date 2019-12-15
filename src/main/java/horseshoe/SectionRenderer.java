@@ -5,9 +5,10 @@ import java.io.Writer;
 import java.util.Iterator;
 import java.util.List;
 
+import horseshoe.internal.Expression;
 import horseshoe.internal.Properties;
 
-class SectionRenderer implements Action {
+class SectionRenderer implements Action, Expression.Indexed {
 
 	public static class Factory {
 
@@ -58,6 +59,8 @@ class SectionRenderer implements Action {
 	}
 
 	protected final Section section;
+	protected int index;
+	protected boolean hasNext;
 
 	/**
 	 * Creates a new section renderer using the specified resolver and section.
@@ -79,18 +82,27 @@ class SectionRenderer implements Action {
 	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
 		if (data instanceof Iterable<?>) {
 			final Iterator<?> it = ((Iterable<?>)data).iterator();
+			hasNext = it.hasNext();
+			index = 0;
 
-			if (it.hasNext()) {
+			if (hasNext) {
+				context.getIndexedData().push(this);
+
 				while (true) {
 					final Object object = it.next();
 
 					if (it.hasNext()) {
 						renderActions(context, object, writer, section.getActions());
 					} else {
+						hasNext = false;
 						renderActions(context, object, writer, section.getActions());
 						break;
 					}
+
+					index++;
 				}
+
+				context.getIndexedData().pop();
 			} else {
 				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 			}
@@ -107,6 +119,11 @@ class SectionRenderer implements Action {
 		}
 	}
 
+	@Override
+	public int getIndex() {
+		return index;
+	}
+
 	/**
 	 * Gets the section that is rendered by this action
 	 *
@@ -114,6 +131,11 @@ class SectionRenderer implements Action {
 	 */
 	Section getSection() {
 		return section;
+	}
+
+	@Override
+	public boolean hasNext() {
+		return hasNext;
 	}
 
 	@Override
@@ -129,7 +151,7 @@ class SectionRenderer implements Action {
 
 			value = context.getSectionData().peek();
 		} else {
-			value = section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess());
+			value = section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData());
 		}
 
 		dispatchData(context, value, writer);

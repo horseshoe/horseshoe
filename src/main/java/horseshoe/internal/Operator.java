@@ -31,6 +31,7 @@ public final class Operator {
 		operators.add(createMethod("("));
 		operators.add(new Operator("(",    0,  RIGHT_EXPRESSION | RIGHT_TYPE_RETURN, "Parentheses", ")"));
 		operators.add(new Operator(".",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | RESOLVABLE_RETURN, "Navigate"));
+		operators.add(new Operator("+",    5,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Add"));
 		operators.add(new Operator(",",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_TYPE_RETURN, "Comma Operator"));
 
 		for (final Operator operator : operators) {
