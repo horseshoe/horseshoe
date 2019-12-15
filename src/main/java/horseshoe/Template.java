@@ -4,58 +4,64 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class Template {
 
-	public static interface WriterMap {
+	public static interface AnnotationProcessor {
 		/**
-		 * Gets the writer based on the specified name.
+		 * Gets the writer based on the result of the expression.
 		 *
-		 * @param name the name of the writer to get
-		 * @return the writer associated with the specified name, or null to indicate that the writer should not be changed
+		 * @param writer the writer from the enveloping section
+		 * @param value the resulting value of the evaluated expression, or null if no expression was given
+		 * @return the writer to use for the annotated section, or null to indicate that the writer should not be changed
 		 */
-		public Writer getWriter(final String name);
+		public Writer getWriter(final Writer writer, final Object value) throws IOException;
+
+		/**
+		 * Returns the writer. This method should close or flush the writer as appropriate.
+		 *
+		 * @param writer the writer to return
+		 */
+		public void returnWriter(final Writer writer) throws IOException;
 	}
 
-	private static final WriterMap DEFAULT_WRITER_MAP = new WriterMap() {
+	private static final Map<String, AnnotationProcessor> DEFAULT_ANNOTATION_MAP = new HashMap<>();
 
-		private final Writer ERROR = new Writer() {
+	static {
+		DEFAULT_ANNOTATION_MAP.put("StdErr", new AnnotationProcessor() {
 			@Override
-			public void close() {
+			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+				return new Writer() {
+					@Override
+					public void close() {
+					}
+
+					@Override
+					public void flush() {
+						System.err.flush();
+					}
+
+					@Override
+					public void write(final char[] cbuf, final int off, final int len) throws IOException {
+						System.err.print(off == 0 && len == cbuf.length ? cbuf : Arrays.copyOfRange(cbuf, off, off + len));
+					}
+				};
 			}
 
 			@Override
-			public void flush() {
+			public void returnWriter(final Writer writer) throws IOException {
 				System.err.flush();
 			}
-
-			@Override
-			public void write(final char[] cbuf, final int off, final int len) throws IOException {
-				System.err.print(off == 0 && len == cbuf.length ? cbuf : Arrays.copyOfRange(cbuf, off, off + len));
-			}
-		};
-
-		@Override
-		public Writer getWriter(final String name) {
-			switch (name) {
-			case "&2":
-			case "stderr":
-				return ERROR;
-
-			default:
-				break;
-			}
-
-			return null;
-		}
-
-	};
+		});
+	}
 
 	private final String name;
 	private final List<Action> actions = new ArrayList<>();
-	
+
 	/**
 	 * Creates an empty template with the specified name.
 	 *
@@ -89,10 +95,11 @@ public final class Template {
 	 * @param settings the settings used while rendering
 	 * @param globalData the global data used while rendering
 	 * @param writer the writer used to render the template
+	 * @param annotationMap the map used to process annotations
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	public void render(final Settings settings, final Map<String, Object> globalData, final Writer writer, final WriterMap writerMap) throws IOException {
-		final RenderContext renderContext = new RenderContext(settings, globalData, writerMap);
+	public void render(final Settings settings, final Map<String, Object> globalData, final Writer writer, final Map<String, AnnotationProcessor> annotationMap) throws IOException {
+		final RenderContext renderContext = new RenderContext(settings, globalData, annotationMap);
 
 		renderContext.getIndentation().push("");
 		renderContext.getSectionData().push(renderContext.getGlobalData());
@@ -111,7 +118,7 @@ public final class Template {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	public void render(final Settings settings, final Map<String, Object> globalData, final Writer writer) throws IOException {
-		render(settings, globalData, writer, DEFAULT_WRITER_MAP);
+		render(settings, globalData, writer, DEFAULT_ANNOTATION_MAP);
 	}
 
 }

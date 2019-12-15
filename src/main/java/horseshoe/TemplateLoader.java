@@ -52,6 +52,7 @@ public class TemplateLoader {
 	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))), false);
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*([^\\s]+)\\s+([^\\s]+)\\s*=");
+	private static final Pattern ANNOTATION = Pattern.compile("@([A-Za-z_\\$][A-Za-z0-9_\\$]*)(=(.*))?", Pattern.DOTALL);
 
 	/**
 	 * Creates a new template loader that is mustache-compatible
@@ -476,7 +477,20 @@ public class TemplateLoader {
 								throw new LoadException(loaders, "Repeat section without prior section");
 							}
 
-							sections.push();
+							final Section previousSection = sections.push();
+
+							sections.replace(new Section("", previousSection.getExpression(), null, localPartials));
+						} else if (sectionExpression.charAt(0) == '@') {
+							final Matcher annotation = ANNOTATION.matcher(sectionExpression);
+
+							if (!annotation.matches()) {
+								throw new LoadException(loaders, "Annotation is not properly formatted");
+							}
+
+							final String sectionName = sectionExpression.subSequence(0, annotation.end(1)).toString();
+							final String expressionString = annotation.group(3);
+
+							sections.push(new Section(sectionName, expressionString == null ? null : new Expression(expressionString, useSimpleExpressions, sections.size()), sectionName.substring(1), localPartials));
 						} else if (sectionExpression.charAt(0) == '>') {
 							final String sectionName = CharSequenceUtils.trim(sectionExpression, 1, sectionExpression.length()).toString();
 
@@ -549,13 +563,12 @@ public class TemplateLoader {
 						break;
 					}
 
-					default: {
+					default:
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 0, expression.length());
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
 						actionStack.peek().add(new DynamicContentRenderer(new Expression(sectionExpression, useSimpleExpressions, sections.size()), true));
 						break;
-					}
 					}
 				} catch (final Exception e) {
 					throw new LoadException(loaders, "Invalid expression: " + expression, e);

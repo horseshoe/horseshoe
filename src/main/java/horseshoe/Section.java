@@ -11,7 +11,7 @@ final class Section {
 
 	private final String name;
 	private final Expression expression;
-	private final String writerName;
+	private final String annotation;
 	private final Map<String, Template> localPartials;
 	private final List<Action> actions = new ArrayList<>();
 	private final List<Action> invertedActions = new ArrayList<>();
@@ -21,13 +21,13 @@ final class Section {
 	 *
 	 * @param name the name for the section
 	 * @param expression the expression for the section
-	 * @param writerName the name of the writer to use for the section, or null to use the current writer
+	 * @param annotation the name of the annotation for the section, or null if no annotation exists
 	 * @param localPartials the local partials for the section
 	 */
-	public Section(final String name, final Expression expression, final String writerName, final Map<String, Template> localPartials) {
+	public Section(final String name, final Expression expression, final String annotation, final Map<String, Template> localPartials) {
 		this.name = name;
 		this.expression = expression;
-		this.writerName = writerName;
+		this.annotation = annotation;
 		this.localPartials = new HashMap<>(localPartials);
 	}
 
@@ -54,6 +54,15 @@ final class Section {
 	 */
 	public List<Action> getActions() {
 		return actions;
+	}
+
+	/**
+	 * Gets the name of the annotation for the section.
+	 *
+	 * @return the name of the annotation for the section, or null if no annotation exists
+	 */
+	public String getAnnotation() {
+		return annotation;
 	}
 
 	/**
@@ -90,15 +99,6 @@ final class Section {
 	 */
 	public String getName() {
 		return name;
-	}
-
-	/**
-	 * Gets the name of the writer to use for the section.
-	 *
-	 * @return the name of the writer to use for the section, or null if one does not exist
-	 */
-	public String getWriterName() {
-		return writerName;
 	}
 
 }

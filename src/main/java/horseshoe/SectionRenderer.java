@@ -139,22 +139,33 @@ class SectionRenderer implements Action, Expression.Indexed {
 	}
 
 	@Override
-	public final void perform(final RenderContext context, Writer writer) throws IOException {
-		final Object value;
+	public final void perform(final RenderContext context, final Writer writer) throws IOException {
+		if (section.getAnnotation() != null) {
+			final Template.AnnotationProcessor annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
 
-		if (section.getWriterName() != null) {
-			final Writer newWriter = context.getWriterMap().getWriter(section.getWriterName());
+			if (annotationProcessor != null) { // Only write the data if there is an annotation processor available
+				final Writer newWriter;
 
-			if (newWriter != null) {
-				writer = newWriter;
+				try {
+					newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData()));
+				} catch (final IOException e) {
+					// TODO: Log error
+					return;
+				}
+
+				if (newWriter == null) {
+					dispatchData(context, context.getSectionData().peek(), writer);
+				} else {
+					try {
+						dispatchData(context, context.getSectionData().peek(), newWriter);
+					} finally {
+						annotationProcessor.returnWriter(newWriter);
+					}
+				}
 			}
-
-			value = context.getSectionData().peek();
 		} else {
-			value = section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData());
+			dispatchData(context, section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData()), writer);
 		}
-
-		dispatchData(context, value, writer);
 	}
 
 }

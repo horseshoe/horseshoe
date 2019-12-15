@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,33 +25,13 @@ class SectionRenderer_8 extends SectionRenderer {
 		super(section);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
-		if (data instanceof Supplier<?>) {
-			dispatchData(context, ((Supplier<Object>)data).get(), writer);
-			return;
-		} else if (data instanceof Function<?, ?>) {
-			final Function<String, Object> function = (Function<String, Object>)data;
+		if (data instanceof Stream<?>) {
+			final List<Object> list = ((Stream<?>)data).collect(Collectors.toList());
 
-			/*
-			if (!list.isEmpty()) {
-				for (final Object obj : list) {
-					renderActions(context, obj, writer, section.getActions());
-				}
-			} else {
-				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
-			}//*/
-		} else if (data instanceof Stream<?>) {
-			final List<Object> list = ((Stream<?>)data).collect(Collectors.toList()); // TODO: Stream.forEach().orElse()?
-
-			if (!list.isEmpty()) {
-				for (final Object obj : list) {
-					renderActions(context, obj, writer, section.getActions());
-				}
-			} else {
-				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
-			}
+			context.getSectionData().replace(list);
+			super.dispatchData(context, list, writer);
 		} else if (data instanceof Optional<?>) {
 			final Optional<?> optional = (Optional<?>)data;
 
