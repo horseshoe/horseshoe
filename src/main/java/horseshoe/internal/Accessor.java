@@ -54,9 +54,10 @@ public abstract class Accessor {
 
 			if (types != null) {
 				final Class<?> parameterTypes[] = method.getParameterTypes();
+				final int length = Math.min(parameterTypes.length, types.length);
 
-				for (int i = 0; i < Math.min(parameterTypes.length, types.length); i++) {
-					if (!types[i].equals(parameterTypes[i].getSimpleName()) && !types[i].isEmpty()) {
+				for (int i = 0; i < length; i++) {
+					if (!types[i].isEmpty() && !types[i].equals(parameterTypes[i].getSimpleName()) && !types[i].equals(parameterTypes[i].getCanonicalName())) {
 						return false;
 					}
 				}

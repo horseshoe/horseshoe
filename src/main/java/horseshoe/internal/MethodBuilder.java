@@ -601,6 +601,17 @@ public final class MethodBuilder {
 	};
 
 	/**
+	 * Adds an access (load / store) instruction. This is a convenience method that applies the "wide" instruction prefix if needed.
+	 *
+	 * @param instruction the load or store instruction
+	 * @param index the index of the local variable to access
+	 * @return this builder
+	 */
+	public MethodBuilder addAccess(final byte instruction, final int index) {
+		return index < Byte.MIN_VALUE || index > Byte.MAX_VALUE ? addCode(WIDE, instruction, (byte)(index >>> 8), (byte)index) : addCode(instruction, (byte)index);
+	}
+
+	/**
 	 * Adds a branch instruction to the given label. Note that the label must be in the same buffer or it must be combined with the buffer containing the label at some point.
 	 *
 	 * @param instruction the branch instruction
@@ -1421,7 +1432,7 @@ public final class MethodBuilder {
 		classBytecode[4] = 0x00;
 		classBytecode[5] = 0x00;
 		classBytecode[6] = 0x00;
-		classBytecode[7] = (byte)0x32; // Use Java 1.6, so we don't have to generate stackmaps
+		classBytecode[7] = (byte)0x31; // Use Java 1.5, so we don't have to generate stackmaps
 
 		// Constants count
 		classBytecode[8] = (byte)(constantPool.count() >>> 8);

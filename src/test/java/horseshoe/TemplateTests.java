@@ -86,4 +86,13 @@ public class TemplateTests {
 		}
 	}
 
+	@Test
+	public void testBadAnnotation() throws java.io.IOException, LoadException {
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Bad Annotation", "{{#@BadAnnotation=\"blah\"}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@StdErr}}\nEngine does not support @BadAnnotation.\n{{/}}\n{{/@BadAnnotation}}\n");
+		final horseshoe.Settings settings = new horseshoe.Settings();
+		final java.io.StringWriter writer = new java.io.StringWriter();
+
+		template.render(settings, new java.util.HashMap<>(), writer);
+	}
+
 }

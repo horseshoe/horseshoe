@@ -19,9 +19,6 @@ public final class Operator {
 	public static final int RIGHT_ASSOCIATIVITY = 0x00000040; // Is evaluated right to left
 	public static final int DEFERRED_EVALUATION = 0x00000080; // The right side may not be evaluated depending on the left side
 
-	public static final int RIGHT_TYPE_RETURN  = 0x00002000;
-	public static final int RESOLVABLE_RETURN  = 0x00100000;
-
 	private static final List<Operator> OPERATORS;
 	private static final Map<String, Operator> OPERATOR_LOOKUP = new LinkedHashMap<>();
 
@@ -29,10 +26,20 @@ public final class Operator {
 		final List<Operator> operators = new ArrayList<>();
 
 		operators.add(createMethod("("));
-		operators.add(new Operator("(",    0,  RIGHT_EXPRESSION | RIGHT_TYPE_RETURN, "Parentheses", ")"));
-		operators.add(new Operator(".",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | RESOLVABLE_RETURN, "Navigate"));
+		operators.add(new Operator("(",    0,  RIGHT_EXPRESSION, "Parentheses", ")"));
+		operators.add(new Operator(".",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Navigate"));
+		operators.add(new Operator("*",    4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Multiply"));
+		operators.add(new Operator("/",    4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Divide"));
+		operators.add(new Operator("%",    4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Modulus"));
 		operators.add(new Operator("+",    5,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Add"));
-		operators.add(new Operator(",",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_TYPE_RETURN, "Comma Operator"));
+		operators.add(new Operator("-",    5,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Subtract"));
+		operators.add(new Operator("<<",   6,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Shift Left"));
+		operators.add(new Operator(">>",   6,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Shift Right Sign Extend"));
+		operators.add(new Operator(">>>",  6,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Shift Right Zero Extend"));
+		operators.add(new Operator("&",    9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise And"));
+		operators.add(new Operator("^",    10, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Xor"));
+		operators.add(new Operator("|",    11, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Or"));
+		operators.add(new Operator(",",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Comma Operator"));
 
 		for (final Operator operator : operators) {
 			operator.next = OPERATOR_LOOKUP.put(operator.string, operator);

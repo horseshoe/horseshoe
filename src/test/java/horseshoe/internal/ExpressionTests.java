@@ -26,6 +26,22 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testMathOperators() throws ReflectiveOperationException {
+		final PersistentStack<Object> context = new PersistentStack<>();
+		context.push(Helper.loadMap("r", 10, "i2", 2, "π", 3.14159265358979311599796346854, "bigNum", 9999999999L));
+		assertEquals(2 * 3.14159265358979311599796346854 * 10 - 2, (Double)new Expression("(2 * `π` * r - i2)", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null), 0.00001);
+		assertEquals(9999999999L + 9999999999L / 2 + 9999999999L % 2 - 3.14159265358979311599796346854, (Double)new Expression("bigNum + bigNum / 2 + bigNum % 2 - `π`", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null), 0.00001);
+	}
+
+	@Test
+	public void testIntegralOperators() throws ReflectiveOperationException {
+		final PersistentStack<Object> context = new PersistentStack<>();
+		context.push(Helper.loadMap("r", 10, "i2", 2, "bigNum", 9999999999L));
+		assertEquals((((10 | 2) ^ 2) >> 2) << 10, new Expression("(((r | i2) ^ 2) >> 2) << r", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null));
+		assertEquals((9999999999L >>> (9999999999L & 10)) + (9999999999L >>> 10), new Expression("(bigNum >>> (bigNum & r)) + (bigNum >> r)", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null));
+	}
+
+	@Test
 	public void testStringConcatenation() throws ReflectiveOperationException {
 		final PersistentStack<Object> context = new PersistentStack<>();
 		context.push(Helper.loadMap("cb", "bc"));

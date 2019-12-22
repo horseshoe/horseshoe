@@ -480,7 +480,7 @@ public class TemplateLoader {
 							final Section previousSection = sections.push();
 
 							sections.replace(new Section("", previousSection.getExpression(), null, localPartials));
-						} else if (sectionExpression.charAt(0) == '@') {
+						} else if (sectionExpression.charAt(0) == '@') { // Annotation section
 							final Matcher annotation = ANNOTATION.matcher(sectionExpression);
 
 							if (!annotation.matches()) {
@@ -491,10 +491,6 @@ public class TemplateLoader {
 							final String expressionString = annotation.group(3);
 
 							sections.push(new Section(sectionName, expressionString == null ? null : new Expression(expressionString, useSimpleExpressions, sections.size()), sectionName.substring(1), localPartials));
-						} else if (sectionExpression.charAt(0) == '>') {
-							final String sectionName = CharSequenceUtils.trim(sectionExpression, 1, sectionExpression.length()).toString();
-
-							sections.push(new Section(sectionName, null, sectionName, localPartials));
 						} else { // Start a new section
 							sections.push(new Section(new Expression(sectionExpression, useSimpleExpressions, sections.size()), localPartials));
 						}

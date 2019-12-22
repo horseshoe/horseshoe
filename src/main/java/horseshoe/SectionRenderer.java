@@ -143,7 +143,9 @@ class SectionRenderer implements Action, Expression.Indexed {
 		if (section.getAnnotation() != null) {
 			final Template.AnnotationProcessor annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
 
-			if (annotationProcessor != null) { // Only write the data if there is an annotation processor available
+			if (annotationProcessor == null) { // Only write the data if there is an annotation processor available, otherwise take false path with default writer
+				dispatchData(context, false, writer);
+			} else {
 				final Writer newWriter;
 
 				try {
