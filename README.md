@@ -20,6 +20,19 @@ Horseshoe does not have the same design goals as Mustache, resulting in many dif
 ### Does Horseshoe support Mustache lambdas?
 Horseshoe does not support Mustache lambdas. It supplements lambdas with a more sophisticated expression system.
 
+### What operators does Horseshoe support?
+Precedence | Operators | Associativity
+---------- | --------- | -------------
+0 | a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate) | Left-to-right
+2 | <code>+</code>a (Unary Plus), <br><code>-</code>a (Unary Plus), <br><code>~</code>a (Bitwise Negate) | Right-to-left
+4 | a<code>*</code>b (Multiply), <br>a<code>/</code>b (Divide), <br>a<code>%</code>b (Modulus) | Left-to-right
+5 | a<code>+</code>b (Add), <br>a<code>-</code>b (Subtract) | Left-to-right
+6 | a<code><<</code>b (Bitwise Shift Left), <br>a<code>>></code>b (Bitwise Shift Right Sign Extend), <br>a<code>>>></code>b (Bitwise Shift Right Zero Extend) | Left-to-right
+9 | a<code>&</code>b (Bitwise And) | Left-to-right
+10 | a<code>^</code>b (Bitwise Xor) | Left-to-right
+11 | a<code>&#124;</code>b (Bitwise Or) | Left-to-right
+16 | a<code>,</code>b (Comma Operator) | Left-to-right
+
 ## Example
 First, a template is loaded using the template loader class. Templates can be loaded from a string, a file, or a reader.
 ```java

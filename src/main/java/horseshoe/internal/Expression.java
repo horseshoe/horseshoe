@@ -99,70 +99,44 @@ public final class Expression {
 		}
 
 		/**
-		 * Converts the operand to a number. The resulting operand will have a type of null or a primitive type. A failure will be logged in the case that the conversion fails.
-		 *
-		 * @return the resulting primitive, numeric operand
-		 */
-		private Operand toNumeric() {
-			if (type == null || type.isPrimitive()) {
-				return this;
-			}
-
-			final Label notNumber = builder.newLabel();
-			final Label notDouble = builder.newLabel();
-			final Label notLong = builder.newLabel();
-			final Label notFloat = builder.newLabel();
-			final Label getChar = builder.newLabel();
-			final Label success = builder.newLabel();
-
-			// TODO: Handle Atomic* & Big*
-			return new Operand(null, logError(builder.addCode(DUP, DUP).addInstanceOfCheck(Number.class).addBranch(IFEQ, notNumber)
-					.addInstanceOfCheck(Double.class).addBranch(IFEQ, notDouble).addCast(Double.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, success)
-					.updateLabel(notDouble).addCode(DUP).addInstanceOfCheck(Long.class).addBranch(IFEQ, notLong).addCast(Long.class).addInvoke(LONG_VALUE).addCode(DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, success)
-					.updateLabel(notLong).addCode(DUP).addInstanceOfCheck(Float.class).addBranch(IFEQ, notFloat).addCast(Float.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, success)
-					.updateLabel(notFloat).addCast(Number.class).addInvoke(INT_VALUE).addCode(I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, success)
-					.updateLabel(notNumber).addInstanceOfCheck(Character.class).addBranch(IFNE, getChar), "Invalid object, expecting boxed numeric primitive").addCode(ACONST_NULL, ARETURN)
-					.updateLabel(getChar).addCast(Character.class).addInvoke(CHAR_VALUE).addCode(I2L, DCONST_0).pushConstant(INT_TYPE).updateLabel(success));
-		}
-
-		/**
 		 * Generates an operand that is the result of the specified mathematical operation on this operand and the other specified operand.
 		 *
 		 * @param other the other operand used to calculate the result
-		 * @param intOpcode the opcode used to compute the result of two int operands
-		 * @param longOpcode the opcode used to compute the result of two long operands
+		 * @param intOpcode the opcode used to compute the result of the operation on two int operands
+		 * @param longOpcode the opcode used to compute the result of the operation on two long operands
 		 * @param doubleOpcode the opcode used to compute the result of two double operands
 		 * @return the resulting operand from the operation
 		 */
 		public Operand execMathOp(final Operand other, final byte intOpcode, final byte longOpcode, final byte doubleOpcode) {
-			for (final Operand op : new Operand[] { this, other }) {
-				if (op.type != null) {
-					assert op.type.isPrimitive();
-
-					if (boolean.class.equals(op.type)) {
-						throw new RuntimeException("Unexpected " + op.type.getName() + " value, expecting numeric value");
-					} else if (double.class.equals(op.type)) {
-						op.builder.addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE);
-					} else if (long.class.equals(op.type)) {
-						op.builder.addCode(DCONST_0).pushConstant(LONG_TYPE);
-					} else {
-						op.builder.addCode(I2L, DCONST_0).pushConstant(INT_TYPE);
-					}
-				}
-			}
-
 			final Label notInt = builder.newLabel();
 			final Label isFloating = builder.newLabel();
 			final Label process2nd = builder.newLabel();
 			final Label use2ndDouble = builder.newLabel();
 			final Label success = builder.newLabel();
 
-			return new Operand(null, builder.append(other.builder).addAccess(ISTORE, Evaluable.FIRST_LOCAL).addAccess(DSTORE, Evaluable.FIRST_LOCAL + 1).addAccess(LSTORE, Evaluable.FIRST_LOCAL + 3)
+			return new Operand(null, toNumeric(true).append(other.toNumeric(true)).addAccess(ISTORE, Evaluable.FIRST_LOCAL).addAccess(DSTORE, Evaluable.FIRST_LOCAL + 1).addAccess(LSTORE, Evaluable.FIRST_LOCAL + 3)
 					.addCode(DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(IOR, DUP).addBranch(IFNE, notInt).addCode(POP2, POP2, L2I).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, success)
 					.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, success)
 					.updateLabel(isFloating).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, process2nd).addCode(POP2, DUP2, L2D).addAccess(DLOAD, Evaluable.FIRST_LOCAL + 1).addCode(doubleOpcode).pushConstant(DOUBLE_TYPE).addBranch(GOTO, success)
 					.updateLabel(process2nd).addAccess(ILOAD, Evaluable.FIRST_LOCAL).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, use2ndDouble).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(L2D, doubleOpcode).pushConstant(DOUBLE_TYPE).addBranch(GOTO, success)
 					.updateLabel(use2ndDouble).addAccess(DLOAD, Evaluable.FIRST_LOCAL + 1).addCode(doubleOpcode).pushConstant(DOUBLE_TYPE).updateLabel(success));
+		}
+
+		/**
+		 * Generates an operand that is the result of the specified integral unary operation on this operand.
+		 *
+		 * @param intOpcode the opcode used to compute the result of the operation
+		 * @param longOpcode the opcode used to compute the result of the operation
+		 * @return the resulting operand from the operation
+		 */
+		public Operand execIntegralOp(final byte intOpcode, final byte longOpcode) {
+			final Label notInt = builder.newLabel();
+			final Label isFloating = builder.newLabel();
+			final Label success = builder.newLabel();
+
+			return new Operand(null, logError(toNumeric(false).addCode(DUP).addBranch(IFNE, notInt).addCode(POP, POP2, L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, success)
+					.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP2, longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, success)
+					.updateLabel(isFloating), "Unexpected floating-point value, expecting integral value").addCode(ACONST_NULL, ARETURN).updateLabel(success));
 		}
 
 		/**
@@ -175,28 +149,55 @@ public final class Expression {
 		 * @return the resulting operand from the operation
 		 */
 		public Operand execIntegralOp(final Operand other, final byte intOpcode, final byte longOpcode, final boolean secondOperandInt) {
-			for (final Operand op : new Operand[] { this, other }) {
-				if (op.type != null) {
-					assert op.type.isPrimitive();
-
-					if (boolean.class.equals(op.type) || double.class.equals(op.type) || float.class.equals(op.type)) {
-						throw new RuntimeException("Unexpected " + op.type.getName() + " value, expecting integral value");
-					} else if (long.class.equals(op.type)) {
-						op.builder.addCode(DCONST_0).pushConstant(LONG_TYPE);
-					} else {
-						op.builder.addCode(I2L, DCONST_0).pushConstant(INT_TYPE);
-					}
-				}
-			}
-
 			final Label notInt = builder.newLabel();
 			final Label isFloating = builder.newLabel();
 			final Label success = builder.newLabel();
 
-			return new Operand(null, logError(builder.append(other.builder).addAccess(ISTORE, Evaluable.FIRST_LOCAL).addAccess(DSTORE, Evaluable.FIRST_LOCAL + 1).addAccess(LSTORE, Evaluable.FIRST_LOCAL + 3)
+			return new Operand(null, logError(toNumeric(false).append(other.toNumeric(false)).addAccess(ISTORE, Evaluable.FIRST_LOCAL).addAccess(DSTORE, Evaluable.FIRST_LOCAL + 1).addAccess(LSTORE, Evaluable.FIRST_LOCAL + 3)
 					.addCode(DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(IOR, DUP).addBranch(IFNE, notInt).addCode(POP2, POP2, L2I).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, success)
 					.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode((secondOperandInt ? L2I : NOP), longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, success)
 					.updateLabel(isFloating), "Unexpected floating-point value, expecting integral value").addCode(ACONST_NULL, ARETURN).updateLabel(success));
+		}
+
+		/**
+		 * Converts the operand to a number. The resulting operand will have a type of null or a primitive type. A failure will be logged in the case that the conversion fails.
+		 *
+		 * @param allowFloating true to allow floating point values, otherwise false
+		 * @return the resulting primitive, numeric operand
+		 */
+		private MethodBuilder toNumeric(final boolean allowFloating) {
+			if (type == null) {
+				return builder;
+			} else if (type.isPrimitive()) {
+				if (boolean.class.equals(type)) {
+					throw new RuntimeException("Unexpected boolean value, expecting numeric value");
+				} else if (double.class.equals(type) || float.class.equals(type)) {
+					if (allowFloating) {
+						return builder.addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE);
+					} else {
+						throw new RuntimeException("Unexpected " + type.getName() + " value, expecting integral value");
+					}
+				} else if (long.class.equals(type)) {
+					return builder.addCode(DCONST_0).pushConstant(LONG_TYPE);
+				} else {
+					return builder.addCode(I2L, DCONST_0).pushConstant(INT_TYPE);
+				}
+			}
+
+			final Label notNumber = builder.newLabel();
+			final Label notDouble = builder.newLabel();
+			final Label notLong = builder.newLabel();
+			final Label notFloat = builder.newLabel();
+			final Label getChar = builder.newLabel();
+			final Label success = builder.newLabel();
+
+			return logError(builder.addCode(DUP, DUP).addInstanceOfCheck(Number.class).addBranch(IFEQ, notNumber)
+					.addInstanceOfCheck(Double.class).addBranch(IFEQ, notDouble).addCast(Double.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, success)
+					.updateLabel(notDouble).addCode(DUP).addInstanceOfCheck(Long.class).addBranch(IFEQ, notLong).addCast(Long.class).addInvoke(LONG_VALUE).addCode(DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, success)
+					.updateLabel(notLong).addCode(DUP).addInstanceOfCheck(Float.class).addBranch(IFEQ, notFloat).addCast(Float.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, success)
+					.updateLabel(notFloat).addCast(Number.class).addInvoke(INT_VALUE).addCode(I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, success)
+					.updateLabel(notNumber).addInstanceOfCheck(Character.class).addBranch(IFNE, getChar), "Invalid object, expecting boxed numeric primitive").addCode(ACONST_NULL, ARETURN)
+					.updateLabel(getChar).addCast(Character.class).addInvoke(CHAR_VALUE).addCode(I2L, DCONST_0).pushConstant(INT_TYPE).updateLabel(success);
 		}
 
 		/**
@@ -248,6 +249,7 @@ public final class Expression {
 	private static final Method PERSISTENT_STACK_PEEK;
 	private static final Method STRING_BUILDER_APPEND_OBJECT;
 	private static final Constructor<StringBuilder> STRING_BUILDER_INIT_STRING;
+	private static final Method STRING_VALUE_OF;
 
 	static {
 		try {
@@ -259,6 +261,7 @@ public final class Expression {
 			PERSISTENT_STACK_PEEK = PersistentStack.class.getMethod("peek", int.class);
 			STRING_BUILDER_APPEND_OBJECT = StringBuilder.class.getMethod("append", Object.class);
 			STRING_BUILDER_INIT_STRING = StringBuilder.class.getConstructor(String.class);
+			STRING_VALUE_OF = String.class.getMethod("valueOf", Object.class);
 		} catch (final ReflectiveOperationException e) {
 			throw new RuntimeException("Bad reflection operation: " + e.getMessage(), e);
 		}
@@ -266,8 +269,8 @@ public final class Expression {
 
 	// The patterns used for parsing the grammar
 	private static final Pattern IDENTIFIER_BACKREACH_PATTERN = Pattern.compile("\\s*([.][.]/)+");
-	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("\\s*([.][/.])*(([A-Za-z_\\$][A-Za-z0-9_\\$]*|`([^`\\\\]|\\\\[`\\\\])+`)[(]?)");
-	private static final Pattern INTERNAL_PATTERN = Pattern.compile("\\s*([.][/.])*([.][A-Za-z]*)");
+	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("\\s*([.][/.])*(([\\p{L}_\\$][\\p{L}\\p{Nd}_\\$]*|`([^`\\\\]|\\\\[`\\\\])+`)[(]?)");
+	private static final Pattern INTERNAL_PATTERN = Pattern.compile("\\s*([.][/.])*([.]\\p{L}*)");
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("\\s*([0-9][0-9]*[.][0-9]+)");
 	private static final Pattern LONG_PATTERN = Pattern.compile("\\s*([0-9](x[0-9A-Fa-f]+|[0-9]*))");
 	private static final Pattern STRING_PATTERN = Pattern.compile("\\s*\"(([^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"");
@@ -357,56 +360,68 @@ public final class Expression {
 		switch (operator.getString()) {
 		// Math Operations
 		case "+":
-			if (left == null) {
-			// TODO: Unary plus
-			} else if (StringBuilder.class.equals(left.type)) {
-				operands.push();
-				left.builder.append(right[0].toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT);
-			} else if (String.class.equals(left.type)) {
-				operands.push(new Operand(StringBuilder.class, left.builder.pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_BUILDER_INIT_STRING).append(right[0].toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
-			} else if (left.type == null) { // TODO: fix
-				operands.push(left.execMathOp(right[0].toNumeric(), IADD, LADD, DADD));
-			} else { // TODO: fix
-				operands.push(left.toNumeric().execMathOp(right[0].toNumeric(), IADD, LADD, DADD));
+			if (left == null) { // Unary +, basically do nothing except require a number
+				operands.push(new Operand(null, right[0].toNumeric(true)));
+			} else if (StringBuilder.class.equals(left.type)) { // Check for string concatenation
+				operands.push().builder.append(right[0].toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT);
+			} else if (String.class.equals(left.type) || String.class.equals(right[0].type) || StringBuilder.class.equals(right[0].type)) {
+				operands.push(new Operand(StringBuilder.class, left.builder.pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right[0].toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
+			} else if ((left.type == null || (left.type.isPrimitive() && !boolean.class.equals(left.type))) && (right[0].type == null || (right[0].type.isPrimitive() && !boolean.class.equals(right[0].type)))) { // Mathematical addition
+				operands.push(left.execMathOp(right[0], IADD, LADD, DADD));
+			} else { // String concatenation, mathematical addition, or invalid
+				final Label notStringBuilder = left.builder.newLabel();
+				final Label isString = left.builder.newLabel();
+				final Label notString = left.builder.newLabel();
+				final Label success = left.builder.newLabel();
+				final Operand result = new Operand(Object.class, left.toObject(false).append(right[0].toObject(false)).addCode(SWAP, DUP_X1).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notStringBuilder).addCode(SWAP).addCast(StringBuilder.class).addCode(SWAP).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, success)
+					.updateLabel(notStringBuilder).addCode(SWAP, DUP_X1).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notString)
+					.updateLabel(isString).addCode(SWAP).pushNewObject(StringBuilder.class).addCode(DUP_X2, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, success)
+					.updateLabel(notString).addAccess(ASTORE, Evaluable.FIRST_LOCAL));
+
+				result.execMathOp(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL)), IADD, LADD, DADD).toObject(false).updateLabel(success);
+				operands.push(result);
 			}
 
-			break; // TODO (See '*')
+			break;
 		case "-":
 			if (left == null) {
-			// TODO: Unary minus
+				operands.push(right[0].execIntegralOp(INEG, LNEG));
 			} else {
-				operands.push(left.toNumeric().execMathOp(right[0].toNumeric(), ISUB, LSUB, DSUB));
+				operands.push(left.execMathOp(right[0], ISUB, LSUB, DSUB));
 			}
 
 			break;
 		case "*":
-			operands.push(left.toNumeric().execMathOp(right[0].toNumeric(), IMUL, LMUL, DMUL));
+			operands.push(left.execMathOp(right[0], IMUL, LMUL, DMUL));
 			break;
 		case "/":
-			operands.push(left.toNumeric().execMathOp(right[0].toNumeric(), IDIV, LDIV, DDIV));
+			operands.push(left.execMathOp(right[0], IDIV, LDIV, DDIV));
 			break;
 		case "%":
-			operands.push(left.toNumeric().execMathOp(right[0].toNumeric(), IREM, LREM, DREM));
+			operands.push(left.execMathOp(right[0], IREM, LREM, DREM));
 			break;
 
 		// Integral Operations
+		case "~": // Treat as x ^ -1
+			operands.push(right[0].execIntegralOp(new Operand(int.class, new MethodBuilder().pushConstant(-1)), IXOR, LXOR, false));
+			break;
 		case "<<":
-			operands.push(left.toNumeric().execIntegralOp(right[0].toNumeric(), ISHL, LSHL, true));
+			operands.push(left.execIntegralOp(right[0], ISHL, LSHL, true));
 			break;
 		case ">>":
-			operands.push(left.toNumeric().execIntegralOp(right[0].toNumeric(), ISHR, LSHR, true));
+			operands.push(left.execIntegralOp(right[0], ISHR, LSHR, true));
 			break;
 		case ">>>":
-			operands.push(left.toNumeric().execIntegralOp(right[0].toNumeric(), IUSHR, LUSHR, true));
+			operands.push(left.execIntegralOp(right[0], IUSHR, LUSHR, true));
 			break;
 		case "&":
-			operands.push(left.toNumeric().execIntegralOp(right[0].toNumeric(), IAND, LAND, false));
+			operands.push(left.execIntegralOp(right[0], IAND, LAND, false));
 			break;
 		case "^":
-			operands.push(left.toNumeric().execIntegralOp(right[0].toNumeric(), IXOR, LXOR, false));
+			operands.push(left.execIntegralOp(right[0], IXOR, LXOR, false));
 			break;
 		case "|":
-			operands.push(left.toNumeric().execIntegralOp(right[0].toNumeric(), IOR, LOR, false));
+			operands.push(left.execIntegralOp(right[0], IOR, LOR, false));
 			break;
 
 		case ",": {
