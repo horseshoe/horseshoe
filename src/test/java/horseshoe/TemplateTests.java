@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.Test;
 
@@ -58,19 +59,19 @@ public class TemplateTests {
 	@Test
 	public void testOutputRemapping() throws java.io.IOException, LoadException {
 		final String filename = "DELETE_ME.test";
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Remapping", "{{#@File=\"" + filename + "\"}}\nGood things are happening!\nMore good things!\n{{/}}\n");
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Remapping", "{{#@File(name =\"" + filename + "\")}}\nGood things are happening!\nMore good things!\n{{/@File}}\n");
 		final horseshoe.Settings settings = new horseshoe.Settings();
 		final java.io.StringWriter writer = new java.io.StringWriter();
 
 		try {
-			template.render(settings, new java.util.HashMap<>(), writer, new HashMap<String, Template.AnnotationProcessor>() {
+			template.render(settings, new java.util.HashMap<>(), writer, new HashMap<String, AnnotationProcessor>() {
 				private static final long serialVersionUID = 1L;
 
 				{
-					put("File", new Template.AnnotationProcessor() {
+					put("File", new AnnotationProcessor() {
 						@Override
-						public Writer getWriter(final Writer writer, final Object value) throws IOException {
-							return new FileWriter(value.toString());
+						public Writer getWriter(final Writer writer, final Map<String, Object> value) throws IOException {
+							return new FileWriter(value.getOrDefault("name", "file.txt").toString());
 						}
 
 						@Override
@@ -88,7 +89,7 @@ public class TemplateTests {
 
 	@Test
 	public void testBadAnnotation() throws java.io.IOException, LoadException {
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Bad Annotation", "{{#@BadAnnotation=\"blah\"}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@StdErr}}\nEngine does not support @BadAnnotation.\n{{/}}\n{{/@BadAnnotation}}\n");
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Bad Annotation", "{{#@BadAnnotation(\"blah\")}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@StdErr}}\nEngine does not support @BadAnnotation.\n{{/}}\n{{/@BadAnnotation}}\n");
 		final horseshoe.Settings settings = new horseshoe.Settings();
 		final java.io.StringWriter writer = new java.io.StringWriter();
 

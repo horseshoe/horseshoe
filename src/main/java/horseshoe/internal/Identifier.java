@@ -7,6 +7,8 @@ import horseshoe.Settings.ContextAccess;
 
 public final class Identifier {
 
+	public static final String PATTERN = "[\\p{L}_\\$][\\p{L}\\p{Nd}_\\$]*";
+
 	private final HashMap<Class<?>, Accessor> accessorDatabase = new LinkedHashMap<>();
 	private final int backreach;
 	private final String name;
@@ -126,7 +128,7 @@ public final class Identifier {
 		Accessor accessor = accessorDatabase.get(objectClass);
 
 		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(context, this, parameters.length);
+			accessor = Accessor.FACTORY.create(context, this, parameters == null ? 0 : parameters.length);
 			accessorDatabase.put(objectClass, accessor);
 		}
 

@@ -22,9 +22,13 @@ public class ExpressionTests {
 	}
 
 	@Test
-	public void testCommaOperator() throws ReflectiveOperationException {
-		final PersistentStack<Object> context = new PersistentStack<>();
-		assertEquals("blah", new Expression("5, 6.7, \"string-1\", \"blah\"", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());
+	public void testCompareOperators() throws ReflectiveOperationException {
+		assertEquals("true, false, true, false, true, false", new Expression("(\"a\" + \"bc\" == \"ab\" + \"c\") + \", \" + (5 + 8.3 == 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 == 0xFFFF) + \", \" + (\"A\" == \"B\") + \", \" + (null == null) + \", \" + (null == 5)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("false, true, false, true, false, true", new Expression("(\"a\" + \"bc\" != \"ab\" + \"c\") + \", \" + (5 + 8.3 != 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 != 0xFFFF) + \", \" + (\"A\" != \"B\") + \", \" + (null != null) + \", \" + (null != 5)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("true, true, true, true",     new Expression("(\"a\" + \"bc\" <= \"ab\" + \"c\") + \", \" + (5 + 8.3 <= 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 <= 0xFFFF) + \", \" + (\"A\" <= \"B\")", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("true, false, true, false",   new Expression("(\"a\" + \"bc\" >= \"ab\" + \"c\") + \", \" + (5 + 8.3 >= 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 >= 0xFFFF) + \", \" + (\"A\" >= \"B\")", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("false, true, false, true",   new Expression("(\"a\" + \"bc\" <  \"ab\" + \"c\") + \", \" + (5 + 8.3 <  5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 <  0xFFFF) + \", \" + (\"A\" <  \"B\")", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("false, false, false, false", new Expression("(\"a\" + \"bc\" >  \"ab\" + \"c\") + \", \" + (5 + 8.3 >  5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 >  0xFFFF) + \", \" + (\"A\" >  \"B\")", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 	}
 
 	@Test
@@ -34,6 +38,18 @@ public class ExpressionTests {
 		assertEquals((((10 | 2) ^ 2) >> 2) << 10, new Expression("(((r | i2) ^ 2) >> 2) << r", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null));
 		assertEquals((9999999999L >>> (9999999999L & 10)) + (9999999999L >>> 10), new Expression("(bigNum >>> (bigNum & r)) + (bigNum >> r)", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null));
 		assertEquals(~(-2) - -3, new Expression("~(-2) - -3", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null));
+	}
+
+	@Test
+	public void testLogicalOperators() throws ReflectiveOperationException {
+		assertEquals("true", new Expression("(true && 1)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("false", new Expression("(true && !1)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("false", new Expression("(null && true)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("true", new Expression("(!null && (5 > 4))", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("true", new Expression("(null || (5 > 4))", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("true", new Expression("((\"four\".length() == 4) || false)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("false", new Expression("(null || !!null)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("true", new Expression("(true || 1)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 	}
 
 	@Test
@@ -51,6 +67,12 @@ public class ExpressionTests {
 		assertEquals("a11.5", new Expression("a + (b + d)", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("10.5c", new Expression("4 + d + c", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("ctest_[0-9]+56.5", new Expression("c + e + b + d", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());
+	}
+
+	@Test
+	public void testSeparatorOperator() throws ReflectiveOperationException {
+		final PersistentStack<Object> context = new PersistentStack<>();
+		assertEquals("blah", new Expression("5, 6.7, \"string-1\", \"blah\"", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());
 	}
 
 	@Test

@@ -11,30 +11,12 @@ import java.util.Map;
 
 public final class Template {
 
-	public static interface AnnotationProcessor {
-		/**
-		 * Gets the writer based on the result of the expression.
-		 *
-		 * @param writer the writer from the enveloping section
-		 * @param value the resulting value of the evaluated expression, or null if no expression was given
-		 * @return the writer to use for the annotated section, or null to indicate that the writer should not be changed
-		 */
-		public Writer getWriter(final Writer writer, final Object value) throws IOException;
-
-		/**
-		 * Returns the writer. This method should close or flush the writer as appropriate.
-		 *
-		 * @param writer the writer to return
-		 */
-		public void returnWriter(final Writer writer) throws IOException;
-	}
-
 	private static final Map<String, AnnotationProcessor> DEFAULT_ANNOTATION_MAP = new HashMap<>();
 
 	static {
 		DEFAULT_ANNOTATION_MAP.put("StdErr", new AnnotationProcessor() {
 			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+			public Writer getWriter(final Writer writer, final Map<String, Object> value) throws IOException {
 				return new Writer() {
 					@Override
 					public void close() {

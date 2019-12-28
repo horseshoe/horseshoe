@@ -1063,19 +1063,17 @@ public final class MethodBuilder {
 				} else if (double.class.equals(from) && to.isAssignableFrom(Double.class)) {
 					return addInvoke(Double.class.getMethod("valueOf", double.class));
 				}
-			} else if (boolean.class.equals(to)) { // TODO
+			} else if (boolean.class.equals(to)) {
 				if (int.class.equals(from) || short.class.equals(from) || byte.class.equals(from) || boolean.class.equals(from) || char.class.equals(from)) {
 					return this;
 				} else if (long.class.equals(from)) {
-					return addCode(L2I);
-				} else if (float.class.equals(from) && to.isAssignableFrom(Float.class)) {
-					return addInvoke(Float.class.getMethod("valueOf", float.class));
-				} else if (double.class.equals(from) && to.isAssignableFrom(Double.class)) {
-					return addInvoke(Double.class.getMethod("valueOf", double.class));
+					return addCode(LCONST_0, LCMP);
+				} else if (float.class.equals(from)) {
+					return addCode(FCONST_0, FCMPG);
+				} else if (double.class.equals(from)) {
+					return addCode(DCONST_0, DCMPG);
 				} else if (Boolean.class.equals(from)) {
 					return addInvoke(Boolean.class.getMethod("booleanValue"));
-				} else {
-
 				}
 			} else if (Number.class.isAssignableFrom(from)) {
 				if (int.class.equals(to)) {

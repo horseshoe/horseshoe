@@ -23,15 +23,20 @@ Horseshoe does not support Mustache lambdas. It supplements lambdas with a more 
 ### What operators does Horseshoe support?
 Precedence | Operators | Associativity
 ---------- | --------- | -------------
-0 | a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate) | Left-to-right
-2 | <code>+</code>a (Unary Plus), <br><code>-</code>a (Unary Plus), <br><code>~</code>a (Bitwise Negate) | Right-to-left
+0 | <code>{</code>a?<code>}</code> (Map / Set Literal), <br>a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate) | Left-to-right
+2 | <code>+</code>a (Unary Plus), <br><code>-</code>a (Unary Plus), <br><code>~</code>a (Bitwise Negate), <br><code>!</code>a (Logical Negate) | Right-to-left
 4 | a<code>*</code>b (Multiply), <br>a<code>/</code>b (Divide), <br>a<code>%</code>b (Modulus) | Left-to-right
 5 | a<code>+</code>b (Add), <br>a<code>-</code>b (Subtract) | Left-to-right
 6 | a<code><<</code>b (Bitwise Shift Left), <br>a<code>>></code>b (Bitwise Shift Right Sign Extend), <br>a<code>>>></code>b (Bitwise Shift Right Zero Extend) | Left-to-right
+7 | a<code><=</code>b (Less Than or Equal), <br>a<code>>=</code>b (Greater Than or Equal), <br>a<code><</code>b (Less Than), <br>a<code>></code>b (Greater Than) | Left-to-right
+8 | a<code>==</code>b (Equal), <br>a<code>!=</code>b (Not Equal) | Left-to-right
 9 | a<code>&</code>b (Bitwise And) | Left-to-right
 10 | a<code>^</code>b (Bitwise Xor) | Left-to-right
 11 | a<code>&#124;</code>b (Bitwise Or) | Left-to-right
-16 | a<code>,</code>b (Comma Operator) | Left-to-right
+12 | a<code>&&</code>b (Logical And) | Left-to-right
+13 | a<code>&#124;&#124;</code>b (Logical Or) | Left-to-right
+14 | a<code>:</code>b (Pair) | Right-to-left
+16 | a<code>,</code>b (Statement Separator) | Left-to-right
 
 ## Example
 First, a template is loaded using the template loader class. Templates can be loaded from a string, a file, or a reader.

@@ -15,6 +15,7 @@ final class Section {
 	private final Map<String, Template> localPartials;
 	private final List<Action> actions = new ArrayList<>();
 	private final List<Action> invertedActions = new ArrayList<>();
+	private final boolean invisible;
 
 	/**
 	 * Creates a new section using the specified expression and specified writer.
@@ -24,11 +25,12 @@ final class Section {
 	 * @param annotation the name of the annotation for the section, or null if no annotation exists
 	 * @param localPartials the local partials for the section
 	 */
-	public Section(final String name, final Expression expression, final String annotation, final Map<String, Template> localPartials) {
+	public Section(final String name, final Expression expression, final String annotation, final Map<String, Template> localPartials, final boolean invisible) {
 		this.name = name;
 		this.expression = expression;
 		this.annotation = annotation;
 		this.localPartials = new HashMap<>(localPartials);
+		this.invisible = invisible;
 	}
 
 	/**
@@ -37,14 +39,14 @@ final class Section {
 	 * @param expression the expression for the section
 	 */
 	public Section(final Expression expression, final Map<String, Template> localPartials) {
-		this(expression.toString(), expression, null, localPartials);
+		this(expression.toString(), expression, null, localPartials, false);
 	}
 
 	/**
 	 * Creates a new section using an empty expression.
 	 */
 	public Section(final String name, final Map<String, Template> localPartials) {
-		this(name, null, null, localPartials);
+		this(name, null, null, localPartials, false);
 	}
 
 	/**
@@ -99,6 +101,15 @@ final class Section {
 	 */
 	public String getName() {
 		return name;
+	}
+
+	/**
+	 * Checks the invisibility of the section.
+	 *
+	 * @return true if the section is invisible, otherwise false
+	 */
+	public boolean isInvisible() {
+		return invisible;
 	}
 
 }

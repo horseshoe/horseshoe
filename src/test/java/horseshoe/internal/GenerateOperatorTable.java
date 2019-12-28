@@ -1,4 +1,4 @@
-package horseshoe;
+package horseshoe.internal;
 
 import static horseshoe.internal.Operator.LEFT_EXPRESSION;
 import static horseshoe.internal.Operator.METHOD_CALL;
@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import horseshoe.internal.Operator;
 
-public class GenerateOperationTable {
+public class GenerateOperatorTable {
 
 	@Test
 	public void generateOperationTable() throws Exception {

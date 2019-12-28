@@ -10,7 +10,7 @@ final class RenderContext {
 
 	private final Settings settings;
 	private final Map<String, Object> globalData;
-	private final Map<String, Template.AnnotationProcessor> annotationMap;
+	private final Map<String, AnnotationProcessor> annotationMap;
 	private final PersistentStack<Object> sectionData = new PersistentStack<>();
 	private final PersistentStack<Expression.Indexed> indexedData = new PersistentStack<>();
 	private final PersistentStack<String> indentation = new PersistentStack<>();
@@ -22,7 +22,7 @@ final class RenderContext {
 	 * @param globalData the global data that will be used as part of the render context
 	 * @param annotationMap the map used to process annotations
 	 */
-	public RenderContext(final Settings settings, final Map<String, Object> globalData, final Map<String, Template.AnnotationProcessor> annotationMap) {
+	public RenderContext(final Settings settings, final Map<String, Object> globalData, final Map<String, AnnotationProcessor> annotationMap) {
 		this.settings = settings;
 		this.globalData = new HashMap<>(globalData);
 		this.annotationMap = annotationMap;
@@ -33,7 +33,7 @@ final class RenderContext {
 	 *
 	 * @return the annotation map used by the rendering process
 	 */
-	Map<String, Template.AnnotationProcessor> getAnnotationMap() {
+	Map<String, AnnotationProcessor> getAnnotationMap() {
 		return annotationMap;
 	}
 

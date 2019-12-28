@@ -2,8 +2,10 @@ package horseshoe;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import horseshoe.internal.Expression;
 import horseshoe.internal.Properties;
@@ -37,25 +39,6 @@ class SectionRenderer implements Action, Expression.Indexed {
 		}
 
 		FACTORY = factory;
-	}
-
-	/**
-	 * Renders the actions using the specified context, data, and writer.
-	 *
-	 * @param context the render context
-	 * @param data the data to render
-	 * @param writer the writer used for rendering
-	 * @param actions the actions to render
-	 * @throws IOException if an error occurs while writing to the writer
-	 */
-	protected static void renderActions(final RenderContext context, final Object data, final Writer writer, final List<Action> actions) throws IOException {
-		context.getSectionData().push(data);
-
-		for (final Action action : actions) {
-			action.perform(context, writer);
-		}
-
-		context.getSectionData().pop();
 	}
 
 	protected final Section section;
@@ -138,10 +121,11 @@ class SectionRenderer implements Action, Expression.Indexed {
 		return hasNext;
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public final void perform(final RenderContext context, final Writer writer) throws IOException {
 		if (section.getAnnotation() != null) {
-			final Template.AnnotationProcessor annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
+			final AnnotationProcessor annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
 
 			if (annotationProcessor == null) { // Only write the data if there is an annotation processor available, otherwise take false path with default writer
 				dispatchData(context, false, writer);
@@ -149,7 +133,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 				final Writer newWriter;
 
 				try {
-					newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData()));
+					newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? Collections.emptyMap() : (Map)section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData()));
 				} catch (final IOException e) {
 					// TODO: Log error
 					return;
@@ -167,6 +151,31 @@ class SectionRenderer implements Action, Expression.Indexed {
 			}
 		} else {
 			dispatchData(context, section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData()), writer);
+		}
+	}
+
+	/**
+	 * Renders the actions using the specified context, data, and writer.
+	 *
+	 * @param context the render context
+	 * @param data the data to render
+	 * @param writer the writer used for rendering
+	 * @param actions the actions to render
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	protected void renderActions(final RenderContext context, final Object data, final Writer writer, final List<Action> actions) throws IOException {
+		if (section.isInvisible()) {
+			for (final Action action : actions) {
+				action.perform(context, writer);
+			}
+		} else {
+			context.getSectionData().push(data);
+
+			for (final Action action : actions) {
+				action.perform(context, writer);
+			}
+
+			context.getSectionData().pop();
 		}
 	}
 

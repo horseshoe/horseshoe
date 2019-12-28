@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class Operator {
+final class Operator {
 
 	// Operator Properties
 	public static final int LEFT_EXPRESSION     = 0x00000001; // Has an expression on the left
@@ -25,12 +25,14 @@ public final class Operator {
 	static {
 		final List<Operator> operators = new ArrayList<>();
 
+		operators.add(new Operator("{",    0,  X_RIGHT_EXPRESSIONS, "Map / Set Literal", "}", 0));
 		operators.add(createMethod("("));
-		operators.add(new Operator("(",    0,  RIGHT_EXPRESSION, "Parentheses", ")"));
+		operators.add(new Operator("(",    0,  RIGHT_EXPRESSION, "Parentheses", ")", 1));
 		operators.add(new Operator(".",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Navigate"));
 		operators.add(new Operator("+",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
 		operators.add(new Operator("-",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
 		operators.add(new Operator("~",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Bitwise Negate"));
+		operators.add(new Operator("!",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Logical Negate"));
 		operators.add(new Operator("*",    4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Multiply"));
 		operators.add(new Operator("/",    4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Divide"));
 		operators.add(new Operator("%",    4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Modulus"));
@@ -39,10 +41,19 @@ public final class Operator {
 		operators.add(new Operator("<<",   6,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Shift Left"));
 		operators.add(new Operator(">>",   6,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Shift Right Sign Extend"));
 		operators.add(new Operator(">>>",  6,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Shift Right Zero Extend"));
+		operators.add(new Operator("<=",   7,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Less Than or Equal"));
+		operators.add(new Operator(">=",   7,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Greater Than or Equal"));
+		operators.add(new Operator("<",    7,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Less Than"));
+		operators.add(new Operator(">",    7,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Greater Than"));
+		operators.add(new Operator("==",   8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Equal"));
+		operators.add(new Operator("!=",   8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Not Equal"));
 		operators.add(new Operator("&",    9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise And"));
 		operators.add(new Operator("^",    10, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Xor"));
 		operators.add(new Operator("|",    11, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Or"));
-		operators.add(new Operator(",",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Comma Operator"));
+		operators.add(new Operator("&&",   12, LEFT_EXPRESSION | RIGHT_EXPRESSION | DEFERRED_EVALUATION, "Logical And"));
+		operators.add(new Operator("||",   13, LEFT_EXPRESSION | RIGHT_EXPRESSION | DEFERRED_EVALUATION, "Logical Or"));
+		operators.add(new Operator(":",    14, LEFT_EXPRESSION | RIGHT_EXPRESSION | DEFERRED_EVALUATION | RIGHT_ASSOCIATIVITY, "Pair"));
+		operators.add(new Operator(",",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Statement Separator"));
 
 		for (final Operator operator : operators) {
 			operator.next = OPERATOR_LOOKUP.put(operator.string, operator);
@@ -58,7 +69,7 @@ public final class Operator {
 	 * @return the operator for the specified method name
 	 */
 	public static Operator createMethod(final String name) {
-		return new Operator(name, 0, METHOD_CALL | X_RIGHT_EXPRESSIONS, "Call Method", ")");
+		return new Operator(name, 0, METHOD_CALL | X_RIGHT_EXPRESSIONS, "Call Method", ")", 0);
 	}
 
 	/**
@@ -85,43 +96,33 @@ public final class Operator {
 	private final int properties;
 	private final String description;
 	private final String closingString;
-
-	private int rightExpressions;
+	private final int rightExpressions;
 	private Operator next = null;
 
-	private Operator(final String string, final int precedence, final int properties, final String description, final String closingString) {
+	private Operator(final String string, final int precedence, final int properties, final String description, final String closingString, final int rightExpressions) {
 		this.string = string;
 		this.precedence = precedence;
 		this.properties = properties;
 		this.description = description;
 		this.closingString = closingString;
-		this.rightExpressions = has(RIGHT_EXPRESSION) ? 1 : 0;
+		this.rightExpressions = rightExpressions;
 	}
 
 	private Operator(final String string, final int precedence, final int properties, final String description) {
-		this(string, precedence, properties, description, null);
+		this(string, precedence, properties, description, null, (properties & RIGHT_EXPRESSION) != 0 ? 1 : 0);
 	}
 
 	/**
 	 * Adds a right expression to the operator.
 	 *
-	 * @return this operator
+	 * @return the new operator
 	 */
 	public Operator addRightExpression() {
-		if (has(X_RIGHT_EXPRESSIONS)) {
-			rightExpressions++;
+		if (!has(X_RIGHT_EXPRESSIONS)) {
+			throw new UnsupportedOperationException();
 		}
 
-		return this;
-	}
-
-	/**
-	 * Duplicates the operator.
-	 *
-	 * @return the duplicate of the operator
-	 */
-	public Operator duplicate() {
-		return new Operator(string, precedence, properties, closingString);
+		return new Operator(string, precedence, properties, description, closingString, rightExpressions + 1);
 	}
 
 	/**
