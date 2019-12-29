@@ -10,14 +10,14 @@ final class Operator {
 
 	// Operator Properties
 	public static final int LEFT_EXPRESSION     = 0x00000001; // Has an expression on the left
-	public static final int LEFT_ASSIGNABLE     = 0x00000002; // Has an assignable on the left
-	public static final int RIGHT_EXPRESSION    = 0x00000004; // Has an expression on the right
-	public static final int RIGHT_ASSIGNABLE    = 0x00000008; // Has an assignable on the right
-	public static final int X_RIGHT_EXPRESSIONS = 0x00000010; // Has 0 or more comma-separated expressions on the right
+	public static final int RIGHT_EXPRESSION    = 0x00000002; // Has an expression on the right
+	public static final int X_RIGHT_EXPRESSIONS = 0x00000004; // Has 0 or more comma-separated expressions on the right
 
-	public static final int METHOD_CALL         = 0x00000020; // Is a method call (starts with '.', ends with '(')
-	public static final int RIGHT_ASSOCIATIVITY = 0x00000040; // Is evaluated right to left
-	public static final int DEFERRED_EVALUATION = 0x00000080; // The right side may not be evaluated depending on the left side
+	public static final int METHOD_CALL         = 0x00000010; // Is a method call (starts with '.', ends with '(')
+	public static final int RIGHT_ASSOCIATIVITY = 0x00000020; // Is evaluated right to left
+	public static final int ALLOW_PAIRS         = 0x00000040; // Can contain pairs
+	public static final int NAVIGATION          = 0x00000080; // Is a navigation operator
+	public static final int SAFE                = 0x00000100; // Is a safe operator
 
 	private static final List<Operator> OPERATORS;
 	private static final Map<String, Operator> OPERATOR_LOOKUP = new LinkedHashMap<>();
@@ -25,10 +25,13 @@ final class Operator {
 	static {
 		final List<Operator> operators = new ArrayList<>();
 
-		operators.add(new Operator("{",    0,  X_RIGHT_EXPRESSIONS, "Map / Set Literal", "}", 0));
-		operators.add(createMethod("("));
+		operators.add(new Operator("{",    0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal", "}", 0));
+		operators.add(new Operator("[",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Lookup", "]", 1));
+		operators.add(new Operator("?[",   0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | SAFE, "Safe Lookup", "]", 1));
+		operators.add(createMethod("(", false));
 		operators.add(new Operator("(",    0,  RIGHT_EXPRESSION, "Parentheses", ")", 1));
-		operators.add(new Operator(".",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Navigate"));
+		operators.add(new Operator(".",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION, "Navigate"));
+		operators.add(new Operator("?.",   0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | SAFE, "Safe Navigate"));
 		operators.add(new Operator("+",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
 		operators.add(new Operator("-",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
 		operators.add(new Operator("~",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Bitwise Negate"));
@@ -50,9 +53,12 @@ final class Operator {
 		operators.add(new Operator("&",    9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise And"));
 		operators.add(new Operator("^",    10, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Xor"));
 		operators.add(new Operator("|",    11, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Or"));
-		operators.add(new Operator("&&",   12, LEFT_EXPRESSION | RIGHT_EXPRESSION | DEFERRED_EVALUATION, "Logical And"));
-		operators.add(new Operator("||",   13, LEFT_EXPRESSION | RIGHT_EXPRESSION | DEFERRED_EVALUATION, "Logical Or"));
-		operators.add(new Operator(":",    14, LEFT_EXPRESSION | RIGHT_EXPRESSION | DEFERRED_EVALUATION | RIGHT_ASSOCIATIVITY, "Pair"));
+		operators.add(new Operator("&&",   12, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical And"));
+		operators.add(new Operator("||",   13, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical Or"));
+		operators.add(new Operator("?:",   14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce"));
+		operators.add(new Operator("??",   14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce (Alternate)"));
+		operators.add(new Operator("?",    14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
+		operators.add(new Operator(":",    14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair"));
 		operators.add(new Operator(",",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Statement Separator"));
 
 		for (final Operator operator : operators) {
@@ -66,10 +72,11 @@ final class Operator {
 	 * Gets the operator for the specified method name.
 	 *
 	 * @param name the name of the method
+	 * @param isSafe true to make a safe method, otherwise false
 	 * @return the operator for the specified method name
 	 */
-	public static Operator createMethod(final String name) {
-		return new Operator(name, 0, METHOD_CALL | X_RIGHT_EXPRESSIONS, "Call Method", ")", 0);
+	public static Operator createMethod(final String name, final boolean isSafe) {
+		return new Operator(name, 0, METHOD_CALL | X_RIGHT_EXPRESSIONS | (isSafe ? SAFE : 0), "Call Method", ")", 0);
 	}
 
 	/**

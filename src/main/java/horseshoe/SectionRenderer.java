@@ -63,7 +63,9 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
-		if (data instanceof Iterable<?>) {
+		if (data == null) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else if (data instanceof Iterable<?>) {
 			final Iterator<?> it = ((Iterable<?>)data).iterator();
 			hasNext = it.hasNext();
 			index = 0;
@@ -95,10 +97,8 @@ class SectionRenderer implements Action, Expression.Indexed {
 			} else {
 				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 			}
-		} else if (data != null) {
-			renderActions(context, data, writer, section.getActions());
 		} else {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			renderActions(context, data, writer, section.getActions());
 		}
 	}
 

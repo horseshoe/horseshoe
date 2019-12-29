@@ -70,6 +70,14 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testSafeOperators() throws ReflectiveOperationException {
+		assertEquals("good", new Expression("null ?? \"good\"", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("good", new Expression("\"good\" ?: \"bad\"", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("good", new Expression("(null?.toString()) ?? \"good\"", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("7", new Expression("(7?.toString()) ?? \"bad\"", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+	}
+
+	@Test
 	public void testSeparatorOperator() throws ReflectiveOperationException {
 		final PersistentStack<Object> context = new PersistentStack<>();
 		assertEquals("blah", new Expression("5, 6.7, \"string-1\", \"blah\"", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());

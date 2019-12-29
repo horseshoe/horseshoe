@@ -4,7 +4,6 @@ import static horseshoe.internal.MethodBuilder.*;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -62,11 +61,8 @@ public final class Expression {
 	}
 
 	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
-	private static final Operator NAVIGATE_OPERATOR = Operator.get(".");
 
 	// Reflected Methods
-	private static final Method ENTRY_GET_KEY;
-	private static final Method ENTRY_GET_VALUE;
 	private static final Method IDENTIFIER_GET_VALUE;
 	private static final Method IDENTIFIER_GET_VALUE_BACKREACH;
 	private static final Method IDENTIFIER_GET_VALUE_METHOD;
@@ -80,8 +76,6 @@ public final class Expression {
 
 	static {
 		try {
-			ENTRY_GET_KEY = Entry.class.getMethod("getKey");
-			ENTRY_GET_VALUE = Entry.class.getMethod("getValue");
 			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
 			IDENTIFIER_GET_VALUE_BACKREACH = Identifier.class.getMethod("getValue", PersistentStack.class, Settings.ContextAccess.class);
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
@@ -98,16 +92,16 @@ public final class Expression {
 	}
 
 	// The patterns used for parsing the grammar
-	private static final Pattern IDENTIFIER_BACKREACH_PATTERN = Pattern.compile("\\s*([.][.]/)+");
-	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("\\s*([.][/.])*((" + Identifier.PATTERN + "|`([^`\\\\]|\\\\[`\\\\])+`)[(]?)");
-	private static final Pattern INTERNAL_PATTERN = Pattern.compile("\\s*([.][/.])*([.]\\p{L}*)");
-	private static final Pattern DOUBLE_PATTERN = Pattern.compile("\\s*([0-9][0-9]*[.][0-9]+)");
-	private static final Pattern LONG_PATTERN = Pattern.compile("\\s*(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))");
-	private static final Pattern STRING_PATTERN = Pattern.compile("\\s*\"(([^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"");
+	private static final Pattern IDENTIFIER_BACKREACH_PATTERN = Pattern.compile("(?<backreach>(?:[.][.]/)+)\\s*");
+	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?:[.][/.])*(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`)[(]?)\\s*");
+	private static final Pattern INTERNAL_PATTERN = Pattern.compile("(?:[.][/.])*(?<identifier>[.]\\p{L}*)\\s*");
+	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*");
+	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))\\s*");
+	private static final Pattern STRING_PATTERN = Pattern.compile("\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"\\s*");
 	private static final Pattern OPERATOR_PATTERN;
 
 	static {
-		final StringBuilder sb = new StringBuilder("\\s*(?<operator>");
+		final StringBuilder sb = new StringBuilder("(?<operator>");
 		final Set<String> patterns = new TreeSet<>(new Comparator<String>() {
 			@Override
 			public int compare(final String o1, final String o2) {
@@ -130,7 +124,7 @@ public final class Expression {
 		}
 
 		// Add comma as a separator
-		OPERATOR_PATTERN = Pattern.compile(sb.append(",)").toString());
+		OPERATOR_PATTERN = Pattern.compile(sb.append(",)\\s*").toString());
 	}
 
 	/**
@@ -158,35 +152,39 @@ public final class Expression {
 	 * @throws ReflectiveOperationException
 	 */
 	private static void processOperation(final HashMap<Identifier, Integer> identifiers, final PersistentStack<Operand> operands, final Operator operator) throws ReflectiveOperationException {
-		final Operand right[];
+		final Operand right;
 
-		if (operator == NAVIGATE_OPERATOR) { // Navigation operator is handled during parsing
+		if (operator.has(Operator.NAVIGATION)) { // Navigation operator is handled during parsing
 			return;
 		} else if (operator.has(Operator.METHOD_CALL)) { // Check for a method call
-			final MethodBuilder mb = operands.peek(operator.getRightExpressions()).builder;
+			final MethodBuilder object = operands.peek(operator.getRightExpressions() + 1).builder;
+			final Label end = object.newLabel();
+
+			if (operator.has(Operator.SAFE)) {
+				object.addCode(DUP).addBranch(IFNULL, end);
+			}
+
+			object.append(operands.peek(operator.getRightExpressions()).builder).addCode(SWAP);
 
 			if (operator.getRightExpressions() == 0) {
-				mb.addCode(ACONST_NULL);
+				object.addCode(ACONST_NULL);
 			} else {
-				mb.pushNewObject(Object.class, operator.getRightExpressions());
+				object.pushNewObject(Object.class, operator.getRightExpressions());
 			}
 
 			// Convert all parameters to objects and store them in the array
 			for (int i = 0; i < operator.getRightExpressions(); i++) {
-				mb.addCode(DUP).pushConstant(i).append(operands.peek(operator.getRightExpressions() - 1 - i).toObject(false)).addCode(AASTORE);
+				object.addCode(DUP).pushConstant(i).append(operands.peek(operator.getRightExpressions() - 1 - i).toObject(false)).addCode(AASTORE);
 			}
 
-			operands.pop(1 + operator.getRightExpressions()).push(new Operand(Object.class, mb.addInvoke(IDENTIFIER_GET_VALUE_METHOD)));
+			operands.pop(operator.getRightExpressions() + 2).push(new Operand(Object.class, object.addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(end)));
 			return;
-		} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS)) { // Determine the normalized class of all right hand arguments
-			right = new Operand[operator.getRightExpressions()];
-
-			for (int i = operator.getRightExpressions(); --i >= 0; ) {
-				right[i] = operands.pop();
-			}
 		} else if (operator.has(Operator.RIGHT_EXPRESSION)) {
-			right = new Operand[1];
-			right[0] = operands.pop();
+			right = operands.pop();
+
+			if (Entry.class.equals(right.type) && !operator.has(Operator.ALLOW_PAIRS)) {
+				throw new RuntimeException("Invalid pair operator (':') in expression");
+			}
 		} else {
 			right = null;
 		}
@@ -194,37 +192,61 @@ public final class Expression {
 		final Operand left = operator.has(Operator.LEFT_EXPRESSION) ? operands.pop() : null;
 
 		switch (operator.getString()) {
-		case "{": { // TODO: Iterable?
-			final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).addInvoke(LinkedHashMap.class.getConstructor());
+		case "{": {
+			int pairs = 0;
 
-			for (int i = 0; i < right.length; i++) {
-				if (Entry.class.equals(right[i].type)) {
-					builder.addCode(DUP).append(right[i].builder).addCode(DUP).addInvoke(ENTRY_GET_KEY).addCode(SWAP).addInvoke(ENTRY_GET_VALUE).addInvoke(MAP_PUT).addCode(POP);
-				} else {
-					builder.addCode(DUP).pushConstant(i).addPrimitiveConversion(int.class, Object.class).append(right[i].toObject(false)).addInvoke(MAP_PUT).addCode(POP);
+			// Find the number of pairs
+			for (int i = 0; i < operator.getRightExpressions(); i++) {
+				if (Entry.class.equals(operands.peek(i + pairs).type)) {
+					pairs++;
+					assert Entry.class.equals(operands.peek(i + pairs).type);
 				}
 			}
 
-			operands.push(new Operand(Object.class, builder));
+			if (pairs > 0) { // Create a map
+				final int totalPairs = pairs;
+				final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LinkedHashMap.class.getConstructor(int.class));
+
+				for (int i = operator.getRightExpressions() - 1, j = 0; i >= 0; j++, i--) {
+					final Operand first = operands.peek(i + pairs);
+
+					if (Entry.class.equals(first.type)) {
+						builder.addCode(DUP).append(first.toObject(false)).append(operands.peek(i + --pairs).toObject(false)).addInvoke(MAP_PUT).addCode(POP);
+					} else {
+						builder.addCode(DUP).pushConstant(j).addPrimitiveConversion(int.class, Object.class).append(first.toObject(false)).addInvoke(MAP_PUT).addCode(POP);
+					}
+				}
+
+				operands.pop(operator.getRightExpressions() + totalPairs).push(new Operand(Object.class, builder));
+			} else { // Create an array
+				final MethodBuilder builder = new MethodBuilder().pushNewObject(Object.class, operator.getRightExpressions());
+
+				for (int i = operator.getRightExpressions() - 1, j = 0; i >= 0; j++, i--) {
+					builder.addCode(DUP).pushConstant(j).append(operands.peek(i).toObject(false)).addCode(AASTORE);
+				}
+
+				operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
+			}
+
 			break;
 		}
 
 		// Math Operations
 		case "+":
 			if (left == null) { // Unary +, basically do nothing except require a number
-				operands.push(new Operand(null, right[0].toNumeric(true)));
+				operands.push(new Operand(null, right.toNumeric(true)));
 			} else if (StringBuilder.class.equals(left.type)) { // Check for string concatenation
-				operands.push().builder.append(right[0].toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT);
-			} else if (String.class.equals(left.type) || String.class.equals(right[0].type) || StringBuilder.class.equals(right[0].type)) {
-				operands.push(new Operand(StringBuilder.class, left.toObject(false).pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right[0].toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
-			} else if ((left.type == null || (left.type.isPrimitive() && !boolean.class.equals(left.type))) && (right[0].type == null || (right[0].type.isPrimitive() && !boolean.class.equals(right[0].type)))) { // Mathematical addition
-				operands.push(left.execMathOp(right[0], IADD, LADD, DADD));
+				operands.push().builder.append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT);
+			} else if (String.class.equals(left.type) || String.class.equals(right.type) || StringBuilder.class.equals(right.type)) {
+				operands.push(new Operand(StringBuilder.class, left.toObject(false).pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
+			} else if ((left.type == null || (left.type.isPrimitive() && !boolean.class.equals(left.type))) && (right.type == null || (right.type.isPrimitive() && !boolean.class.equals(right.type)))) { // Mathematical addition
+				operands.push(left.execMathOp(right, IADD, LADD, DADD));
 			} else { // String concatenation, mathematical addition, or invalid
 				final Label notStringBuilder = left.builder.newLabel();
 				final Label isString = left.builder.newLabel();
 				final Label notString = left.builder.newLabel();
 				final Label end = left.builder.newLabel();
-				final Operand result = new Operand(Object.class, left.toObject(false).append(right[0].toObject(false)).addCode(SWAP, DUP_X1).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notStringBuilder).addCode(SWAP).addCast(StringBuilder.class).addCode(SWAP).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
+				final Operand result = new Operand(Object.class, left.toObject(false).append(right.toObject(false)).addCode(SWAP, DUP_X1).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notStringBuilder).addCode(SWAP).addCast(StringBuilder.class).addCode(SWAP).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
 					.updateLabel(notStringBuilder).addCode(SWAP, DUP_X1).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notString)
 					.updateLabel(isString).addCode(SWAP).pushNewObject(StringBuilder.class).addCode(DUP_X2, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
 					.updateLabel(notString).addAccess(ASTORE, Evaluable.FIRST_LOCAL));
@@ -236,90 +258,113 @@ public final class Expression {
 			break;
 		case "-":
 			if (left == null) {
-				operands.push(right[0].execIntegralOp(INEG, LNEG));
+				operands.push(right.execIntegralOp(INEG, LNEG));
 			} else {
-				operands.push(left.execMathOp(right[0], ISUB, LSUB, DSUB));
+				operands.push(left.execMathOp(right, ISUB, LSUB, DSUB));
 			}
 
 			break;
 		case "*":
-			operands.push(left.execMathOp(right[0], IMUL, LMUL, DMUL));
+			operands.push(left.execMathOp(right, IMUL, LMUL, DMUL));
 			break;
 		case "/":
-			operands.push(left.execMathOp(right[0], IDIV, LDIV, DDIV));
+			operands.push(left.execMathOp(right, IDIV, LDIV, DDIV));
 			break;
 		case "%":
-			operands.push(left.execMathOp(right[0], IREM, LREM, DREM));
+			operands.push(left.execMathOp(right, IREM, LREM, DREM));
 			break;
 
 		// Integral Operations
 		case "~": // Treat as x ^ -1
-			operands.push(right[0].execIntegralOp(new Operand(int.class, new MethodBuilder().pushConstant(-1)), IXOR, LXOR, false));
+			operands.push(right.execIntegralOp(new Operand(int.class, new MethodBuilder().pushConstant(-1)), IXOR, LXOR, false));
 			break;
 		case "<<":
-			operands.push(left.execIntegralOp(right[0], ISHL, LSHL, true));
+			operands.push(left.execIntegralOp(right, ISHL, LSHL, true));
 			break;
 		case ">>":
-			operands.push(left.execIntegralOp(right[0], ISHR, LSHR, true));
+			operands.push(left.execIntegralOp(right, ISHR, LSHR, true));
 			break;
 		case ">>>":
-			operands.push(left.execIntegralOp(right[0], IUSHR, LUSHR, true));
+			operands.push(left.execIntegralOp(right, IUSHR, LUSHR, true));
 			break;
 		case "&":
-			operands.push(left.execIntegralOp(right[0], IAND, LAND, false));
+			operands.push(left.execIntegralOp(right, IAND, LAND, false));
 			break;
 		case "^":
-			operands.push(left.execIntegralOp(right[0], IXOR, LXOR, false));
+			operands.push(left.execIntegralOp(right, IXOR, LXOR, false));
 			break;
 		case "|":
-			operands.push(left.execIntegralOp(right[0], IOR, LOR, false));
+			operands.push(left.execIntegralOp(right, IOR, LOR, false));
 			break;
 
 		// Logical Operators
 		case "!": {
-			final Label notZero = right[0].builder.newLabel();
-			final Label end = right[0].builder.newLabel();
+			final Label notZero = right.builder.newLabel();
+			final Label end = right.builder.newLabel();
 
-			operands.push(new Operand(boolean.class, right[0].toBoolean().addBranch(IFNE, notZero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(notZero).addCode(ICONST_0).updateLabel(end)));
+			operands.push(new Operand(boolean.class, right.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(notZero).addCode(ICONST_0).updateLabel(end)));
 			break;
 		}
 		case "&&": {
 			final Label notZero = left.builder.newLabel();
 			final Label end = left.builder.newLabel();
 
-			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_0).addBranch(GOTO, end).updateLabel(notZero).append(right[0].builder).updateLabel(end)));
+			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_0).addBranch(GOTO, end).updateLabel(notZero).append(right.builder).updateLabel(end)));
 			break;
 		}
 		case "||": {
 			final Label zero = left.builder.newLabel();
 			final Label end = left.builder.newLabel();
 
-			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFEQ, zero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(zero).append(right[0].builder).updateLabel(end)));
+			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFEQ, zero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(zero).append(right.builder).updateLabel(end)));
 			break;
 		}
 
 		// Comparison Operators
 		case "<=":
-			operands.push(left.execCompareOp(right[0], IF_ICMPLE, IFLE));
+			operands.push(left.execCompareOp(right, IF_ICMPLE, IFLE));
 			break;
 		case ">=":
-			operands.push(left.execCompareOp(right[0], IF_ICMPGE, IFGE));
+			operands.push(left.execCompareOp(right, IF_ICMPGE, IFGE));
 			break;
 		case "<":
-			operands.push(left.execCompareOp(right[0], IF_ICMPLT, IFLT));
+			operands.push(left.execCompareOp(right, IF_ICMPLT, IFLT));
 			break;
 		case ">":
-			operands.push(left.execCompareOp(right[0], IF_ICMPGT, IFGT));
+			operands.push(left.execCompareOp(right, IF_ICMPGT, IFGT));
 			break;
 		case "==":
-			operands.push(left.execCompareOp(right[0], IF_ICMPEQ, IFEQ));
+			operands.push(left.execCompareOp(right, IF_ICMPEQ, IFEQ));
 			break;
 		case "!=":
-			operands.push(left.execCompareOp(right[0], IF_ICMPNE, IFNE));
+			operands.push(left.execCompareOp(right, IF_ICMPNE, IFNE));
 			break;
 
+		case "??": case "?:": {
+			final Label end = left.builder.newLabel();
+
+			operands.push(new Operand(Object.class, left.toObject(false).addCode(DUP).addBranch(IFNONNULL, end).addCode(POP).append(right.toObject(false)).updateLabel(end)));
+			break;
+		}
+
+		case "?": {
+			if (!Entry.class.equals(right.type)) {
+				throw new RuntimeException("Incomplete ternary operator, missing ':'");
+			}
+
+			assert Entry.class.equals(left.type);
+			assert !operands.isEmpty();
+
+			final Label isFalse = left.builder.newLabel();
+			final Label end = left.builder.newLabel();
+
+			operands.push(new Operand(Object.class, operands.pop().toBoolean().addBranch(IFEQ, isFalse).append(left.toObject(false)).addBranch(GOTO, end).updateLabel(isFalse).append(right.toObject(false)).updateLabel(end)));
+			break;
+		}
+
 		case ":":
-			operands.push(new Operand(Entry.class, new MethodBuilder().pushNewObject(AbstractMap.SimpleEntry.class).addCode(DUP).append(left.toObject(false)).append(right[0].toObject(false).addInvoke(AbstractMap.SimpleEntry.class.getConstructor(Object.class, Object.class)))));
+			operands.push(new Operand(Entry.class, left.builder));
+			operands.push(new Operand(Entry.class, right.builder));
 			break;
 
 		case ",":
@@ -329,7 +374,7 @@ public final class Expression {
 				left.builder.addCode(long.class.equals(left.type) || double.class.equals(left.type) ? POP2 : POP);
 			}
 
-			operands.push(new Operand(right[0].type, left.builder.append(right[0].builder)));
+			operands.push(new Operand(right.type, left.builder.append(right.builder)));
 			break;
 
 		default:
@@ -345,7 +390,7 @@ public final class Expression {
 	/**
 	 * Creates a new expression.
 	 *
-	 * @param expressionString the advanced expression string
+	 * @param expressionString the trimmed, advanced expression string
 	 * @param simpleExpression true to parse as a simple expression, false to parse as an advanced expression
 	 * @param maxBackreach the maximum backreach allowed by the expression
 	 * @throws ReflectiveOperationException if an error occurs while resolving the reflective parts of the expression
@@ -392,18 +437,20 @@ public final class Expression {
 			nextToken:
 			for (final Matcher matcher = IDENTIFIER_BACKREACH_PATTERN.matcher(expressionString); !matcher.hitEnd(); matcher.region(matcher.end(), length)) {
 				final boolean hasLeftExpression = (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION | Operator.X_RIGHT_EXPRESSIONS));
+				final boolean lastNavigation = (lastOperator != null && lastOperator.has(Operator.NAVIGATION));
+				final String token;
 				int backreach = 0;
 
 				// Check for backreach
 				if (matcher.usePattern(IDENTIFIER_BACKREACH_PATTERN).lookingAt()) {
-					if (hasLeftExpression || lastOperator == NAVIGATE_OPERATOR) {
-						throw new RuntimeException("Unexpected backreach in expression at offset " + matcher.start(1));
+					if (hasLeftExpression || lastNavigation) {
+						throw new RuntimeException("Unexpected backreach in expression at offset " + matcher.regionStart());
 					}
 
-					backreach = (matcher.end(1) - matcher.start(1)) / 3;
+					backreach = (matcher.end("backreach") - matcher.regionStart()) / 3;
 
 					if (backreach > maxBackreach) {
-						throw new RuntimeException("Backreach too far (max: " + maxBackreach + ") in expression at offset " + matcher.start(1));
+						throw new RuntimeException("Backreach too far (max: " + maxBackreach + ") in expression at offset " + matcher.regionStart());
 					}
 
 					matcher.region(matcher.end(), length);
@@ -411,17 +458,17 @@ public final class Expression {
 
 				// Check for identifier or literals
 				if (!hasLeftExpression && matcher.usePattern(IDENTIFIER_PATTERN).lookingAt()) { // Identifier
-					final String match = matcher.group(2);
+					token = matcher.group("identifier");
 
 					// Check for keywords that look like literals
-					if ("true".equals(match) && backreach == 0 && lastOperator != NAVIGATE_OPERATOR) {
+					if ("true".equals(token) && backreach == 0 && !lastNavigation) {
 						operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(1)));
-					} else if ("false".equals(match) && backreach == 0 && lastOperator != NAVIGATE_OPERATOR) {
+					} else if ("false".equals(token) && backreach == 0 && !lastNavigation) {
 						operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(0)));
-					} else if ("null".equals(match) && backreach == 0 && lastOperator != NAVIGATE_OPERATOR) {
+					} else if ("null".equals(token) && backreach == 0 && !lastNavigation) {
 						operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
-					} else if (match.endsWith("(")) { // Method
-						final String name = match.startsWith("`") ? match.substring(1, match.length() - 2).replaceAll("\\\\(.)", "\\1") : match.substring(0, match.length() - 1);
+					} else if (token.endsWith("(")) { // Method
+						final String name = token.startsWith("`") ? token.substring(1, token.length() - 2).replaceAll("\\\\(.)", "\\1") : token.substring(0, token.length() - 1);
 						final Identifier identifier = new Identifier(backreach, name, true);
 						Integer index = identifiers.get(identifier);
 
@@ -430,19 +477,21 @@ public final class Expression {
 							identifiers.put(identifier, index);
 						}
 
-						if (lastOperator == NAVIGATE_OPERATOR) {
-							// Create a new output formed by invoking identifiers[index].getValue(object, ...)
-							operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP)));
-							operators.pop();
-						} else {
+						if (!lastNavigation) {
 							// Create a new output formed by invoking identifiers[index].getValue(context.peek(backreach), ...)
-							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK)));
+							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK)));
+							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD)));
+							lastOperator = operators.push(Operator.createMethod(name, false));
+						} else {
+							// Create a new output formed by invoking identifiers[index].getValue(object, ...)
+							operands.push(new Operand(Object.class, operands.pop().toObject(false)));
+							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD)));
+							lastOperator = operators.push(Operator.createMethod(name, lastOperator.has(Operator.SAFE)));
 						}
 
-						lastOperator = operators.push(Operator.createMethod(name));
 						continue nextToken;
 					} else { // Identifier
-						final String name = match.startsWith("`") ? match.substring(1, match.length() - 1).replaceAll("\\\\(.)", "\\1") : match;
+						final String name = token.startsWith("`") ? token.substring(1, token.length() - 1).replaceAll("\\\\(.)", "\\1") : token;
 						final Identifier identifier = new Identifier(backreach, name, false);
 						Integer index = identifiers.get(identifier);
 
@@ -451,36 +500,39 @@ public final class Expression {
 							identifiers.put(identifier, index);
 						}
 
-						if (lastOperator == NAVIGATE_OPERATOR) {
-							// Create a new output formed by invoking identifiers[index].getValue(object)
-							operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
-							operators.pop();
-						} else {
+						if (!lastNavigation) {
 							// Create a new output formed by invoking identifiers[index].getValue(context, access)
 							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_VALUE_BACKREACH)));
+							// Create a new output formed by invoking identifiers[index].getValue(object)
+						} else if (operators.pop().has(Operator.SAFE)) {
+							final Label end = operands.peek().builder.newLabel();
+							operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
+						} else {
+							operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
 						}
 					}
 				} else if (!hasLeftExpression && matcher.usePattern(INTERNAL_PATTERN).lookingAt()) { // Internal identifier
-					final String name = matcher.group(2);
+					token = matcher.group("identifier");
 
-					if (".index".equals(name)) {
+					if (".index".equals(token)) {
 						operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
-					} else if (".hasNext".equals(name)) {
+					} else if (".hasNext".equals(token)) {
 						operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_HAS_NEXT)));
-					} else if (".".equals(name)) {
+					} else if (".".equals(token)) {
 						operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK)));
-					} else { // TODO: Unknown internal identifier = null?
+					} else { // Unknown internal identifier = null
 						operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
 					}
-				} else if (backreach != 0 || lastOperator == NAVIGATE_OPERATOR) { // Any backreach must have an identifier associated with it, and identifiers must follow the member selection operator
+				} else if (backreach != 0 || lastNavigation) { // Any backreach must have an identifier associated with it, and identifiers must follow the member selection operator
 					throw new RuntimeException("Invalid identifier in expression at offset " + matcher.regionStart());
 				} else if (matcher.hitEnd()) {
 					break;
 				} else if (matcher.usePattern(DOUBLE_PATTERN).lookingAt()) { // Double literal
-					operands.push(new Operand(double.class, new MethodBuilder().pushConstant(Double.parseDouble(matcher.group(1)))));
+					token = matcher.group("double");
+					operands.push(new Operand(double.class, new MethodBuilder().pushConstant(Double.parseDouble(token))));
 				} else if (matcher.usePattern(LONG_PATTERN).lookingAt()) { // Long literal
-					final String decimal = matcher.group("decimal");
-					final long value = decimal == null ? Long.parseLong(matcher.group("hexadecimal"), 16) : Long.parseLong(decimal);
+					token = matcher.group("decimal");
+					final long value = token == null ? Long.parseLong(matcher.group("hexadecimal"), 16) : Long.parseLong(token);
 
 					if (value > Integer.MAX_VALUE || value < Integer.MIN_VALUE) {
 						operands.push(new Operand(long.class, new MethodBuilder().pushConstant(value)));
@@ -488,25 +540,25 @@ public final class Expression {
 						operands.push(new Operand(int.class, new MethodBuilder().pushConstant((int)value)));
 					}
 				} else if (matcher.usePattern(STRING_PATTERN).lookingAt()) { // String literal
-					final String literal = matcher.group(1);
+					token = matcher.group("string");
 					int backslash = 0;
 
-					if (literal == null) {
+					if (token == null) {
 						operands.push(new Operand(String.class, new MethodBuilder().pushConstant("")));
-					} else if ((backslash = literal.indexOf('\\')) < 0) {
-						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(literal)));
+					} else if ((backslash = token.indexOf('\\')) < 0) {
+						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(token)));
 					} else { // Find escape sequences and replace them with the proper character sequences
-						final StringBuilder sb = new StringBuilder(literal.length());
+						final StringBuilder sb = new StringBuilder(token.length());
 						int start = 0;
 
 						do {
-							sb.append(literal, start, backslash);
+							sb.append(token, start, backslash);
 
-							if (backslash + 1 >= literal.length()) {
-								throw new RuntimeException("Invalid '\\' at end of string literal in expression at offset " + matcher.start(1));
+							if (backslash + 1 >= token.length()) {
+								throw new RuntimeException("Invalid '\\' at end of string literal in expression at offset " + matcher.regionStart());
 							}
 
-							switch (literal.charAt(backslash + 1)) {
+							switch (token.charAt(backslash + 1)) {
 							case '\\': sb.append('\\'); break;
 							case '"':  sb.append('\"'); break;
 							case '\'': sb.append('\''); break;
@@ -519,8 +571,8 @@ public final class Expression {
 							case 'x':
 								int codePoint = 0;
 
-								for (int i = 0; i < 8 && backslash + 2 < literal.length(); i++, backslash++) {
-									final int digit = literal.charAt(backslash + 2);
+								for (int i = 0; i < 8 && backslash + 2 < token.length(); i++, backslash++) {
+									final int digit = token.charAt(backslash + 2);
 
 									if (digit >= '0' && digit <= '9') {
 										codePoint = codePoint * 16 + digit - '0';
@@ -537,33 +589,33 @@ public final class Expression {
 								break;
 
 							case 'u':
-								if (backslash + 5 >= literal.length()) {
-									throw new RuntimeException("Invalid '\\u' at end of string literal in expression at offset " + matcher.start(1));
+								if (backslash + 5 >= token.length()) {
+									throw new RuntimeException("Invalid '\\u' at end of string literal in expression at offset " + matcher.regionStart());
 								}
 
-								sb.append(Character.toChars(Integer.parseInt(literal.substring(backslash + 2, backslash + 6), 16)));
+								sb.append(Character.toChars(Integer.parseInt(token.substring(backslash + 2, backslash + 6), 16)));
 								backslash += 4;
 								break;
 
 							case 'U':
-								if (backslash + 9 >= literal.length()) {
-									throw new RuntimeException("Invalid '\\U' at end of string literal in expression at offset " + matcher.start(1));
+								if (backslash + 9 >= token.length()) {
+									throw new RuntimeException("Invalid '\\U' at end of string literal in expression at offset " + matcher.regionStart());
 								}
 
-								sb.append(Character.toChars(Integer.parseInt(literal.substring(backslash + 2, backslash + 10), 16)));
+								sb.append(Character.toChars(Integer.parseInt(token.substring(backslash + 2, backslash + 10), 16)));
 								backslash += 8;
 								break;
 
-							default: throw new RuntimeException("Invalid character (" + literal.charAt(backslash + 1) + ") following '\\' in string literal (offset: " + backslash + ") in expression at offset " + matcher.start(1));
+							default: throw new RuntimeException("Invalid character (" + token.charAt(backslash + 1) + ") following '\\' in string literal (offset: " + backslash + ") in expression at offset " + matcher.regionStart());
 							}
 
 							start = backslash + 2;
-						} while ((backslash = literal.indexOf('\\', start)) >= 0);
+						} while ((backslash = token.indexOf('\\', start)) >= 0);
 
-						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(sb.append(literal, start, literal.length()).toString())));
+						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(sb.append(token, start, token.length()).toString())));
 					}
 				} else if (matcher.usePattern(OPERATOR_PATTERN).lookingAt()) { // Operator
-					final String token = matcher.group("operator");
+					token = matcher.group("operator");
 					Operator operator = Operator.get(token);
 
 					for (; operator != null && hasLeftExpression != operator.has(Operator.LEFT_EXPRESSION); ) {
@@ -574,7 +626,7 @@ public final class Expression {
 						// Shunting-yard Algorithm
 						while (!operators.isEmpty() && !operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && !"(".equals(operators.peek().getString()) && (operators.peek().getPrecedence() < operator.getPrecedence() || (operators.peek().getPrecedence() == operator.getPrecedence() && operator.isLeftAssociative()))) {
 							if (operators.peek().getClosingString() != null) {
-								throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.start(1) + ", expecting '" + operators.peek().getClosingString() + "'");
+								throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + operators.peek().getClosingString() + "'");
 							}
 
 							processOperation(identifiers, operands, operators.pop());
@@ -582,7 +634,7 @@ public final class Expression {
 
 						if (!operators.isEmpty() && operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
 							if (!hasLeftExpression) { // Check for invalid and empty expressions
-								throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.start(1));
+								throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
 							}
 
 							operators.push(operators.pop().addRightExpression());
@@ -600,7 +652,7 @@ public final class Expression {
 								Operator closedOperator = operators.pop();
 
 								if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
-									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.start(1) + ", expecting '" + closedOperator.getClosingString() + "'");
+									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + closedOperator.getClosingString() + "'");
 								} else if (closedOperator.has(Operator.X_RIGHT_EXPRESSIONS)) { // Process multi-argument operators
 									if (hasLeftExpression) { // Allow trailing commas
 										closedOperator = closedOperator.addRightExpression();
@@ -608,7 +660,7 @@ public final class Expression {
 
 									processOperation(identifiers, operands, closedOperator);
 								} else if (!hasLeftExpression) { // Check for empty expressions
-									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.start(1));
+									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
 								} else if (closedOperator.has(Operator.LEFT_EXPRESSION)) { // If the token is not a parenthetical, process the operation
 									processOperation(identifiers, operands, closedOperator);
 								}
@@ -621,14 +673,14 @@ public final class Expression {
 						}
 					}
 
-					throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.start(1));
+					throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
 				} else {
 					throw new RuntimeException("Unrecognized identifier in expression at offset " + matcher.regionStart());
 				}
 
 				// Check for multiple consecutive identifiers or literals
 				if (hasLeftExpression) {
-					throw new RuntimeException("Unexpected '" + matcher.group(1) + "' in expression at offset " + matcher.start(1) + ", expecting operator");
+					throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting operator");
 				}
 
 				lastOperator = null;

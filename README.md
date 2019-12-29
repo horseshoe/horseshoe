@@ -35,7 +35,7 @@ Precedence | Operators | Associativity
 11 | a<code>&#124;</code>b (Bitwise Or) | Left-to-right
 12 | a<code>&&</code>b (Logical And) | Left-to-right
 13 | a<code>&#124;&#124;</code>b (Logical Or) | Left-to-right
-14 | a<code>:</code>b (Pair) | Right-to-left
+14 | a<code>?:</code>b (Null Coalesce), <br>a<code>??</code>b (Null Coalesce (Alternate)), <br>a<code>?</code>b (Ternary), <br>a<code>:</code>b (Pair) | Right-to-left
 16 | a<code>,</code>b (Statement Separator) | Left-to-right
 
 ## Example
