@@ -53,8 +53,7 @@ public class TemplateLoader {
 	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))), false);
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=");
-	private static final Pattern ANNOTATION = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\((?<parameters>.*)\\)\\s*)?", Pattern.DOTALL);
-	private static final Pattern ANNOTATION_ARG = Pattern.compile("\\s*(?<key>" + Identifier.PATTERN + ")\\s*=\\s*(?<expression>[^=]*),?\\s*(?<next>" + Identifier.PATTERN + "\\s*=|$)");
+	private static final Pattern ANNOTATION = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL);
 
 	/**
 	 * Creates a new template loader that is mustache-compatible
@@ -493,27 +492,7 @@ public class TemplateLoader {
 							final String parameters = annotation.group("parameters");
 
 							// Load the annotation arguments
-							if (parameters == null) {
-								sections.push(new Section(sectionName, null, sectionName.substring(1), localPartials, true));
-							} else {
-								final StringBuilder expressionString = new StringBuilder();
-								int i = 1;
-
-								for (final Matcher matcher = ANNOTATION_ARG.matcher(parameters); !matcher.hitEnd(); i++, matcher.region(matcher.start("next"), parameters.length())) {
-									if (!matcher.lookingAt()) {
-										if (i == 1) {
-											expressionString.append(",\"value\":").append(parameters);
-											break;
-										}
-
-										throw new LoadException(loaders, "Invalid annotation argument (" + i + ")");
-									}
-
-									expressionString.append(",\"" + matcher.group("key") + "\":" + matcher.group("expression"));
-								}
-
-								sections.push(new Section(sectionName, new Expression("{" + expressionString.substring(1) + "}", false, sections.size()), sectionName.substring(1), localPartials, true));
-							}
+							sections.push(new Section(sectionName, parameters == null ? null : new Expression(parameters, false, sections.size()), sectionName.substring(1), localPartials, true));
 						} else { // Start a new section
 							sections.push(new Section(new Expression(sectionExpression, useSimpleExpressions, sections.size()), localPartials));
 						}
@@ -539,7 +518,7 @@ public class TemplateLoader {
 						}
 
 						// Grab the inverted action list from the section
-						final List<Action> actions = actionStack.peek(); // TODO: fix
+						final List<Action> actions = actionStack.peek(); // TODO: use a more robust method than peeking into the action stack and assuming it is a SectionRenderer
 
 						actionStack.push(((SectionRenderer)actions.get(actions.size() - 1)).getSection().getInvertedActions());
 						break;

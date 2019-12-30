@@ -23,8 +23,9 @@ Horseshoe does not support Mustache lambdas. It supplements lambdas with a more 
 ### What operators does Horseshoe support?
 Precedence | Operators | Associativity
 ---------- | --------- | -------------
-0 | <code>{</code>a?<code>}</code> (Map / Set Literal), <br>a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate) | Left-to-right
+0 | <code>{</code>a?<code>}</code> (Array / Map Literal), <br><code>[</code>a?<code>]</code> (Array / Map Literal (Alternate)), <br>a<code>[</code>b<code>]</code> (Lookup), <br>a<code>?[</code>b<code>]</code> (Safe Lookup), <br>a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate), <br>a<code>?.</code>b (Safe Navigate) | Left-to-right
 2 | <code>+</code>a (Unary Plus), <br><code>-</code>a (Unary Plus), <br><code>~</code>a (Bitwise Negate), <br><code>!</code>a (Logical Negate) | Right-to-left
+3 | a<code>..</code>b (Range) | Left-to-right
 4 | a<code>*</code>b (Multiply), <br>a<code>/</code>b (Divide), <br>a<code>%</code>b (Modulus) | Left-to-right
 5 | a<code>+</code>b (Add), <br>a<code>-</code>b (Subtract) | Left-to-right
 6 | a<code><<</code>b (Bitwise Shift Left), <br>a<code>>></code>b (Bitwise Shift Right Sign Extend), <br>a<code>>>></code>b (Bitwise Shift Right Zero Extend) | Left-to-right

@@ -49,7 +49,6 @@ public final class MethodBuilder {
 	private static final byte LOOKUPSWITCH = (byte)0xAB; // 8+: [0-3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, npairs1, npairs2, npairs3, npairs4, match-offset pairs... (stack: key ->)
 	private static final byte MULTIANEWARRAY = (byte)0xC5; // 3: indexbyte1, indexbyte2, dimensions (stack: count1, [count2,...] -> arrayref)
 	private static final byte NEW = (byte)0xBB; // 2: indexbyte1, indexbyte2 (stack: -> objectref)
-	private static final byte NEWARRAY = (byte)0xBC; // 1: atype (stack: count -> arrayref)
 	private static final byte PUTFIELD = (byte)0xB5; // 2: indexbyte1, indexbyte2 (stack: objectref, value ->)
 	private static final byte PUTSTATIC = (byte)0xB3; // 2: indexbyte1, indexbyte2 (stack: value ->)
 	private static final byte TABLESWITCH = (byte)0xAA; // 16+: [0-3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, lowbyte1, lowbyte2, lowbyte3, lowbyte4, highbyte1, highbyte2, highbyte3, highbyte4, jump offsets... (stack: index ->)
@@ -233,6 +232,7 @@ public final class MethodBuilder {
 	public static final byte LXOR = (byte)0x83; // (stack: value1, value2 -> result)
 	public static final byte MONITORENTER = (byte)0xC2; // (stack: objectref ->)
 	public static final byte MONITOREXIT = (byte)0xC3; // (stack: objectref ->)
+	public static final byte NEWARRAY = (byte)0xBC; // 1: atype (stack: count -> arrayref)
 	public static final byte NOP = B0; // (stack: [No change])
 	public static final byte POP = (byte)0x57; // (stack: value ->)
 	public static final byte POP2 = (byte)0x58; // (stack: {value2, value1} ->)
@@ -890,10 +890,10 @@ public final class MethodBuilder {
 			case LDC_W:
 			case LDC2_W: throw new RuntimeException("All constant loads must use the pushConstant() method");
 
+			case NEWARRAY: i++; break;
 			case ANEWARRAY:
 			case MULTIANEWARRAY:
-			case NEW:
-			case NEWARRAY: throw new RuntimeException("All new's must use the pushNewObject() method");
+			case NEW: throw new RuntimeException("All new's must use the pushNewObject() method");
 
 			case ARRAYLENGTH: break;
 			case ATHROW: break;
@@ -1173,6 +1173,25 @@ public final class MethodBuilder {
 		}
 
 		return this;
+	}
+
+	/**
+	 * Adds a throw instruction. The throwable is constructed using the specified parameters.
+	 *
+	 * @param throwable the class of the throwable to throw
+	 * @param message the message to use for constructing the throwable
+	 * @return this builder
+	 */
+	public MethodBuilder addThrow(final Class<? extends Throwable> throwable, final String message) {
+		try {
+			if (message == null) {
+				return pushNewObject(throwable).addCode(DUP).addInvoke(throwable.getConstructor()).addCode(ATHROW);
+			} else {
+				return pushNewObject(throwable).addCode(DUP).pushConstant(message).addInvoke(throwable.getConstructor(String.class)).addCode(ATHROW);
+			}
+		} catch (final ReflectiveOperationException e) {
+			throw new RuntimeException(e.getMessage(), e);
+		}
 	}
 
 	/**

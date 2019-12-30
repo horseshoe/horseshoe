@@ -2,10 +2,9 @@ package horseshoe;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Collections;
+import java.lang.reflect.Array;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import horseshoe.internal.Expression;
 import horseshoe.internal.Properties;
@@ -91,6 +90,67 @@ class SectionRenderer implements Action, Expression.Indexed {
 			} else {
 				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 			}
+		} else if (data.getClass().isArray()) {
+			final int length = Array.getLength(data);
+			index = 0;
+
+			if (length > 0) {
+				final Class<?> componentType = data.getClass().getComponentType();
+
+				context.getIndexedData().push(this);
+
+				if (!componentType.isPrimitive()) {
+					for (final Object[] array = (Object[])data; index < length; index++) {
+						hasNext = index >= length - 1;
+						renderActions(context, array[index], writer, section.getActions());
+					}
+				} else if (int.class.equals(componentType)) {
+					for (final int[] array = (int[])data; index < length; index++) {
+						hasNext = index >= length - 1;
+						renderActions(context, array[index], writer, section.getActions());
+					}
+				} else if (byte.class.equals(componentType)) {
+					for (final byte[] array = (byte[])data; index < length; index++) {
+						hasNext = index >= length - 1;
+						renderActions(context, array[index], writer, section.getActions());
+					}
+				} else if (double.class.equals(componentType)) {
+					for (final double[] array = (double[])data; index < length; index++) {
+						hasNext = index >= length - 1;
+						renderActions(context, array[index], writer, section.getActions());
+					}
+				} else if (boolean.class.equals(componentType)) {
+					for (final boolean[] array = (boolean[])data; index < length; index++) {
+						hasNext = index >= length - 1;
+						renderActions(context, array[index], writer, section.getActions());
+					}
+				} else if (float.class.equals(componentType)) {
+					for (final float[] array = (float[])data; index < length; index++) {
+						hasNext = index >= length - 1;
+						renderActions(context, array[index], writer, section.getActions());
+					}
+				} else if (long.class.equals(componentType)) {
+					for (final long[] array = (long[])data; index < length; index++) {
+						hasNext = index >= length - 1;
+						renderActions(context, array[index], writer, section.getActions());
+					}
+				} else if (char.class.equals(componentType)) {
+					for (final char[] array = (char[])data; index < length; index++) {
+						hasNext = index >= length - 1;
+						renderActions(context, array[index], writer, section.getActions());
+					}
+				} else {
+					for (final short[] array = (short[])data; index < length; index++) {
+						hasNext = index >= length - 1;
+						renderActions(context, array[index], writer, section.getActions());
+					}
+				}
+
+				context.getIndexedData().pop();
+			} else {
+				hasNext = false;
+				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			}
 		} else if (data instanceof Boolean) {
 			if ((Boolean)data) {
 				renderActions(context, context.getSectionData().peek(), writer, section.getActions());
@@ -121,31 +181,19 @@ class SectionRenderer implements Action, Expression.Indexed {
 		return hasNext;
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public final void perform(final RenderContext context, final Writer writer) throws IOException {
 		if (section.getAnnotation() != null) {
-			final AnnotationProcessor annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
+			final AnnotationHandler annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
 
 			if (annotationProcessor == null) { // Only write the data if there is an annotation processor available, otherwise take false path with default writer
 				dispatchData(context, false, writer);
 			} else {
-				final Writer newWriter;
-
-				try {
-					newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? Collections.emptyMap() : (Map)section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData()));
-				} catch (final IOException e) {
-					// TODO: Log error
-					return;
-				}
-
-				if (newWriter == null) {
-					dispatchData(context, context.getSectionData().peek(), writer);
-				} else {
-					try {
+				try (final Writer newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData()))) {
+					if (newWriter == null) {
+						dispatchData(context, context.getSectionData().peek(), writer);
+					} else {
 						dispatchData(context, context.getSectionData().peek(), newWriter);
-					} finally {
-						annotationProcessor.returnWriter(newWriter);
 					}
 				}
 			}

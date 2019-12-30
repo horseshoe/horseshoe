@@ -2,13 +2,14 @@ package horseshoe.internal;
 
 import static horseshoe.internal.MethodBuilder.*;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -44,8 +45,7 @@ public final class Expression {
 		public static final byte LOAD_CONTEXT = ALOAD_2;
 		public static final byte LOAD_ACCESS = ALOAD_3;
 		public static final byte LOAD_INDEXES[] = new byte[] { ALOAD, 4 };
-		public static final byte LOAD_ERRORS[] = new byte[] { ALOAD, 5 };
-		public static final int FIRST_LOCAL = 6;
+		public static final int FIRST_LOCAL = 5;
 
 		/**
 		 * Evaluates the object using the specified parameters.
@@ -53,21 +53,23 @@ public final class Expression {
 		 * @param identifiers the identifiers used to evaluate the object
 		 * @param context the context used to evaluate the object
 		 * @param access the access for the context for evaluating the object
-		 * @param errors the list of errors encountered while evaluating the object
 		 * @return the result of evaluating the object
 		 * @throws ReflectiveOperationException if an error occurs while evaluating the reflective parts of the object
 		 */
-		public abstract Object evaluate(final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indexes, final List<String> errors) throws ReflectiveOperationException;
+		public abstract Object evaluate(final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indexes) throws ReflectiveOperationException;
 	}
 
 	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
 
 	// Reflected Methods
+	private static final Method ACCESSOR_LOOKUP;
 	private static final Method IDENTIFIER_GET_VALUE;
 	private static final Method IDENTIFIER_GET_VALUE_BACKREACH;
 	private static final Method IDENTIFIER_GET_VALUE_METHOD;
 	private static final Method INDEXED_GET_INDEX;
 	private static final Method INDEXED_HAS_NEXT;
+	@SuppressWarnings("rawtypes")
+	private static final Constructor<LinkedHashMap> LINKED_HASH_MAP_CTOR_INT;
 	private static final Method MAP_PUT;
 	private static final Method PERSISTENT_STACK_PEEK;
 	private static final Method STRING_BUILDER_APPEND_OBJECT;
@@ -76,11 +78,13 @@ public final class Expression {
 
 	static {
 		try {
+			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
 			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
 			IDENTIFIER_GET_VALUE_BACKREACH = Identifier.class.getMethod("getValue", PersistentStack.class, Settings.ContextAccess.class);
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
 			INDEXED_GET_INDEX = Indexed.class.getMethod("getIndex");
 			INDEXED_HAS_NEXT = Indexed.class.getMethod("hasNext");
+			LINKED_HASH_MAP_CTOR_INT = LinkedHashMap.class.getConstructor(int.class);
 			MAP_PUT = Map.class.getMethod("put", Object.class, Object.class);
 			PERSISTENT_STACK_PEEK = PersistentStack.class.getMethod("peek", int.class);
 			STRING_BUILDER_APPEND_OBJECT = StringBuilder.class.getMethod("append", Object.class);
@@ -93,8 +97,8 @@ public final class Expression {
 
 	// The patterns used for parsing the grammar
 	private static final Pattern IDENTIFIER_BACKREACH_PATTERN = Pattern.compile("(?<backreach>(?:[.][.]/)+)\\s*");
-	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?:[.][/.])*(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`)[(]?)\\s*");
-	private static final Pattern INTERNAL_PATTERN = Pattern.compile("(?:[.][/.])*(?<identifier>[.]\\p{L}*)\\s*");
+	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?:[.]/)*(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`)[(]?)\\s*");
+	private static final Pattern INTERNAL_PATTERN = Pattern.compile("(?:[.]/)*(?<identifier>[.]\\p{L}*)\\s*");
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*");
 	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))\\s*");
 	private static final Pattern STRING_PATTERN = Pattern.compile("\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"\\s*");
@@ -128,30 +132,13 @@ public final class Expression {
 	}
 
 	/**
-	 * Generates the appropriate instructions to log an error.
+	 * Processes the specified operation. The operand stack will be updated with the results of evaluating the operator.
 	 *
-	 * @param mb the builder to use for logging the error
-	 * @param error the error to log
-	 * @return the method builder
+	 * @param identifiers the identifiers for the expression
+	 * @param operands the operand stack for the expression
+	 * @param operator the operator to evaluate
 	 */
-	static MethodBuilder logError(final MethodBuilder mb, final String error) {
-		try {
-			return mb.addCode(Evaluable.LOAD_ERRORS).pushConstant(error).addInvoke(List.class.getMethod("add", Object.class));
-		} catch (final ReflectiveOperationException e) {
-			throw new RuntimeException(e.getMessage(), e);
-		}
-	}
-
-	/**
-	 * Processes the operation
-	 *
-	 * @param mb
-	 * @param identifiers
-	 * @param operands
-	 * @param operator
-	 * @throws ReflectiveOperationException
-	 */
-	private static void processOperation(final HashMap<Identifier, Integer> identifiers, final PersistentStack<Operand> operands, final Operator operator) throws ReflectiveOperationException {
+	private static void processOperation(final HashMap<Identifier, Integer> identifiers, final PersistentStack<Operand> operands, final Operator operator) {
 		final Operand right;
 
 		if (operator.has(Operator.NAVIGATION)) { // Navigation operator is handled during parsing
@@ -170,11 +157,11 @@ public final class Expression {
 				object.addCode(ACONST_NULL);
 			} else {
 				object.pushNewObject(Object.class, operator.getRightExpressions());
-			}
 
-			// Convert all parameters to objects and store them in the array
-			for (int i = 0; i < operator.getRightExpressions(); i++) {
-				object.addCode(DUP).pushConstant(i).append(operands.peek(operator.getRightExpressions() - 1 - i).toObject(false)).addCode(AASTORE);
+				// Convert all parameters to objects and store them in the array
+				for (int i = 0; i < operator.getRightExpressions(); i++) {
+					object.addCode(DUP).pushConstant(i).append(operands.peek(operator.getRightExpressions() - 1 - i).toObject(false)).addCode(AASTORE);
+				}
 			}
 
 			operands.pop(operator.getRightExpressions() + 2).push(new Operand(Object.class, object.addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(end)));
@@ -192,6 +179,21 @@ public final class Expression {
 		final Operand left = operator.has(Operator.LEFT_EXPRESSION) ? operands.pop() : null;
 
 		switch (operator.getString()) {
+		// Array / Map Operations
+		case "[": case "?[": if (left != null) {
+			if (!Object.class.equals(left.type)) {
+				throw new RuntimeException("Unexpected '" + operator.getString() + "' operator applied to " + (left.type == null ? "numeric" : left.type.getName()) + " value, expecting map or array type value");
+			}
+
+			final Label end = left.builder.newLabel();
+
+			if (operator.has(Operator.SAFE)) {
+				left.builder.addCode(DUP).addBranch(IFNULL, end);
+			}
+
+			operands.push(new Operand(Object.class, left.builder.append(right.toObject(false)).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
+			break;
+		}
 		case "{": {
 			int pairs = 0;
 
@@ -205,7 +207,7 @@ public final class Expression {
 
 			if (pairs > 0) { // Create a map
 				final int totalPairs = pairs;
-				final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LinkedHashMap.class.getConstructor(int.class));
+				final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_MAP_CTOR_INT);
 
 				for (int i = operator.getRightExpressions() - 1, j = 0; i >= 0; j++, i--) {
 					final Operand first = operands.peek(i + pairs);
@@ -228,6 +230,18 @@ public final class Expression {
 				operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
 			}
 
+			break;
+		}
+		case "..": {
+			final Label decreasing = left.builder.newLabel();
+			final Label increasingLoop = left.builder.newLabel();
+			final Label decreasingLoop = left.builder.newLabel();
+			final Label end = left.builder.newLabel();
+
+			operands.push(new Operand(Object.class, left.toNumeric(false).addCode(POP, POP2, L2I, DUP).addAccess(ISTORE, Evaluable.FIRST_LOCAL).append(right.toNumeric(false)).addCode(POP, POP2, L2I, DUP2).addBranch(IF_ICMPGT, decreasing)
+					.addCode(SWAP, ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL + 1).addCode(ICONST_0).updateLabel(increasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(IADD, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, increasingLoop).addBranch(GOTO, end)
+					.updateLabel(decreasing).addCode(ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL + 1).addCode(ICONST_0).updateLabel(decreasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(SWAP, ISUB, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, decreasingLoop)
+					.updateLabel(end).addCode(POP)));
 			break;
 		}
 
@@ -340,13 +354,13 @@ public final class Expression {
 			operands.push(left.execCompareOp(right, IF_ICMPNE, IFNE));
 			break;
 
+		// Ternary Operations
 		case "??": case "?:": {
 			final Label end = left.builder.newLabel();
 
 			operands.push(new Operand(Object.class, left.toObject(false).addCode(DUP).addBranch(IFNONNULL, end).addCode(POP).append(right.toObject(false)).updateLabel(end)));
 			break;
 		}
-
 		case "?": {
 			if (!Entry.class.equals(right.type)) {
 				throw new RuntimeException("Incomplete ternary operator, missing ':'");
@@ -358,13 +372,13 @@ public final class Expression {
 			final Label isFalse = left.builder.newLabel();
 			final Label end = left.builder.newLabel();
 
-			operands.push(new Operand(Object.class, operands.pop().toBoolean().addBranch(IFEQ, isFalse).append(left.toObject(false)).addBranch(GOTO, end).updateLabel(isFalse).append(right.toObject(false)).updateLabel(end)));
+			operands.push(new Operand(Object.class, operands.pop().toBoolean().addBranch(IFEQ, isFalse).append(left.builder).addBranch(GOTO, end).updateLabel(isFalse).append(right.builder).updateLabel(end)));
 			break;
 		}
 
 		case ":":
-			operands.push(new Operand(Entry.class, left.builder));
-			operands.push(new Operand(Entry.class, right.builder));
+			operands.push(new Operand(Entry.class, left.toObject(false)));
+			operands.push(new Operand(Entry.class, right.toObject(false)));
 			break;
 
 		case ",":
@@ -385,7 +399,22 @@ public final class Expression {
 	private final String originalString;
 	private final Identifier identifiers[];
 	private final Evaluable evaluable;
-	private final List<String> errors = new ArrayList<>();
+	private Writer errorLogger = new Writer() {
+		@Override
+		public void close() {
+			flush();
+		}
+
+		@Override
+		public void flush() {
+			System.err.flush();
+		}
+
+		@Override
+		public void write(final char[] cbuf, final int off, final int len) throws IOException {
+			System.err.print(off == 0 && len == cbuf.length ? cbuf : Arrays.copyOfRange(cbuf, off, off + len));
+		}
+	};
 
 	/**
 	 * Creates a new expression.
@@ -516,6 +545,9 @@ public final class Expression {
 
 					if (".index".equals(token)) {
 						operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
+					} else if (".isFirst".equals(token)) {
+						operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
+						processOperation(identifiers, operands, Operator.get("!"));
 					} else if (".hasNext".equals(token)) {
 						operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_HAS_NEXT)));
 					} else if (".".equals(token)) {
@@ -723,21 +755,26 @@ public final class Expression {
 	 */
 	public Object evaluate(final PersistentStack<Object> context, final Settings.ContextAccess access, final PersistentStack<Indexed> indices) {
 		try {
-			return evaluable.evaluate(identifiers, context, access, indices, errors);
+			return evaluable.evaluate(identifiers, context, access, indices);
 		} catch (final Throwable t) { // Don't let any exceptions escape
-			errors.add(t.getMessage());
+			try {
+				errorLogger.write(t.getMessage() + System.lineSeparator());
+			} catch (final IOException e) { // Ignore error-logging errors
+			}
 		}
 
 		return null;
 	}
 
 	/**
-	 * Gets a list of errors from the expression.
+	 * Sets the error logger for the expression.
 	 *
-	 * @return the list of errors for the expression
+	 * @param errorLogger the error logger to use for this expression
+	 * @return this expression
 	 */
-	public List<String> getErrors() {
-		return errors;
+	public Expression setErrorLogger(final Writer errorLogger) {
+		this.errorLogger = errorLogger;
+		return this;
 	}
 
 	@Override

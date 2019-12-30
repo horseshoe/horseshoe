@@ -89,6 +89,37 @@ public abstract class Accessor {
 	}
 
 	/**
+	 * Looks up a value based on a map or array and the lookup operator.
+	 *
+	 * @param context the context object to resolve
+	 * @param lookup the value within the context to resolve
+	 * @return the result of the lookup
+	 */
+	public static Object lookup(final Object context, final Object lookup) {
+		if (context instanceof Map) {
+			return ((Map<?, ?>)context).get(lookup);
+		} else if (context instanceof Object[]) {
+			return ((Object[])context)[((Number)lookup).intValue()];
+		} else if (context instanceof int[]) {
+			return ((int[])context)[((Number)lookup).intValue()];
+		} else if (context instanceof byte[]) {
+			return ((byte[])context)[((Number)lookup).intValue()];
+		} else if (context instanceof double[]) {
+			return ((double[])context)[((Number)lookup).intValue()];
+		} else if (context instanceof boolean[]) {
+			return ((boolean[])context)[((Number)lookup).intValue()];
+		} else if (context instanceof float[]) {
+			return ((float[])context)[((Number)lookup).intValue()];
+		} else if (context instanceof long[]) {
+			return ((long[])context)[((Number)lookup).intValue()];
+		} else if (context instanceof char[]) {
+			return ((char[])context)[((Number)lookup).intValue()];
+		} else {
+			return ((short[])context)[((Number)lookup).intValue()];
+		}
+	}
+
+	/**
 	 * Sets the value of an identifier given the specified context as part of an expression.
 	 *
 	 * @param context the context object to resolve
@@ -97,6 +128,57 @@ public abstract class Accessor {
 	 * @throws ReflectiveOperationException if the value cannot be set due to an invalid reflection call
 	 */
 	public abstract Object set(final Object context, final Object value) throws ReflectiveOperationException;
+
+	/**
+	 * Accesses a static method or class property method in a class
+	 */
+	private static final class ClassMethodAccessor extends Accessor {
+		private final Method method;
+
+		/**
+		 * Creates a new static method accessor.
+		 *
+		 * @param parent the parent class for the method
+		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
+		 * @param parameterCount the number of parameters that the method takes
+		 */
+		public ClassMethodAccessor(final Class<?> parent, final String methodSignature, final int parameterCount) {
+			final MethodSignature signature = new MethodSignature(methodSignature);
+
+			for (final Method method : parent.getMethods()) {
+				if (Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
+					method.setAccessible(true);
+					this.method = method;
+					return;
+				}
+			}
+
+			for (final Method method : Class.class.getMethods()) {
+				if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
+					method.setAccessible(true);
+					this.method = method;
+					return;
+				}
+			}
+
+			throw new java.lang.NoSuchMethodError("Method \"" + signature.name + "\" taking " + parameterCount + " parameters not found in class " + parent.getName());
+		}
+
+		@Override
+		public Object get(final Object context) throws ReflectiveOperationException {
+			return method;
+		}
+
+		@Override
+		public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
+			return method.invoke(context, parameters);
+		}
+
+		@Override
+		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
+			return null;
+		}
+	}
 
 	/**
 	 * Accesses a field in a class
@@ -224,49 +306,6 @@ public abstract class Accessor {
 		}
 	}
 
-	/**
-	 * Accesses a static method in a class
-	 */
-	private static final class StaticMethodAccessor extends Accessor {
-		private final Method method;
-
-		/**
-		 * Creates a new static method accessor.
-		 *
-		 * @param parent the parent class for the method
-		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
-		 * @param parameterCount the number of parameters that the method takes
-		 */
-		public StaticMethodAccessor(final Class<?> parent, final String methodSignature, final int parameterCount) {
-			final MethodSignature signature = new MethodSignature(methodSignature);
-
-			for (final Method method : parent.getMethods()) {
-				if (Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
-					method.setAccessible(true);
-					this.method = method;
-					return;
-				}
-			}
-
-			throw new java.lang.NoSuchMethodError("Static method \"" + signature.name + "\" taking " + parameterCount + " parameters not found in class " + parent.getName());
-		}
-
-		@Override
-		public Object get(final Object context) throws ReflectiveOperationException {
-			return method;
-		}
-
-		@Override
-		public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
-			return method.invoke(context, parameters);
-		}
-
-		@Override
-		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
-			return null;
-		}
-	}
-
 	static class Factory {
 
 		public Accessor create(final Object context, final Identifier identifier, final int parameters) {
@@ -276,7 +315,7 @@ public abstract class Accessor {
 				return new MapAccessor(identifier.getName());
 			} else if (Class.class.equals(contextClass)) { // Static
 				if (identifier.isMethod()) { // Method
-					return new StaticMethodAccessor((Class<?>)context, identifier.getName(), parameters);
+					return new ClassMethodAccessor((Class<?>)context, identifier.getName(), parameters);
 				} else { // Field
 					return new StaticFieldAccessor((Class<?>)context, identifier.getName());
 				}

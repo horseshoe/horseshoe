@@ -101,7 +101,7 @@ final class Operand {
 			newBuilder.updateLabel(compareObjects).addCode(SWAP, DUP_X1).addInstanceOfCheck(Comparable.class).addBranch(IFEQ, failure).addCode(SWAP).addCast(Comparable.class).addCode(SWAP).addInvoke(COMPARE_TO).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end);
 		}
 
-		return new Operand(boolean.class, Expression.logError(newBuilder.updateLabel(failure), "Unexpected object, expecting comparable object").addCode(ACONST_NULL, ARETURN).updateLabel(trueLabel).addCode(ICONST_1).updateLabel(end));
+		return new Operand(boolean.class, newBuilder.updateLabel(failure).addThrow(RuntimeException.class, "Unexpected object, expecting comparable object").addCode(ACONST_NULL, ARETURN).updateLabel(trueLabel).addCode(ICONST_1).updateLabel(end));
 	}
 
 	/**
@@ -140,9 +140,9 @@ final class Operand {
 		final Label isFloating = builder.newLabel();
 		final Label end = builder.newLabel();
 
-		return new Operand(null, Expression.logError(toNumeric(false).addCode(DUP).addBranch(IFNE, notInt).addCode(POP, POP2, L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
+		return new Operand(null, toNumeric(false).addCode(DUP).addBranch(IFNE, notInt).addCode(POP, POP2, L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
 				.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP2, longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
-				.updateLabel(isFloating), "Unexpected floating-point value, expecting integral value").addCode(ACONST_NULL, ARETURN).updateLabel(end));
+				.updateLabel(isFloating).addThrow(RuntimeException.class, "Unexpected floating-point value, expecting integral value").addCode(ACONST_NULL, ARETURN).updateLabel(end));
 	}
 
 	/**
@@ -159,10 +159,10 @@ final class Operand {
 		final Label isFloating = builder.newLabel();
 		final Label end = builder.newLabel();
 
-		return new Operand(null, Expression.logError(toNumeric(false).append(other.toNumeric(false)).addAccess(ISTORE, Evaluable.FIRST_LOCAL).addAccess(DSTORE, Evaluable.FIRST_LOCAL + 1).addAccess(LSTORE, Evaluable.FIRST_LOCAL + 3)
+		return new Operand(null, toNumeric(false).append(other.toNumeric(false)).addAccess(ISTORE, Evaluable.FIRST_LOCAL).addAccess(DSTORE, Evaluable.FIRST_LOCAL + 1).addAccess(LSTORE, Evaluable.FIRST_LOCAL + 3)
 				.addCode(DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(IOR, DUP).addBranch(IFNE, notInt).addCode(POP2, POP2, L2I).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
 				.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode((secondOperandInt ? L2I : NOP), longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
-				.updateLabel(isFloating), "Unexpected floating-point value, expecting integral value").addCode(ACONST_NULL, ARETURN).updateLabel(end));
+				.updateLabel(isFloating).addThrow(RuntimeException.class, "Unexpected floating-point value, expecting integral value").addCode(ACONST_NULL, ARETURN).updateLabel(end));
 	}
 
 	/**
@@ -224,12 +224,12 @@ final class Operand {
 		final Label end = builder.newLabel();
 
 		// TODO: Handle AtomicLong, BigInteger & BigDecimal?
-		return Expression.logError(builder.addCode(DUP, DUP).addInstanceOfCheck(Number.class).addBranch(IFEQ, notNumber)
+		return builder.addCode(DUP, DUP).addInstanceOfCheck(Number.class).addBranch(IFEQ, notNumber)
 				.addInstanceOfCheck(Double.class).addBranch(IFEQ, notDouble).addCast(Double.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end)
 				.updateLabel(notDouble).addCode(DUP).addInstanceOfCheck(Long.class).addBranch(IFEQ, notLong).addCast(Long.class).addInvoke(LONG_VALUE).addCode(DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
 				.updateLabel(notLong).addCode(DUP).addInstanceOfCheck(Float.class).addBranch(IFEQ, notFloat).addCast(Float.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end)
 				.updateLabel(notFloat).addCast(Number.class).addInvoke(INT_VALUE).addCode(I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
-				.updateLabel(notNumber), "Invalid object, expecting boxed numeric primitive").addCode(ACONST_NULL, ARETURN).updateLabel(end);
+				.updateLabel(notNumber).addThrow(RuntimeException.class, "Invalid object, expecting boxed numeric primitive").addCode(ACONST_NULL, ARETURN).updateLabel(end);
 	}
 
 	/**

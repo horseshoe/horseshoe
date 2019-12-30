@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,15 +12,18 @@ import java.util.Map;
 
 public final class Template {
 
-	private static final Map<String, AnnotationProcessor> DEFAULT_ANNOTATION_MAP = new HashMap<>();
+	public static final Map<String, AnnotationHandler> DEFAULT_ANNOTATION_MAP;
 
 	static {
-		DEFAULT_ANNOTATION_MAP.put("StdErr", new AnnotationProcessor() {
+		final Map<String, AnnotationHandler> annotationMap = new HashMap<>();
+
+		annotationMap.put("StdErr", new AnnotationHandler() {
 			@Override
-			public Writer getWriter(final Writer writer, final Map<String, Object> value) throws IOException {
+			public Writer getWriter(final Writer writer, final Object value) throws IOException {
 				return new Writer() {
 					@Override
 					public void close() {
+						flush();
 					}
 
 					@Override
@@ -33,12 +37,8 @@ public final class Template {
 					}
 				};
 			}
-
-			@Override
-			public void returnWriter(final Writer writer) throws IOException {
-				System.err.flush();
-			}
 		});
+		DEFAULT_ANNOTATION_MAP = Collections.unmodifiableMap(annotationMap);
 	}
 
 	private final String name;
@@ -80,7 +80,7 @@ public final class Template {
 	 * @param annotationMap the map used to process annotations
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	public void render(final Settings settings, final Map<String, Object> globalData, final Writer writer, final Map<String, AnnotationProcessor> annotationMap) throws IOException {
+	public void render(final Settings settings, final Map<String, Object> globalData, final Writer writer, final Map<String, AnnotationHandler> annotationMap) throws IOException {
 		final RenderContext renderContext = new RenderContext(settings, globalData, annotationMap);
 
 		renderContext.getIndentation().push("");

@@ -22,6 +22,21 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testArraysMaps() throws ReflectiveOperationException {
+		assert((Boolean)new Expression("{\"1\", \"2\"}.getClass().isArray()", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null));
+		assertEquals("2", new Expression("{\"1\", \"2\"}[1]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("1", new Expression("{7: \"1\", \"2\"}[7]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("2", new Expression("{\"1\", \"blah\": \"2\"}[\"blah\"]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assert((Boolean)new Expression("[\"1\", \"2\"].getClass().isArray()", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null));
+		assertEquals("2", new Expression("[\"1\", \"2\"][1]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("1", new Expression("[7: \"1\", \"2\"][7]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("2", new Expression("[\"1\", \"blah\": \"2\"][\"blah\"]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("2", new Expression("null?[1] ?? \"2\"", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("4", new Expression("(1..5)[3]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("8", new Expression("(10..5)[2]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+	}
+
+	@Test
 	public void testCompareOperators() throws ReflectiveOperationException {
 		assertEquals("true, false, true, false, true, false", new Expression("(\"a\" + \"bc\" == \"ab\" + \"c\") + \", \" + (5 + 8.3 == 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 == 0xFFFF) + \", \" + (\"A\" == \"B\") + \", \" + (null == null) + \", \" + (null == 5)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("false, true, false, true, false, true", new Expression("(\"a\" + \"bc\" != \"ab\" + \"c\") + \", \" + (5 + 8.3 != 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 != 0xFFFF) + \", \" + (\"A\" != \"B\") + \", \" + (null != null) + \", \" + (null != 5)", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());

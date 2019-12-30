@@ -59,24 +59,20 @@ public class TemplateTests {
 	@Test
 	public void testOutputRemapping() throws java.io.IOException, LoadException {
 		final String filename = "DELETE_ME.test";
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Remapping", "{{#@File(name =\"" + filename + "\")}}\nGood things are happening!\nMore good things!\n{{/@File}}\n");
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Remapping", "{{#@File({\"name\":\"" + filename + "\"})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n");
 		final horseshoe.Settings settings = new horseshoe.Settings();
 		final java.io.StringWriter writer = new java.io.StringWriter();
 
 		try {
-			template.render(settings, new java.util.HashMap<>(), writer, new HashMap<String, AnnotationProcessor>() {
+			template.render(settings, new java.util.HashMap<>(), writer, new HashMap<String, AnnotationHandler>() {
 				private static final long serialVersionUID = 1L;
 
 				{
-					put("File", new AnnotationProcessor() {
+					put("File", new AnnotationHandler() {
+						@SuppressWarnings({ "unchecked", "rawtypes" })
 						@Override
-						public Writer getWriter(final Writer writer, final Map<String, Object> value) throws IOException {
-							return new FileWriter(value.getOrDefault("name", "file.txt").toString());
-						}
-
-						@Override
-						public void returnWriter(final Writer writer) throws IOException {
-							writer.close();
+						public Writer getWriter(final Writer writer, final Object value) throws IOException {
+							return new FileWriter(((Map)value).getOrDefault("name", "file.txt").toString());
 						}
 					});
 				}
