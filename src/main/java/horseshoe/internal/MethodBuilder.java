@@ -1705,7 +1705,7 @@ public final class MethodBuilder {
 		} else if (value == 1.0f) {
 			return addCode(FCONST_1);
 		} else if (value == 2.0f) {
-			return addCode(FCONST_2, F2D);
+			return addCode(FCONST_2);
 		}
 
 		getConstant(value).add(new Location(this, length + 1));
