@@ -24,12 +24,12 @@ public class ExpressionTests {
 	@Test
 	public void testArraysMaps() throws ReflectiveOperationException {
 		assert((Boolean)new Expression("{\"1\", \"2\"}.getClass().isArray()", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null));
-		assertEquals("2", new Expression("{\"1\", \"2\"}[1]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("2", new Expression("{\"1\", \"2\",}[1]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("1", new Expression("{7: \"1\", \"2\"}[7]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("2", new Expression("{\"1\", \"blah\": \"2\"}[\"blah\"]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 		assert((Boolean)new Expression("[\"1\", \"2\"].getClass().isArray()", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null));
 		assertEquals("2", new Expression("[\"1\", \"2\"][1]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
-		assertEquals("1", new Expression("[7: \"1\", \"2\"][7]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("1", new Expression("[7: \"1\", \"2\",][7]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("2", new Expression("[\"1\", \"blah\": \"2\"][\"blah\"]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("2", new Expression("null?[1] ?? \"2\"", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("4", new Expression("(1..5)[3]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());

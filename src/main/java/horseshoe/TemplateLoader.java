@@ -507,7 +507,7 @@ public class TemplateLoader {
 						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
 
 						if (sectionExpression.length() == 0) { // Else block for the current section
-							if (sections.isEmpty() || sections.peek().getExpression() == null) {
+							if (sections.isEmpty() || (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null)) {
 								throw new LoadException(loaders, "Section else tag outside section start tag");
 							}
 

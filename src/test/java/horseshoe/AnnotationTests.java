@@ -86,7 +86,7 @@ public class AnnotationTests {
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final TemplateLoader loader = new TemplateLoader();
-		final Template template = loader.load("AnnotationsTests", "ab{{#@test(\"value123\")}}456{{/}}cd");
+		final Template template = loader.load("AnnotationsTests", "ab{{#@test(\"value123\")}}456{{^}}789{{/}}cd");
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 		template.render(settings, new HashMap<>(), writer, Collections.singletonMap("test", mapAnnotation));
 		Assert.assertEquals("456", mapAnnotation.map.get("value123"));

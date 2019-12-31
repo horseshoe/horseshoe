@@ -2,11 +2,8 @@ package horseshoe.internal;
 
 import static horseshoe.internal.MethodBuilder.*;
 
-import java.io.IOException;
-import java.io.Writer;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -23,6 +20,15 @@ import horseshoe.Settings.ContextAccess;
 import horseshoe.internal.MethodBuilder.Label;
 
 public final class Expression {
+
+	public static interface ErrorLogger {
+		/**
+		 * Logs the specified error.
+		 *
+		 * @param error the error to log
+		 */
+		public void log(final Throwable error);
+	}
 
 	public static interface Indexed {
 		/**
@@ -399,20 +405,14 @@ public final class Expression {
 	private final String originalString;
 	private final Identifier identifiers[];
 	private final Evaluable evaluable;
-	private Writer errorLogger = new Writer() {
+	private ErrorLogger errorLogger = new ErrorLogger() {
 		@Override
-		public void close() {
-			flush();
-		}
-
-		@Override
-		public void flush() {
-			System.err.flush();
-		}
-
-		@Override
-		public void write(final char[] cbuf, final int off, final int len) throws IOException {
-			System.err.print(off == 0 && len == cbuf.length ? cbuf : Arrays.copyOfRange(cbuf, off, off + len));
+		public void log(final Throwable error) {
+			if (error.getMessage() == null) {
+				System.err.println("Encountered " + error.getClass().getName() + " while processing expression \"" + originalString + "\"");
+			} else {
+				System.err.println("Encountered " + error.getClass().getName() + " while processing expression \"" + originalString + "\": " + error.getMessage());
+			}
 		}
 	};
 
@@ -678,7 +678,7 @@ public final class Expression {
 						continue nextToken;
 					}
 
-					if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION)) { // Check if this token ends an expression on the stack
+					if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION) || ",".equals(lastOperator.getString())) { // Check if this token ends an expression on the stack
 						while (!operators.isEmpty()) {
 							if (operators.peek().getClosingString() != null) {
 								Operator closedOperator = operators.pop();
@@ -757,10 +757,7 @@ public final class Expression {
 		try {
 			return evaluable.evaluate(identifiers, context, access, indices);
 		} catch (final Throwable t) { // Don't let any exceptions escape
-			try {
-				errorLogger.write(t.getMessage() + System.lineSeparator());
-			} catch (final IOException e) { // Ignore error-logging errors
-			}
+			errorLogger.log(t);
 		}
 
 		return null;
@@ -772,7 +769,7 @@ public final class Expression {
 	 * @param errorLogger the error logger to use for this expression
 	 * @return this expression
 	 */
-	public Expression setErrorLogger(final Writer errorLogger) {
+	public Expression setErrorLogger(final ErrorLogger errorLogger) {
 		this.errorLogger = errorLogger;
 		return this;
 	}
