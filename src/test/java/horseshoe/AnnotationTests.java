@@ -1,6 +1,5 @@
 package horseshoe;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -147,18 +146,12 @@ public class AnnotationTests {
 	@Test
 	public void testOutputRemapping() throws IOException, LoadException {
 		final String filename = "DELETE_ME.test";
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Remapping", "{{#@File({\"name\":\"" + filename + "\"})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n");
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Remapping", "{{#@file({\"name\":\"" + filename + "\"})}}\nGood things are happening!\nMore good things!\n{{/@file}}\n");
 		final horseshoe.Settings settings = new horseshoe.Settings();
 		final Writer writer = new StringWriter();
 
 		try {
-			template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("File", new AnnotationHandler() {
-				@SuppressWarnings({ "unchecked", "rawtypes" })
-				@Override
-				public Writer getWriter(final Writer writer, final Object value) throws IOException {
-					return new FileWriter(((Map)value).getOrDefault("name", "file.txt").toString());
-				}
-			}));
+			template.render(settings, Collections.emptyMap(), writer);
 		} finally {
 			Assert.assertEquals("Good things are happening!" + LS + "More good things!" + LS, String.join(LS, new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8)));
 			Files.delete(Paths.get(filename));

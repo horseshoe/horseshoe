@@ -2,9 +2,8 @@ package horseshoe;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -21,7 +20,12 @@ public final class AnnotationHandlers {
 		return new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
-				return new PrintWriter(printStream);
+				return new PrintWriter(printStream) {
+					@Override
+					public void close() {
+						flush();
+					}
+				};
 			}
 		};
 	}
@@ -38,7 +42,7 @@ public final class AnnotationHandlers {
 					parentFile.mkdirs();
 				}
 
-				return new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), charset));
+				return new BufferedWriter(new FileWriter(file));
 			}
 		};
 	}
