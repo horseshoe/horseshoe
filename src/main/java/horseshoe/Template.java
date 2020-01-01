@@ -3,43 +3,10 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class Template {
-
-	public static final Map<String, AnnotationHandler> DEFAULT_ANNOTATION_MAP;
-
-	static {
-		final Map<String, AnnotationHandler> annotationMap = new HashMap<>();
-
-		annotationMap.put("StdErr", new AnnotationHandler() {
-			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
-				return new Writer() {
-					@Override
-					public void close() {
-						flush();
-					}
-
-					@Override
-					public void flush() {
-						System.err.flush();
-					}
-
-					@Override
-					public void write(final char[] cbuf, final int off, final int len) throws IOException {
-						System.err.print(off == 0 && len == cbuf.length ? cbuf : Arrays.copyOfRange(cbuf, off, off + len));
-					}
-				};
-			}
-		});
-		DEFAULT_ANNOTATION_MAP = Collections.unmodifiableMap(annotationMap);
-	}
 
 	private final String name;
 	private final List<Action> actions = new ArrayList<>();
@@ -100,7 +67,7 @@ public final class Template {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	public void render(final Settings settings, final Map<String, Object> globalData, final Writer writer) throws IOException {
-		render(settings, globalData, writer, DEFAULT_ANNOTATION_MAP);
+		render(settings, globalData, writer, AnnotationHandlers.DEFAULT_ANNOTATIONS);
 	}
 
 }

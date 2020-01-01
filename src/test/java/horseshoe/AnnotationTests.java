@@ -1,6 +1,5 @@
 package horseshoe;
 
-import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -18,7 +17,9 @@ import org.junit.Test;
 
 public class AnnotationTests {
 
-	static class MapAnnotation implements AnnotationHandler {
+	private static final String LS = System.lineSeparator();
+
+	private static final class MapAnnotation implements AnnotationHandler {
 		final Map<String, String> map = new LinkedHashMap<>();
 		@Override
 		public Writer getWriter(final Writer writer, final Object value) throws IOException {
@@ -40,11 +41,8 @@ public class AnnotationTests {
 
 				@Override
 				public void write(final int c) {
-					super.write(c);
-					try {
-						writer.write(c);
-					} catch (final IOException e) {
-					}
+					final char chars[] = Character.toChars(c);
+					write(chars, 0, chars.length);
 				}
 
 				@Override
@@ -58,11 +56,7 @@ public class AnnotationTests {
 
 				@Override
 				public void write(final String str) {
-					super.write(str);
-					try {
-						writer.write(str);
-					} catch (final IOException e) {
-					}
+					write(str, 0, str.length());
 				}
 			};
 		}
@@ -94,6 +88,18 @@ public class AnnotationTests {
 	}
 
 	@Test
+	public void testMissingAnnotation() throws IOException, LoadException {
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Missing Annotation", "{{#@missing(\"blah\")}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@test}}\nEngine does not support @missing.\n{{/}}\n{{/@missing}}\n");
+		final horseshoe.Settings settings = new horseshoe.Settings();
+		final StringWriter writer = new StringWriter();
+		final MapAnnotation mapAnnotation = new MapAnnotation();
+
+		template.render(settings, new java.util.HashMap<>(), writer, Collections.singletonMap("test", mapAnnotation));
+		Assert.assertEquals("Engine does not support @missing." + LS, mapAnnotation.map.get(null));
+		Assert.assertEquals("Engine does not support @missing." + LS, writer.toString());
+	}
+
+	@Test
 	public void testNestedAnnotations() throws LoadException, IOException {
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
@@ -105,35 +111,56 @@ public class AnnotationTests {
 		annotations.put("test", testMapAnnotation);
 		annotations.put("inner", innerMapAnnotation);
 		template.render(settings, new HashMap<>(), writer, annotations);
-		Assert.assertEquals("789456", testMapAnnotation.map.get("value123"));
 		Assert.assertEquals("789", innerMapAnnotation.map.get(null));
+		Assert.assertEquals("789456", testMapAnnotation.map.get("value123"));
 		Assert.assertEquals("ab789456cd", writer.toString());
 	}
 
 	@Test
-	public void testOutputRemapping() throws java.io.IOException, LoadException {
-		final String filename = "DELETE_ME.test";
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("AnnotationTest", "{{#@OutputToFile(\"" + filename + "\")}}\nGood things are happening!\nMore good things!\n{{/}}\n");
-
+	public void testNullWriter() throws IOException, LoadException {
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Null Writer", "a{{#@test}}b{{^}}d{{/}}c");
 		final horseshoe.Settings settings = new horseshoe.Settings();
-		final java.io.Writer writer = new java.io.StringWriter();
+		final StringWriter writer = new StringWriter();
+
+		template.render(settings, new java.util.HashMap<>(), writer, Collections.singletonMap("test", new AnnotationHandler() {
+			@Override
+			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+				return null;
+			}
+		}));
+		Assert.assertEquals("abc", writer.toString());
+	}
+
+	@Test
+	public void testOutputMapping() throws IOException, LoadException {
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Mapping", "Good things are happening!\n{{#@test}}\nThis should output to map annotation.\n{{/}}\nGood things are happening again!\n");
+		final horseshoe.Settings settings = new horseshoe.Settings();
+		final StringWriter writer = new StringWriter();
+		final MapAnnotation mapAnnotation = new MapAnnotation();
+
+		template.render(settings, new java.util.HashMap<>(), writer, Collections.singletonMap("test", mapAnnotation));
+
+		Assert.assertEquals("This should output to map annotation." + LS, mapAnnotation.map.get(null));
+		Assert.assertEquals("Good things are happening!" + LS + "This should output to map annotation." + LS + "Good things are happening again!" + LS, writer.toString());
+	}
+
+	@Test
+	public void testOutputRemapping() throws IOException, LoadException {
+		final String filename = "DELETE_ME.test";
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Remapping", "{{#@File({\"name\":\"" + filename + "\"})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n");
+		final horseshoe.Settings settings = new horseshoe.Settings();
+		final Writer writer = new StringWriter();
 
 		try {
-			template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("OutputToFile", new AnnotationHandler() {
+			template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("File", new AnnotationHandler() {
+				@SuppressWarnings({ "unchecked", "rawtypes" })
 				@Override
 				public Writer getWriter(final Writer writer, final Object value) throws IOException {
-					return new BufferedWriter(new FileWriter(value.toString())) {
-						@Override
-						public void write(final char[] cbuf, final int off, final int len) throws IOException {
-							super.write(cbuf, off, len);
-							writer.write(cbuf, off, len);
-						}
-
-					};
+					return new FileWriter(((Map)value).getOrDefault("name", "file.txt").toString());
 				}
 			}));
 		} finally {
-			Assert.assertEquals("Good things are happening!" + System.lineSeparator() + "More good things!" + System.lineSeparator(), String.join(System.lineSeparator(), new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8)));
+			Assert.assertEquals("Good things are happening!" + LS + "More good things!" + LS, String.join(LS, new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8)));
 			Files.delete(Paths.get(filename));
 		}
 	}
