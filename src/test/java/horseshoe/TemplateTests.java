@@ -2,6 +2,8 @@ package horseshoe;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Collections;
+
 import org.junit.Test;
 
 public class TemplateTests {
@@ -34,6 +36,16 @@ public class TemplateTests {
 		template.render(settings, data, writer);
 
 		assertEquals("Hello, world!", writer.toString());
+	}
+
+	@Test
+	public void testMapLiteral() throws java.io.IOException, LoadException {
+		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Map Test", "{{#[\"Bob\": 45, \"Alice\": 31]}}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}");
+		final horseshoe.Settings settings = new horseshoe.Settings();
+		final java.io.StringWriter writer = new java.io.StringWriter();
+		template.render(settings, Collections.emptyMap(), writer);
+
+		assertEquals("Bob is 45 years old." + System.lineSeparator() + "Alice is 31 years old." + System.lineSeparator(), writer.toString());
 	}
 
 }

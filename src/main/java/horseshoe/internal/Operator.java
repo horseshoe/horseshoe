@@ -26,7 +26,7 @@ final class Operator {
 		final List<Operator> operators = new ArrayList<>();
 
 		operators.add(new Operator("{",    0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal", "}", 0));
-		operators.add(new Operator("[",    0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal (Alternate)", "]", 0));
+		operators.add(new Operator("[",    0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal (Iterating)", "]", 0));
 		operators.add(new Operator("[",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Lookup", "]", 1));
 		operators.add(new Operator("?[",   0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | SAFE, "Safe Lookup", "]", 1));
 		operators.add(createMethod("(", false));
@@ -34,7 +34,7 @@ final class Operator {
 		operators.add(new Operator(".",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION, "Navigate"));
 		operators.add(new Operator("?.",   0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | SAFE, "Safe Navigate"));
 		operators.add(new Operator("+",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
-		operators.add(new Operator("-",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
+		operators.add(new Operator("-",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Minus"));
 		operators.add(new Operator("~",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Bitwise Negate"));
 		operators.add(new Operator("!",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Logical Negate"));
 		operators.add(new Operator("..",   3,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Range"));

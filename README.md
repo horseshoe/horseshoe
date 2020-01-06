@@ -5,26 +5,27 @@ Horseshoe for Java
 
 ## Goals
 * Mustache-like templates for source code
-* TODO
+* Allow method calls and processing of returned values
+* Simple iteration and repeated iterations with special cases based on first/last/index
 
 ## FAQ
 ### What is Horseshoe?
 Horseshoe is a templating system used to generate source code. It uses a Mustache-like syntax with an extended expression system supporting method calls to allow processing of both stored data and dynamically-generated data.
 
 ### How is Horseshoe similiar to Mustache?
-Horseshoe uses the same tags as Mustache. These tags have the same meaning as they do in Mustache. Due to the extended expression syntax, it is difficult to gauge whether or not it is Mustache-compliant. However, when the appropriate context object is used, Horseshoe passes all required tests in the Mustache specification v1.1.2.
+Horseshoe uses the same tags as Mustache. These tags have the same meaning as they do in Mustache. Due to the extended expression syntax, it is difficult to gauge whether or not it is Mustache-compliant. However, when a Mustache-compliant context object is used, Horseshoe passes all required tests in the Mustache specification v1.1.2.
 
 ### How is Horseshoe different from Mustache?
-Horseshoe does not have the same design goals as Mustache, resulting in many different decisions when creating the specification. For example, Horseshoe was designed for generation of source code, not HTML. For this reason, the default escape function does not escape HTML (unless the context is created with `horseshoe.Context.newMustacheContext()`). Other differences include a more complex expression syntax ("interpolation" in Mustache-speak), support for limited logic, support for method calls in expressions, and support for variable assignment inside expressions.
+Horseshoe does not have the same design goals as Mustache, resulting in many different decisions when creating the specification. For example, Horseshoe was designed for generation of source code, not HTML. For this reason, the default escape function does not escape HTML (unless the context is created with `horseshoe.Context.newMustacheContext()`). Other differences include a more complex expression syntax ("interpolation" in Mustache-speak) and support for method calls in expressions.
 
 ### Does Horseshoe support Mustache lambdas?
-Horseshoe does not support Mustache lambdas. It supplements lambdas with a more sophisticated expression system.
+Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an expression syntax that supports method calls.
 
-### What operators does Horseshoe support?
+### Which operators are supported by Horseshoe expressions?
 Precedence | Operators | Associativity
 ---------- | --------- | -------------
-0 | <code>{</code>a?<code>}</code> (Array / Map Literal), <br><code>[</code>a?<code>]</code> (Array / Map Literal (Alternate)), <br>a<code>[</code>b<code>]</code> (Lookup), <br>a<code>?[</code>b<code>]</code> (Safe Lookup), <br>a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate), <br>a<code>?.</code>b (Safe Navigate) | Left-to-right
-2 | <code>+</code>a (Unary Plus), <br><code>-</code>a (Unary Plus), <br><code>~</code>a (Bitwise Negate), <br><code>!</code>a (Logical Negate) | Right-to-left
+0 | <code>{</code>a?<code>}</code> (Array / Map Literal), <br><code>[</code>a?<code>]</code> (Array / Map Literal (Iterating)), <br>a<code>[</code>b<code>]</code> (Lookup), <br>a<code>?[</code>b<code>]</code> (Safe Lookup), <br>a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate), <br>a<code>?.</code>b (Safe Navigate) | Left-to-right
+2 | <code>+</code>a (Unary Plus), <br><code>-</code>a (Unary Minus), <br><code>~</code>a (Bitwise Negate), <br><code>!</code>a (Logical Negate) | Right-to-left
 3 | a<code>..</code>b (Range) | Left-to-right
 4 | a<code>*</code>b (Multiply), <br>a<code>/</code>b (Divide), <br>a<code>%</code>b (Modulus) | Left-to-right
 5 | a<code>+</code>b (Add), <br>a<code>-</code>b (Subtract) | Left-to-right

@@ -311,9 +311,7 @@ public abstract class Accessor {
 		public Accessor create(final Object context, final Identifier identifier, final int parameters) {
 			final Class<?> contextClass = context.getClass();
 
-			if (Map.class.isAssignableFrom(contextClass)) {
-				return new MapAccessor(identifier.getName());
-			} else if (Class.class.equals(contextClass)) { // Static
+			if (Class.class.equals(contextClass)) { // Static
 				if (identifier.isMethod()) { // Method
 					return new ClassMethodAccessor((Class<?>)context, identifier.getName(), parameters);
 				} else { // Field
@@ -321,6 +319,8 @@ public abstract class Accessor {
 				}
 			} else if (identifier.isMethod()) { // Method
 				return new MethodAccessor(contextClass, identifier.getName(), parameters);
+			} else if (Map.class.isAssignableFrom(contextClass)) {
+				return new MapAccessor(identifier.getName());
 			}
 
 			// Field

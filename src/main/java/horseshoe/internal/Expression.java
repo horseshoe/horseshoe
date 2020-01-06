@@ -6,6 +6,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -65,6 +66,23 @@ public final class Expression {
 		public abstract Object evaluate(final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indexes) throws ReflectiveOperationException;
 	}
 
+	@SuppressWarnings("serial")
+	public static class IterableMap<K, V> extends LinkedHashMap<K, V> implements Iterable<Entry<K, V>> {
+		/**
+		 * Creates a new iterable map.
+		 *
+		 * @param initialCapacity the initial capacity of the map
+		 */
+		public IterableMap(final int initialCapacity) {
+			super(initialCapacity);
+		}
+
+		@Override
+		public Iterator<java.util.Map.Entry<K, V>> iterator() {
+			return entrySet().iterator();
+		}
+	}
+
 	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
 
 	// Reflected Methods
@@ -74,6 +92,8 @@ public final class Expression {
 	private static final Method IDENTIFIER_GET_VALUE_METHOD;
 	private static final Method INDEXED_GET_INDEX;
 	private static final Method INDEXED_HAS_NEXT;
+	@SuppressWarnings("rawtypes")
+	private static final Constructor<IterableMap> ITERABLE_MAP_CTOR_INT;
 	@SuppressWarnings("rawtypes")
 	private static final Constructor<LinkedHashMap> LINKED_HASH_MAP_CTOR_INT;
 	private static final Method MAP_PUT;
@@ -90,6 +110,7 @@ public final class Expression {
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
 			INDEXED_GET_INDEX = Indexed.class.getMethod("getIndex");
 			INDEXED_HAS_NEXT = Indexed.class.getMethod("hasNext");
+			ITERABLE_MAP_CTOR_INT = IterableMap.class.getConstructor(int.class);
 			LINKED_HASH_MAP_CTOR_INT = LinkedHashMap.class.getConstructor(int.class);
 			MAP_PUT = Map.class.getMethod("put", Object.class, Object.class);
 			PERSISTENT_STACK_PEEK = PersistentStack.class.getMethod("peek", int.class);
@@ -213,7 +234,13 @@ public final class Expression {
 
 			if (pairs > 0) { // Create a map
 				final int totalPairs = pairs;
-				final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_MAP_CTOR_INT);
+				final MethodBuilder builder;
+
+				if ("{".equals(operator.getString())) {
+					builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_MAP_CTOR_INT);
+				} else {
+					builder = new MethodBuilder().pushNewObject(IterableMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(ITERABLE_MAP_CTOR_INT);
+				}
 
 				for (int i = operator.getRightExpressions() - 1, j = 0; i >= 0; j++, i--) {
 					final Operand first = operands.peek(i + pairs);
