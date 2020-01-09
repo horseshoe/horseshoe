@@ -72,20 +72,48 @@ public final class Identifier {
 	 */
 	public Object getValue(final PersistentStack<Object> context, final ContextAccess access) throws ReflectiveOperationException {
 		// Try to get value at the specified scope
-		final Object value = getValue(context.peek(backreach));
+		boolean skippedAccessor = false;
+		Object object = context.peek(backreach);
+		Class<?> objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
+		Accessor accessor = accessorDatabase.get(objectClass);
 
-		if (value != null) {
-			return value;
+		if (accessor == null) {
+			accessor = Accessor.FACTORY.create(object, this, 0);
+			accessorDatabase.put(objectClass, accessor);
+		}
+
+		if (accessor != null) {
+			final Object result = accessor.get(object);
+
+			if (result != null || accessor.has(object)) {
+				return result;
+			}
+
+			skippedAccessor = true;
 		}
 
 		// If there is no value at the specified scope and the backreach is 0, then try to get the value at a different scope
 		if (backreach == 0) {
 			if (access == ContextAccess.FULL) {
 				for (int i = 1; i < context.size(); i++) {
-					final Object levelValue = getValue(context.peek(i));
+					object = context.peek(i);
+					objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
+					accessor = accessorDatabase.get(objectClass);
 
-					if (levelValue != null) {
-						return levelValue;
+					// Try to create the accessor and add it to the database
+					if (accessor == null) {
+						accessor = Accessor.FACTORY.create(object, this, 0);
+						accessorDatabase.put(objectClass, accessor);
+					}
+
+					if (accessor != null) {
+						final Object result = accessor.get(object);
+
+						if (result != null || accessor.has(object)) {
+							return result;
+						}
+
+						skippedAccessor = true;
 					}
 				}
 			} else if (access == ContextAccess.CURRENT_AND_ROOT) {
@@ -93,7 +121,11 @@ public final class Identifier {
 			}
 		}
 
-		return null;
+		if (skippedAccessor) {
+			return null;
+		}
+
+		throw new java.lang.NoSuchFieldException("Field \"" + name + "\" not found in class " + objectClass.getName());
 	}
 
 	/**
@@ -109,6 +141,11 @@ public final class Identifier {
 
 		if (accessor == null) {
 			accessor = Accessor.FACTORY.create(context, this, 0);
+
+			if (accessor == null) {
+				throw new java.lang.NoSuchFieldException("Field \"" + name + "\" not found in class " + objectClass.getName());
+			}
+
 			accessorDatabase.put(objectClass, accessor);
 		}
 
@@ -129,6 +166,11 @@ public final class Identifier {
 
 		if (accessor == null) {
 			accessor = Accessor.FACTORY.create(context, this, parameters == null ? 0 : parameters.length);
+
+			if (accessor == null) {
+				throw new java.lang.NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());
+			}
+
 			accessorDatabase.put(objectClass, accessor);
 		}
 

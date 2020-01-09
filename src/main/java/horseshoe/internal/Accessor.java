@@ -89,6 +89,16 @@ public abstract class Accessor {
 	}
 
 	/**
+	 * Checks if the accessor has the ability to resolve given the specified context.
+	 *
+	 * @param context the context object to resolve
+	 * @return true if the context is resolvable, otherwise false
+	 */
+	public boolean has(final Object context) {
+		return true;
+	}
+
+	/**
 	 * Looks up a value based on a map or array and the lookup operator.
 	 *
 	 * @param context the context object to resolve
@@ -135,6 +145,10 @@ public abstract class Accessor {
 	private static final class ClassMethodAccessor extends Accessor {
 		private final Method method;
 
+		private ClassMethodAccessor(final Method method) {
+			this.method = method;
+		}
+
 		/**
 		 * Creates a new static method accessor.
 		 *
@@ -142,26 +156,26 @@ public abstract class Accessor {
 		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
 		 */
-		public ClassMethodAccessor(final Class<?> parent, final String methodSignature, final int parameterCount) {
+		public static ClassMethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
 			final MethodSignature signature = new MethodSignature(methodSignature);
 
-			for (final Method method : parent.getMethods()) {
-				if (Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
-					method.setAccessible(true);
-					this.method = method;
-					return;
+			if (Modifier.isPublic(parent.getModifiers())) {
+				for (final Method method : parent.getMethods()) {
+					if (Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
+						method.setAccessible(true);
+						return new ClassMethodAccessor(method);
+					}
 				}
 			}
 
 			for (final Method method : Class.class.getMethods()) {
 				if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
 					method.setAccessible(true);
-					this.method = method;
-					return;
+					return new ClassMethodAccessor(method);
 				}
 			}
 
-			throw new java.lang.NoSuchMethodError("Method \"" + signature.name + "\" taking " + parameterCount + " parameters not found in class " + parent.getName());
+			return null;
 		}
 
 		@Override
@@ -186,16 +200,21 @@ public abstract class Accessor {
 	private static final class FieldAccessor extends Accessor {
 		private final Field field;
 
-		public FieldAccessor(final Class<?> parent, final String fieldName) {
-			for (final Field field : parent.getFields()) {
-				if (!Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
-					field.setAccessible(true);
-					this.field = field;
-					return;
+		private FieldAccessor(final Field field) {
+			this.field = field;
+		}
+
+		public static FieldAccessor create(final Class<?> parent, final String fieldName) {
+			if (Modifier.isPublic(parent.getModifiers())) {
+				for (final Field field : parent.getFields()) {
+					if (!Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
+						field.setAccessible(true);
+						return new FieldAccessor(field);
+					}
 				}
 			}
 
-			throw new java.lang.NoSuchFieldError("Field \"" + fieldName + "\" not found in class " + parent.getName());
+			return null;
 		}
 
 		@Override
@@ -225,6 +244,11 @@ public abstract class Accessor {
 			return ((Map<?, ?>)context).get(key);
 		}
 
+		@Override
+		public boolean has(final Object context) {
+			return ((Map<?, ?>)context).containsKey(key);
+		}
+
 		@SuppressWarnings({ "unchecked" })
 		@Override
 		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
@@ -239,6 +263,10 @@ public abstract class Accessor {
 	private static final class MethodAccessor extends Accessor {
 		private final Method method;
 
+		private MethodAccessor(final Method method) {
+			this.method = method;
+		}
+
 		/**
 		 * Creates a new method accessor.
 		 *
@@ -246,18 +274,30 @@ public abstract class Accessor {
 		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
 		 */
-		public MethodAccessor(final Class<?> parent, final String methodSignature, final int parameterCount) {
+		public static MethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
 			final MethodSignature signature = new MethodSignature(methodSignature);
 
-			for (final Method method : parent.getMethods()) {
-				if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
-					method.setAccessible(true);
-					this.method = method;
-					return;
+			if (Modifier.isPublic(parent.getModifiers())) {
+				for (final Method method : parent.getMethods()) {
+					if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
+						method.setAccessible(true);
+						return new MethodAccessor(method);
+					}
 				}
 			}
 
-			throw new java.lang.NoSuchMethodError("Method \"" + signature.name + "\" taking " + parameterCount + " parameters not found in class " + parent.getName());
+			for (final Class<?> iface : parent.getInterfaces()) {
+				if (Modifier.isPublic(iface.getModifiers())) {
+					for (final Method method : iface.getMethods()) {
+						if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
+							method.setAccessible(true);
+							return new MethodAccessor(method);
+						}
+					}
+				}
+			}
+
+			return parent.getSuperclass() == null || Object.class.equals(parent) ? null : create(parent.getSuperclass(), methodSignature, parameterCount);
 		}
 
 		@Override
@@ -282,16 +322,21 @@ public abstract class Accessor {
 	private static final class StaticFieldAccessor extends Accessor {
 		private final Field field;
 
-		public StaticFieldAccessor(final Class<?> parent, final String fieldName) {
-			for (final Field field : parent.getFields()) {
-				if (Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
-					field.setAccessible(true);
-					this.field = field;
-					return;
+		private StaticFieldAccessor(final Field field) {
+			this.field = field;
+		}
+
+		public static StaticFieldAccessor create(final Class<?> parent, final String fieldName) {
+			if (Modifier.isPublic(parent.getModifiers())) {
+				for (final Field field : parent.getFields()) {
+					if (Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
+						field.setAccessible(true);
+						return new StaticFieldAccessor(field);
+					}
 				}
 			}
 
-			throw new java.lang.NoSuchFieldError("Static field \"" + fieldName + "\" not found in class " + parent.getName());
+			return null;
 		}
 
 		@Override
@@ -313,18 +358,18 @@ public abstract class Accessor {
 
 			if (Class.class.equals(contextClass)) { // Static
 				if (identifier.isMethod()) { // Method
-					return new ClassMethodAccessor((Class<?>)context, identifier.getName(), parameters);
+					return ClassMethodAccessor.create((Class<?>)context, identifier.getName(), parameters);
 				} else { // Field
-					return new StaticFieldAccessor((Class<?>)context, identifier.getName());
+					return StaticFieldAccessor.create((Class<?>)context, identifier.getName());
 				}
 			} else if (identifier.isMethod()) { // Method
-				return new MethodAccessor(contextClass, identifier.getName(), parameters);
+				return MethodAccessor.create(contextClass, identifier.getName(), parameters);
 			} else if (Map.class.isAssignableFrom(contextClass)) {
 				return new MapAccessor(identifier.getName());
 			}
 
 			// Field
-			return new FieldAccessor(contextClass, identifier.getName());
+			return FieldAccessor.create(contextClass, identifier.getName());
 		}
 
 	}

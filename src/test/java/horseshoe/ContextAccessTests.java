@@ -1,11 +1,13 @@
 package horseshoe;
 
 import horseshoe.Settings.ContextAccess;
+
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
 import org.junit.Assert;
 import org.junit.Test;
 
