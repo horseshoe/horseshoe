@@ -59,11 +59,12 @@ public final class Expression {
 		 *
 		 * @param identifiers the identifiers used to evaluate the object
 		 * @param context the context used to evaluate the object
-		 * @param access the access for the context for evaluating the object
+		 * @param access the access to the context used to evaluate the object
+		 * @param indices the indexed objects used to evaluate the object
 		 * @return the result of evaluating the object
 		 * @throws ReflectiveOperationException if an error occurs while evaluating the reflective parts of the object
 		 */
-		public abstract Object evaluate(final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indexes) throws ReflectiveOperationException;
+		public abstract Object evaluate(final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indices) throws ReflectiveOperationException;
 	}
 
 	@SuppressWarnings("serial")
@@ -123,8 +124,8 @@ public final class Expression {
 	}
 
 	// The patterns used for parsing the grammar
-	private static final Pattern IDENTIFIER_BACKREACH_PATTERN = Pattern.compile("(?<backreach>(?:[.][.]/)+)\\s*");
-	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?:[.]/)*(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`)[(]?)\\s*");
+	private static final Pattern IDENTIFIER_BACKREACH_PATTERN = Pattern.compile("(?<backreach>(?:[.][.]/)+)");
+	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<current>(?:[.]/)*)(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`)[(]?)\\s*");
 	private static final Pattern INTERNAL_PATTERN = Pattern.compile("(?:[.]/)*(?<identifier>[.]\\p{L}*)\\s*");
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*");
 	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))\\s*");
@@ -503,7 +504,7 @@ public final class Expression {
 						throw new RuntimeException("Unexpected backreach in expression at offset " + matcher.regionStart());
 					}
 
-					backreach = (matcher.end("backreach") - matcher.regionStart()) / 3;
+					backreach = matcher.group("backreach").length() / 3;
 
 					if (backreach > maxBackreach) {
 						throw new RuntimeException("Backreach too far (max: " + maxBackreach + ") in expression at offset " + matcher.regionStart());
@@ -514,14 +515,19 @@ public final class Expression {
 
 				// Check for identifier or literals
 				if (!hasLeftExpression && matcher.usePattern(IDENTIFIER_PATTERN).lookingAt()) { // Identifier
+					final int literalBackreach = backreach;
 					token = matcher.group("identifier");
 
+					if (backreach == 0 && matcher.group("current").length() == 0) {
+						backreach = Identifier.UNSPECIFIED_BACKREACH;
+					}
+
 					// Check for keywords that look like literals
-					if ("true".equals(token) && backreach == 0 && !lastNavigation) {
+					if (backreach < 0 && !lastNavigation && "true".equals(token)) {
 						operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(1)));
-					} else if ("false".equals(token) && backreach == 0 && !lastNavigation) {
+					} else if (backreach < 0 && !lastNavigation && "false".equals(token)) {
 						operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(0)));
-					} else if ("null".equals(token) && backreach == 0 && !lastNavigation) {
+					} else if (backreach < 0 && !lastNavigation && "null".equals(token)) {
 						operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
 					} else if (token.endsWith("(")) { // Method
 						final String name = token.startsWith("`") ? token.substring(1, token.length() - 2).replaceAll("\\\\(.)", "\\1") : token.substring(0, token.length() - 1);
@@ -535,7 +541,7 @@ public final class Expression {
 
 						if (!lastNavigation) {
 							// Create a new output formed by invoking identifiers[index].getValue(context.peek(backreach), ...)
-							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK)));
+							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(literalBackreach).addInvoke(PERSISTENT_STACK_PEEK)));
 							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD)));
 							lastOperator = operators.push(Operator.createMethod(name, false));
 						} else {
@@ -582,7 +588,7 @@ public final class Expression {
 					} else { // Unknown internal identifier = null
 						operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
 					}
-				} else if (backreach != 0 || lastNavigation) { // Any backreach must have an identifier associated with it, and identifiers must follow the member selection operator
+				} else if (backreach > 0 || lastNavigation) { // Any backreach must have an identifier associated with it, and identifiers must follow the member selection operator
 					throw new RuntimeException("Invalid identifier in expression at offset " + matcher.regionStart());
 				} else if (matcher.hitEnd()) {
 					break;
@@ -775,9 +781,11 @@ public final class Expression {
 	}
 
 	/**
-	 * Evaluates the expression using the given context, global data, and access
+	 * Evaluates the expression using the given context, global data, and access.
 	 *
-	 * @param context the context to use for evaluating the expression
+	 * @param context the context used to evaluate the object
+	 * @param access the access to the context used to evaluate the object
+	 * @param indices the indexed objects used to evaluate the object
 	 * @return the evaluated expression or null if the expression could not be evaluated
 	 */
 	public Object evaluate(final PersistentStack<Object> context, final Settings.ContextAccess access, final PersistentStack<Indexed> indices) {

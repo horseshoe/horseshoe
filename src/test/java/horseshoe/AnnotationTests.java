@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -68,7 +67,7 @@ public class AnnotationTests {
 		final TemplateLoader loader = new TemplateLoader();
 		final Template template = loader.load("AnnotationsTests", "ab{{#@test(\"value123\")}}{{/@test}}cd");
 		final MapAnnotation mapAnnotation = new MapAnnotation();
-		template.render(settings, new HashMap<>(), writer, Collections.singletonMap("test", mapAnnotation));
+		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("test", mapAnnotation));
 		Assert.assertEquals("value123", mapAnnotation.map.keySet().stream().findFirst().get());
 		Assert.assertEquals("", mapAnnotation.map.values().stream().findFirst().get());
 		Assert.assertEquals("abcd", writer.toString());
@@ -81,7 +80,7 @@ public class AnnotationTests {
 		final TemplateLoader loader = new TemplateLoader();
 		final Template template = loader.load("AnnotationsTests", "ab{{#@test(\"value123\")}}456{{^}}789{{/}}cd");
 		final MapAnnotation mapAnnotation = new MapAnnotation();
-		template.render(settings, new HashMap<>(), writer, Collections.singletonMap("test", mapAnnotation));
+		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("test", mapAnnotation));
 		Assert.assertEquals("456", mapAnnotation.map.get("value123"));
 		Assert.assertEquals("ab456cd", writer.toString());
 	}
@@ -93,7 +92,7 @@ public class AnnotationTests {
 		final StringWriter writer = new StringWriter();
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 
-		template.render(settings, new java.util.HashMap<>(), writer, Collections.singletonMap("test", mapAnnotation));
+		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("test", mapAnnotation));
 		Assert.assertEquals("Engine does not support @missing." + LS, mapAnnotation.map.get(null));
 		Assert.assertEquals("Engine does not support @missing." + LS, writer.toString());
 	}
@@ -109,7 +108,7 @@ public class AnnotationTests {
 		final Map<String, AnnotationHandler> annotations = new LinkedHashMap<>();
 		annotations.put("test", testMapAnnotation);
 		annotations.put("inner", innerMapAnnotation);
-		template.render(settings, new HashMap<>(), writer, annotations);
+		template.render(settings, Collections.emptyMap(), writer, annotations);
 		Assert.assertEquals("789", innerMapAnnotation.map.get(null));
 		Assert.assertEquals("789456", testMapAnnotation.map.get("value123"));
 		Assert.assertEquals("ab789456cd", writer.toString());
@@ -121,7 +120,7 @@ public class AnnotationTests {
 		final horseshoe.Settings settings = new horseshoe.Settings();
 		final StringWriter writer = new StringWriter();
 
-		template.render(settings, new java.util.HashMap<>(), writer, Collections.singletonMap("test", new AnnotationHandler() {
+		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("test", new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
 				return null;
@@ -137,7 +136,7 @@ public class AnnotationTests {
 		final StringWriter writer = new StringWriter();
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 
-		template.render(settings, new java.util.HashMap<>(), writer, Collections.singletonMap("test", mapAnnotation));
+		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("test", mapAnnotation));
 
 		Assert.assertEquals("This should output to map annotation." + LS, mapAnnotation.map.get(null));
 		Assert.assertEquals("Good things are happening!" + LS + "This should output to map annotation." + LS + "Good things are happening again!" + LS, writer.toString());

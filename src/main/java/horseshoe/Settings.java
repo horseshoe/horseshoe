@@ -3,14 +3,34 @@ package horseshoe;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * The Settings class allows configuring different properties that are used when rendering a {@link Template}.
+ */
 public class Settings {
 
+	/**
+	 * An enumeration used to control access when checking identifiers in expressions.
+	 */
 	public static enum ContextAccess {
+		/**
+		 * All section scopes will be checked for an identifier in an expression.
+		 */
 		FULL,
+
+		/**
+		 * Only the current section scope and the root-level section scope will be checked for an identifier in an expression.
+		 */
 		CURRENT_AND_ROOT,
+
+		/**
+		 * Only the current section scope will be checked for an identifier in an expression.
+		 */
 		CURRENT_ONLY
 	}
 
+	/**
+	 * An EscapeFunction is used to escape dynamic content (interpolated text) before it is rendered as output.
+	 */
 	public static interface EscapeFunction {
 		/**
 		 * Escapes the specified string.
@@ -21,13 +41,27 @@ public class Settings {
 		String escape(String raw);
 	}
 
-	public static final String DEFAULT_LINE_ENDING = System.lineSeparator();
-	public static final String KEEP_TEMPLATE_LINE_ENDINGS = null;
+	/**
+	 * Use the default (system) line endings when rendering the template.
+	 */
+	public static final String USE_DEFAULT_LINE_ENDINGS = System.lineSeparator();
 
-	public static final EscapeFunction NO_ESCAPE_FUNCTION = null;
+	/**
+	 * Use the line endings as they exist in the template being rendered.
+	 */
+	public static final String USE_TEMPLATE_LINE_ENDINGS = null;
+
+	/**
+	 * Do not escape any characters when rendering.
+	 */
+	public static final EscapeFunction DO_NOT_ESCAPE = null;
 
 	private static final Pattern ESCAPE_PATTERN = Pattern.compile("[&<>\"']");
-	public static final EscapeFunction HTML_ESCAPE_FUNCTION = new EscapeFunction() {
+
+	/**
+	 * Escape the text being rendered as HTML.
+	 */
+	public static final EscapeFunction ESCAPE_AS_HTML = new EscapeFunction() {
 		@Override
 		public String escape(final String raw) {
 			final StringBuilder sb = new StringBuilder();
@@ -60,12 +94,18 @@ public class Settings {
 	 * @return new mustache-compatible settings
 	 */
 	public static Settings newMustacheSettings() {
-		return new Settings().setContextAccess(ContextAccess.FULL).setEscapeFunction(HTML_ESCAPE_FUNCTION).setLineEnding(KEEP_TEMPLATE_LINE_ENDINGS);
+		return new Settings().setContextAccess(ContextAccess.FULL).setEscapeFunction(ESCAPE_AS_HTML).setLineEnding(USE_TEMPLATE_LINE_ENDINGS);
 	}
 
-	private EscapeFunction escapeFunction = NO_ESCAPE_FUNCTION;
+	private EscapeFunction escapeFunction = DO_NOT_ESCAPE;
 	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
-	private String lineEnding = DEFAULT_LINE_ENDING;
+	private String lineEnding = USE_DEFAULT_LINE_ENDINGS;
+
+	/**
+	 * Creates a new settings object with the default values.
+	 */
+	public Settings() {
+	}
 
 	/**
 	 * Gets the type of access to the context stack allowed during rendering.

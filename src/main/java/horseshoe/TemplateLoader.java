@@ -20,10 +20,12 @@ import java.util.regex.Pattern;
 import horseshoe.internal.CharSequenceUtils;
 import horseshoe.internal.Expression;
 import horseshoe.internal.Identifier;
-import horseshoe.internal.Loader;
 import horseshoe.internal.ParsedLine;
 import horseshoe.internal.PersistentStack;
 
+/**
+ * The TemplateLoader class is used to load any number of {@link Template}s before rendering. Various properties can be configured to load templates with different settings.
+ */
 public class TemplateLoader {
 
 	private static final class Delimiter {
@@ -91,7 +93,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds templates from strings. Any templates already loaded are ignored.
+	 * Adds templates from strings. The templates will not be loaded until they are referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. Any templates already loaded are ignored.
 	 *
 	 * @param templates a map of template names to template strings
 	 * @return this loader
@@ -105,7 +107,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds a template from a string. If the template is already loaded, this has no effect.
+	 * Adds a template from a string. The template will not be loaded until it is referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
 	 * @param name the name of the template
 	 * @param value the string value to load as a template
@@ -124,7 +126,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds a template to the loader. If the template is already loaded, this has no effect.
+	 * Adds a template to the loader. The template will not be loaded until it is referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
 	 * @param template the template to add to the loader
 	 * @return this loader
@@ -138,7 +140,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds a template from a file. If the template is already loaded, this has no effect.
+	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
 	 * @param name the name of the template
 	 * @param file the file to load as a template
@@ -159,7 +161,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds a template from a file. If the template is already loaded, this has no effect.
+	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
 	 * @param name the name of the template
 	 * @param file the file to load as a template
@@ -195,7 +197,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Closes any open readers. If no open readers exist, this has no effect.
+	 * Closes any open readers. If no open readers exist, this has no effect. This can be used to cleanup after a load exception occurs.
 	 */
 	public void close() {
 		for (final Loader loader : templateLoaders.values()) {
@@ -267,6 +269,7 @@ public class TemplateLoader {
 	 *
 	 * @param name the name of the template
 	 * @param file the file to load as a template
+	 * @param charset the character encoding to use when loading the template from the file
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
 	 * @throws FileNotFoundException if the file does not exist
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
@@ -302,7 +305,7 @@ public class TemplateLoader {
 	 * Loads the specified template using the specified settings. If the template is already loaded the settings are ignored.
 	 *
 	 * @param name the name of the template to load
-	 * @param context the context used to load the template
+	 * @param loaders the stack of items being loaded
 	 * @param recursionLevel the current recursion level of the loading template
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
@@ -374,8 +377,9 @@ public class TemplateLoader {
 	 * Loads the list of actions to be performed when rendering the template
 	 *
 	 * @param template the template to load
-	 * @param context the context used to load the template
+	 * @param loaders the stack of items being loaded
 	 * @param loader the item being loaded
+	 * @param recursionLevel the current recursion level of the loading template
 	 * @throws LoadException if an error is encountered while loading the template
 	 * @throws IOException if an error is encountered while reading from a file or stream
 	 */

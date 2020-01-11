@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -11,6 +11,13 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import horseshoe.internal.Buffer;
+import horseshoe.internal.CharSequenceUtils;
+import horseshoe.internal.ParsedLine;
+
+/**
+ * Loaders are used to parse {@link Template}s. It keeps track of the current state of the internal reader used to load the template text.
+ */
 public final class Loader implements AutoCloseable {
 
 	private static final Pattern NEW_LINE = Pattern.compile("\\r\\n?|\\n");
@@ -50,7 +57,7 @@ public final class Loader implements AutoCloseable {
 	 * @param name the name of the loader
 	 * @param value the character sequence to load
 	 */
-	public Loader(final String name, final CharSequence value) {
+	Loader(final String name, final CharSequence value) {
 		this.name = name;
 		this.file = null;
 		this.reader = null;
@@ -83,7 +90,7 @@ public final class Loader implements AutoCloseable {
 	 * @param name the name of the loader
 	 * @param reader the reader to load
 	 */
-	public Loader(final String name, final Reader reader) {
+	Loader(final String name, final Reader reader) {
 		this(name, null, reader);
 	}
 
@@ -95,7 +102,7 @@ public final class Loader implements AutoCloseable {
 	 * @param charset the character set to use while loading the file
 	 * @throws FileNotFoundException if the file does not exist
 	 */
-	public Loader(final String name, final Path file, final Charset charset) throws FileNotFoundException {
+	Loader(final String name, final Path file, final Charset charset) throws FileNotFoundException {
 		this(name, file, new InputStreamReader(new FileInputStream(file.toFile()), charset));
 	}
 
@@ -106,7 +113,7 @@ public final class Loader implements AutoCloseable {
 	 * @return true if the expected character sequence matches the upcoming sequence in the buffer
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	public boolean checkNext(final CharSequence expected) throws IOException {
+	boolean checkNext(final CharSequence expected) throws IOException {
 		while (expected.length() > buffer.length() - bufferOffset) {
 			if (isFullyLoaded) { // Check if we've reached the end
 				return false;
@@ -170,7 +177,7 @@ public final class Loader implements AutoCloseable {
 	 *
 	 * @return true if more input is available from the loader, otherwise false
 	 */
-	public boolean hasNext() {
+	boolean hasNext() {
 		return !isFullyLoaded || !matcher.hitEnd();
 	}
 
@@ -216,7 +223,7 @@ public final class Loader implements AutoCloseable {
 	 * @return the next character sequence up to the next matching delimiter or end-of-stream
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	public CharSequence next(final List<ParsedLine> lines) throws IOException {
+	CharSequence next(final List<ParsedLine> lines) throws IOException {
 		int start = bufferOffset;
 		int end;
 
@@ -274,7 +281,7 @@ public final class Loader implements AutoCloseable {
 	 * @return the next character sequence up to the next matching delimiter or end-of-stream
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	public CharSequence next(final Pattern delimiter, final List<ParsedLine> lines) throws IOException {
+	CharSequence next(final Pattern delimiter, final List<ParsedLine> lines) throws IOException {
 		matcher.usePattern(delimiter);
 		return next(lines);
 	}

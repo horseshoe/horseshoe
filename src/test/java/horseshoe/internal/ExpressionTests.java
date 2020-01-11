@@ -11,16 +11,6 @@ import horseshoe.Settings.ContextAccess;
 
 public class ExpressionTests {
 
-	@Test (expected = RuntimeException.class)
-	public void testBadBackreachTooFar() throws ReflectiveOperationException {
-		new Expression("../", false, 0);
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadLiteralWithBackreach() throws ReflectiveOperationException {
-		new Expression("../3.5", false, 1);
-	}
-
 	@Test
 	public void testArraysMaps() throws ReflectiveOperationException {
 		assert((Boolean)new Expression("{\"1\", \"2\"}.getClass().isArray()", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null));
@@ -34,6 +24,16 @@ public class ExpressionTests {
 		assertEquals("2", new Expression("null?[1] ?? \"2\"", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("4", new Expression("(1..5)[3]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
 		assertEquals("8", new Expression("(10..5)[2]", false, 0).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null).toString());
+	}
+
+	@Test (expected = RuntimeException.class)
+	public void testBadBackreachTooFar() throws ReflectiveOperationException {
+		new Expression("../", false, 0);
+	}
+
+	@Test (expected = RuntimeException.class)
+	public void testBadLiteralWithBackreach() throws ReflectiveOperationException {
+		new Expression("../3.5", false, 1);
 	}
 
 	@Test
@@ -103,6 +103,9 @@ public class ExpressionTests {
 		final PersistentStack<Object> context = new PersistentStack<>();
 		context.push(Helper.loadMap("cb", "bc"));
 		assertEquals("abcd \\\"\'\b\t\n\f\rƪāĂ\t", new Expression("\"a\" + cb + \"d \\\\\\\"\\\'\\b\\t\\n\\f\\r\\x1Aa\\u0101\\U00000102\\x9\"", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("anull", new Expression("\"a\" + ab", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("bcnull", new Expression("cb + ab", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());
+		assertEquals("nullbc", new Expression("ab + cb", false, 0).evaluate(context, ContextAccess.CURRENT_ONLY, null).toString());
 	}
 
 }

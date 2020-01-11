@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe;
 
 import static org.junit.Assert.assertEquals;
 
@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 import org.junit.Test;
 
-import horseshoe.internal.Loader;
+import horseshoe.Loader;
 
 public class LoaderTests {
 

@@ -23,6 +23,11 @@ public class PersistentStack<T> implements Iterable<T> {
 		public T next() {
 			return array[--i];
 		}
+
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException();
+		}
 	}
 
 	@Override

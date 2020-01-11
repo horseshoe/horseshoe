@@ -4,8 +4,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import horseshoe.internal.Loader;
-
+/**
+ * LoadExceptions can occur if an error is encountered while loading a {@link Template}. A LoadException can be used to determine the exact location and scope in a template that an error occurred.
+ */
 public class LoadException extends Exception {
 
 	private static final long serialVersionUID = 1L;
@@ -42,7 +43,7 @@ public class LoadException extends Exception {
 	 * @param loaders the items being loaded with the exception occurred
 	 * @param error the error associated with the exception
 	 */
-	public LoadException(final Iterable<Loader> loaders, final String error) {
+	LoadException(final Iterable<Loader> loaders, final String error) {
 		super(createMessage(loaders, error));
 
 		for (final Loader loader : loaders) {
@@ -57,7 +58,7 @@ public class LoadException extends Exception {
 	 * @param error the error associated with the exception
 	 * @param throwable the associated exception
 	 */
-	public LoadException(final Iterable<Loader> loaders, final String error, final Throwable throwable) {
+	LoadException(final Iterable<Loader> loaders, final String error, final Throwable throwable) {
 		super(createMessage(loaders, error), throwable);
 
 		for (final Loader loader : loaders) {

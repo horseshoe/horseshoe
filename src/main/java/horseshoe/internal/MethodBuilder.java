@@ -1351,9 +1351,12 @@ public final class MethodBuilder {
 	}
 
 	/**
-	 * Loads the specified method bytecode into the interface method and returns the new class.
-	 *
-	 * @param stackSize the maximum size of the operand stack in the bytecode
+	 * Loads the bytecode of the method builder into a new class.
+	 * @param <T> the type of the base class
+	 * @param name the name of the class being loaded
+	 * @param base the base class of the class being loaded
+	 * @param loader the class loader to use to load the new class
+	 * @return the loaded class
 	 * @throws ReflectiveOperationException if the loader throws an exception while loading the bytecode
 	 */
 	public <T> Class<T> load(final String name, final Class<T> base, final ClassLoader loader) throws ReflectiveOperationException {

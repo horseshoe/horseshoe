@@ -7,6 +7,7 @@ import horseshoe.Settings.ContextAccess;
 
 public final class Identifier {
 
+	public static final int UNSPECIFIED_BACKREACH = -1;
 	public static final String PATTERN = "[\\p{L}_\\$][\\p{L}\\p{Nd}_\\$]*";
 
 	private final HashMap<Class<?>, Accessor> accessorDatabase = new LinkedHashMap<>();
@@ -17,7 +18,7 @@ public final class Identifier {
 	/**
 	 * Creates a new identifier from some amount of backreach and a name.
 	 *
-	 * @param backreach the backreach for the identifier
+	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
 	 * @param name the name of the identifier
 	 * @param isMethod true if the identifier is a method, otherwise false
 	 */
@@ -33,7 +34,7 @@ public final class Identifier {
 	 * @param name the name of the identifier
 	 */
 	public Identifier(final String name) {
-		this(0, name, false);
+		this(UNSPECIFIED_BACKREACH, name, false);
 	}
 
 	@Override
@@ -64,16 +65,17 @@ public final class Identifier {
 	}
 
 	/**
-	 * Evaluates the identifier given the context object. For methods, this returns the method to invoke.
+	 * Gets the value of the identifier given the context object.
 	 *
-	 * @param context the context object to evaluate
-	 * @return the result of the evaluation
-	 * @throws ReflectiveOperationException
+	 * @param context the context object used to get the value of the identifier
+	 * @param access the access used to get the value of the identifier
+	 * @return the value of the identifier
+	 * @throws ReflectiveOperationException if an error occurs while getting the value of the identifier
 	 */
 	public Object getValue(final PersistentStack<Object> context, final ContextAccess access) throws ReflectiveOperationException {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
-		Object object = context.peek(backreach);
+		Object object = context.peek(Math.max(backreach, 0));
 		Class<?> objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
 		Accessor accessor = accessorDatabase.get(objectClass);
 
@@ -92,8 +94,8 @@ public final class Identifier {
 			skippedAccessor = true;
 		}
 
-		// If there is no value at the specified scope and the backreach is 0, then try to get the value at a different scope
-		if (backreach == 0) {
+		// If there is no value at the specified scope and the backreach is unspecified, then try to get the value at a different scope
+		if (backreach < 0) {
 			if (access == ContextAccess.FULL) {
 				for (int i = 1; i < context.size(); i++) {
 					object = context.peek(i);
@@ -133,7 +135,7 @@ public final class Identifier {
 	 *
 	 * @param context the context object to evaluate
 	 * @return the result of the evaluation
-	 * @throws ReflectiveOperationException
+	 * @throws ReflectiveOperationException if an error occurs while evaluating the value of the identifier
 	 */
 	public Object getValue(final Object context) throws ReflectiveOperationException {
 		final Class<?> objectClass = Class.class.equals(context.getClass()) ? (Class<?>)context : context.getClass();
@@ -158,7 +160,7 @@ public final class Identifier {
 	 * @param context the context object to evaluate
 	 * @param parameters the parameters used to evaluate the object
 	 * @return the result of the evaluation
-	 * @throws ReflectiveOperationException
+	 * @throws ReflectiveOperationException if an error occurs while evaluating the value of the identifier
 	 */
 	public Object getValue(final Object context, final Object... parameters) throws ReflectiveOperationException {
 		final Class<?> objectClass = Class.class.equals(context.getClass()) ? (Class<?>)context : context.getClass();

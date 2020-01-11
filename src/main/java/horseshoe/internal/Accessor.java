@@ -161,7 +161,7 @@ public abstract class Accessor {
 
 			if (Modifier.isPublic(parent.getModifiers())) {
 				for (final Method method : parent.getMethods()) {
-					if (Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
+					if (Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
 						method.setAccessible(true);
 						return new ClassMethodAccessor(method);
 					}
@@ -169,7 +169,7 @@ public abstract class Accessor {
 			}
 
 			for (final Method method : Class.class.getMethods()) {
-				if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
+				if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
 					method.setAccessible(true);
 					return new ClassMethodAccessor(method);
 				}
@@ -274,30 +274,35 @@ public abstract class Accessor {
 		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
 		 */
-		public static MethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
+		public static MethodAccessor create(Class<?> parent, final String methodSignature, final int parameterCount) {
 			final MethodSignature signature = new MethodSignature(methodSignature);
 
-			if (Modifier.isPublic(parent.getModifiers())) {
-				for (final Method method : parent.getMethods()) {
-					if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
-						method.setAccessible(true);
-						return new MethodAccessor(method);
-					}
-				}
-			}
-
-			for (final Class<?> iface : parent.getInterfaces()) {
-				if (Modifier.isPublic(iface.getModifiers())) {
-					for (final Method method : iface.getMethods()) {
-						if (!Modifier.isStatic(method.getModifiers()) && method.getParameterCount() == parameterCount && signature.matches(method)) {
+			// Find the first public parent class, analyzing all interfaces along the way
+			for (; parent != null; parent = parent.getSuperclass()) {
+				if (Modifier.isPublic(parent.getModifiers())) {
+					for (final Method method : parent.getMethods()) {
+						if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
 							method.setAccessible(true);
 							return new MethodAccessor(method);
+						}
+					}
+
+					break;
+				} else {
+					for (final Class<?> iface : parent.getInterfaces()) {
+						if (Modifier.isPublic(iface.getModifiers())) {
+							for (final Method method : iface.getMethods()) {
+								if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
+									method.setAccessible(true);
+									return new MethodAccessor(method);
+								}
+							}
 						}
 					}
 				}
 			}
 
-			return parent.getSuperclass() == null || Object.class.equals(parent) ? null : create(parent.getSuperclass(), methodSignature, parameterCount);
+			return null;
 		}
 
 		@Override
