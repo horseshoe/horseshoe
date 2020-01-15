@@ -1201,6 +1201,10 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder append(final MethodBuilder other) {
+		if (other == this) {
+			throw new IllegalArgumentException("Cannot append a builder to itself");
+		}
+
 		maxStackSize = Math.max(maxStackSize, stackSize + other.maxStackSize);
 		stackSize += other.stackSize;
 		maxLocalVariableIndex = Math.max(maxLocalVariableIndex, other.maxLocalVariableIndex);
@@ -1212,6 +1216,23 @@ public final class MethodBuilder {
 
 		final int oldLength = length;
 		append(other.bytes, other.length);
+
+		// Update all labels to point to this buffer
+		for (final Label label : labels) {
+			final Location target = label.getTarget();
+
+			// Update the target if needed
+			if (target.container == other) {
+				target.update(this, oldLength);
+			}
+
+			// Update each location if needed
+			for (final Location location : label.getReferences()) {
+				if (location.container == other) {
+					location.update(this, oldLength);
+				}
+			}
+		}
 
 		// Update all labels for the other builder to point to this buffer
 		for (final Label label : other.labels) {

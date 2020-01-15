@@ -89,13 +89,13 @@ public abstract class Accessor {
 	}
 
 	/**
-	 * Checks if the accessor has the ability to resolve given the specified context.
+	 * Checks if the accessor has the ability to resolve given the specified context when get returns null.
 	 *
 	 * @param context the context object to resolve
 	 * @return true if the context is resolvable, otherwise false
 	 */
 	public boolean has(final Object context) {
-		return true;
+		return false;
 	}
 
 	/**

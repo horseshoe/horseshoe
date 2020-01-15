@@ -189,7 +189,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 			if (annotationProcessor == null) { // Only write the data if there is an annotation processor available, otherwise take false path with default writer
 				dispatchData(context, false, writer);
 			} else {
-				try (final Writer newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData()))) {
+				try (final Writer newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), Expression.STDERR_LOGGER))) {
 					if (newWriter == null) {
 						dispatchData(context, context.getSectionData().peek(), writer);
 					} else {
@@ -198,7 +198,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 				}
 			}
 		} else {
-			dispatchData(context, section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData()), writer);
+			dispatchData(context, section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), Expression.STDERR_LOGGER), writer);
 		}
 	}
 

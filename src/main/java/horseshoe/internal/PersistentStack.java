@@ -5,7 +5,7 @@ package horseshoe.internal;
  *
  * @param <T> the type of items contained in the stack
  */
-public class PersistentStack<T> implements Iterable<T> {
+public final class PersistentStack<T> implements Iterable<T> {
 
 	@SuppressWarnings("unchecked")
 	private T array[] = (T[])new Object[8];

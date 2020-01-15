@@ -25,6 +25,7 @@ import java.util.Map;
 public final class Template {
 
 	private final String name;
+	private final Section section;
 	private final List<Action> actions = new ArrayList<>();
 
 	/**
@@ -34,6 +35,9 @@ public final class Template {
 	 */
 	Template(final String name) {
 		this.name = name;
+		this.section = new Section(null, name, null, null, true);
+
+		section.getLocalPartials().put(name, this);
 	}
 
 	/**
@@ -55,23 +59,12 @@ public final class Template {
 	}
 
 	/**
-	 * Renders the template to the specified writer using the specified context and global data. The global data is copied and will not be modified while rendering the template.
+	 * Gets the section associated with the template.
 	 *
-	 * @param settings the settings used while rendering
-	 * @param globalData the global data used while rendering
-	 * @param writer the writer used to render the template
-	 * @param annotationMap the map used to process annotations
-	 * @throws IOException if an error occurs while writing to the writer
+	 * @return the section associated with the template
 	 */
-	public void render(final Settings settings, final Map<String, Object> globalData, final Writer writer, final Map<String, AnnotationHandler> annotationMap) throws IOException {
-		final RenderContext renderContext = new RenderContext(settings, globalData, annotationMap);
-
-		renderContext.getIndentation().push("");
-		renderContext.getSectionData().push(renderContext.getGlobalData());
-
-		for (final Action action : actions) {
-			action.perform(renderContext, writer);
-		}
+	Section getSection() {
+		return section;
 	}
 
 	/**
@@ -80,10 +73,34 @@ public final class Template {
 	 * @param settings the settings used while rendering
 	 * @param globalData the global data used while rendering
 	 * @param writer the writer used to render the template
+	 * @param annotationMap the map used to process annotations
+	 * @return the writer passed to the render method
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	public void render(final Settings settings, final Map<String, Object> globalData, final Writer writer) throws IOException {
-		render(settings, globalData, writer, AnnotationHandlers.DEFAULT_ANNOTATIONS);
+	public Writer render(final Settings settings, final Map<String, Object> globalData, final Writer writer, final Map<String, AnnotationHandler> annotationMap) throws IOException {
+		final RenderContext renderContext = new RenderContext(settings, globalData, annotationMap);
+
+		renderContext.getIndentation().push("");
+		renderContext.getSectionData().push(renderContext.getGlobalData());
+
+		for (final Action action : actions) {
+			action.perform(renderContext, writer);
+		}
+
+		return writer;
+	}
+
+	/**
+	 * Renders the template to the specified writer using the specified context and global data. The global data is copied and will not be modified while rendering the template.
+	 *
+	 * @param settings the settings used while rendering
+	 * @param globalData the global data used while rendering
+	 * @param writer the writer used to render the template
+	 * @return the writer passed to the render method
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	public Writer render(final Settings settings, final Map<String, Object> globalData, final Writer writer) throws IOException {
+		return render(settings, globalData, writer, AnnotationHandlers.DEFAULT_ANNOTATIONS);
 	}
 
 }

@@ -11,6 +11,12 @@ public class TemplateTests {
 	private static final String LS = System.lineSeparator();
 
 	@Test
+	public void testBackreach() throws java.io.IOException, LoadException {
+		assertEquals("Original String" + LS, new horseshoe.TemplateLoader().load("Backreach", "{{#\"Original String\"}}\n{{#charAt(1)}}\n{{..}}\n{{/}}\n{{/}}").render(new horseshoe.Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("Original String" + LS, new horseshoe.TemplateLoader().load("Backreach", "{{#\"Original String\"}}\n{{#charAt(1)}}\n{{.././toString()}}\n{{/}}\n{{/}}").render(new horseshoe.Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+	}
+
+	@Test
 	public void testDuplicateSection() throws java.io.IOException, LoadException {
 		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Duplicate Section", "Names:\n{{#people}}\n - {{lastName}}, {{firstName}}\n{{/}}\n\nMailing Labels:\n{{#}}\n{{firstName}} {{lastName}}\n{{address}}\n{{city}}, {{state}} {{zip}}\n{{#.hasNext}}\n\n{{/}}\n{{/}}\n");
 
@@ -48,7 +54,13 @@ public class TemplateTests {
 		final java.io.StringWriter writer = new java.io.StringWriter();
 		template.render(settings, Collections.emptyMap(), writer);
 
-		assertEquals("Bob is 45 years old." + System.lineSeparator() + "Alice is 31 years old." + System.lineSeparator(), writer.toString());
+		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS, writer.toString());
+	}
+
+	@Test
+	public void testNamedExpressions() throws java.io.IOException, LoadException {
+		assertEquals("ORIGINAL STRING" + LS, new horseshoe.TemplateLoader().load("Upper", "{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n{{#charAt(1)}}\n{{upper(..)}}\n{{/}}\n{{/}}").render(new horseshoe.Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals(LS + "ORIGINAL STRING-original string" + LS, new horseshoe.TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n{{>a}}\n{{upper() + \"-\" + lower()}}\n{{/}}").render(new horseshoe.Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 }

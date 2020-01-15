@@ -14,10 +14,11 @@ final class Operator {
 	public static final int X_RIGHT_EXPRESSIONS = 0x00000004; // Has 0 or more comma-separated expressions on the right
 
 	public static final int METHOD_CALL         = 0x00000010; // Is a method call (starts with '.', ends with '(')
-	public static final int RIGHT_ASSOCIATIVITY = 0x00000020; // Is evaluated right to left
-	public static final int ALLOW_PAIRS         = 0x00000040; // Can contain pairs
-	public static final int NAVIGATION          = 0x00000080; // Is a navigation operator
-	public static final int SAFE                = 0x00000100; // Is a safe operator
+	public static final int KNOWN_OBJECT        = 0x00000020; // Has an associated known object
+	public static final int RIGHT_ASSOCIATIVITY = 0x00000040; // Is evaluated right to left
+	public static final int ALLOW_PAIRS         = 0x00000080; // Can contain pairs
+	public static final int NAVIGATION          = 0x00000100; // Is a navigation operator
+	public static final int SAFE                = 0x00000200; // Is a safe operator
 
 	private static final List<Operator> OPERATORS;
 	private static final Map<String, Operator> OPERATOR_LOOKUP = new LinkedHashMap<>();
@@ -29,7 +30,7 @@ final class Operator {
 		operators.add(new Operator("[",    0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal (Iterating)", "]", 0));
 		operators.add(new Operator("[",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Lookup", "]", 1));
 		operators.add(new Operator("?[",   0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | SAFE, "Safe Lookup", "]", 1));
-		operators.add(createMethod("(", false));
+		operators.add(createMethod("(", true));
 		operators.add(new Operator("(",    0,  RIGHT_EXPRESSION, "Parentheses", ")", 1));
 		operators.add(new Operator(".",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION, "Navigate"));
 		operators.add(new Operator("?.",   0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | SAFE, "Safe Navigate"));
@@ -74,11 +75,11 @@ final class Operator {
 	 * Gets the operator for the specified method name.
 	 *
 	 * @param name the name of the method
-	 * @param isSafe true to make a safe method, otherwise false
+	 * @param hasObject true if the method has an identified object, false if the object cannot be determined based on the context
 	 * @return the operator for the specified method name
 	 */
-	public static Operator createMethod(final String name, final boolean isSafe) {
-		return new Operator(name, 0, METHOD_CALL | X_RIGHT_EXPRESSIONS | (isSafe ? SAFE : 0), "Call Method", ")", 0);
+	public static Operator createMethod(final String name, final boolean hasObject) {
+		return new Operator(name, 0, METHOD_CALL | X_RIGHT_EXPRESSIONS | (hasObject ? KNOWN_OBJECT : 0), "Call Method", ")", 0);
 	}
 
 	/**

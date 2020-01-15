@@ -56,6 +56,7 @@ public class TemplateLoader {
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=");
 	private static final Pattern ANNOTATION = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL);
+	private static final Pattern NAMED_EXPRESSION = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?->\\s*");
 
 	/**
 	 * Creates a new template loader that is mustache-compatible
@@ -298,7 +299,7 @@ public class TemplateLoader {
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
 	public Template load(final String name) throws LoadException {
-		return load(name, new PersistentStack<Loader>(), 0);
+		return load(name, new PersistentStack<Loader>());
 	}
 
 	/**
@@ -306,11 +307,10 @@ public class TemplateLoader {
 	 *
 	 * @param name the name of the template to load
 	 * @param loaders the stack of items being loaded
-	 * @param recursionLevel the current recursion level of the loading template
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	private Template load(final String name, final PersistentStack<Loader> loaders, final int recursionLevel) throws LoadException {
+	private Template load(final String name, final PersistentStack<Loader> loaders) throws LoadException {
 		Template template = templates.get(name);
 
 		if (template == null) {
@@ -358,7 +358,7 @@ public class TemplateLoader {
 					}
 				}
 
-				loadTemplate(template, loaders, loader, recursionLevel);
+				loadTemplate(template, loaders, loader);
 			} catch (final IOException | RuntimeException e) {
 				if (throwOnPartialNotFound) {
 					throw new LoadException(loaders, "Template \"" + name + "\" could not be loaded: " + e.getMessage(), e);
@@ -379,12 +379,10 @@ public class TemplateLoader {
 	 * @param template the template to load
 	 * @param loaders the stack of items being loaded
 	 * @param loader the item being loaded
-	 * @param recursionLevel the current recursion level of the loading template
 	 * @throws LoadException if an error is encountered while loading the template
 	 * @throws IOException if an error is encountered while reading from a file or stream
 	 */
-	private void loadTemplate(final Template template, final PersistentStack<Loader> loaders, final Loader loader, final int recursionLevel) throws LoadException, IOException {
-		final Map<String, Template> rootLocalPartials = new HashMap<>();
+	private void loadTemplate(final Template template, final PersistentStack<Loader> loaders, final Loader loader) throws LoadException, IOException {
 		final PersistentStack<Section> sections = new PersistentStack<>();
 		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
 
@@ -392,17 +390,18 @@ public class TemplateLoader {
 		StaticContentRenderer textBeforeStandaloneTag = EMPTY_STATIC_CONTENT_RENDERER;
 
 		loaders.push(loader);
+		sections.push(template.getSection());
 		actionStack.push(template.getActions());
 
 		// Parse all tags
-		while (true) {
+		for (int tags = 0; true; tags++) {
 			// Get text before this tag
 			final List<ParsedLine> lines = new ArrayList<>();
 			final CharSequence freeText = loader.next(delimiter.start, lines);
 			final int length = freeText.length();
 
 			if (length == 0) {
-				if (!template.getActions().isEmpty()) {
+				if (tags != 0) {
 					// The text can only be following a stand-alone tag if it is at the very end of the template
 					if (!loader.hasNext() && textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
 						textBeforeStandaloneTag.ignoreLastLine();
@@ -436,33 +435,35 @@ public class TemplateLoader {
 			}
 
 			// Parse the expression
-			final CharSequence expression = loader.next(loader.checkNext("{") ? delimiter.unescapedEnd : delimiter.end, null);
+			final CharSequence tag = loader.next(loader.checkNext("{") ? delimiter.unescapedEnd : delimiter.end, null);
 
 			if (!loader.hasNext()) {
 				throw new LoadException(loaders, "Unclosed tag, unexpected end of stream");
 			}
 
-			if (expression.length() != 0) {
+			if (tag.length() != 0) {
 				try {
-					switch (expression.charAt(0)) {
+					switch (tag.charAt(0)) {
 					case '!': // Comments are completely ignored
 						break;
 
 					case '<': { // Local partial
-						final String name = CharSequenceUtils.trim(expression, 1, expression.length()).toString();
+						final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
 						final Template partial = new Template(name);
-						final Map<String, Template> localPartials = sections.isEmpty() ? rootLocalPartials : sections.peek().getLocalPartials();
+						final Map<String, Template> localPartials = sections.peek().getLocalPartials();
 
 						localPartials.put(name, partial);
-						sections.push(new Section(name, localPartials));
+						sections.push(partial.getSection());
 						actionStack.push(partial.getActions());
 						break;
 					}
 
 					case '>': { // Load partial
-						final String name = CharSequenceUtils.trim(expression, 1, expression.length()).toString();
-						final Template localPartial = sections.isEmpty() ? rootLocalPartials.get(name) : sections.peek().getLocalPartials().get(name);
-						final Template partial = localPartial == null ? load(name, loaders, recursionLevel + sections.size()) : localPartial;
+						final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
+						final Template localPartial = sections.peek().getLocalPartials().get(name);
+						final Template partial = (localPartial != null ? localPartial : load(name, loaders));
+
+						sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
 
 						if (textBeforeStandaloneTag != null) {
 							actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag));
@@ -474,19 +475,18 @@ public class TemplateLoader {
 					}
 
 					case '#': { // Start a new section, or repeat the previous section
-						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
-						final Map<String, Template> localPartials = sections.isEmpty() ? rootLocalPartials : sections.peek().getLocalPartials();
+						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
-						if (sectionExpression.length() == 0) { // Repeat the previous section
+						if (expression.length() == 0) { // Repeat the previous section
 							if (!sections.hasPoppedItem()) {
 								throw new LoadException(loaders, "Repeat section without prior section");
 							}
 
 							final Section previousSection = sections.push();
 
-							sections.replace(new Section("", previousSection.getExpression(), null, localPartials, false));
-						} else if (sectionExpression.charAt(0) == '@') { // Annotation section
-							final Matcher annotation = ANNOTATION.matcher(sectionExpression);
+							sections.replace(new Section(sections.peek(), "", previousSection.getExpression(), null, false));
+						} else if (expression.charAt(0) == '@') { // Annotation section
+							final Matcher annotation = ANNOTATION.matcher(expression);
 
 							if (!annotation.matches()) {
 								throw new LoadException(loaders, "Invalid annotation format");
@@ -496,9 +496,9 @@ public class TemplateLoader {
 							final String parameters = annotation.group("parameters");
 
 							// Load the annotation arguments
-							sections.push(new Section(sectionName, parameters == null ? null : new Expression(parameters, false, sections.size()), sectionName.substring(1), localPartials, true));
+							sections.push(new Section(sections.peek(), sectionName, parameters == null ? null : new Expression(loader.toLocationString(), parameters, sections.peek().getNamedExpressions(), false), sectionName.substring(1), true));
 						} else { // Start a new section
-							sections.push(new Section(new Expression(sectionExpression, useSimpleExpressions, sections.size()), localPartials));
+							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), useSimpleExpressions)));
 						}
 
 						// Add a new render section action
@@ -508,16 +508,16 @@ public class TemplateLoader {
 					}
 
 					case '^': { // Start a new inverted section, or else block for the current section
-						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
-						if (sectionExpression.length() == 0) { // Else block for the current section
+						if (expression.length() == 0) { // Else block for the current section
 							if (sections.isEmpty() || (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null)) {
 								throw new LoadException(loaders, "Section else tag outside section start tag");
 							}
 
 							actionStack.pop();
 						} else { // Start a new inverted section
-							sections.push(new Section(new Expression(sectionExpression, useSimpleExpressions, sections.size()), sections.isEmpty() ? rootLocalPartials : sections.peek().getLocalPartials()));
+							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), useSimpleExpressions)));
 							actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
 						}
 
@@ -529,15 +529,15 @@ public class TemplateLoader {
 					}
 
 					case '/': { // Close the current section
-						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
-						if (sections.isEmpty()) {
+						if (sections.size() <= 1) { // There should always be at least one section on the stack (the template root section)
 							throw new LoadException(loaders, "Section close tag without matching section start tag");
 						}
 
 						final Section section = sections.pop();
 
-						if (sectionExpression.length() != 0 && !section.getName().contentEquals(sectionExpression)) {
+						if (expression.length() != 0 && !section.getName().contentEquals(expression)) {
 							throw new LoadException(loaders, "Unmatched section start tag, expecting \"" + section.getName() + "\"");
 						}
 
@@ -546,7 +546,7 @@ public class TemplateLoader {
 					}
 
 					case '=': { // Set delimiter
-						final Matcher matcher = SET_DELIMITER.matcher(expression);
+						final Matcher matcher = SET_DELIMITER.matcher(tag);
 
 						if (!matcher.matches()) {
 							throw new LoadException(loaders, "Invalid set delimiter tag");
@@ -558,28 +558,45 @@ public class TemplateLoader {
 
 					case '{':
 					case '&': {
-						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 1, expression.length());
+						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(sectionExpression, useSimpleExpressions, sections.size()), false));
+						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), useSimpleExpressions), false));
 						break;
 					}
 
 					default:
-						final CharSequence sectionExpression = CharSequenceUtils.trim(expression, 0, expression.length());
+						final CharSequence expression = CharSequenceUtils.trim(tag, 0, tag.length());
+
+						// Check for a named expression
+						if (!useSimpleExpressions) {
+							final Matcher namedExpression = NAMED_EXPRESSION.matcher(expression);
+
+							if (namedExpression.lookingAt()) {
+								sections.peek().getNamedExpressions().put(namedExpression.group("name"), new Expression(loader.toLocationString(), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), false));
+								break;
+							}
+						}
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(sectionExpression, useSimpleExpressions, sections.size()), true));
+						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), useSimpleExpressions), true));
 						break;
 					}
 				} catch (final Exception e) {
-					throw new LoadException(loaders, "Invalid expression: " + expression, e);
+					if (e instanceof LoadException) {
+						throw (LoadException)e;
+					} else {
+						throw new LoadException(loaders, "Invalid tag \"" + tag + "\"", e);
+					}
 				}
 			}
 		}
 
+		// Pop off the top section (should be the template root section) and verify that the section stack is empty
+		final Section topSection = sections.pop();
+
 		if (!sections.isEmpty()) {
-			throw new LoadException(loaders, "Unmatched section tag \"" + sections.peek().toString() + "\", unexpected end of stream");
+			throw new LoadException(loaders, "Unmatched section tag \"" + topSection.toString() + "\", unexpected end of stream");
 		}
 
 		// Check for empty last line of template, so that indentation is not applied

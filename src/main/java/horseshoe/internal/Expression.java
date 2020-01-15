@@ -26,10 +26,25 @@ public final class Expression {
 		/**
 		 * Logs the specified error.
 		 *
+		 * @param expression the expression that cause the error
 		 * @param error the error to log
 		 */
-		public void log(final Throwable error);
+		public void log(final Expression expression, final Throwable error);
 	}
+
+	/**
+	 * A stderr logger.
+	 */
+	public static final ErrorLogger STDERR_LOGGER = new ErrorLogger() {
+		@Override
+		public void log(final Expression expression, final Throwable error) {
+			if (error.getMessage() == null) {
+				System.err.println("Encountered " + error.getClass().getName() + " while evaluating expression \"" + expression.originalString + "\" (" + expression.location + ")");
+			} else {
+				System.err.println("Encountered " + error.getClass().getName() + " while evaluating expression \"" + expression.originalString + "\" (" + expression.location + "): " + error.getMessage());
+			}
+		}
+	};
 
 	public static interface Indexed {
 		/**
@@ -48,23 +63,27 @@ public final class Expression {
 	}
 
 	public static abstract class Evaluable {
-		public static final byte LOAD_IDENTIFIERS = ALOAD_1;
-		public static final byte LOAD_CONTEXT = ALOAD_2;
-		public static final byte LOAD_ACCESS = ALOAD_3;
-		public static final byte LOAD_INDEXES[] = new byte[] { ALOAD, 4 };
-		public static final int FIRST_LOCAL = 5;
+		public static final byte LOAD_EXPRESSIONS = ALOAD_1;
+		public static final byte LOAD_IDENTIFIERS = ALOAD_2;
+		public static final byte LOAD_CONTEXT = ALOAD_3;
+		public static final byte LOAD_ACCESS[] = new byte[] { ALOAD, 4 };
+		public static final byte LOAD_INDEXES[] = new byte[] { ALOAD, 5 };
+		public static final byte LOAD_ERROR_LOGGER[] = new byte[] { ALOAD, 6 };
+		public static final int FIRST_LOCAL = 7;
 
 		/**
 		 * Evaluates the object using the specified parameters.
 		 *
+		 * @param expressions the expressions used to evaluate the object
 		 * @param identifiers the identifiers used to evaluate the object
 		 * @param context the context used to evaluate the object
 		 * @param access the access to the context used to evaluate the object
 		 * @param indices the indexed objects used to evaluate the object
+		 * @param errorLogger the error logger to use while evaluating this expression
 		 * @return the result of evaluating the object
 		 * @throws ReflectiveOperationException if an error occurs while evaluating the reflective parts of the object
 		 */
-		public abstract Object evaluate(final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indices) throws ReflectiveOperationException;
+		public abstract Object evaluate(final Expression expressions[], final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indices, final ErrorLogger errorLogger) throws ReflectiveOperationException;
 	}
 
 	@SuppressWarnings("serial")
@@ -88,8 +107,10 @@ public final class Expression {
 
 	// Reflected Methods
 	private static final Method ACCESSOR_LOOKUP;
-	private static final Method IDENTIFIER_GET_VALUE;
+	private static final Method EXPRESSION_EVALUATE;
 	private static final Method IDENTIFIER_GET_VALUE_BACKREACH;
+	private static final Method IDENTIFIER_GET_VALUE_BACKREACH_METHOD;
+	private static final Method IDENTIFIER_GET_VALUE;
 	private static final Method IDENTIFIER_GET_VALUE_METHOD;
 	private static final Method INDEXED_GET_INDEX;
 	private static final Method INDEXED_HAS_NEXT;
@@ -99,6 +120,8 @@ public final class Expression {
 	private static final Constructor<LinkedHashMap> LINKED_HASH_MAP_CTOR_INT;
 	private static final Method MAP_PUT;
 	private static final Method PERSISTENT_STACK_PEEK;
+	private static final Method PERSISTENT_STACK_POP;
+	private static final Method PERSISTENT_STACK_PUSH_OBJECT;
 	private static final Method STRING_BUILDER_APPEND_OBJECT;
 	private static final Constructor<StringBuilder> STRING_BUILDER_INIT_STRING;
 	private static final Method STRING_VALUE_OF;
@@ -106,8 +129,10 @@ public final class Expression {
 	static {
 		try {
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
-			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
+			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", PersistentStack.class, Settings.ContextAccess.class, PersistentStack.class, ErrorLogger.class);
 			IDENTIFIER_GET_VALUE_BACKREACH = Identifier.class.getMethod("getValue", PersistentStack.class, Settings.ContextAccess.class);
+			IDENTIFIER_GET_VALUE_BACKREACH_METHOD = Identifier.class.getMethod("getValue", PersistentStack.class, Settings.ContextAccess.class, Object[].class);
+			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
 			INDEXED_GET_INDEX = Indexed.class.getMethod("getIndex");
 			INDEXED_HAS_NEXT = Indexed.class.getMethod("hasNext");
@@ -115,6 +140,8 @@ public final class Expression {
 			LINKED_HASH_MAP_CTOR_INT = LinkedHashMap.class.getConstructor(int.class);
 			MAP_PUT = Map.class.getMethod("put", Object.class, Object.class);
 			PERSISTENT_STACK_PEEK = PersistentStack.class.getMethod("peek", int.class);
+			PERSISTENT_STACK_POP = PersistentStack.class.getMethod("pop");
+			PERSISTENT_STACK_PUSH_OBJECT = PersistentStack.class.getMethod("push", Object.class);
 			STRING_BUILDER_APPEND_OBJECT = StringBuilder.class.getMethod("append", Object.class);
 			STRING_BUILDER_INIT_STRING = StringBuilder.class.getConstructor(String.class);
 			STRING_VALUE_OF = String.class.getMethod("valueOf", Object.class);
@@ -125,7 +152,7 @@ public final class Expression {
 
 	// The patterns used for parsing the grammar
 	private static final Pattern IDENTIFIER_BACKREACH_PATTERN = Pattern.compile("(?<backreach>(?:[.][.]/)+)");
-	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<current>(?:[.]/)*)(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`)[(]?)\\s*");
+	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<current>(?:[.]/)*)(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`|[.][.])[(]?)\\s*");
 	private static final Pattern INTERNAL_PATTERN = Pattern.compile("(?:[.]/)*(?<identifier>[.]\\p{L}*)\\s*");
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*");
 	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))\\s*");
@@ -162,37 +189,60 @@ public final class Expression {
 	/**
 	 * Processes the specified operation. The operand stack will be updated with the results of evaluating the operator.
 	 *
-	 * @param identifiers the identifiers for the expression
+	 * @param namedExpressions the map used to lookup named expressions
 	 * @param operands the operand stack for the expression
 	 * @param operator the operator to evaluate
 	 */
-	private static void processOperation(final HashMap<Identifier, Integer> identifiers, final PersistentStack<Operand> operands, final Operator operator) {
+	private static void processOperation(final Map<String, Expression> namedExpressions, final Map<Expression, Integer> expressions, final PersistentStack<Operand> operands, final Operator operator) {
 		final Operand right;
 
 		if (operator.has(Operator.NAVIGATION)) { // Navigation operator is handled during parsing
 			return;
 		} else if (operator.has(Operator.METHOD_CALL)) { // Check for a method call
-			final MethodBuilder object = operands.peek(operator.getRightExpressions() + 1).builder;
-			final Label end = object.newLabel();
+			if (!operator.has(Operator.KNOWN_OBJECT) && operator.getRightExpressions() <= 1) {
+				final Expression namedExpression = namedExpressions.get(operator.getString());
 
-			if (operator.has(Operator.SAFE)) {
-				object.addCode(DUP).addBranch(IFNULL, end);
-			}
+				// Check for a named expression
+				if (namedExpression != null) {
+					final MethodBuilder expressionResult = new MethodBuilder();
+					Integer index = expressions.get(namedExpression);
 
-			object.append(operands.peek(operator.getRightExpressions()).builder).addCode(SWAP);
+					if (index == null) {
+						index = expressions.size();
+						expressions.put(namedExpression, index);
+					}
 
-			if (operator.getRightExpressions() == 0) {
-				object.addCode(ACONST_NULL);
-			} else {
-				object.pushNewObject(Object.class, operator.getRightExpressions());
+					// Load the context and evaluate the expression
+					if (operator.getRightExpressions() != 0) {
+						expressionResult.addCode(Evaluable.LOAD_CONTEXT).append(operands.peek().toObject(false)).addInvoke(PERSISTENT_STACK_PUSH_OBJECT);
+					}
 
-				// Convert all parameters to objects and store them in the array
-				for (int i = 0; i < operator.getRightExpressions(); i++) {
-					object.addCode(DUP).pushConstant(i).append(operands.peek(operator.getRightExpressions() - 1 - i).toObject(false)).addCode(AASTORE);
+					expressionResult.addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS).addCode(Evaluable.LOAD_INDEXES).addCode(Evaluable.LOAD_ERROR_LOGGER).addInvoke(EXPRESSION_EVALUATE);
+
+					if (operator.getRightExpressions() != 0) {
+						expressionResult.addCode(Evaluable.LOAD_CONTEXT).addInvoke(PERSISTENT_STACK_POP).addCode(POP);
+					}
+
+					operands.pop(operator.getRightExpressions() + 2).push(new Operand(Object.class, expressionResult));
+					return;
 				}
 			}
 
-			operands.pop(operator.getRightExpressions() + 2).push(new Operand(Object.class, object.addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(end)));
+			// Get and invoke the appropriate method
+			final MethodBuilder methodResult = operands.peek(operator.getRightExpressions()).builder;
+
+			if (operator.getRightExpressions() == 0) {
+				methodResult.addCode(ACONST_NULL);
+			} else {
+				methodResult.pushNewObject(Object.class, operator.getRightExpressions());
+
+				// Convert all parameters to objects and store them in the array
+				for (int i = 0; i < operator.getRightExpressions(); i++) {
+					methodResult.addCode(DUP).pushConstant(i).append(operands.peek(operator.getRightExpressions() - 1 - i).toObject(false)).addCode(AASTORE);
+				}
+			}
+
+			operands.push(new Operand(Object.class, methodResult.append(operands.pop(operator.getRightExpressions() + 1).pop().builder)));
 			return;
 		} else if (operator.has(Operator.RIGHT_EXPRESSION)) {
 			right = operands.pop();
@@ -357,14 +407,14 @@ public final class Expression {
 			final Label notZero = left.builder.newLabel();
 			final Label end = left.builder.newLabel();
 
-			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_0).addBranch(GOTO, end).updateLabel(notZero).append(right.builder).updateLabel(end)));
+			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_0).addBranch(GOTO, end).updateLabel(notZero).append(right.toBoolean()).updateLabel(end)));
 			break;
 		}
 		case "||": {
 			final Label zero = left.builder.newLabel();
 			final Label end = left.builder.newLabel();
 
-			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFEQ, zero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(zero).append(right.builder).updateLabel(end)));
+			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFEQ, zero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(zero).append(right.toBoolean()).updateLabel(end)));
 			break;
 		}
 
@@ -430,32 +480,44 @@ public final class Expression {
 		}
 	}
 
+	/**
+	 * Unescapes a quoted identifier name
+	 *
+	 * @param rawIdentifier the escaped name of the identifier
+	 * @return the unescaped name of the identifier
+	 */
+	private static String unescapeQuotedIdentifier(final String rawIdentifier) {
+		final StringBuilder sb = new StringBuilder(rawIdentifier.length());
+		int i = 0;
+
+		for (int end = rawIdentifier.indexOf('\\', i); end >= 0; i = end + 1, end = rawIdentifier.indexOf('\\', i + 1)) {
+			sb.append(rawIdentifier, i, end);
+		}
+
+		return sb.append(rawIdentifier.substring(i)).toString();
+	}
+
+	private final String location;
 	private final String originalString;
+	private final Expression expressions[];
 	private final Identifier identifiers[];
 	private final Evaluable evaluable;
-	private ErrorLogger errorLogger = new ErrorLogger() {
-		@Override
-		public void log(final Throwable error) {
-			if (error.getMessage() == null) {
-				System.err.println("Encountered " + error.getClass().getName() + " while processing expression \"" + originalString + "\"");
-			} else {
-				System.err.println("Encountered " + error.getClass().getName() + " while processing expression \"" + originalString + "\": " + error.getMessage());
-			}
-		}
-	};
 
 	/**
 	 * Creates a new expression.
 	 *
+	 * @param location the location of the expression
 	 * @param expressionString the trimmed, advanced expression string
+	 * @param namedExpressions the map used to lookup named expressions
 	 * @param simpleExpression true to parse as a simple expression, false to parse as an advanced expression
-	 * @param maxBackreach the maximum backreach allowed by the expression
 	 * @throws ReflectiveOperationException if an error occurs while resolving the reflective parts of the expression
 	 */
-	public Expression(final CharSequence expressionString, final boolean simpleExpression, final int maxBackreach) throws ReflectiveOperationException {
+	public Expression(final String location, final CharSequence expressionString, final Map<String, Expression> namedExpressions, final boolean simpleExpression) throws ReflectiveOperationException {
+		final HashMap<Expression, Integer> expressions = new HashMap<>();
 		final HashMap<Identifier, Integer> identifiers = new HashMap<>();
 		final PersistentStack<Operand> operands = new PersistentStack<>();
 
+		this.location = location;
 		this.originalString = expressionString.toString();
 
 		if (".".equals(this.originalString)) {
@@ -505,72 +567,79 @@ public final class Expression {
 					}
 
 					backreach = matcher.group("backreach").length() / 3;
-
-					if (backreach > maxBackreach) {
-						throw new RuntimeException("Backreach too far (max: " + maxBackreach + ") in expression at offset " + matcher.regionStart());
-					}
-
 					matcher.region(matcher.end(), length);
 				}
 
 				// Check for identifier or literals
 				if (!hasLeftExpression && matcher.usePattern(IDENTIFIER_PATTERN).lookingAt()) { // Identifier
-					final int literalBackreach = backreach;
 					token = matcher.group("identifier");
 
-					if (backreach == 0 && matcher.group("current").length() == 0) {
-						backreach = Identifier.UNSPECIFIED_BACKREACH;
-					}
-
-					// Check for keywords that look like literals
-					if (backreach < 0 && !lastNavigation && "true".equals(token)) {
-						operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(1)));
-					} else if (backreach < 0 && !lastNavigation && "false".equals(token)) {
-						operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(0)));
-					} else if (backreach < 0 && !lastNavigation && "null".equals(token)) {
-						operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
-					} else if (token.endsWith("(")) { // Method
-						final String name = token.startsWith("`") ? token.substring(1, token.length() - 2).replaceAll("\\\\(.)", "\\1") : token.substring(0, token.length() - 1);
-						final Identifier identifier = new Identifier(backreach, name, true);
-						Integer index = identifiers.get(identifier);
-
-						if (index == null) {
-							index = identifiers.size();
-							identifiers.put(identifier, index);
+					if ("..".equals(token)) {
+						operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach + 1).addInvoke(PERSISTENT_STACK_PEEK)));
+					} else {
+						if (backreach == 0 && matcher.group("current").length() == 0) {
+							backreach = Identifier.UNSPECIFIED_BACKREACH;
 						}
 
-						if (!lastNavigation) {
-							// Create a new output formed by invoking identifiers[index].getValue(context.peek(backreach), ...)
-							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(literalBackreach).addInvoke(PERSISTENT_STACK_PEEK)));
-							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD)));
-							lastOperator = operators.push(Operator.createMethod(name, false));
-						} else {
-							// Create a new output formed by invoking identifiers[index].getValue(object, ...)
-							operands.push(new Operand(Object.class, operands.pop().toObject(false)));
-							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD)));
-							lastOperator = operators.push(Operator.createMethod(name, lastOperator.has(Operator.SAFE)));
-						}
+						// Check for keywords that look like literals
+						if (backreach < 0 && !lastNavigation && "true".equals(token)) {
+							operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(1)));
+						} else if (backreach < 0 && !lastNavigation && "false".equals(token)) {
+							operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(0)));
+						} else if (backreach < 0 && !lastNavigation && "null".equals(token)) {
+							operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
+						} else if (token.endsWith("(")) { // Method
+							final String name = token.startsWith("`") ? unescapeQuotedIdentifier(token.substring(1, token.length() - 2)) : token.substring(0, token.length() - 1);
+							final Identifier identifier = new Identifier(backreach, name, true);
+							Integer index = identifiers.get(identifier);
 
-						continue nextToken;
-					} else { // Identifier
-						final String name = token.startsWith("`") ? token.substring(1, token.length() - 1).replaceAll("\\\\(.)", "\\1") : token;
-						final Identifier identifier = new Identifier(backreach, name, false);
-						Integer index = identifiers.get(identifier);
+							if (index == null) {
+								index = identifiers.size();
+								identifiers.put(identifier, index);
+							}
 
-						if (index == null) {
-							index = identifiers.size();
-							identifiers.put(identifier, index);
-						}
+							if (!lastNavigation) {
+								// Create a new output formed by invoking identifiers[index].getValue(context, access, ...)
+								operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_VALUE_BACKREACH_METHOD)));
+								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS)));
+								lastOperator = operators.push(Operator.createMethod(name, backreach >= 0));
+							} else {
+								// Create a new output formed by invoking identifiers[index].getValue(object, ...)
+								final MethodBuilder objectBuilder = operands.pop().toObject(false);
+								final Label skipFunc = objectBuilder.newLabel();
 
-						if (!lastNavigation) {
-							// Create a new output formed by invoking identifiers[index].getValue(context, access)
-							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_VALUE_BACKREACH)));
-							// Create a new output formed by invoking identifiers[index].getValue(object)
-						} else if (operators.pop().has(Operator.SAFE)) {
-							final Label end = operands.peek().builder.newLabel();
-							operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
-						} else {
-							operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
+								operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(skipFunc)));
+
+								if (lastOperator.has(Operator.SAFE)) {
+									operands.push(new Operand(Object.class, objectBuilder.addCode(DUP).addBranch(IFNULL, skipFunc).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP)));
+								} else {
+									operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).append(objectBuilder)));
+								}
+
+								lastOperator = operators.push(Operator.createMethod(name, true));
+							}
+
+							continue nextToken;
+						} else { // Identifier
+							final String name = token.startsWith("`") ? unescapeQuotedIdentifier(token.substring(1, token.length() - 1)) : token;
+							final Identifier identifier = new Identifier(backreach, name, false);
+							Integer index = identifiers.get(identifier);
+
+							if (index == null) {
+								index = identifiers.size();
+								identifiers.put(identifier, index);
+							}
+
+							if (!lastNavigation) {
+								// Create a new output formed by invoking identifiers[index].getValue(context, access)
+								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_VALUE_BACKREACH)));
+							} else if (operators.pop().has(Operator.SAFE)) {
+								// Create a new output formed by invoking identifiers[index].getValue(object)
+								final Label end = operands.peek().builder.newLabel();
+								operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
+							} else {
+								operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
+							}
 						}
 					}
 				} else if (!hasLeftExpression && matcher.usePattern(INTERNAL_PATTERN).lookingAt()) { // Internal identifier
@@ -580,7 +649,7 @@ public final class Expression {
 						operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
 					} else if (".isFirst".equals(token)) {
 						operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
-						processOperation(identifiers, operands, Operator.get("!"));
+						processOperation(namedExpressions, expressions, operands, Operator.get("!"));
 					} else if (".hasNext".equals(token)) {
 						operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_HAS_NEXT)));
 					} else if (".".equals(token)) {
@@ -694,7 +763,7 @@ public final class Expression {
 								throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + operators.peek().getClosingString() + "'");
 							}
 
-							processOperation(identifiers, operands, operators.pop());
+							processOperation(namedExpressions, expressions, operands, operators.pop());
 						}
 
 						if (!operators.isEmpty() && operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
@@ -723,18 +792,18 @@ public final class Expression {
 										closedOperator = closedOperator.addRightExpression();
 									}
 
-									processOperation(identifiers, operands, closedOperator);
+									processOperation(namedExpressions, expressions, operands, closedOperator);
 								} else if (!hasLeftExpression) { // Check for empty expressions
 									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
 								} else if (closedOperator.has(Operator.LEFT_EXPRESSION)) { // If the token is not a parenthetical, process the operation
-									processOperation(identifiers, operands, closedOperator);
+									processOperation(namedExpressions, expressions, operands, closedOperator);
 								}
 
 								lastOperator = closedOperator.getClosingOperator();
 								continue nextToken;
 							}
 
-							processOperation(identifiers, operands, operators.pop());
+							processOperation(namedExpressions, expressions, operands, operators.pop());
 						}
 					}
 
@@ -757,14 +826,19 @@ public final class Expression {
 					throw new RuntimeException("Unexpected end of expression, expecting '" + operators.peek().getClosingString() + "' (unmatched '" + operators.peek().getString() + "')");
 				}
 
-				processOperation(identifiers, operands, operators.pop());
+				processOperation(namedExpressions, expressions, operands, operators.pop());
 			}
 		}
 
 		// Populate all the identifiers and create the evaluator
+		this.expressions = new Expression[expressions.size()];
 		this.identifiers = new Identifier[identifiers.size()];
 		this.evaluable = operands.pop().toObject(true).load(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		assert operands.isEmpty();
+
+		for (final Entry<Expression, Integer> entry : expressions.entrySet()) {
+			this.expressions[entry.getValue()] = entry.getKey();
+		}
 
 		for (final Entry<Identifier, Integer> entry : identifiers.entrySet()) {
 			this.identifiers[entry.getValue()] = entry.getKey();
@@ -781,32 +855,22 @@ public final class Expression {
 	}
 
 	/**
-	 * Evaluates the expression using the given context, global data, and access.
+	 * Evaluates the expression using the given context and access.
 	 *
 	 * @param context the context used to evaluate the object
 	 * @param access the access to the context used to evaluate the object
 	 * @param indices the indexed objects used to evaluate the object
+	 * @param errorLogger the error logger to use while evaluating this expression
 	 * @return the evaluated expression or null if the expression could not be evaluated
 	 */
-	public Object evaluate(final PersistentStack<Object> context, final Settings.ContextAccess access, final PersistentStack<Indexed> indices) {
+	public Object evaluate(final PersistentStack<Object> context, final Settings.ContextAccess access, final PersistentStack<Indexed> indices, final ErrorLogger errorLogger) {
 		try {
-			return evaluable.evaluate(identifiers, context, access, indices);
+			return evaluable.evaluate(expressions, identifiers, context, access, indices, errorLogger);
 		} catch (final Throwable t) { // Don't let any exceptions escape
-			errorLogger.log(t);
+			errorLogger.log(this, t);
 		}
 
 		return null;
-	}
-
-	/**
-	 * Sets the error logger for the expression.
-	 *
-	 * @param errorLogger the error logger to use for this expression
-	 * @return this expression
-	 */
-	public Expression setErrorLogger(final ErrorLogger errorLogger) {
-		this.errorLogger = errorLogger;
-		return this;
 	}
 
 	@Override

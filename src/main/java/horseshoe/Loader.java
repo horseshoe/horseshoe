@@ -286,6 +286,15 @@ public final class Loader implements AutoCloseable {
 		return next(lines);
 	}
 
+	/**
+	 * Gets the appropriate location string of the form file:line.
+	 *
+	 * @return the location string
+	 */
+	public String toLocationString() {
+		return (file == null ? name : file.toString()) + ":" + location.line;
+	}
+
 	@Override
 	public String toString() {
 		return name;
