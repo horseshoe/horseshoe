@@ -3,6 +3,10 @@
 # Horseshoe
 Horseshoe for Java
 
+![](https://github.com/nicklauslittle/horseshoe-j/workflows/Build/badge.svg)
+[![Codacy](https://api.codacy.com/project/badge/Grade/07cec89cb05f4ed4ba8759f6ad8bdc97)](https://www.codacy.com/manual/nicklaus.little/horseshoe-j?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nicklauslittle/horseshoe-j&amp;utm_campaign=Badge_Grade)
+[![Coverity](https://scan.coverity.com/projects/20222/badge.svg)](https://scan.coverity.com/projects/nicklauslittle-horseshoe-j)
+
 ## Goals
 * Mustache-like templates for source code
 * Allow method calls and processing of returned values
@@ -19,12 +23,12 @@ Horseshoe uses the same tags as Mustache. These tags have the same meaning as th
 Horseshoe does not have the same design goals as Mustache, resulting in many different decisions when creating the specification. For example, Horseshoe was designed for generation of source code, not HTML. For this reason, the default escape function does not escape HTML (unless the context is created with `horseshoe.Context.newMustacheContext()`). Other differences include a more complex expression syntax ("interpolation" in Mustache-speak) and support for method calls in expressions.
 
 ### Does Horseshoe support Mustache lambdas?
-Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an expression syntax that supports method calls.
+Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an expression syntax that supports method calls. Expressions can be named and reused to support similar functionality to Mustache lambdas.
 
 ### Which operators are supported by Horseshoe expressions?
 Precedence | Operators | Associativity
 ---------- | --------- | -------------
-0 | <code>{</code>a?<code>}</code> (Array / Map Literal), <br><code>[</code>a?<code>]</code> (Array / Map Literal (Iterating)), <br>a<code>[</code>b<code>]</code> (Lookup), <br>a<code>?[</code>b<code>]</code> (Safe Lookup), <br>a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate), <br>a<code>?.</code>b (Safe Navigate) | Left-to-right
+0 | <code>{</code>a?<code>}</code> (Array / Map Literal (Iterating)), <br><code>[</code>a?<code>]</code> (Array / Map Literal), <br><code>[:]</code> (Empty Map), <br>a<code>[</code>b<code>]</code> (Lookup), <br>a<code>?[</code>b<code>]</code> (Safe Lookup), <br>a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate), <br>a<code>?.</code>b (Safe Navigate) | Left-to-right
 2 | <code>+</code>a (Unary Plus), <br><code>-</code>a (Unary Minus), <br><code>~</code>a (Bitwise Negate), <br><code>!</code>a (Logical Negate) | Right-to-left
 3 | a<code>..</code>b (Range) | Left-to-right
 4 | a<code>*</code>b (Multiply), <br>a<code>/</code>b (Divide), <br>a<code>%</code>b (Modulus) | Left-to-right
@@ -38,7 +42,13 @@ Precedence | Operators | Associativity
 12 | a<code>&&</code>b (Logical And) | Left-to-right
 13 | a<code>&#124;&#124;</code>b (Logical Or) | Left-to-right
 14 | a<code>?:</code>b (Null Coalesce), <br>a<code>??</code>b (Null Coalesce (Alternate)), <br>a<code>?</code>b (Ternary), <br>a<code>:</code>b (Pair) | Right-to-left
-16 | a<code>,</code>b (Statement Separator) | Left-to-right
+16 | a<code>,</code>b? (Array / Map Separator), <br>a<code>;</code>b (Statement Separator) | Left-to-right
+
+### What extension should be used for Horseshoe template files?
+Horseshoe supports any file extension for template files. However, convention is to use a capital "U", which resembles a horseshoe.
+
+### How is whitespace within a template handled by Horseshoe?
+Horseshoe uses the same whitespace paradigm as Mustache. All tags except for content (and unescaped content) and partial tags qualify for consideration as standalone tags, meaning only whitespace and that tag occur on a single line. In this case, the entire line is excluded from output and only processed by Horseshoe.
 
 ## Example
 First, a template is loaded using the template loader class. Templates can be loaded from a string, a file, or a reader.
@@ -63,3 +73,21 @@ final java.io.StringWriter writer = new java.io.StringWriter();
 template.render(settings, data, writer);
 System.out.println(writer.toString()); // Prints "Hello, world!"
 ```
+
+## Description
+Horseshoe is a Mustache-like templating system focused on fast source code generation. It is written in Java with an emphasis on minimizing dependencies.
+
+### Tags
+Horseshoe uses "tags" to specify dynamic parts of a template. The tags typically start with `{{` and end with `}}`. Those familiar with Mustache will recognize the majority of the tags used by Horseshoe.
+
+#### Comment (`{{! ignore this}}`)
+
+#### Content (`{{content}}`)
+#### Unescaped Content (`{{{content}}}`, `{{& content}}`)
+#### Partial (`{{> partial}}`)
+#### Set Delimiter (`{{=<% %>=}}`)
+#### Section (`{{# map}}`)
+#### Inverted Section (`{{^ exists}}`)
+#### Inline Partial (`{{< partial}}`)
+
+### Expressions
