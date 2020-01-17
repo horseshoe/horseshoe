@@ -47,15 +47,6 @@ public final class Identifier {
 	}
 
 	/**
-	 * Gets the backreach of the identifier.
-	 *
-	 * @return the backreach of the identifier
-	 */
-	public int getBackreach() {
-		return backreach;
-	}
-
-	/**
 	 * Gets the name of the identifier.
 	 *
 	 * @return the name of the identifier

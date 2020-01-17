@@ -19,6 +19,9 @@ final class Operator {
 	public static final int ALLOW_PAIRS         = 0x00000080; // Can contain pairs
 	public static final int NAVIGATION          = 0x00000100; // Is a navigation operator
 	public static final int SAFE                = 0x00000200; // Is a safe operator
+	public static final int IGNORE_TRAILING     = 0x00000400; // Trailing operators should be ignored
+
+	private static final int CONTAINER          = 0x00000800; // Is a container (has an ending match or comma separator)
 
 	private static final List<Operator> OPERATORS;
 	private static final Map<String, Operator> OPERATOR_LOOKUP = new LinkedHashMap<>();
@@ -26,8 +29,9 @@ final class Operator {
 	static {
 		final List<Operator> operators = new ArrayList<>();
 
-		operators.add(new Operator("{",    0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal", "}", 0));
-		operators.add(new Operator("[",    0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal (Iterating)", "]", 0));
+		operators.add(new Operator("{",    0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal (Iterating)", "}", 0));
+		operators.add(new Operator("[",    0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal", "]", 0));
+		operators.add(new Operator("[:]",  0,  0, "Empty Map"));
 		operators.add(new Operator("[",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Lookup", "]", 1));
 		operators.add(new Operator("?[",   0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | SAFE, "Safe Lookup", "]", 1));
 		operators.add(createMethod("(", true));
@@ -62,7 +66,8 @@ final class Operator {
 		operators.add(new Operator("??",   14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce (Alternate)"));
 		operators.add(new Operator("?",    14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
 		operators.add(new Operator(":",    14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair"));
-		operators.add(new Operator(",",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Statement Separator"));
+		operators.add(new Operator(",",    16, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | IGNORE_TRAILING | CONTAINER, "Array / Map Separator"));
+		operators.add(new Operator(";",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
 
 		for (final Operator operator : operators) {
 			operator.next = OPERATOR_LOOKUP.put(operator.string, operator);
@@ -128,11 +133,21 @@ final class Operator {
 	 * @return the new operator
 	 */
 	public Operator addRightExpression() {
+		return addRightExpressions(1);
+	}
+
+	/**
+	 * Adds right expressions to the operator.
+	 *
+	 * @param expressions the number of right expressions to add
+	 * @return the new operator
+	 */
+	public Operator addRightExpressions(final int expressions) {
 		if (!has(X_RIGHT_EXPRESSIONS)) {
 			throw new UnsupportedOperationException();
 		}
 
-		return new Operator(string, precedence, properties, description, closingString, rightExpressions + 1);
+		return new Operator(string, precedence, properties, description, closingString, rightExpressions + expressions);
 	}
 
 	/**
@@ -196,6 +211,15 @@ final class Operator {
 	 */
 	public boolean has(final int property) {
 		return (properties & property) != 0;
+	}
+
+	/**
+	 * Gets if the operator is a container operator.
+	 *
+	 * @return true if the operator is a container operator, otherwise false
+	 */
+	public boolean isContainer() {
+		return closingString != null || has(CONTAINER);
 	}
 
 	/**

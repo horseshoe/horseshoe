@@ -155,7 +155,7 @@ public final class Expression {
 	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<current>(?:[.]/)*)(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`|[.][.])[(]?)\\s*");
 	private static final Pattern INTERNAL_PATTERN = Pattern.compile("(?:[.]/)*(?<identifier>[.]\\p{L}*)\\s*");
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*");
-	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))\\s*");
+	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))(?<isLong>[lL])?\\s*");
 	private static final Pattern STRING_PATTERN = Pattern.compile("\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"\\s*");
 	private static final Pattern OPERATOR_PATTERN;
 
@@ -287,7 +287,7 @@ public final class Expression {
 				final int totalPairs = pairs;
 				final MethodBuilder builder;
 
-				if ("{".equals(operator.getString())) {
+				if ("[".equals(operator.getString())) {
 					builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_MAP_CTOR_INT);
 				} else {
 					builder = new MethodBuilder().pushNewObject(IterableMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(ITERABLE_MAP_CTOR_INT);
@@ -316,6 +316,9 @@ public final class Expression {
 
 			break;
 		}
+		case "[:]":
+			operands.push(new Operand(Object.class, new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant(8).addInvoke(LINKED_HASH_MAP_CTOR_INT)));
+			break;
 		case "..": {
 			final Label decreasing = left.builder.newLabel();
 			final Label increasingLoop = left.builder.newLabel();
@@ -465,7 +468,7 @@ public final class Expression {
 			operands.push(new Operand(Entry.class, right.toObject(false)));
 			break;
 
-		case ",":
+		case ";":
 			if (left.type == null) {
 				left.builder.addCode(POP, POP2, POP2);
 			} else {
@@ -473,6 +476,15 @@ public final class Expression {
 			}
 
 			operands.push(new Operand(right.type, left.builder.append(right.builder)));
+			break;
+
+		case ",":
+			operands.push();
+			processOperation(namedExpressions, expressions, operands, Operator.get("{").addRightExpressions(operator.getRightExpressions() + 1));
+			break;
+
+		case "(":
+			operands.push();
 			break;
 
 		default:
@@ -659,8 +671,6 @@ public final class Expression {
 					}
 				} else if (backreach > 0 || lastNavigation) { // Any backreach must have an identifier associated with it, and identifiers must follow the member selection operator
 					throw new RuntimeException("Invalid identifier in expression at offset " + matcher.regionStart());
-				} else if (matcher.hitEnd()) {
-					break;
 				} else if (matcher.usePattern(DOUBLE_PATTERN).lookingAt()) { // Double literal
 					token = matcher.group("double");
 					operands.push(new Operand(double.class, new MethodBuilder().pushConstant(Double.parseDouble(token))));
@@ -668,7 +678,7 @@ public final class Expression {
 					token = matcher.group("decimal");
 					final long value = token == null ? Long.parseLong(matcher.group("hexadecimal"), 16) : Long.parseLong(token);
 
-					if (value > Integer.MAX_VALUE || value < Integer.MIN_VALUE) {
+					if (matcher.group("isLong") != null || value > Integer.MAX_VALUE || value < Integer.MIN_VALUE) {
 						operands.push(new Operand(long.class, new MethodBuilder().pushConstant(value)));
 					} else {
 						operands.push(new Operand(int.class, new MethodBuilder().pushConstant((int)value)));
@@ -758,11 +768,7 @@ public final class Expression {
 
 					if (operator != null) {
 						// Shunting-yard Algorithm
-						while (!operators.isEmpty() && !operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && !"(".equals(operators.peek().getString()) && (operators.peek().getPrecedence() < operator.getPrecedence() || (operators.peek().getPrecedence() == operator.getPrecedence() && operator.isLeftAssociative()))) {
-							if (operators.peek().getClosingString() != null) {
-								throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + operators.peek().getClosingString() + "'");
-							}
-
+						while (!operators.isEmpty() && !operators.peek().isContainer() && (operators.peek().getPrecedence() < operator.getPrecedence() || (operators.peek().getPrecedence() == operator.getPrecedence() && operator.isLeftAssociative()))) {
 							processOperation(namedExpressions, expressions, operands, operators.pop());
 						}
 
@@ -778,32 +784,33 @@ public final class Expression {
 
 						lastOperator = operator;
 						continue nextToken;
-					}
+					} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION) || lastOperator.has(Operator.IGNORE_TRAILING)) { // Check if this token ends an expression on the stack
+						for (boolean nowHasLeftExpression = hasLeftExpression; !operators.isEmpty(); ) {
+							Operator closedOperator = operators.pop();
 
-					if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION) || ",".equals(lastOperator.getString())) { // Check if this token ends an expression on the stack
-						while (!operators.isEmpty()) {
-							if (operators.peek().getClosingString() != null) {
-								Operator closedOperator = operators.pop();
-
-								if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
-									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + closedOperator.getClosingString() + "'");
-								} else if (closedOperator.has(Operator.X_RIGHT_EXPRESSIONS)) { // Process multi-argument operators
-									if (hasLeftExpression) { // Allow trailing commas
+							if (closedOperator.isContainer()) {
+								if (closedOperator.has(Operator.X_RIGHT_EXPRESSIONS)) { // Process multi-argument operators
+									if (hasLeftExpression) { // Add parameter
 										closedOperator = closedOperator.addRightExpression();
 									}
 
-									processOperation(namedExpressions, expressions, operands, closedOperator);
-								} else if (!hasLeftExpression) { // Check for empty expressions
+									nowHasLeftExpression = true;
+								} else if (!nowHasLeftExpression) { // Check for empty expressions
 									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
-								} else if (closedOperator.has(Operator.LEFT_EXPRESSION)) { // If the token is not a parenthetical, process the operation
-									processOperation(namedExpressions, expressions, operands, closedOperator);
 								}
-
-								lastOperator = closedOperator.getClosingOperator();
-								continue nextToken;
 							}
 
-							processOperation(namedExpressions, expressions, operands, operators.pop());
+							if (closedOperator.getClosingString() != null) {
+								if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
+									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + closedOperator.getClosingString() + "'");
+								} else {
+									processOperation(namedExpressions, expressions, operands, closedOperator);
+									lastOperator = closedOperator.getClosingOperator();
+									continue nextToken;
+								}
+							}
+
+							processOperation(namedExpressions, expressions, operands, closedOperator);
 						}
 					}
 
@@ -822,11 +829,22 @@ public final class Expression {
 
 			// Push everything to the output queue
 			while (!operators.isEmpty()) {
-				if (operators.peek().getClosingString() != null) {
-					throw new RuntimeException("Unexpected end of expression, expecting '" + operators.peek().getClosingString() + "' (unmatched '" + operators.peek().getString() + "')");
+				Operator operator = operators.pop();
+
+				if (operator.getClosingString() != null) {
+					throw new RuntimeException("Unexpected end of expression, expecting '" + operator.getClosingString() + "' (unmatched '" + operator.getString() + "')");
+				} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS) && lastOperator == null) { // Process multi-argument operators, but allow trailing commas
+					operator = operator.addRightExpression();
+				} else if (lastOperator != null && lastOperator.has(Operator.RIGHT_EXPRESSION)) {
+					if (lastOperator.has(Operator.IGNORE_TRAILING)) {
+						lastOperator = null;
+						continue;
+					} else {
+						throw new RuntimeException("Unexpected end of expression");
+					}
 				}
 
-				processOperation(namedExpressions, expressions, operands, operators.pop());
+				processOperation(namedExpressions, expressions, operands, operator);
 			}
 		}
 

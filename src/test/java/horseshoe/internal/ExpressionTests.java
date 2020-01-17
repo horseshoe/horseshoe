@@ -1,8 +1,10 @@
 package horseshoe.internal;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.junit.Test;
@@ -78,6 +80,8 @@ public class ExpressionTests {
 		context.push(Helper.loadMap("r", 10, "i2", 2, "π", 3.14159265358979311599796346854, "bigNum", 9999999999L));
 		assertEquals(2 * 3.14159265358979311599796346854 * 10 - 2, (Double)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(2 * π * r - i2)", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER), 0.00001);
 		assertEquals(9999999999L + 9999999999L / 2 + 9999999999L % 2 - 3.14159265358979311599796346854, (Double)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "bigNum + bigNum / 2 + bigNum % 2 - π", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER), 0.00001);
+		assertEquals((int)(0x10000000L * 5280), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000 * 5280", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER));
+		assertEquals(0x10000000L * 5280, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000L * 5280", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER));
 	}
 
 	@Test
@@ -90,7 +94,7 @@ public class ExpressionTests {
 		final PersistentStack<Object> context = new PersistentStack<>();
 		context.push(Helper.loadMap("a", "a", "b", 5, "c", new StringBuilder("c"), "d", 6.5, "e", Pattern.compile("test_[0-9]+")));
 		assertEquals("a11.5", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a + (b + d)", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
-		assertEquals("10.5c", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "4 + d + c", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("10.5c", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "1 + 5.6; +4 + d + c", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
 		assertEquals("ctest_[0-9]+56.5", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "c + e + b + d", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
 	}
 
@@ -114,17 +118,35 @@ public class ExpressionTests {
 	@Test
 	public void testSeparatorOperator() throws ReflectiveOperationException {
 		final PersistentStack<Object> context = new PersistentStack<>();
-		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\", \"blah\"", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5; 6.7; \"string-1\"; \"blah\";", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[5, 6.7, \"string-1\", \"blah\"][1 + 2]", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("string-1", ((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\", \"blah\"", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER))[2].toString());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\"", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\",", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(5, 6.7, \"string-1\": 7, \"blah\",)", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
+		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "7:5,", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
+		assertTrue(((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[:]", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).isEmpty());
+		assertTrue(((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[]", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).length == 0);
+		assertTrue(((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5,", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).length == 1);
 	}
 
 	@Test
 	public void testStringConcatenation() throws ReflectiveOperationException {
 		final PersistentStack<Object> context = new PersistentStack<>();
 		context.push(Helper.loadMap("cb", "bc"));
-		assertEquals("abcd \\\"\'\b\t\n\f\rƪāĂ\t", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"a\" + cb + \"d \\\\\\\"\\\'\\b\\t\\n\\f\\r\\x1Aa\\u0101\\U00000102\\x9\"", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("abcd \\\"\'\b\t\n\f\rƪāĂ\t", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"\" + \"a\" + cb + \"d \\\\\\\"\\\'\\b\\t\\n\\f\\r\\x1Aa\\u0101\\U00000102\\x9\"", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
 		assertEquals("anull", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"a\" + ab", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
 		assertEquals("bcnull", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "cb + ab", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
 		assertEquals("nullbc", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "ab + cb", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("54", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5.toString() + 4.toString()", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+	}
+
+	@Test
+	public void testTernary() throws ReflectiveOperationException {
+		assertEquals("a", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "true ? \"a\" : 5", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("4", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "false ? \"b\" : (1.0; 4)", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("isZero", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0L * 5.6 ? \"notZero\" : \"isZero\"", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("12345678901234", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0 ? 0 : (912345678901235; 12345678901234)", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
 	}
 
 }

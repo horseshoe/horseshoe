@@ -49,12 +49,9 @@ public class TemplateTests {
 
 	@Test
 	public void testMapLiteral() throws java.io.IOException, LoadException {
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Map Test", "{{#[\"Bob\": 45, \"Alice\": 31]}}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}");
-		final horseshoe.Settings settings = new horseshoe.Settings();
-		final java.io.StringWriter writer = new java.io.StringWriter();
-		template.render(settings, Collections.emptyMap(), writer);
-
-		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS, writer.toString());
+		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS + "Jim is 80 years old." + LS, new horseshoe.TemplateLoader().load("Map Test", "{{#{\"Bob\": 45, \"Alice\": 31, \"Jim\": 80} }}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}").render(new horseshoe.Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS + "Jim is 80 years old." + LS, new horseshoe.TemplateLoader().load("Map Test", "{{#\"Bob\": 45, \"Alice\": 31, \"Jim\": 80}}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}").render(new horseshoe.Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS + "Jim is 80 years old." + LS, new horseshoe.TemplateLoader().load("Map Test", "{{#(\"Bob\": 45, \"Alice\": 31, \"Jim\": 80)}}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}").render(new horseshoe.Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 	@Test

@@ -173,7 +173,7 @@ final class Operand {
 			final Label isFloating = builder.newLabel();
 			final Label end = builder.newLabel();
 
-			return builder.pushConstant(LONG_TYPE).addBranch(IFGT, isFloating).addCode(POP2, LCONST_0, LCMP).addBranch(GOTO, end)
+			return builder.pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP2, LCONST_0, LCMP).addBranch(GOTO, end)
 					.updateLabel(isFloating).addAccess(DSTORE, Evaluable.FIRST_LOCAL).addCode(POP2).addAccess(DLOAD, Evaluable.FIRST_LOCAL).addCode(DCONST_0, DCMPG).updateLabel(end);
 		} else if (type.isPrimitive()) {
 			return builder.addPrimitiveConversion(type, boolean.class);
@@ -210,14 +210,14 @@ final class Operand {
 				return builder.addThrow(RuntimeException.class, "Unexpected boolean value, expecting numeric value");
 			} else if (double.class.equals(type) || float.class.equals(type)) {
 				if (allowFloating) {
-					return builder.addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE);
+					return builder.addPrimitiveConversion(type, double.class).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE);
 				} else {
 					return builder.addThrow(RuntimeException.class, "Unexpected " + type.getSimpleName() + " value, expecting integral value");
 				}
 			} else if (long.class.equals(type)) {
 				return builder.addCode(DCONST_0).pushConstant(LONG_TYPE);
 			} else {
-				return builder.addCode(I2L, DCONST_0).pushConstant(INT_TYPE);
+				return builder.addPrimitiveConversion(type, long.class).addCode(DCONST_0).pushConstant(INT_TYPE);
 			}
 		}
 
