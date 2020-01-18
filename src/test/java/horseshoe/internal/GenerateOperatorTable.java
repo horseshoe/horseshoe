@@ -4,7 +4,6 @@ import static horseshoe.internal.Operator.LEFT_EXPRESSION;
 import static horseshoe.internal.Operator.METHOD_CALL;
 import static horseshoe.internal.Operator.RIGHT_EXPRESSION;
 import static horseshoe.internal.Operator.X_RIGHT_EXPRESSIONS;
-import static org.junit.Assert.assertTrue;
 
 import java.util.Iterator;
 
@@ -75,7 +74,6 @@ public class GenerateOperatorTable {
 		}
 
 		System.out.println();
-		assertTrue(true); // Explicitly state that we passed (for code analysis tools)
 	}
 
 }

@@ -43,10 +43,6 @@ public class Helper {
 		}
 	}
 
-	public static void executeTest(final String template, final Map<String, String> partials, final Settings settings, final Map<String, Object> data, final String expected) throws LoadException, IOException {
-		executeTest(new TemplateLoader().add(partials).load("Test", template), settings, data, expected);
-	}
-
 	public static void executeMustacheTest(final String template, final Map<String, Object> data, final Map<String, Object> partialMap, final String expected) throws LoadException, IOException {
 		final Map<String, String> partials = new LinkedHashMap<>();
 

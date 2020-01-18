@@ -1,6 +1,6 @@
 package horseshoe;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import horseshoe.internal.Expression;
@@ -24,7 +24,7 @@ final class RenderContext {
 	 */
 	public RenderContext(final Settings settings, final Map<String, Object> globalData, final Map<String, AnnotationHandler> annotationMap) {
 		this.settings = settings;
-		this.globalData = new HashMap<>(globalData);
+		this.globalData = new LinkedHashMap<>(globalData);
 		this.annotationMap = annotationMap;
 	}
 

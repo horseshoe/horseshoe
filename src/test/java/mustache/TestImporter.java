@@ -1,9 +1,10 @@
 package mustache;
 
 import java.io.FileInputStream;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -99,10 +100,8 @@ public class TestImporter {
 				System.out.println("Loading " + path.toString() + "...");
 
 				try (final InputStream in = new FileInputStream(path.toString());
-						final PrintWriter out = new PrintWriter(new FileWriter(destination.resolve(className + ".java").toString()))) {
+						final PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(destination.resolve(className + ".java").toString())))) {
 					out.print("package horseshoe.mustache;" + System.lineSeparator() +
-							System.lineSeparator() +
-							"import static org.junit.Assert.assertTrue;" + System.lineSeparator() +
 							System.lineSeparator() +
 							"import org.junit.Test;" + System.lineSeparator() +
 							System.lineSeparator() +
@@ -120,9 +119,7 @@ public class TestImporter {
 						out.println("\t\tHelper.executeMustacheTest(\"" + escapeCodeString(test.get("template").toString()) + "\", Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("data")) + "), Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("partials")) + "), \"" + escapeCodeString(test.get("expected").toString()) + "\");");
 					}
 
-					out.println(System.lineSeparator() +
-							"		assertTrue(true); // Explicitly state that we passed (for code analysis tools)" + System.lineSeparator() +
-							"	}" + System.lineSeparator() +
+					out.println("	}" + System.lineSeparator() +
 							System.lineSeparator() +
 							"}");
 				} catch (final IOException e) {

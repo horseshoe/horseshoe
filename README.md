@@ -3,7 +3,7 @@
 # Horseshoe
 Horseshoe for Java
 
-![](https://github.com/nicklauslittle/horseshoe-j/workflows/Build/badge.svg)
+![Build](https://github.com/nicklauslittle/horseshoe-j/workflows/Build/badge.svg)
 [![Codacy](https://api.codacy.com/project/badge/Grade/07cec89cb05f4ed4ba8759f6ad8bdc97)](https://www.codacy.com/manual/nicklaus.little/horseshoe-j?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nicklauslittle/horseshoe-j&amp;utm_campaign=Badge_Grade)
 [![Coverity](https://scan.coverity.com/projects/20222/badge.svg)](https://scan.coverity.com/projects/nicklauslittle-horseshoe-j)
 
@@ -28,21 +28,21 @@ Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an 
 ### Which operators are supported by Horseshoe expressions?
 | Precedence | Operators | Associativity |
 | ---------- | --------- | ------------- |
-| 0 | <code>{</code>a?<code>}</code> (Array / Map Literal (Iterating)), <br><code>[</code>a?<code>]</code> (Array / Map Literal), <br><code>[:]</code> (Empty Map), <br>a<code>[</code>b<code>]</code> (Lookup), <br>a<code>?[</code>b<code>]</code> (Safe Lookup), <br>a<code>(</code>b?<code>)</code> (Call Method), <br><code>(</code>a<code>)</code> (Parentheses), <br>a<code>.</code>b (Navigate), <br>a<code>?.</code>b (Safe Navigate) | Left-to-right |
-| 2 | <code>+</code>a (Unary Plus), <br><code>-</code>a (Unary Minus), <br><code>~</code>a (Bitwise Negate), <br><code>!</code>a (Logical Negate) | Right-to-left |
-| 3 | a<code>..</code>b (Range) | Left-to-right |
-| 4 | a<code>*</code>b (Multiply), <br>a<code>/</code>b (Divide), <br>a<code>%</code>b (Modulus) | Left-to-right |
-| 5 | a<code>+</code>b (Add), <br>a<code>-</code>b (Subtract) | Left-to-right |
-| 6 | a<code><<</code>b (Bitwise Shift Left), <br>a<code>>></code>b (Bitwise Shift Right Sign Extend), <br>a<code>>>></code>b (Bitwise Shift Right Zero Extend) | Left-to-right |
-| 7 | a<code><=</code>b (Less Than or Equal), <br>a<code>>=</code>b (Greater Than or Equal), <br>a<code><</code>b (Less Than), <br>a<code>></code>b (Greater Than) | Left-to-right |
-| 8 | a<code>==</code>b (Equal), <br>a<code>!=</code>b (Not Equal) | Left-to-right |
-| 9 | a<code>&</code>b (Bitwise And) | Left-to-right |
-| 10 | a<code>^</code>b (Bitwise Xor) | Left-to-right |
-| 11 | a<code>&#124;</code>b (Bitwise Or) | Left-to-right |
-| 12 | a<code>&&</code>b (Logical And) | Left-to-right |
-| 13 | a<code>&#124;&#124;</code>b (Logical Or) | Left-to-right |
-| 14 | a<code>?:</code>b (Null Coalesce), <br>a<code>??</code>b (Null Coalesce (Alternate)), <br>a<code>?</code>b (Ternary), <br>a<code>:</code>b (Pair) | Right-to-left |
-| 16 | a<code>,</code>b? (Array / Map Separator), <br>a<code>;</code>b (Statement Separator) | Left-to-right |
+| 0 | <code>{</code>a?<code>}</code> \(Array / Map Literal \(Iterating\)\), <br><code>[</code>a?<code>]</code> \(Array / Map Literal\), <br><code>[:]</code> \(Empty Map\), <br>a<code>[</code>b<code>]</code> \(Lookup\), <br>a<code>?[</code>b<code>]</code> \(Safe Lookup\), <br>a<code>(</code>b?<code>)</code> \(Call Method\), <br><code>(</code>a<code>)</code> \(Parentheses\), <br>a<code>.</code>b \(Navigate\), <br>a<code>?.</code>b \(Safe Navigate\) | Left&nbsp;to&nbsp;right |
+| 2 | <code>+</code>a \(Unary Plus\), <br><code>-</code>a \(Unary Minus\), <br><code>~</code>a \(Bitwise Negate\), <br><code>!</code>a \(Logical Negate\) | Right&nbsp;to&nbsp;left |
+| 3 | a<code>..</code>b \(Range\) | Left&nbsp;to&nbsp;right |
+| 4 | a<code>*</code>b \(Multiply\), <br>a<code>/</code>b \(Divide\), <br>a<code>%</code>b \(Modulus\) | Left&nbsp;to&nbsp;right |
+| 5 | a<code>+</code>b \(Add\), <br>a<code>-</code>b \(Subtract\) | Left&nbsp;to&nbsp;right |
+| 6 | a<code>&lt;&lt;</code>b \(Bitwise Shift Left\), <br>a<code>&gt;&gt;</code>b \(Bitwise Shift Right Sign Extend\), <br>a<code>&gt;&gt;&gt;</code>b \(Bitwise Shift Right Zero Extend\) | Left&nbsp;to&nbsp;right |
+| 7 | a<code>&lt;=</code>b \(Less Than or Equal\), <br>a<code>&gt;=</code>b \(Greater Than or Equal\), <br>a<code>&lt;</code>b \(Less Than\), <br>a<code>&gt;</code>b \(Greater Than\) | Left&nbsp;to&nbsp;right |
+| 8 | a<code>==</code>b \(Equal\), <br>a<code>!=</code>b \(Not Equal\) | Left&nbsp;to&nbsp;right |
+| 9 | a<code>&amp;</code>b \(Bitwise And\) | Left&nbsp;to&nbsp;right |
+| 10 | a<code>^</code>b \(Bitwise Xor\) | Left&nbsp;to&nbsp;right |
+| 11 | a<code>&#124;</code>b \(Bitwise Or\) | Left&nbsp;to&nbsp;right |
+| 12 | a<code>&amp;&amp;</code>b \(Logical And\) | Left&nbsp;to&nbsp;right |
+| 13 | a<code>&#124;&#124;</code>b \(Logical Or\) | Left&nbsp;to&nbsp;right |
+| 14 | a<code>?:</code>b \(Null Coalesce\), <br>a<code>??</code>b \(Null Coalesce \(Alternate\)\), <br>a<code>?</code>b \(Ternary\), <br>a<code>:</code>b \(Pair\) | Right&nbsp;to&nbsp;left |
+| 16 | a<code>,</code>b? \(Array / Map Separator\), <br>a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
 
 ### What extension should be used for Horseshoe template files?
 Horseshoe supports any file extension for template files. However, convention is to use a capital "U", which resembles a horseshoe.

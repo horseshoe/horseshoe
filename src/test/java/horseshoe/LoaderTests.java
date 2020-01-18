@@ -9,11 +9,9 @@ import java.util.regex.Pattern;
 
 import org.junit.Test;
 
-import horseshoe.Loader;
-
 public class LoaderTests {
 
-	private static final Random rand = new Random();
+	private static final Random rand = new Random(0);
 
 	private static class StringPartReader extends Reader {
 

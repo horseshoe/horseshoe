@@ -1,7 +1,5 @@
 package horseshoe.mustache;
 
-import static org.junit.Assert.assertTrue;
-
 import org.junit.Test;
 
 import horseshoe.Helper;
@@ -72,8 +70,6 @@ public class Inverted {
 
 		/* Padding - Superfluous in-tag whitespace should be ignored. */
 		Helper.executeMustacheTest("|{{^ boolean }}={{/ boolean }}|", Helper.loadMap("boolean", false), Helper.loadMap(), "|=|");
-
-		assertTrue(true); // Explicitly state that we passed (for code analysis tools)
 	}
 
 }

@@ -22,11 +22,11 @@ public final class AnnotationHandlers {
 
 	private AnnotationHandlers() { }
 
-	public static AnnotationHandler printWriter(final PrintStream printStream) {
+	public static AnnotationHandler printWriter(final PrintStream printStream, final Charset charset) {
 		return new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
-				return new PrintWriter(printStream) {
+				return new PrintWriter(new OutputStreamWriter(printStream, charset)) {
 					@Override
 					public void close() {
 						flush();
@@ -36,7 +36,7 @@ public final class AnnotationHandlers {
 		};
 	}
 
-	public static AnnotationHandler fileWriter(final Charset charset) {
+	public static AnnotationHandler fileWriter() {
 		return new AnnotationHandler() {
 			private String getDefaultFilename() {
 				return "Horseshoe_" + filesCount + ".out";
@@ -45,10 +45,17 @@ public final class AnnotationHandlers {
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
 				final File file;
+				Charset charset = Charset.defaultCharset();
 
 				if (value instanceof Map) {
 					final Object name = ((Map<?, ?>)value).get("name");
+					final Object encoding = ((Map<?, ?>)value).get("encoding");
+
 					file = new File(name == null ? getDefaultFilename() : name.toString());
+
+					if (encoding != null) {
+						charset = Charset.forName(encoding.toString());
+					}
 				} else {
 					file = new File(value == null ? getDefaultFilename() : value.toString());
 				}
@@ -68,8 +75,9 @@ public final class AnnotationHandlers {
 	public static final Map<String, AnnotationHandler> DEFAULT_ANNOTATIONS = Collections.unmodifiableMap(new HashMap<String, AnnotationHandler>() {
 		private static final long serialVersionUID = 1L;
 		{
-			put("stderr", printWriter(System.err));
-			put("file", fileWriter(Charset.defaultCharset()));
+			put("StdErr", printWriter(System.err, Charset.defaultCharset()));
+			put("StdOut", printWriter(System.out, Charset.defaultCharset()));
+			put("File", fileWriter());
 		}
 	});
 

@@ -1,7 +1,5 @@
 package horseshoe.mustache;
 
-import static org.junit.Assert.assertTrue;
-
 import org.junit.Test;
 
 import horseshoe.Helper;
@@ -102,8 +100,6 @@ public class Interpolation {
 
 		/* Ampersand With Padding - Superfluous in-tag whitespace should be ignored. */
 		Helper.executeMustacheTest("|{{& string }}|", Helper.loadMap("string", "---"), Helper.loadMap(), "|---|");
-
-		assertTrue(true); // Explicitly state that we passed (for code analysis tools)
 	}
 
 }
