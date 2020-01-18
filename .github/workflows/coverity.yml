@@ -30,8 +30,7 @@ jobs:
     - name: Build with Gradle
       run: |
         export PATH=`pwd`/cov-analysis-linux64/bin:$PATH
-        gradle --stop
-        cov-build --dir cov-int ./gradlew –-no-daemon build
+        cov-build --dir cov-int ./gradlew build
         tar cjf horseshoe-cov.tar.bz2 cov-int
 
     - name: Upload Results
