@@ -20,10 +20,21 @@ Horseshoe is a templating system used to generate source code. It uses a Mustach
 Horseshoe uses the same tags as Mustache. These tags have the same meaning as they do in Mustache. Due to the extended expression syntax, it is difficult to gauge whether or not it is Mustache-compliant. However, when a Mustache-compliant context object is used, Horseshoe passes all required tests in the Mustache specification v1.1.2.
 
 ### How is Horseshoe different from Mustache?
-Horseshoe does not have the same design goals as Mustache, resulting in many different decisions when creating the specification. For example, Horseshoe was designed for generation of source code, not HTML. For this reason, the default escape function does not escape HTML (unless the context is created with `horseshoe.Context.newMustacheContext()`). Other differences include a more complex expression syntax ("interpolation" in Mustache-speak) and support for method calls in expressions.
+Horseshoe does not have the same design goals as Mustache, resulting in many different decisions when creating the specification. For example, Horseshoe was designed for generation of source code, not HTML. For this reason, the default escape function does not escape HTML (unless the settings are created with `horseshoe.Settings.newMustacheSettings()`). Other differences include a more complex expression syntax ("interpolation" in Mustache-speak) and support for method calls in expressions.
 
 ### Does Horseshoe support Mustache lambdas?
 Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an expression syntax that supports method calls. Expressions can be named and reused to support similar functionality to Mustache lambdas.
+
+### What literal types are supported in Horseshoe expressions?
+| Java Type | Horseshoe Literal |
+|-----------|------|
+| `java.lang.String` | `"a string"` |
+| T`[]` | `[1,2,3]` / `[1..3]` / `[]` |
+| `java.util.Map` | `[1:2,3:4]` / `[:]` |
+| `int` | `123` |
+| `double` | `3.14` |
+| `boolean` | `true` / `false` |
+| `java.lang.Object` | `null` |
 
 ### Which operators are supported by Horseshoe expressions?
 | Precedence | Operators | Associativity |
