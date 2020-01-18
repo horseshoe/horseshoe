@@ -1,5 +1,7 @@
 package horseshoe.mustache;
 
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
 
 import horseshoe.Helper;
@@ -49,6 +51,8 @@ public class Delimiters {
 
 		/* Pair with Padding - Superfluous in-tag whitespace should be ignored. */
 		Helper.executeMustacheTest("|{{= @   @ =}}|", Helper.loadMap(), Helper.loadMap(), "||");
+
+		assertTrue(true); // Explicitly state that we passed (for code analysis tools)
 	}
 
 }

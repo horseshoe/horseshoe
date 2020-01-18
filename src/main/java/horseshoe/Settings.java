@@ -55,6 +55,10 @@ public class Settings {
 		}
 	};
 
+	private EscapeFunction escapeFunction = DO_NOT_ESCAPE;
+	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
+	private String lineEnding = USE_DEFAULT_LINE_ENDINGS;
+
 	/**
 	 * An enumeration used to control access when checking identifiers in expressions.
 	 */
@@ -95,16 +99,6 @@ public class Settings {
 	 */
 	public static Settings newMustacheSettings() {
 		return new Settings().setContextAccess(ContextAccess.FULL).setEscapeFunction(ESCAPE_AS_HTML).setLineEnding(USE_TEMPLATE_LINE_ENDINGS);
-	}
-
-	private EscapeFunction escapeFunction = DO_NOT_ESCAPE;
-	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
-	private String lineEnding = USE_DEFAULT_LINE_ENDINGS;
-
-	/**
-	 * Creates a new settings object with the default values.
-	 */
-	public Settings() {
 	}
 
 	/**

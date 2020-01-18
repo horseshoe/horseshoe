@@ -7,6 +7,8 @@ import java.util.Map;
 
 public abstract class Accessor {
 
+	static final Factory FACTORY = new Factory();
+
 	private static final class MethodSignature {
 		private final String name;
 		private final String types[];
@@ -274,13 +276,13 @@ public abstract class Accessor {
 		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
 		 */
-		public static MethodAccessor create(Class<?> parent, final String methodSignature, final int parameterCount) {
+		public static MethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
 			final MethodSignature signature = new MethodSignature(methodSignature);
 
-			// Find the first public parent class, analyzing all interfaces along the way
-			for (; parent != null; parent = parent.getSuperclass()) {
-				if (Modifier.isPublic(parent.getModifiers())) {
-					for (final Method method : parent.getMethods()) {
+			// Find the first public ancestor class, analyzing all interfaces along the way
+			for (Class<?> ancestor = parent; ancestor != null; ancestor = ancestor.getSuperclass()) {
+				if (Modifier.isPublic(ancestor.getModifiers())) {
+					for (final Method method : ancestor.getMethods()) {
 						if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
 							method.setAccessible(true);
 							return new MethodAccessor(method);
@@ -289,7 +291,7 @@ public abstract class Accessor {
 
 					break;
 				} else {
-					for (final Class<?> iface : parent.getInterfaces()) {
+					for (final Class<?> iface : ancestor.getInterfaces()) {
 						if (Modifier.isPublic(iface.getModifiers())) {
 							for (final Method method : iface.getMethods()) {
 								if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
@@ -378,7 +380,5 @@ public abstract class Accessor {
 		}
 
 	}
-
-	static final Factory FACTORY = new Factory();
 
 }

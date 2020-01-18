@@ -658,7 +658,7 @@ public final class MethodBuilder {
 			return addCode(JSR, B0, B0);
 
 		default:
-			throw new RuntimeException("Unexpected bytecode instruction: 0x" + Integer.toHexString(instruction) + ", expecting a branch instruction");
+			throw new IllegalArgumentException("Unexpected bytecode instruction: 0x" + Integer.toHexString(instruction) + ", expecting a branch instruction");
 		}
 	}
 
@@ -852,7 +852,7 @@ public final class MethodBuilder {
 			case GETFIELD:
 			case GETSTATIC:
 			case PUTFIELD:
-			case PUTSTATIC: throw new RuntimeException("All field accesses must use the addFieldAccess() method");
+			case PUTSTATIC: throw new IllegalArgumentException("All field accesses must use the addFieldAccess() method");
 
 			case GOTO:
 			case GOTO_W:
@@ -873,28 +873,28 @@ public final class MethodBuilder {
 			case IFNONNULL:
 			case IFNULL:
 			case JSR:
-			case JSR_W: throw new RuntimeException("All branch instructions must use the addBranch() method");
+			case JSR_W: throw new IllegalArgumentException("All branch instructions must use the addBranch() method");
 
 			case LOOKUPSWITCH:
-			case TABLESWITCH: throw new RuntimeException("All switch instructions must use the addSwitch() method");
+			case TABLESWITCH: throw new IllegalArgumentException("All switch instructions must use the addSwitch() method");
 
 			case INVOKEDYNAMIC:
 			case INVOKEINTERFACE:
 			case INVOKESPECIAL:
 			case INVOKESTATIC:
-			case INVOKEVIRTUAL: throw new RuntimeException("All invocations must use the addInvoke() method");
+			case INVOKEVIRTUAL: throw new IllegalArgumentException("All invocations must use the addInvoke() method");
 
-			case CHECKCAST: throw new RuntimeException("All casts must use the addCast() method");
-			case INSTANCEOF: throw new RuntimeException("All instanceof checks must use the addInstanceOfCheck() method");
+			case CHECKCAST: throw new IllegalArgumentException("All casts must use the addCast() method");
+			case INSTANCEOF: throw new IllegalArgumentException("All instanceof checks must use the addInstanceOfCheck() method");
 
 			case LDC:
 			case LDC_W:
-			case LDC2_W: throw new RuntimeException("All constant loads must use the pushConstant() method");
+			case LDC2_W: throw new IllegalArgumentException("All constant loads must use the pushConstant() method");
 
 			case NEWARRAY: i++; break;
 			case ANEWARRAY:
 			case MULTIANEWARRAY:
-			case NEW: throw new RuntimeException("All new's must use the pushNewObject() method");
+			case NEW: throw new IllegalArgumentException("All new's must use the pushNewObject() method");
 
 			case ARRAYLENGTH: break;
 			case ATHROW: break;
@@ -925,17 +925,17 @@ public final class MethodBuilder {
 				case IINC: maxLocalVariableIndex = Math.max(maxLocalVariableIndex, ((code[i + 1] & 0xFF) << 8) + (code[i + 2] & 0xFF)); i += 4; break;
 				case RET:  maxLocalVariableIndex = Math.max(maxLocalVariableIndex, ((code[i + 1] & 0xFF) << 8) + (code[i + 2] & 0xFF)); i += 2; break;
 
-				default: throw new RuntimeException("Unrecognized wide bytecode instruction: 0x" + Integer.toHexString(code[i]));
+				default: throw new IllegalArgumentException("Unrecognized wide bytecode instruction: 0x" + Integer.toHexString(code[i]));
 			}
 
-			default: throw new RuntimeException("Unrecognized bytecode instruction: 0x" + Integer.toHexString(code[i]));
+			default: throw new IllegalArgumentException("Unrecognized bytecode instruction: 0x" + Integer.toHexString(code[i]));
 			}
 
 			maxStackSize = Math.max(maxStackSize, stackSize + stackOffset);
 		}
 
 		if (i != code.length) {
-			throw new RuntimeException("Invalid bytecode length");
+			throw new IllegalArgumentException("Invalid bytecode (length mismatch)");
 		}
 
 		this.stackSize += stackOffset;
@@ -1142,10 +1142,10 @@ public final class MethodBuilder {
 				}
 			}
 		} catch (final ReflectiveOperationException e) {
-			throw new RuntimeException(e.getMessage(), e); // This should never happen
+			throw new RuntimeException("Failed to get conversion method to invoke: " + e.getMessage(), e); // This should never happen
 		}
 
-		throw new IllegalArgumentException();
+		throw new IllegalArgumentException("The \"from\" type must be convertible to the \"to\" type");
 	}
 
 	/**
@@ -1191,7 +1191,7 @@ public final class MethodBuilder {
 				return pushNewObject(throwable).addCode(DUP).pushConstant(message).addInvoke(throwable.getConstructor(String.class)).addCode(ATHROW);
 			}
 		} catch (final ReflectiveOperationException e) {
-			throw new RuntimeException(e.getMessage(), e);
+			throw new RuntimeException("Failed to get constructor for " + throwable.getSimpleName() + ": " + e.getMessage(), e);
 		}
 	}
 
@@ -1369,7 +1369,7 @@ public final class MethodBuilder {
 			return constantPool.add(value, (value instanceof Field ? FIELD_CONSTANT : (parentClass.getModifiers() & Modifier.INTERFACE) == 0 ? METHOD_CONSTANT : IMETHOD_CONSTANT), B0, B0, B0, B0);
 		}
 
-		throw new RuntimeException("Cannot add a constant of type " + value.getClass().toString());
+		throw new IllegalArgumentException("Cannot add a constant of type " + value.getClass().toString());
 	}
 
 	/**
@@ -1395,7 +1395,7 @@ public final class MethodBuilder {
 			for (final Method check : base.getMethods()) {
 				if (!Modifier.isStatic(check.getModifiers())) {
 					if (method != null) {
-						throw new RuntimeException("Class " + base.getName() + " must have exactly 1 method (contains multiple)");
+						throw new IllegalArgumentException("Class " + base.getName() + " must have exactly 1 method (contains multiple)");
 					}
 
 					method = check;
@@ -1409,7 +1409,7 @@ public final class MethodBuilder {
 			for (final Method check : base.getMethods()) {
 				if (Modifier.isAbstract(check.getModifiers())) {
 					if (method != null) {
-						throw new RuntimeException("Class " + base.getName() + " must have exactly 1 abstract method (contains multiple)");
+						throw new IllegalArgumentException("Class " + base.getName() + " must have exactly 1 abstract method (contains multiple)");
 					}
 
 					method = check;
@@ -1420,15 +1420,11 @@ public final class MethodBuilder {
 				for (final Method check : base.getDeclaredMethods()) {
 					if ((check.getModifiers() & (Modifier.FINAL | Modifier.NATIVE | Modifier.PRIVATE | Modifier.PROTECTED | Modifier.STATIC)) == 0 && !check.isSynthetic() ) {
 						if (method != null) {
-							throw new RuntimeException("Class " + base.getName() + " must have exactly 1 abstract method (contains none) or 1 public declared non-final, non-native, non-static method (contains multiple)");
+							throw new IllegalArgumentException("Class " + base.getName() + " must have exactly 1 abstract method (contains none) or 1 public declared non-final, non-native, non-static method (contains multiple)");
 						}
 
 						method = check;
 					}
-				}
-
-				if (method == null) {
-					throw new RuntimeException("Class " + base.getName() + " must have exactly 1 abstract method or 1 public declared non-final, non-native, non-static method (contains none)");
 				}
 			}
 
@@ -1436,7 +1432,9 @@ public final class MethodBuilder {
 			baseConstructorInfo = getConstant(base.getDeclaredConstructor());
 		}
 
-		final int SUPER = 0x20; // Internal flag
+		if (method == null) {
+			throw new IllegalArgumentException("Class " + base.getName() + " must have exactly 1 abstract method or 1 public declared non-final, non-native, non-static method (contains none)");
+		}
 
 		final ConstantPoolEntry ctorNameInfo = getConstant(new UTF8String("<init>"));
 		final ConstantPoolEntry ctorSignatureInfo = getConstant(new UTF8String("()V"));
@@ -1452,7 +1450,7 @@ public final class MethodBuilder {
 		final int endIndex = attributeIndex + 2;
 
 		if (constantPool.count() >= 65536 || maxStackSize >= 65536 || maxLocalVariableIndex >= 65536) {
-			throw new RuntimeException("Encountered data overflow while building method");
+			throw new IllegalStateException("Encountered data overflow while building method");
 		}
 
 		// Populate all labels and the constant pool
@@ -1483,6 +1481,7 @@ public final class MethodBuilder {
 		System.arraycopy(constantPool.getData(), 0, classBytecode, 10, constantPool.getLength());
 
 		// Access flags (public final super)
+		final int SUPER = 0x20; // Internal flag
 		final int accessFlags = Modifier.PUBLIC | Modifier.FINAL | SUPER;
 		classBytecode[10 + constantPool.getLength()]     = (byte)(accessFlags >>> 8);
 		classBytecode[10 + constantPool.getLength() + 1] = (byte)(accessFlags);
@@ -1651,7 +1650,7 @@ public final class MethodBuilder {
 						final int branchOffset = target.offset - location.offset;
 
 						if ((short)branchOffset != branchOffset) {
-							throw new RuntimeException("Failed to generate code for a branch instruction spanning more than 32767 bytes");
+							throw new IllegalStateException("Failed to generate code for a branch instruction spanning more than 32767 bytes");
 						}
 
 						bytes[location.updateOffset]     = (byte)(branchOffset >>> 8);
@@ -1779,7 +1778,7 @@ public final class MethodBuilder {
 	 */
 	public MethodBuilder pushNewObject(final Class<?> type, final int... dimensions) {
 		if (dimensions.length > 255) {
-			throw new RuntimeException("Array dimensions to large, expecting at most 255");
+			throw new IllegalArgumentException("Array dimensions to large, expecting at most 255");
 		} else if (dimensions.length > 1) {
 			for (final int dimension : dimensions) {
 				pushConstant(dimension);
@@ -1814,7 +1813,7 @@ public final class MethodBuilder {
 		}
 
 		if (type.isPrimitive()) {
-			throw new RuntimeException("Unexpected primitive type for new object, expecting non-primitive type");
+			throw new IllegalArgumentException("Unexpected primitive type for new object, expecting non-primitive type");
 		}
 
 		getConstant(type).add(new Location(this, length + 1));
@@ -1840,7 +1839,17 @@ public final class MethodBuilder {
 
 	@Override
 	public String toString() {
-		return bytes.toString();
+		if (length <= 0) {
+			return "";
+		}
+
+		final StringBuilder sb = new StringBuilder();
+
+		for (int i = 0; i < length; i++) {
+			sb.append(", ").append(Integer.toHexString(bytes[i] & 0xFF));
+		}
+
+		return sb.substring(2);
 	}
 
 	/**

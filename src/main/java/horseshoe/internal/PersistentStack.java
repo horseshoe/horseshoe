@@ -1,5 +1,7 @@
 package horseshoe.internal;
 
+import java.util.NoSuchElementException;
+
 /**
  * A stack that persists items popped off the top, so that they can be repushed when needed.
  *
@@ -21,6 +23,10 @@ public final class PersistentStack<T> implements Iterable<T> {
 
 		@Override
 		public T next() {
+			if (!hasNext()) {
+				throw new NoSuchElementException();
+			}
+
 			return array[--i];
 		}
 

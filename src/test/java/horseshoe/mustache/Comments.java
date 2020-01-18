@@ -1,5 +1,7 @@
 package horseshoe.mustache;
 
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
 
 import horseshoe.Helper;
@@ -40,6 +42,8 @@ public class Comments {
 
 		/* Surrounding Whitespace - Comment removal should preserve surrounding whitespace. */
 		Helper.executeMustacheTest("12345 {{! Comment Block! }} 67890", Helper.loadMap(), Helper.loadMap(), "12345  67890");
+
+		assertTrue(true); // Explicitly state that we passed (for code analysis tools)
 	}
 
 }

@@ -11,6 +11,12 @@ import horseshoe.internal.Properties;
 
 class SectionRenderer implements Action, Expression.Indexed {
 
+	static final Factory FACTORY;
+
+	protected final Section section;
+	protected int index;
+	protected boolean hasNext;
+
 	public static class Factory {
 
 		/**
@@ -25,8 +31,6 @@ class SectionRenderer implements Action, Expression.Indexed {
 
 	}
 
-	static final Factory FACTORY;
-
 	static {
 		Factory factory = new Factory();
 
@@ -39,10 +43,6 @@ class SectionRenderer implements Action, Expression.Indexed {
 
 		FACTORY = factory;
 	}
-
-	protected final Section section;
-	protected int index;
-	protected boolean hasNext;
 
 	/**
 	 * Creates a new section renderer using the specified resolver and section.
@@ -189,11 +189,15 @@ class SectionRenderer implements Action, Expression.Indexed {
 			if (annotationProcessor == null) { // Only write the data if there is an annotation processor available, otherwise take false path with default writer
 				dispatchData(context, false, writer);
 			} else {
-				try (final Writer newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), Expression.STDERR_LOGGER))) {
-					if (newWriter == null) {
-						dispatchData(context, context.getSectionData().peek(), writer);
-					} else {
+				final Writer newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), Expression.STDERR_LOGGER));
+
+				if (newWriter == null || newWriter == writer) {
+					dispatchData(context, context.getSectionData().peek(), writer);
+				} else {
+					try {
 						dispatchData(context, context.getSectionData().peek(), newWriter);
+					} finally {
+						newWriter.close();
 					}
 				}
 			}

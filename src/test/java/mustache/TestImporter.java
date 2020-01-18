@@ -1,3 +1,5 @@
+package mustache;
+
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -12,7 +14,7 @@ import java.util.Map.Entry;
 
 import org.yaml.snakeyaml.Yaml;
 
-public class MustacheTestImporter {
+public class TestImporter {
 
 	private static String capitalize(final String value) {
 		return value.substring(0, 1).toUpperCase() + value.substring(1);
@@ -100,6 +102,8 @@ public class MustacheTestImporter {
 						final PrintWriter out = new PrintWriter(new FileWriter(destination.resolve(className + ".java").toString()))) {
 					out.print("package horseshoe.mustache;" + System.lineSeparator() +
 							System.lineSeparator() +
+							"import static org.junit.Assert.assertTrue;" + System.lineSeparator() +
+							System.lineSeparator() +
 							"import org.junit.Test;" + System.lineSeparator() +
 							System.lineSeparator() +
 							"import horseshoe.Helper;" + System.lineSeparator() +
@@ -116,7 +120,9 @@ public class MustacheTestImporter {
 						out.println("\t\tHelper.executeMustacheTest(\"" + escapeCodeString(test.get("template").toString()) + "\", Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("data")) + "), Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("partials")) + "), \"" + escapeCodeString(test.get("expected").toString()) + "\");");
 					}
 
-					out.println("	}" + System.lineSeparator() +
+					out.println(System.lineSeparator() +
+							"		assertTrue(true); // Explicitly state that we passed (for code analysis tools)" + System.lineSeparator() +
+							"	}" + System.lineSeparator() +
 							System.lineSeparator() +
 							"}");
 				} catch (final IOException e) {

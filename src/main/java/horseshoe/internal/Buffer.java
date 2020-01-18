@@ -5,6 +5,9 @@ package horseshoe.internal;
  */
 public final class Buffer implements CharSequence {
 
+	private final char buffer[];
+	private int length;
+
 	/**
 	 * A character sequence that wraps a buffer without copying data. Note that the wrapper references the underlying buffer, so any changes to the buffer will be reflected in the wrapper object.
 	 */
@@ -46,9 +49,6 @@ public final class Buffer implements CharSequence {
 			return new String(buffer, start, end - start);
 		}
 	}
-
-	private final char buffer[];
-	private int length;
 
 	/**
 	 * Creates a buffer of the specified capacity and length. This assumes the user will fill the buffer with useful data up to the specified length.

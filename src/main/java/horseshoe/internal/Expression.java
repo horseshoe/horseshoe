@@ -254,7 +254,7 @@ public final class Expression {
 			right = operands.pop();
 
 			if (Entry.class.equals(right.type) && !operator.has(Operator.ALLOW_PAIRS)) {
-				throw new RuntimeException("Invalid pair operator (':') in expression");
+				throw new IllegalArgumentException("Invalid pair operator (':') in expression");
 			}
 		} else {
 			right = null;
@@ -266,7 +266,7 @@ public final class Expression {
 		// Array / Map Operations
 		case "[": case "?[": if (left != null) {
 			if (!Object.class.equals(left.type)) {
-				throw new RuntimeException("Unexpected '" + operator.getString() + "' operator applied to " + (left.type == null ? "numeric" : left.type.getName()) + " value, expecting map or array type value");
+				throw new IllegalArgumentException("Unexpected '" + operator.getString() + "' operator applied to " + (left.type == null ? "numeric" : left.type.getName()) + " value, expecting map or array type value");
 			}
 
 			final Label end = left.builder.newLabel();
@@ -456,7 +456,7 @@ public final class Expression {
 		}
 		case "?": {
 			if (!Entry.class.equals(right.type)) {
-				throw new RuntimeException("Incomplete ternary operator, missing ':'");
+				throw new IllegalArgumentException("Incomplete ternary operator, missing ':'");
 			}
 
 			assert Entry.class.equals(left.type);
@@ -494,7 +494,7 @@ public final class Expression {
 			break;
 
 		default:
-			throw new RuntimeException("Unrecognized operator '" + operator.getString() + "' while parsing expression");
+			throw new IllegalArgumentException("Unrecognized operator '" + operator.getString() + "' while parsing expression");
 		}
 	}
 
@@ -575,7 +575,7 @@ public final class Expression {
 				// Check for backreach
 				if (matcher.usePattern(IDENTIFIER_BACKREACH_PATTERN).lookingAt()) {
 					if (hasLeftExpression || lastNavigation) {
-						throw new RuntimeException("Unexpected backreach in expression at offset " + matcher.regionStart());
+						throw new IllegalArgumentException("Unexpected backreach in expression at offset " + matcher.regionStart());
 					}
 
 					backreach = matcher.group("backreach").length() / 3;
@@ -670,7 +670,7 @@ public final class Expression {
 						operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
 					}
 				} else if (backreach > 0 || lastNavigation) { // Any backreach must have an identifier associated with it, and identifiers must follow the member selection operator
-					throw new RuntimeException("Invalid identifier in expression at offset " + matcher.regionStart());
+					throw new IllegalArgumentException("Invalid identifier in expression at offset " + matcher.regionStart());
 				} else if (matcher.usePattern(DOUBLE_PATTERN).lookingAt()) { // Double literal
 					token = matcher.group("double");
 					operands.push(new Operand(double.class, new MethodBuilder().pushConstant(Double.parseDouble(token))));
@@ -699,7 +699,7 @@ public final class Expression {
 							sb.append(token, start, backslash);
 
 							if (backslash + 1 >= token.length()) {
-								throw new RuntimeException("Invalid '\\' at end of string literal in expression at offset " + matcher.regionStart());
+								throw new IllegalArgumentException("Invalid '\\' at end of string literal in expression at offset " + matcher.regionStart());
 							}
 
 							switch (token.charAt(backslash + 1)) {
@@ -734,7 +734,7 @@ public final class Expression {
 
 							case 'u':
 								if (backslash + 5 >= token.length()) {
-									throw new RuntimeException("Invalid '\\u' at end of string literal in expression at offset " + matcher.regionStart());
+									throw new IllegalArgumentException("Invalid '\\u' at end of string literal in expression at offset " + matcher.regionStart());
 								}
 
 								sb.append(Character.toChars(Integer.parseInt(token.substring(backslash + 2, backslash + 6), 16)));
@@ -743,14 +743,14 @@ public final class Expression {
 
 							case 'U':
 								if (backslash + 9 >= token.length()) {
-									throw new RuntimeException("Invalid '\\U' at end of string literal in expression at offset " + matcher.regionStart());
+									throw new IllegalArgumentException("Invalid '\\U' at end of string literal in expression at offset " + matcher.regionStart());
 								}
 
 								sb.append(Character.toChars(Integer.parseInt(token.substring(backslash + 2, backslash + 10), 16)));
 								backslash += 8;
 								break;
 
-							default: throw new RuntimeException("Invalid character (" + token.charAt(backslash + 1) + ") following '\\' in string literal (offset: " + backslash + ") in expression at offset " + matcher.regionStart());
+							default: throw new IllegalArgumentException("Invalid character (" + token.charAt(backslash + 1) + ") following '\\' in string literal (offset: " + backslash + ") in expression at offset " + matcher.regionStart());
 							}
 
 							start = backslash + 2;
@@ -774,7 +774,7 @@ public final class Expression {
 
 						if (!operators.isEmpty() && operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
 							if (!hasLeftExpression) { // Check for invalid and empty expressions
-								throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
+								throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
 							}
 
 							operators.push(operators.pop().addRightExpression());
@@ -796,13 +796,13 @@ public final class Expression {
 
 									nowHasLeftExpression = true;
 								} else if (!nowHasLeftExpression) { // Check for empty expressions
-									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
+									throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
 								}
 							}
 
 							if (closedOperator.getClosingString() != null) {
 								if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
-									throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + closedOperator.getClosingString() + "'");
+									throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + closedOperator.getClosingString() + "'");
 								} else {
 									processOperation(namedExpressions, expressions, operands, closedOperator);
 									lastOperator = closedOperator.getClosingOperator();
@@ -814,14 +814,14 @@ public final class Expression {
 						}
 					}
 
-					throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
+					throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
 				} else {
-					throw new RuntimeException("Unrecognized identifier in expression at offset " + matcher.regionStart());
+					throw new IllegalArgumentException("Unrecognized identifier in expression at offset " + matcher.regionStart());
 				}
 
 				// Check for multiple consecutive identifiers or literals
 				if (hasLeftExpression) {
-					throw new RuntimeException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting operator");
+					throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting operator");
 				}
 
 				lastOperator = null;
@@ -832,7 +832,7 @@ public final class Expression {
 				Operator operator = operators.pop();
 
 				if (operator.getClosingString() != null) {
-					throw new RuntimeException("Unexpected end of expression, expecting '" + operator.getClosingString() + "' (unmatched '" + operator.getString() + "')");
+					throw new IllegalArgumentException("Unexpected end of expression, expecting '" + operator.getClosingString() + "' (unmatched '" + operator.getString() + "')");
 				} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS) && lastOperator == null) { // Process multi-argument operators, but allow trailing commas
 					operator = operator.addRightExpression();
 				} else if (lastOperator != null && lastOperator.has(Operator.RIGHT_EXPRESSION)) {
@@ -840,7 +840,7 @@ public final class Expression {
 						lastOperator = null;
 						continue;
 					} else {
-						throw new RuntimeException("Unexpected end of expression");
+						throw new IllegalArgumentException("Unexpected end of expression");
 					}
 				}
 

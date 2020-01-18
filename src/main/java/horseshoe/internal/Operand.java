@@ -258,8 +258,8 @@ final class Operand {
 	 */
 	public MethodBuilder toObject(final boolean generateReturn) {
 		if (type == null) {
-			final MethodBuilder.Label isFloating = builder.newLabel();
-			final MethodBuilder.Label isLong = builder.newLabel();
+			final Label isFloating = builder.newLabel();
+			final Label isLong = builder.newLabel();
 
 			if (generateReturn) {
 				builder.addCode(DUP).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating)
@@ -267,7 +267,7 @@ final class Operand {
 					.updateLabel(isLong).addCode(POP2).addPrimitiveConversion(long.class, Object.class).addCode(ARETURN)
 					.updateLabel(isFloating).addCode(POP).addPrimitiveConversion(double.class, Object.class);
 			} else {
-				final MethodBuilder.Label end = builder.newLabel();
+				final Label end = builder.newLabel();
 
 				builder.addCode(DUP).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating)
 					.addBranch(IFNE, isLong).addCode(POP2, L2I).addPrimitiveConversion(int.class, Object.class).addBranch(GOTO, end)

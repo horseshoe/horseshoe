@@ -118,7 +118,7 @@ public final class Identifier {
 			return null;
 		}
 
-		throw new java.lang.NoSuchFieldException("Field \"" + name + "\" not found in class " + objectClass.getName());
+		throw new NoSuchFieldException("Field \"" + name + "\" not found in class " + objectClass.getName());
 	}
 
 	/**
@@ -185,7 +185,7 @@ public final class Identifier {
 			return null;
 		}
 
-		throw new java.lang.NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());
+		throw new NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());
 	}
 
 	/**
@@ -203,7 +203,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this, 0);
 
 			if (accessor == null) {
-				throw new java.lang.NoSuchFieldException("Field \"" + name + "\" not found in class " + objectClass.getName());
+				throw new NoSuchFieldException("Field \"" + name + "\" not found in class " + objectClass.getName());
 			}
 
 			accessorDatabase.put(objectClass, accessor);
@@ -228,7 +228,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this, parameters == null ? 0 : parameters.length);
 
 			if (accessor == null) {
-				throw new java.lang.NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());
+				throw new NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());
 			}
 
 			accessorDatabase.put(objectClass, accessor);

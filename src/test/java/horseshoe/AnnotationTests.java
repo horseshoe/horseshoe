@@ -87,8 +87,8 @@ public class AnnotationTests {
 
 	@Test
 	public void testMissingAnnotation() throws IOException, LoadException {
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Missing Annotation", "{{#@missing(\"blah\")}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@test}}\nEngine does not support @missing.\n{{/}}\n{{/@missing}}\n");
-		final horseshoe.Settings settings = new horseshoe.Settings();
+		final Template template = new TemplateLoader().load("Missing Annotation", "{{#@missing(\"blah\")}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@test}}\nEngine does not support @missing.\n{{/}}\n{{/@missing}}\n");
+		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 
@@ -116,8 +116,8 @@ public class AnnotationTests {
 
 	@Test
 	public void testNullWriter() throws IOException, LoadException {
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Null Writer", "a{{#@test}}b{{^}}d{{/}}c");
-		final horseshoe.Settings settings = new horseshoe.Settings();
+		final Template template = new TemplateLoader().load("Null Writer", "a{{#@test}}b{{^}}d{{/}}c");
+		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 
 		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("test", new AnnotationHandler() {
@@ -131,8 +131,8 @@ public class AnnotationTests {
 
 	@Test
 	public void testOutputMapping() throws IOException, LoadException {
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Mapping", "Good things are happening!\n{{#@test}}\nThis should output to map annotation.\n{{/}}\nGood things are happening again!\n");
-		final horseshoe.Settings settings = new horseshoe.Settings();
+		final Template template = new TemplateLoader().load("Output Mapping", "Good things are happening!\n{{#@test}}\nThis should output to map annotation.\n{{/}}\nGood things are happening again!\n");
+		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 
@@ -145,8 +145,8 @@ public class AnnotationTests {
 	@Test
 	public void testOutputRemapping() throws IOException, LoadException {
 		final String filename = "DELETE_ME.test";
-		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Output Remapping", "{{#@file({\"name\":\"" + filename + "\"})}}\nGood things are happening!\nMore good things!\n{{/@file}}\n");
-		final horseshoe.Settings settings = new horseshoe.Settings();
+		final Template template = new TemplateLoader().load("Output Remapping", "{{#@file({\"name\":\"" + filename + "\"})}}\nGood things are happening!\nMore good things!\n{{/@file}}\n");
+		final Settings settings = new Settings();
 		final Writer writer = new StringWriter();
 
 		try {
