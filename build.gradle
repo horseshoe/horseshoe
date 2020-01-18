@@ -45,4 +45,10 @@ artifacts {
 	archives javadocJar
 }
 
+task printVersion {
+	doLast {
+		println project.version
+	}
+}
+
 version = '0.1.11'
