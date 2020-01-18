@@ -26,6 +26,14 @@ final class Operator {
 	private static final List<Operator> OPERATORS;
 	private static final Map<String, Operator> OPERATOR_LOOKUP = new LinkedHashMap<>();
 
+	private final String string;
+	private final int precedence; // 0 is the highest
+	private final int properties;
+	private final String description;
+	private final String closingString;
+	private final int rightExpressions;
+	private Operator next = null;
+
 	static {
 		final List<Operator> operators = new ArrayList<>();
 
@@ -105,14 +113,6 @@ final class Operator {
 	public static List<Operator> getAll() {
 		return OPERATORS;
 	}
-
-	private final String string;
-	private final int precedence; // 0 is the highest
-	private final int properties;
-	private final String description;
-	private final String closingString;
-	private final int rightExpressions;
-	private Operator next = null;
 
 	private Operator(final String string, final int precedence, final int properties, final String description, final String closingString, final int rightExpressions) {
 		this.string = string;

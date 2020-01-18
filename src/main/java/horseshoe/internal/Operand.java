@@ -30,6 +30,9 @@ final class Operand {
 	private static final Method EQUALS;
 	private static final Method TO_STRING;
 
+	public final Class<?> type; // null indicates a stack with { long longVal, double doubleVal, int type } on top
+	public final MethodBuilder builder;
+
 	static {
 		try {
 			BOOLEAN_VALUE = Boolean.class.getMethod("booleanValue");
@@ -43,9 +46,6 @@ final class Operand {
 			throw new RuntimeException("Bad reflection operation: " + e.getMessage(), e);
 		}
 	}
-
-	public final Class<?> type; // null indicates a stack with { long longVal, double doubleVal, int type } on top
-	public final MethodBuilder builder;
 
 	public Operand(final Class<?> type, final MethodBuilder builder) {
 		this.type = type;

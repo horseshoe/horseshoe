@@ -22,6 +22,19 @@ public final class Loader implements AutoCloseable {
 
 	private static final Pattern NEW_LINE = Pattern.compile("\\r\\n?|\\n");
 
+	private final String name;
+	private final Path file;
+	private final Reader reader;
+	private Buffer streamBuffer;
+	private CharSequence buffer;
+	private int bufferOffset = 0;
+	private boolean isFullyLoaded = false;
+	private final Matcher matcher;
+
+	private final Matcher newLineMatcher;
+	private Location location = new Location();
+	private Location nextLocation = location;
+
 	private static class Location {
 		public static final int FIRST_COLUMN = 1;
 
@@ -37,19 +50,6 @@ public final class Loader implements AutoCloseable {
 			this(1, FIRST_COLUMN);
 		}
 	}
-
-	private final String name;
-	private final Path file;
-	private final Reader reader;
-	private Buffer streamBuffer;
-	private CharSequence buffer;
-	private int bufferOffset = 0;
-	private boolean isFullyLoaded = false;
-	private final Matcher matcher;
-
-	private final Matcher newLineMatcher;
-	private Location location = new Location();
-	private Location nextLocation = location;
 
 	/**
 	 * Creates a new loader from a character sequence.

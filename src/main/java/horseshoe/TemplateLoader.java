@@ -28,6 +28,20 @@ import horseshoe.internal.PersistentStack;
  */
 public class TemplateLoader {
 
+	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))), false);
+	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
+	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=");
+	private static final Pattern ANNOTATION = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL);
+	private static final Pattern NAMED_EXPRESSION = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?->\\s*");
+
+	private final Map<String, Template> templates = new HashMap<>();
+	private final Map<String, Loader> templateLoaders = new HashMap<>();
+	private final List<Path> includeDirectories = new ArrayList<>();
+	private Charset charset = StandardCharsets.UTF_8;
+	private boolean preventPartialPathTraversal = true;
+	private boolean throwOnPartialNotFound = true;
+	private boolean useSimpleExpressions = false;
+
 	private static final class Delimiter {
 
 		private static final Pattern DEFAULT_START = Pattern.compile(Pattern.quote("{{"));
@@ -52,12 +66,6 @@ public class TemplateLoader {
 
 	}
 
-	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))), false);
-	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
-	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=");
-	private static final Pattern ANNOTATION = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL);
-	private static final Pattern NAMED_EXPRESSION = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?->\\s*");
-
 	/**
 	 * Creates a new template loader that is mustache-compatible
 	 *
@@ -66,14 +74,6 @@ public class TemplateLoader {
 	public static TemplateLoader newMustacheLoader() {
 		return new TemplateLoader().setThrowOnPartialNotFound(false).setUseSimpleExpressions(true);
 	}
-
-	private final Map<String, Template> templates = new HashMap<>();
-	private final Map<String, Loader> templateLoaders = new HashMap<>();
-	private final List<Path> includeDirectories = new ArrayList<>();
-	private Charset charset = StandardCharsets.UTF_8;
-	private boolean preventPartialPathTraversal = true;
-	private boolean throwOnPartialNotFound = true;
-	private boolean useSimpleExpressions = false;
 
 	/**
 	 * Creates a template loader using the specified include directories.
@@ -94,7 +94,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds templates from strings. The templates will not be loaded until they are referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. Any templates already loaded are ignored.
+	 * Adds templates from strings. The templates will not be loaded until they are referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. Any templates already loaded are ignored.
 	 *
 	 * @param templates a map of template names to template strings
 	 * @return this loader
@@ -108,7 +108,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds a template from a string. The template will not be loaded until it is referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
+	 * Adds a template from a string. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
 	 * @param name the name of the template
 	 * @param value the string value to load as a template
@@ -127,7 +127,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds a template to the loader. The template will not be loaded until it is referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
+	 * Adds a template to the loader. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
 	 * @param template the template to add to the loader
 	 * @return this loader
@@ -141,7 +141,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
+	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
 	 * @param name the name of the template
 	 * @param file the file to load as a template
@@ -162,7 +162,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
+	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
 	 * @param name the name of the template
 	 * @param file the file to load as a template
@@ -582,12 +582,10 @@ public class TemplateLoader {
 						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), useSimpleExpressions), true));
 						break;
 					}
+				} catch (final LoadException e) {
+					throw e;
 				} catch (final Exception e) {
-					if (e instanceof LoadException) {
-						throw (LoadException)e;
-					} else {
-						throw new LoadException(loaders, "Invalid tag \"" + tag + "\"", e);
-					}
+					throw new LoadException(loaders, "Invalid tag \"" + tag + "\"", e);
 				}
 			}
 		}

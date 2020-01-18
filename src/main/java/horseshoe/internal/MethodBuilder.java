@@ -244,6 +244,13 @@ public final class MethodBuilder {
 	public static final byte SWAP = (byte)0x5F; // (stack: value2, value1 -> value1, value2)
 	public static final byte WIDE = (byte)0xC4; // 3/5: opcode, indexbyte1, indexbyte2 (stack: [same as for corresponding instructions])
 
+	private byte[] bytes = new byte[256];
+	private int length = 0;
+	private int maxStackSize = 0;
+	private int stackSize = 0;
+	private int maxLocalVariableIndex = 0; // Always include index 0 to support "this" pointer to support non-static methods
+	private final Set<Label> labels = new LinkedHashSet<>();
+
 	private static final class Location {
 		public Object container;
 		public int offset;
@@ -524,13 +531,6 @@ public final class MethodBuilder {
 		return offset;
 	}
 
-	private byte[] bytes = new byte[256];
-	private int length = 0;
-	private int maxStackSize = 0;
-	private int stackSize = 0;
-	private int maxLocalVariableIndex = 0; // Always include index 0 to support "this" pointer to support non-static methods
-	private final Set<Label> labels = new LinkedHashSet<>();
-
 	private final ConstantPool constantPool = new ConstantPool() {
 		private final Map<Object, ConstantPoolEntry> constants = new LinkedHashMap<>();
 		private byte[] buffer = new byte[256];
@@ -680,7 +680,8 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder addCode(final byte... code) {
-		int i = 0, stackOffset = 0;
+		int stackOffset = 0;
+		int i = 0;
 
 		for (; i < code.length; i++) {
 			switch (code[i]) {
@@ -1444,7 +1445,7 @@ public final class MethodBuilder {
 		final ConstantPoolEntry methodNameInfo = getConstant(new UTF8String(method.getName()));
 		final ConstantPoolEntry methodSignatureInfo = getConstant(new UTF8String(getSignature(method)));
 
-		final int fieldIndex = 10 + constantPool.getLength() + (baseClassInfo == interfaceClassInfo ? 8 : 10); // The offset of the field start
+		final int fieldIndex = 10 + constantPool.getLength() + (base.isInterface() ? 10 : 8); // The offset of the field start
 		final int ctorIndex = fieldIndex + 4; // The offset of the constructor start
 		final int methodIndex = ctorIndex + 31; // The offset of the method start
 		final int attributeIndex = methodIndex + length + 26;
@@ -1493,14 +1494,14 @@ public final class MethodBuilder {
 		classBytecode[10 + constantPool.getLength() + 5] = (byte)(baseClassInfo.index);
 
 		// Add the interface we are implementing
-		if (baseClassInfo == interfaceClassInfo) {
-			classBytecode[10 + constantPool.getLength() + 6] = 0x00;
-			classBytecode[10 + constantPool.getLength() + 7] = 0x00;
-		} else {
+		if (base.isInterface()) {
 			classBytecode[10 + constantPool.getLength() + 6] = 0x00;
 			classBytecode[10 + constantPool.getLength() + 7] = 0x01;
 			classBytecode[10 + constantPool.getLength() + 8] = (byte)(interfaceClassInfo.index >>> 8);
 			classBytecode[10 + constantPool.getLength() + 9] = (byte)(interfaceClassInfo.index);
+		} else {
+			classBytecode[10 + constantPool.getLength() + 6] = 0x00;
+			classBytecode[10 + constantPool.getLength() + 7] = 0x00;
 		}
 
 		// No fields

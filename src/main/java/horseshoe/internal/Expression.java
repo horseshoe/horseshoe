@@ -22,6 +22,44 @@ import horseshoe.internal.MethodBuilder.Label;
 
 public final class Expression {
 
+	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
+
+	// Reflected Methods
+	private static final Method ACCESSOR_LOOKUP;
+	private static final Method EXPRESSION_EVALUATE;
+	private static final Method IDENTIFIER_GET_VALUE_BACKREACH;
+	private static final Method IDENTIFIER_GET_VALUE_BACKREACH_METHOD;
+	private static final Method IDENTIFIER_GET_VALUE;
+	private static final Method IDENTIFIER_GET_VALUE_METHOD;
+	private static final Method INDEXED_GET_INDEX;
+	private static final Method INDEXED_HAS_NEXT;
+	@SuppressWarnings("rawtypes")
+	private static final Constructor<IterableMap> ITERABLE_MAP_CTOR_INT;
+	@SuppressWarnings("rawtypes")
+	private static final Constructor<LinkedHashMap> LINKED_HASH_MAP_CTOR_INT;
+	private static final Method MAP_PUT;
+	private static final Method PERSISTENT_STACK_PEEK;
+	private static final Method PERSISTENT_STACK_POP;
+	private static final Method PERSISTENT_STACK_PUSH_OBJECT;
+	private static final Method STRING_BUILDER_APPEND_OBJECT;
+	private static final Constructor<StringBuilder> STRING_BUILDER_INIT_STRING;
+	private static final Method STRING_VALUE_OF;
+
+	// The patterns used for parsing the grammar
+	private static final Pattern IDENTIFIER_BACKREACH_PATTERN = Pattern.compile("(?<backreach>(?:[.][.]/)+)");
+	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<current>(?:[.]/)*)(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`|[.][.])[(]?)\\s*");
+	private static final Pattern INTERNAL_PATTERN = Pattern.compile("(?:[.]/)*(?<identifier>[.]\\p{L}*)\\s*");
+	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*");
+	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))(?<isLong>[lL])?\\s*");
+	private static final Pattern STRING_PATTERN = Pattern.compile("\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"\\s*");
+	private static final Pattern OPERATOR_PATTERN;
+
+	private final String location;
+	private final String originalString;
+	private final Expression expressions[];
+	private final Identifier identifiers[];
+	private final Evaluable evaluable;
+
 	public static interface ErrorLogger {
 		/**
 		 * Logs the specified error.
@@ -98,33 +136,10 @@ public final class Expression {
 		}
 
 		@Override
-		public Iterator<java.util.Map.Entry<K, V>> iterator() {
+		public Iterator<Map.Entry<K, V>> iterator() {
 			return entrySet().iterator();
 		}
 	}
-
-	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
-
-	// Reflected Methods
-	private static final Method ACCESSOR_LOOKUP;
-	private static final Method EXPRESSION_EVALUATE;
-	private static final Method IDENTIFIER_GET_VALUE_BACKREACH;
-	private static final Method IDENTIFIER_GET_VALUE_BACKREACH_METHOD;
-	private static final Method IDENTIFIER_GET_VALUE;
-	private static final Method IDENTIFIER_GET_VALUE_METHOD;
-	private static final Method INDEXED_GET_INDEX;
-	private static final Method INDEXED_HAS_NEXT;
-	@SuppressWarnings("rawtypes")
-	private static final Constructor<IterableMap> ITERABLE_MAP_CTOR_INT;
-	@SuppressWarnings("rawtypes")
-	private static final Constructor<LinkedHashMap> LINKED_HASH_MAP_CTOR_INT;
-	private static final Method MAP_PUT;
-	private static final Method PERSISTENT_STACK_PEEK;
-	private static final Method PERSISTENT_STACK_POP;
-	private static final Method PERSISTENT_STACK_PUSH_OBJECT;
-	private static final Method STRING_BUILDER_APPEND_OBJECT;
-	private static final Constructor<StringBuilder> STRING_BUILDER_INIT_STRING;
-	private static final Method STRING_VALUE_OF;
 
 	static {
 		try {
@@ -149,15 +164,6 @@ public final class Expression {
 			throw new RuntimeException("Bad reflection operation: " + e.getMessage(), e);
 		}
 	}
-
-	// The patterns used for parsing the grammar
-	private static final Pattern IDENTIFIER_BACKREACH_PATTERN = Pattern.compile("(?<backreach>(?:[.][.]/)+)");
-	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<current>(?:[.]/)*)(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`|[.][.])[(]?)\\s*");
-	private static final Pattern INTERNAL_PATTERN = Pattern.compile("(?:[.]/)*(?<identifier>[.]\\p{L}*)\\s*");
-	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*");
-	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))(?<isLong>[lL])?\\s*");
-	private static final Pattern STRING_PATTERN = Pattern.compile("\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"\\s*");
-	private static final Pattern OPERATOR_PATTERN;
 
 	static {
 		final StringBuilder sb = new StringBuilder("(?<operator>");
@@ -508,12 +514,6 @@ public final class Expression {
 
 		return sb.append(rawIdentifier.substring(i)).toString();
 	}
-
-	private final String location;
-	private final String originalString;
-	private final Expression expressions[];
-	private final Identifier identifiers[];
-	private final Evaluable evaluable;
 
 	/**
 	 * Creates a new expression.

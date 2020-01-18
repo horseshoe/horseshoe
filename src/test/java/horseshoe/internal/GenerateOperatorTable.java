@@ -7,17 +7,13 @@ import static horseshoe.internal.Operator.X_RIGHT_EXPRESSIONS;
 
 import org.junit.Test;
 
-import horseshoe.internal.Operator;
-
 public class GenerateOperatorTable {
 
 	@Test
 	public void generateOperationTable() throws Exception {
-		//Expression.load("3 + 4 * 2 / ( 1 - 5 ) ^ 2 ^ 3", 1);
-		//Expression.load("(func(5, {6, 7, call(), (8+5)*(4,8)}, 0, something.else[0].func(arg1, arg2)))", 1);
 		System.out.println(" Operation Table:");
-		System.out.println("Precedence | Operators | Associativity");
-		System.out.println("---------- | --------- | -------------");
+		System.out.println("| Precedence | Operators | Associativity |");
+		System.out.println("| ---------- | --------- | ------------- |");
 
 		Operator previousOperator = null;
 		final String separator = ", <br>";
@@ -25,7 +21,7 @@ public class GenerateOperatorTable {
 
 		for (final Operator operator : Operator.getAll()) {
 			if (previousOperator != null && operator.getPrecedence() != previousOperator.getPrecedence()) {
-				System.out.println(previousOperator.getPrecedence() + " | " + sb.substring(separator.length()) + " | " + (previousOperator.isLeftAssociative() ? "Left-to-right" : "Right-to-left"));
+				System.out.println("| " + previousOperator.getPrecedence() + " | " + sb.substring(separator.length()) + " | " + (previousOperator.isLeftAssociative() ? "Left-to-right" : "Right-to-left") + " |");
 
 				sb.setLength(0);
 			}
@@ -58,7 +54,7 @@ public class GenerateOperatorTable {
 			previousOperator = operator;
 		}
 
-		System.out.println(previousOperator.getPrecedence() + " | " + sb.substring(separator.length()) + " | " + (previousOperator.isLeftAssociative() ? "Left-to-right" : "Right-to-left"));
+		System.out.println("| " + previousOperator.getPrecedence() + " | " + sb.substring(separator.length()) + " | " + (previousOperator.isLeftAssociative() ? "Left-to-right" : "Right-to-left") + " |");
 		System.out.println();
 	}
 

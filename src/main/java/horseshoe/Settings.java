@@ -9,39 +9,6 @@ import java.util.regex.Pattern;
 public class Settings {
 
 	/**
-	 * An enumeration used to control access when checking identifiers in expressions.
-	 */
-	public static enum ContextAccess {
-		/**
-		 * All section scopes will be checked for an identifier in an expression.
-		 */
-		FULL,
-
-		/**
-		 * Only the current section scope and the root-level section scope will be checked for an identifier in an expression.
-		 */
-		CURRENT_AND_ROOT,
-
-		/**
-		 * Only the current section scope will be checked for an identifier in an expression.
-		 */
-		CURRENT_ONLY
-	}
-
-	/**
-	 * An EscapeFunction is used to escape dynamic content (interpolated text) before it is rendered as output.
-	 */
-	public static interface EscapeFunction {
-		/**
-		 * Escapes the specified string.
-		 *
-		 * @param raw the raw string to escape
-		 * @return the escaped string
-		 */
-		String escape(String raw);
-	}
-
-	/**
 	 * Use the default (system) line endings when rendering the template.
 	 */
 	public static final String USE_DEFAULT_LINE_ENDINGS = System.lineSeparator();
@@ -87,6 +54,39 @@ public class Settings {
 			return sb.append(raw, start, raw.length()).toString();
 		}
 	};
+
+	/**
+	 * An enumeration used to control access when checking identifiers in expressions.
+	 */
+	public static enum ContextAccess {
+		/**
+		 * All section scopes will be checked for an identifier in an expression.
+		 */
+		FULL,
+
+		/**
+		 * Only the current section scope and the root-level section scope will be checked for an identifier in an expression.
+		 */
+		CURRENT_AND_ROOT,
+
+		/**
+		 * Only the current section scope will be checked for an identifier in an expression.
+		 */
+		CURRENT_ONLY
+	}
+
+	/**
+	 * An EscapeFunction is used to escape dynamic content (interpolated text) before it is rendered as output.
+	 */
+	public static interface EscapeFunction {
+		/**
+		 * Escapes the specified string.
+		 *
+		 * @param raw the raw string to escape
+		 * @return the escaped string
+		 */
+		String escape(String raw);
+	}
 
 	/**
 	 * Creates new mustache-compatible settings.

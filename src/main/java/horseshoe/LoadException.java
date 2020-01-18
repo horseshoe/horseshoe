@@ -11,6 +11,8 @@ public class LoadException extends Exception {
 
 	private static final long serialVersionUID = 1L;
 
+	private final List<Loader> loaders = new ArrayList<>();
+
 	/**
 	 * Creates the exception message based on the load items and an error string.
 	 *
@@ -34,8 +36,6 @@ public class LoadException extends Exception {
 
 		return sb.toString();
 	}
-
-	private final List<Loader> loaders = new ArrayList<>();
 
 	/**
 	 * Creates a new load exception
