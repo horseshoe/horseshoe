@@ -57,7 +57,7 @@ public class TemplateTests {
 	@Test
 	public void testNamedExpressions() throws java.io.IOException, LoadException {
 		assertEquals("ORIGINAL STRING" + LS, new TemplateLoader().load("Upper", "{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n{{#charAt(1)}}\n{{upper(..)}}\n{{/}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals(LS + "ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n{{>a}}\n{{upper() + \"-\" + lower()}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals(LS + "  ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{>a}}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 }
