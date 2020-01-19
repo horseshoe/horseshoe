@@ -9,8 +9,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
 
-import horseshoe.internal.MethodBuilder;
-
 public class MethodBuilderTests {
 
 	private static final AtomicInteger classCounter = new AtomicInteger(10);
@@ -26,6 +24,7 @@ public class MethodBuilderTests {
 
 		// Hello, world!
 		mb.pushConstant("Hello, world!").addCode(ARETURN);
+		System.out.println(mb);
 
 		final SimpleInterface instance = mb.load(name, SimpleInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
 		assertEquals("Hello, world!", instance.run());
@@ -38,6 +37,7 @@ public class MethodBuilderTests {
 
 		// Test method calls
 		mb.addCode(ALOAD_0).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addCode(ARETURN);
+		System.out.println(mb);
 
 		final SimpleInterface instance = mb.load(name, SimpleInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
 		assertEquals(name, instance.run());
@@ -61,6 +61,7 @@ public class MethodBuilderTests {
 				.addCast(Double.class)
 				.addInvoke(Double.class.getMethod("doubleValue"))
 				.addCode(DADD, DLOAD, (byte)4, DADD, DRETURN);
+		System.out.println(mb);
 
 		final ComplexInterface instance = mb.load(name, ComplexInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
 

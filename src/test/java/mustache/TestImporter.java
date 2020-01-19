@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -100,7 +101,7 @@ public class TestImporter {
 				System.out.println("Loading " + path.toString() + "...");
 
 				try (final InputStream in = new FileInputStream(path.toString());
-						final PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(destination.resolve(className + ".java").toString())))) {
+						final PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(destination.resolve(className + ".java").toString()), StandardCharsets.UTF_8))) {
 					out.print("package horseshoe.mustache;" + System.lineSeparator() +
 							System.lineSeparator() +
 							"import org.junit.Test;" + System.lineSeparator() +

@@ -12,7 +12,7 @@ import org.junit.Test;
 public class GenerateOperatorTable {
 
 	private static String escapeHTML(final String value) {
-		return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+		return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("|", "&#124;");
 	}
 
 	private static String escapeMarkdown(final String value) {
@@ -34,19 +34,19 @@ public class GenerateOperatorTable {
 
 			while (true) {
 				final Operator operator = nextOperator;
-				final String operatorOutput = "<code>" + escapeHTML(operator.getString()).replace("|", "&#124;") + "</code>";
+				final String operatorOutput = "<code>" + escapeMarkdown(operator.getString()) + "</code>";
 				sb.append(separator);
 
 				if (operator.has(LEFT_EXPRESSION) || operator.has(METHOD_CALL)) {
 					sb.append("a").append(operatorOutput);
 
 					if (operator.has(X_RIGHT_EXPRESSIONS)) {
-						sb.append("b?");
+						sb.append("b\\*");
 					} else if (operator.has(RIGHT_EXPRESSION)) {
 						sb.append("b");
 					}
 				} else if (operator.has(X_RIGHT_EXPRESSIONS)) {
-					sb.append(operatorOutput).append("a?");
+					sb.append(operatorOutput).append("a\\*");
 				} else if (operator.has(RIGHT_EXPRESSION)) {
 					sb.append(operatorOutput).append("a");
 				} else {
@@ -54,7 +54,7 @@ public class GenerateOperatorTable {
 				}
 
 				if (operator.getClosingString() != null) {
-					sb.append("<code>").append(escapeHTML(operator.getClosingString()).replace("|", "&#124;")).append("</code>");
+					sb.append("<code>").append(escapeMarkdown(operator.getClosingString())).append("</code>");
 				}
 
 				sb.append(" \\(").append(escapeMarkdown(operator.getDescription())).append("\\)");

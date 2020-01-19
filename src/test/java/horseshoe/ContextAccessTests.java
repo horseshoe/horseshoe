@@ -13,7 +13,7 @@ import horseshoe.Settings.ContextAccess;
 
 public class ContextAccessTests {
 
-	public class FieldClass {
+	public static class FieldClass {
 		public String testField = "test";
 
 		@Override

@@ -29,6 +29,18 @@ public class ExpressionTests {
 		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "null?[1] ?? \"2\"", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
 		assertEquals("4", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(1..5)[3]", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
 		assertEquals("8", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(10..5)[2]", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals(6, ((int[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "10..5", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).length);
+		assertEquals(1, ((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[10..5]", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).length);
+
+		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[5, 6.7, \"string-1\", \"blah\"][1 + 2]", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
+		assertEquals("string-1", ((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\", \"blah\"", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER))[2].toString());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\"", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\",", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(5, 6.7, \"string-1\": 7, \"blah\",)", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
+		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "7:5,", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
+		assertTrue(((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[:]", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).isEmpty());
+		assertTrue(((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[]", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).length == 0);
+		assertTrue(((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5,", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).length == 1);
 	}
 
 	@Test (expected = RuntimeException.class)
@@ -117,17 +129,7 @@ public class ExpressionTests {
 
 	@Test
 	public void testSeparatorOperator() throws ReflectiveOperationException {
-		final PersistentStack<Object> context = new PersistentStack<>();
-		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5; 6.7; \"string-1\"; \"blah\";", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
-		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[5, 6.7, \"string-1\", \"blah\"][1 + 2]", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
-		assertEquals("string-1", ((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\", \"blah\"", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER))[2].toString());
-		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\"", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
-		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\",", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
-		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(5, 6.7, \"string-1\": 7, \"blah\",)", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
-		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "7:5,", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).size());
-		assertTrue(((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[:]", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).isEmpty());
-		assertTrue(((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[]", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).length == 0);
-		assertTrue(((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5,", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER)).length == 1);
+		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5; 6.7; \"string-1\"; \"blah\";", Collections.emptyMap(), false).evaluate(new PersistentStack<>(), ContextAccess.CURRENT_ONLY, null, Expression.STDERR_LOGGER).toString());
 	}
 
 	@Test

@@ -1,9 +1,8 @@
 name: Coverity
 
-on: [push]
-#on:
-#   schedule:
-#    - cron: '34 14 * * *' # Daily at 14:34 UTC
+on:
+  schedule:
+    - cron: '34 14 * * *' # Daily at 14:34 UTC
 
 jobs:
   build:
