@@ -23,7 +23,7 @@ final class DynamicContentRenderer implements Action {
 
 	@Override
 	public void perform(final RenderContext context, final Writer writer) throws IOException {
-		final Object value = expression.evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), Expression.STDERR_LOGGER);
+		final Object value = expression.evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), context.getSettings().getErrorLogger());
 
 		if (value != null) {
 			final String string = value.toString();

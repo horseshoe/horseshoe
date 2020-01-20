@@ -1001,7 +1001,7 @@ public final class MethodBuilder {
 				}
 			}
 		} catch (final ReflectiveOperationException e) {
-			throw new RuntimeException("Failed to get conversion method to invoke: " + e.getMessage(), e); // This should never happen
+			throw new NoSuchMethodError("Failed to get required class member: " + e.getMessage());
 		}
 
 		throw new IllegalArgumentException("The \"from\" type must be convertible to the \"to\" type");
@@ -1050,7 +1050,7 @@ public final class MethodBuilder {
 				return pushNewObject(throwable).addCode(DUP).pushConstant(message).addInvoke(throwable.getConstructor(String.class)).addCode(ATHROW);
 			}
 		} catch (final ReflectiveOperationException e) {
-			throw new RuntimeException("Failed to get constructor for " + throwable.getSimpleName() + ": " + e.getMessage(), e);
+			throw new IncompatibleClassChangeError("Failed to get required class constructor: " + e.getMessage());
 		}
 	}
 

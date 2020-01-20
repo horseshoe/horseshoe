@@ -60,30 +60,6 @@ public final class Expression {
 	private final Identifier identifiers[];
 	private final Evaluable evaluable;
 
-	public static interface ErrorLogger {
-		/**
-		 * Logs the specified error.
-		 *
-		 * @param expression the expression that cause the error
-		 * @param error the error to log
-		 */
-		public void log(final Expression expression, final Throwable error);
-	}
-
-	/**
-	 * A stderr logger.
-	 */
-	public static final ErrorLogger STDERR_LOGGER = new ErrorLogger() {
-		@Override
-		public void log(final Expression expression, final Throwable error) {
-			if (error.getMessage() == null) {
-				System.err.println("Encountered " + error.getClass().getName() + " while evaluating expression \"" + expression.originalString + "\" (" + expression.location + ")");
-			} else {
-				System.err.println("Encountered " + error.getClass().getName() + " while evaluating expression \"" + expression.originalString + "\" (" + expression.location + "): " + error.getMessage());
-			}
-		}
-	};
-
 	public static interface Indexed {
 		/**
 		 * Gets the index of the current indexed object.
@@ -119,9 +95,9 @@ public final class Expression {
 		 * @param indices the indexed objects used to evaluate the object
 		 * @param errorLogger the error logger to use while evaluating this expression
 		 * @return the result of evaluating the object
-		 * @throws ReflectiveOperationException if an error occurs while evaluating the reflective parts of the object
+		 * @throws Exception if an error occurs while evaluating the expression
 		 */
-		public abstract Object evaluate(final Expression expressions[], final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indices, final ErrorLogger errorLogger) throws ReflectiveOperationException;
+		public abstract Object evaluate(final Expression expressions[], final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indices, final Settings.ErrorLogger errorLogger) throws Exception;
 	}
 
 	@SuppressWarnings("serial")
@@ -144,7 +120,7 @@ public final class Expression {
 	static {
 		try {
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
-			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", PersistentStack.class, Settings.ContextAccess.class, PersistentStack.class, ErrorLogger.class);
+			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", PersistentStack.class, Settings.ContextAccess.class, PersistentStack.class, Settings.ErrorLogger.class);
 			IDENTIFIER_GET_VALUE_BACKREACH = Identifier.class.getMethod("getValue", PersistentStack.class, Settings.ContextAccess.class);
 			IDENTIFIER_GET_VALUE_BACKREACH_METHOD = Identifier.class.getMethod("getValue", PersistentStack.class, Settings.ContextAccess.class, Object[].class);
 			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
@@ -161,7 +137,7 @@ public final class Expression {
 			STRING_BUILDER_INIT_STRING = StringBuilder.class.getConstructor(String.class);
 			STRING_VALUE_OF = String.class.getMethod("valueOf", Object.class);
 		} catch (final ReflectiveOperationException e) {
-			throw new RuntimeException("Bad reflection operation: " + e.getMessage(), e);
+			throw new ExceptionInInitializerError("Failed to get required class member: " + e.getMessage());
 		}
 	}
 
@@ -881,11 +857,13 @@ public final class Expression {
 	 * @param errorLogger the error logger to use while evaluating this expression
 	 * @return the evaluated expression or null if the expression could not be evaluated
 	 */
-	public Object evaluate(final PersistentStack<Object> context, final Settings.ContextAccess access, final PersistentStack<Indexed> indices, final ErrorLogger errorLogger) {
+	public Object evaluate(final PersistentStack<Object> context, final Settings.ContextAccess access, final PersistentStack<Indexed> indices, final Settings.ErrorLogger errorLogger) {
 		try {
 			return evaluable.evaluate(expressions, identifiers, context, access, indices, errorLogger);
 		} catch (final Throwable t) { // Don't let any exceptions escape
-			errorLogger.log(this, t);
+			if (errorLogger != null) {
+				errorLogger.log(originalString, location, t);
+			}
 		}
 
 		return null;

@@ -9,14 +9,23 @@ import java.util.regex.Pattern;
 public class Settings {
 
 	/**
-	 * Use the default (system) line endings when rendering the template.
+	 * Log render errors to stderr.
 	 */
-	public static final String USE_DEFAULT_LINE_ENDINGS = System.lineSeparator();
+	public static final ErrorLogger LOG_ERRORS_TO_STDERR = new ErrorLogger() {
+		@Override
+		public void log(final String expression, final String location, final Throwable error) {
+			if (error.getMessage() == null) {
+				System.err.println("Encountered " + error.getClass().getName() + " while evaluating expression \"" + expression + "\" (" + location + ")");
+			} else {
+				System.err.println("Encountered " + error.getClass().getName() + " while evaluating expression \"" + expression + "\" (" + location + "): " + error.getMessage());
+			}
+		}
+	};
 
 	/**
-	 * Use the line endings as they exist in the template being rendered.
+	 * Disables logging of errors.
 	 */
-	public static final String USE_TEMPLATE_LINE_ENDINGS = null;
+	public static final ErrorLogger DO_NOT_LOG_ERRORS = null;
 
 	/**
 	 * Do not escape any characters when rendering.
@@ -55,8 +64,19 @@ public class Settings {
 		}
 	};
 
-	private EscapeFunction escapeFunction = DO_NOT_ESCAPE;
+	/**
+	 * Use the default (system) line endings when rendering the template.
+	 */
+	public static final String USE_DEFAULT_LINE_ENDINGS = System.lineSeparator();
+
+	/**
+	 * Use the line endings as they exist in the template being rendered.
+	 */
+	public static final String USE_TEMPLATE_LINE_ENDINGS = null;
+
 	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
+	private ErrorLogger errorLogger = LOG_ERRORS_TO_STDERR;
+	private EscapeFunction escapeFunction = DO_NOT_ESCAPE;
 	private String lineEnding = USE_DEFAULT_LINE_ENDINGS;
 
 	/**
@@ -77,6 +97,20 @@ public class Settings {
 		 * Only the current section scope will be checked for an identifier in an expression.
 		 */
 		CURRENT_ONLY
+	}
+
+	/**
+	 * An ErrorLogger is used to log errors during the evaluation of expressions.
+	 */
+	public static interface ErrorLogger {
+		/**
+		 * Logs the specified error.
+		 *
+		 * @param expression the expression that threw the error
+		 * @param location the location of the expression that threw the error
+		 * @param error the error to log
+		 */
+		public void log(final String expression, final String location, final Throwable error);
 	}
 
 	/**
@@ -111,6 +145,15 @@ public class Settings {
 	}
 
 	/**
+	 * Gets the expression error logger used by the rendering process.
+	 *
+	 * @return the expression error logger used by the rendering process. If null, the rendering process will not log expression errors.
+	 */
+	public ErrorLogger getErrorLogger() {
+		return errorLogger;
+	}
+
+	/**
 	 * Gets the escape function used by the rendering process.
 	 *
 	 * @return the escape function used by the rendering process. If null, the rendering process will not escape the text.
@@ -136,6 +179,17 @@ public class Settings {
 	 */
 	public Settings setContextAccess(final ContextAccess contextAccess) {
 		this.contextAccess = contextAccess;
+		return this;
+	}
+
+	/**
+	 * Sets the expression error logger used by the rendering process.
+	 *
+	 * @param errorLogger the expression error logger used by the rendering process. If null, the rendering process will not log expression errors.
+	 * @return this object
+	 */
+	public Settings setErrorLogger(final ErrorLogger errorLogger) {
+		this.errorLogger = errorLogger;
 		return this;
 	}
 

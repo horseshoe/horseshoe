@@ -43,7 +43,7 @@ final class Operand {
 			EQUALS = Object.class.getMethod("equals", Object.class);
 			TO_STRING = Object.class.getMethod("toString");
 		} catch (final ReflectiveOperationException e) {
-			throw new RuntimeException("Bad reflection operation: " + e.getMessage(), e);
+			throw new ExceptionInInitializerError("Failed to get required class member: " + e.getMessage());
 		}
 	}
 

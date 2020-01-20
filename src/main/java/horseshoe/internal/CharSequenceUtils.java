@@ -16,17 +16,17 @@ public final class CharSequenceUtils {
 	 * @param end the ending index (exclusive) in the character sequence
 	 * @return the trimmed character sequence
 	 */
-	public static CharSequence trim(final CharSequence value, int start, int end) {
-		while (start < end && Character.isWhitespace(value.charAt(start))) {
-			start++;
-		}
+	public static CharSequence trim(final CharSequence value, final int start, final int end) {
+		for (int i = start; i < end; i++) {
+			if (!Character.isWhitespace(value.charAt(i))) {
+				for (int j = end; i < j; j--) {
+					if (!Character.isWhitespace(value.charAt(j - 1))) {
+						return value.subSequence(i, j);
+					}
+				}
 
-		if (start < end) {
-			while (Character.isWhitespace(value.charAt(end - 1))) {
-				end--;
+				break;
 			}
-
-			return value.subSequence(start, end);
 		}
 
 		return "";
