@@ -45,10 +45,17 @@ artifacts {
 	archives javadocJar
 }
 
+jacocoTestReport {
+	reports {
+		xml.enabled true
+		html.enabled true
+	}
+}
+
 task printVersion {
 	doLast {
 		println project.version
 	}
 }
 
-version = '0.1.18'
+version = '0.1.19'
