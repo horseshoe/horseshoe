@@ -109,6 +109,18 @@ public class LoadExceptionTests {
 	}
 
 	@Test
+	public void testTagError() throws IOException {
+		try {
+			new TemplateLoader().load("Bad Tag", " test\n{{%}}\n{{#Test}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			fail();
+		} catch (final LoadException e) {
+			System.err.println(e.getMessage());
+			assertEquals(2, e.getLoaders().get(0).getLine());
+			assertEquals(3, e.getLoaders().get(0).getColumn());
+		}
+	}
+
+	@Test
 	public void testUnmatchedSection() throws IOException {
 		try {
 			new TemplateLoader().load("Unmatched Section", "{{#Test}} test\n{{#Test}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());

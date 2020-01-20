@@ -663,9 +663,7 @@ public final class Expression {
 					token = matcher.group("string");
 					int backslash = 0;
 
-					if (token == null) {
-						operands.push(new Operand(String.class, new MethodBuilder().pushConstant("")));
-					} else if ((backslash = token.indexOf('\\')) < 0) {
+					if ((backslash = token.indexOf('\\')) < 0) {
 						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(token)));
 					} else { // Find escape sequences and replace them with the proper character sequences
 						final StringBuilder sb = new StringBuilder(token.length());
@@ -827,6 +825,7 @@ public final class Expression {
 		// Populate all the identifiers and create the evaluator
 		this.expressions = new Expression[expressions.size()];
 		this.identifiers = new Identifier[identifiers.size()];
+		System.out.println(operands.peek());
 		this.evaluable = operands.pop().toObject(true).load(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		assert operands.isEmpty();
 
