@@ -26,6 +26,32 @@ final class StaticContentRenderer implements Action {
 		this.indentFirstLine = indentFirstLine;
 	}
 
+	String getFirstLine() {
+		return lines[0].getLine();
+	}
+
+	String getLastLine() {
+		return lines[lines.length - 1].getLine();
+	}
+
+	StaticContentRenderer ignoreFirstLine() {
+		ignoreFirstLine = true;
+		return this;
+	}
+
+	StaticContentRenderer ignoreLastLine() {
+		ignoreLastLine = true;
+		return this;
+	}
+
+	boolean isLastLineIgnored() {
+		return ignoreLastLine;
+	}
+
+	boolean isMultiline() {
+		return lines.length > 1;
+	}
+
 	@Override
 	public void perform(final RenderContext context, final Writer writer) throws IOException {
 		final String indentation = context.getIndentation().peek();
@@ -68,30 +94,6 @@ final class StaticContentRenderer implements Action {
 				writer.write(lines[lines.length - 1].getLine());
 			}
 		}
-	}
-
-	String getFirstLine() {
-		return lines[0].getLine();
-	}
-
-	String getLastLine() {
-		return lines[lines.length - 1].getLine();
-	}
-
-	void ignoreFirstLine() {
-		ignoreFirstLine = true;
-	}
-
-	void ignoreLastLine() {
-		ignoreLastLine = true;
-	}
-
-	boolean isLastLineIgnored() {
-		return ignoreLastLine;
-	}
-
-	boolean isMultiline() {
-		return lines.length > 1;
 	}
 
 }

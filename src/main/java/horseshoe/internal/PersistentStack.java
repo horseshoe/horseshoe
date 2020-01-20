@@ -36,11 +36,6 @@ public final class PersistentStack<T> implements Iterable<T> {
 		}
 	}
 
-	@Override
-	public java.util.Iterator<T> iterator() {
-		return new LIFOIterator();
-	}
-
 	/**
 	 * Gets the current capacity of the stack.
 	 *
@@ -55,6 +50,15 @@ public final class PersistentStack<T> implements Iterable<T> {
 	 */
 	public void clear() {
 		size = 0;
+	}
+
+	/**
+	 * Gets the previously popped from the stack.
+	 *
+	 * @return the previously popped from the stack
+	 */
+	public T getPoppedItem() {
+		return array[size];
 	}
 
 	/**
@@ -73,6 +77,11 @@ public final class PersistentStack<T> implements Iterable<T> {
 	 */
 	public boolean isEmpty() {
 		return size == 0;
+	}
+
+	@Override
+	public java.util.Iterator<T> iterator() {
+		return new LIFOIterator();
 	}
 
 	/**
@@ -126,8 +135,8 @@ public final class PersistentStack<T> implements Iterable<T> {
 	/**
 	 * Pushes an item onto the stack.
 	 *
-	 * @param obj the object to place on the stack
-	 * @return the object placed on the stack
+	 * @param obj the object to place onto the stack
+	 * @return the object placed onto the stack
 	 */
 	public T push(final T obj) {
 		// Check if the array needs to be resized
@@ -148,10 +157,22 @@ public final class PersistentStack<T> implements Iterable<T> {
 	/**
 	 * Pushes the previous item back onto the stack.
 	 *
-	 * @return the object pushed back on the stack
+	 * @return the object pushed back onto the stack
 	 */
 	public T push() {
 		return array[size++];
+	}
+
+	/**
+	 * Pushes an item onto the stack and immediately pops it off the stack.
+	 *
+	 * @param obj the object to place onto the stack
+	 * @return the object placed onto the stack
+	 */
+	public T pushPop(final T obj) {
+		push(obj);
+		size--;
+		return obj;
 	}
 
 	/**

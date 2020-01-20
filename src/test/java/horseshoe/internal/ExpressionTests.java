@@ -71,7 +71,7 @@ public class ExpressionTests {
 		context.push(Helper.loadMap("r", 10, "i2", 2, "bigNum", 9999999999L));
 		assertEquals((((10 | 2) ^ 2) >> 2) << 10, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(((r | i2) ^ 2) >> 2) << r", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Settings.LOG_ERRORS_TO_STDERR));
 		assertEquals((9999999999L >>> (9999999999L & 10)) + (9999999999L >>> 10), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(bigNum >>> (bigNum & r)) + (bigNum >> r)", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Settings.LOG_ERRORS_TO_STDERR));
-		assertEquals(~(-2) - -3, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~(-2) - -3", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Settings.LOG_ERRORS_TO_STDERR));
+		assertEquals(~(0 - +2) - -3, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~(0 - +2) - -3", Collections.emptyMap(), false).evaluate(context, ContextAccess.CURRENT_ONLY, null, Settings.LOG_ERRORS_TO_STDERR));
 	}
 
 	@Test

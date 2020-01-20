@@ -14,8 +14,8 @@ class SectionRenderer implements Action, Expression.Indexed {
 	static final Factory FACTORY;
 
 	protected final Section section;
-	protected int index;
 	protected boolean hasNext;
+	protected int index;
 
 	public static class Factory {
 
@@ -101,47 +101,47 @@ class SectionRenderer implements Action, Expression.Indexed {
 
 				if (!componentType.isPrimitive()) {
 					for (final Object[] array = (Object[])data; index < length; index++) {
-						hasNext = index >= length - 1;
+						hasNext = index < length - 1;
 						renderActions(context, array[index], writer, section.getActions());
 					}
 				} else if (int.class.equals(componentType)) {
 					for (final int[] array = (int[])data; index < length; index++) {
-						hasNext = index >= length - 1;
+						hasNext = index < length - 1;
 						renderActions(context, array[index], writer, section.getActions());
 					}
 				} else if (byte.class.equals(componentType)) {
 					for (final byte[] array = (byte[])data; index < length; index++) {
-						hasNext = index >= length - 1;
+						hasNext = index < length - 1;
 						renderActions(context, array[index], writer, section.getActions());
 					}
 				} else if (double.class.equals(componentType)) {
 					for (final double[] array = (double[])data; index < length; index++) {
-						hasNext = index >= length - 1;
+						hasNext = index < length - 1;
 						renderActions(context, array[index], writer, section.getActions());
 					}
 				} else if (boolean.class.equals(componentType)) {
 					for (final boolean[] array = (boolean[])data; index < length; index++) {
-						hasNext = index >= length - 1;
+						hasNext = index < length - 1;
 						renderActions(context, array[index], writer, section.getActions());
 					}
 				} else if (float.class.equals(componentType)) {
 					for (final float[] array = (float[])data; index < length; index++) {
-						hasNext = index >= length - 1;
+						hasNext = index < length - 1;
 						renderActions(context, array[index], writer, section.getActions());
 					}
 				} else if (long.class.equals(componentType)) {
 					for (final long[] array = (long[])data; index < length; index++) {
-						hasNext = index >= length - 1;
+						hasNext = index < length - 1;
 						renderActions(context, array[index], writer, section.getActions());
 					}
 				} else if (char.class.equals(componentType)) {
 					for (final char[] array = (char[])data; index < length; index++) {
-						hasNext = index >= length - 1;
+						hasNext = index < length - 1;
 						renderActions(context, array[index], writer, section.getActions());
 					}
 				} else {
 					for (final short[] array = (short[])data; index < length; index++) {
-						hasNext = index >= length - 1;
+						hasNext = index < length - 1;
 						renderActions(context, array[index], writer, section.getActions());
 					}
 				}
@@ -159,6 +159,10 @@ class SectionRenderer implements Action, Expression.Indexed {
 			}
 		} else {
 			renderActions(context, data, writer, section.getActions());
+		}
+
+		if (section.cacheResult()) {
+			context.getSectionData().pushPop(data);
 		}
 	}
 
@@ -202,7 +206,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 				}
 			}
 		} else {
-			dispatchData(context, section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), context.getSettings().getErrorLogger()), writer);
+			dispatchData(context, section.useCache() ? context.getSectionData().getPoppedItem() : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), context.getSettings().getErrorLogger()), writer);
 		}
 	}
 

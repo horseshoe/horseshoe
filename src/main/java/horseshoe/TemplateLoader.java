@@ -28,7 +28,7 @@ import horseshoe.internal.PersistentStack;
  */
 public class TemplateLoader {
 
-	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(new ArrayList<>(Arrays.asList(new ParsedLine("", ""))), false);
+	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(Arrays.asList(new ParsedLine("", null)), true);
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=");
 	private static final Pattern ANNOTATION = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL);
@@ -360,9 +360,7 @@ public class TemplateLoader {
 
 				loadTemplate(template, loaders, loader);
 			} catch (final IOException | RuntimeException e) {
-				if (throwOnPartialNotFound) {
-					throw new LoadException(loaders, "Template \"" + name + "\" could not be loaded: " + e.getMessage(), e);
-				}
+				throw new LoadException(loaders, "Template \"" + name + "\" could not be loaded: " + e.getMessage(), e);
 			} finally {
 				if (loader != null) {
 					loader.close();
@@ -387,7 +385,7 @@ public class TemplateLoader {
 		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
 
 		Delimiter delimiter = new Delimiter();
-		StaticContentRenderer textBeforeStandaloneTag = EMPTY_STATIC_CONTENT_RENDERER;
+		StaticContentRenderer textBeforeStandaloneTag = null;
 
 		loaders.push(loader);
 		sections.push(template.getSection());
@@ -398,19 +396,8 @@ public class TemplateLoader {
 			// Get text before this tag
 			final List<ParsedLine> lines = new ArrayList<>();
 			final CharSequence freeText = loader.next(delimiter.start, lines);
-			final int length = freeText.length();
 
-			if (length == 0) {
-				if (tags != 0) {
-					// The text can only be following a stand-alone tag if it is at the very end of the template
-					if (!loader.hasNext() && textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
-						textBeforeStandaloneTag.ignoreLastLine();
-					}
-
-					// Empty text can never be just before a stand-alone tag, unless it is the first content in the template
-					textBeforeStandaloneTag = null;
-				}
-			} else {
+			if (freeText.length() > 0) {
 				final StaticContentRenderer currentText = new StaticContentRenderer(lines, actionStack.peek().isEmpty());
 				actionStack.peek().add(currentText);
 
@@ -423,11 +410,21 @@ public class TemplateLoader {
 				}
 
 				// Use the current text as the basis for future stand-alone tag detection if the currentText is multiline or it is the first line in the template
-				if (currentText.isMultiline() || template.getActions().size() == 1) {
+				if (currentText.isMultiline() || tags == 0) {
 					textBeforeStandaloneTag = currentText;
 				} else {
 					textBeforeStandaloneTag = null;
 				}
+			} else if (tags > 0) { // length == 0
+				// The text can only be following a stand-alone tag if it is at the very end of the template
+				if (!loader.hasNext() && textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
+					textBeforeStandaloneTag.ignoreLastLine();
+				}
+
+				// Empty text can never be just before a stand-alone tag, unless it is the first content in the template
+				textBeforeStandaloneTag = null;
+			} else {
+				textBeforeStandaloneTag = EMPTY_STATIC_CONTENT_RENDERER;
 			}
 
 			if (!loader.hasNext()) {
@@ -464,13 +461,7 @@ public class TemplateLoader {
 						final Template partial = (localPartial != null ? localPartial : load(name, loaders));
 
 						sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
-
-						if (textBeforeStandaloneTag != null) {
-							actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag));
-						} else {
-							actionStack.peek().add(new TemplateRenderer(partial, EMPTY_STATIC_CONTENT_RENDERER));
-						}
-
+						actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag != null ? textBeforeStandaloneTag : EMPTY_STATIC_CONTENT_RENDERER));
 						break;
 					}
 
@@ -482,9 +473,9 @@ public class TemplateLoader {
 								throw new LoadException(loaders, "Repeat section without prior section");
 							}
 
-							final Section previousSection = sections.push();
+							final Section repeatedSection = sections.getPoppedItem();
 
-							sections.replace(new Section(sections.peek(), "", previousSection.getExpression(), null, false));
+							sections.push(new Section(sections.peek(), "", repeatedSection.getExpression(), null, false).markAsRepeatOf(repeatedSection));
 						} else if (expression.charAt(0) == '@') { // Annotation section
 							final Matcher annotation = ANNOTATION.matcher(expression);
 
@@ -598,7 +589,7 @@ public class TemplateLoader {
 		}
 
 		// Check for empty last line of template, so that indentation is not applied
-		if (textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
+		if (textBeforeStandaloneTag != null && textBeforeStandaloneTag.getLastLine().isEmpty()) {
 			textBeforeStandaloneTag.ignoreLastLine();
 		}
 

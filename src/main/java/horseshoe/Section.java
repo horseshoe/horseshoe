@@ -14,6 +14,8 @@ final class Section {
 	private final Expression expression;
 	private final String annotation;
 	private final boolean isInvisible;
+	private boolean cacheResult = false;
+	private boolean useCache = false;
 	private final Map<String, Expression> namedExpressions;
 	private final Map<String, Template> localPartials;
 	private final List<Action> actions = new ArrayList<>();
@@ -51,6 +53,15 @@ final class Section {
 	 */
 	public Section(final Section parent, final Expression expression) {
 		this(parent, expression.toString(), expression, null, false);
+	}
+
+	/**
+	 * Checks if the section should cache the result of the expression for later use.
+	 *
+	 * @return true if the section should cache the result of the expression for later use
+	 */
+	public boolean cacheResult() {
+		return cacheResult;
 	}
 
 	/**
@@ -123,6 +134,27 @@ final class Section {
 	 */
 	public boolean isInvisible() {
 		return isInvisible;
+	}
+
+	/**
+	 * Marks this section as a repeat of the other section.
+	 *
+	 * @param other the section that is repeated by this section
+	 * @return this section
+	 */
+	public Section markAsRepeatOf(final Section other) {
+		useCache = true;
+		other.cacheResult = true;
+		return this;
+	}
+
+	/**
+	 * Checks if the section should use a cached result rather than the result of an expression.
+	 *
+	 * @return true if the section should use a cached result rather than the result of an expression
+	 */
+	public boolean useCache() {
+		return useCache;
 	}
 
 }

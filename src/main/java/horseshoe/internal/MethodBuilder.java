@@ -650,9 +650,7 @@ public final class MethodBuilder {
 		if (member instanceof Field) {
 			final Field field = (Field)member;
 			return double.class.equals(field.getType()) || long.class.equals(field.getType()) ? 2 : 1;
-		}
-
-		if (member instanceof Method) {
+		} else if (member instanceof Method) {
 			final Method method = (Method)member;
 			int offset = double.class.equals(method.getReturnType()) || long.class.equals(method.getReturnType()) ? 2 : 1;
 
@@ -661,16 +659,15 @@ public final class MethodBuilder {
 			}
 
 			return offset;
+		} else {
+			int offset = 0;
+
+			for (final Class<?> type : ((Constructor<?>)member).getParameterTypes()) {
+				offset -= double.class.equals(type) || long.class.equals(type) ? 2 : 1;
+			}
+
+			return offset;
 		}
-
-		final Constructor<?> constructor = (Constructor<?>)member;
-		int offset = 0;
-
-		for (final Class<?> type : constructor.getParameterTypes()) {
-			offset -= double.class.equals(type) || long.class.equals(type) ? 2 : 1;
-		}
-
-		return offset;
 	}
 
 	/**
@@ -735,31 +732,29 @@ public final class MethodBuilder {
 		while (i < code.length) {
 			final OpCode opcode = OPCODES[code[i] & 0xFF];
 
-			if (opcode == null || !opcode.has(OpCode.PROP_IS_STANDALONE_VALID)) {
-				final String mnemonic = (opcode == null ? "0x" + Integer.toHexString(code[i] & 0xFF) : opcode.mnemonic);
-
+			if (opcode == null) {
+				throw new IllegalArgumentException("Invalid bytecode instruction: 0x" + Integer.toHexString(code[i] & 0xFF));
+			} else if (!opcode.has(OpCode.PROP_IS_STANDALONE_VALID)) {
 				if (opcode.has(OpCode.PROP_BRANCH_OFFSET)) {
-					throw new IllegalArgumentException("The " + mnemonic + " instruction must use the addBranch() method");
+					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addBranch() method");
 				} else if (code[i] == GETFIELD || code[i] == GETSTATIC || code[i] == PUTFIELD || code[i] == PUTSTATIC) {
-					throw new IllegalArgumentException("The " + mnemonic + " instruction must use the addFieldAccess() method");
+					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addFieldAccess() method");
 				} else if (code[i] == LOOKUPSWITCH || code[i] == TABLESWITCH) {
-					throw new IllegalArgumentException("The " + mnemonic + " instruction must use the addSwitch() method");
+					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addSwitch() method");
 				} else if (code[i] == INVOKEDYNAMIC || code[i] == INVOKEINTERFACE || code[i] == INVOKESPECIAL || code[i] == INVOKESTATIC || code[i] == INVOKEVIRTUAL) {
-					throw new IllegalArgumentException("The " + mnemonic + " instruction must use the addInvoke() method");
+					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addInvoke() method");
 				} else if (code[i] == CHECKCAST) {
-					throw new IllegalArgumentException("The " + mnemonic + " instruction must use the addCast() method");
+					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addCast() method");
 				} else if (code[i] == INSTANCEOF) {
-					throw new IllegalArgumentException("The " + mnemonic + " instruction must use the addInstanceOfCheck() method");
+					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addInstanceOfCheck() method");
 				} else if (code[i] == LDC || code[i] == LDC_W || code[i] == LDC2_W) {
-					throw new IllegalArgumentException("The " + mnemonic + " instruction must use the pushConstant() method");
+					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the pushConstant() method");
 				} else if (code[i] == ANEWARRAY || code[i] == MULTIANEWARRAY || code[i] == NEW) {
-					throw new IllegalArgumentException("The " + mnemonic + " instruction must use the pushNewObject() method");
-				} else {
-					throw new IllegalArgumentException("Invalid bytecode instruction: " + mnemonic);
+					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the pushNewObject() method");
 				}
-			}
 
-			if (code[i] == WIDE) {
+				throw new IllegalArgumentException("Invalid bytecode instruction: " + opcode.mnemonic);
+			} else if (code[i] == WIDE) {
 				if (i + 1 >= code.length) {
 					break;
 				}
@@ -784,9 +779,7 @@ public final class MethodBuilder {
 				i += length;
 				maxStackSize = Math.max(maxStackSize, stackSize += wideOpcode.stackOffset);
 				continue;
-			}
-
-			if (opcode.has(OpCode.PROP_LOCAL_INDEX)) {
+			} else if (opcode.has(OpCode.PROP_LOCAL_INDEX)) {
 				maxLocalVariableIndex = Math.max(maxLocalVariableIndex, code[i + 1] & 0xFF);
 			}
 
