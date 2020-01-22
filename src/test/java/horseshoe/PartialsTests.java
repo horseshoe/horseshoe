@@ -4,7 +4,6 @@ import static horseshoe.Helper.loadMap;
 
 import java.io.IOException;
 import java.io.StringWriter;
-
 import org.junit.Assert;
 import org.junit.Test;
 
