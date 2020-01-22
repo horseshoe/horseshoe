@@ -647,10 +647,7 @@ public final class MethodBuilder {
 	 * @return the stack offset that results from invoking (or getting) the member
 	 */
 	private static int getCallStackOffset(final Member member) {
-		if (member instanceof Field) {
-			final Field field = (Field)member;
-			return double.class.equals(field.getType()) || long.class.equals(field.getType()) ? 2 : 1;
-		} else if (member instanceof Method) {
+		if (member instanceof Method) {
 			final Method method = (Method)member;
 			int offset = double.class.equals(method.getReturnType()) || long.class.equals(method.getReturnType()) ? 2 : 1;
 
@@ -702,7 +699,7 @@ public final class MethodBuilder {
 			return append(GOTO, B0, B0);
 		} else if (instruction == JSR_W) {
 			maxStackSize = Math.max(maxStackSize, ++stackSize);
-			return addCode(JSR, B0, B0);
+			return append(JSR, B0, B0);
 		}
 
 		maxStackSize = Math.max(maxStackSize, stackSize += opcode.stackOffset);
@@ -735,7 +732,7 @@ public final class MethodBuilder {
 			if (opcode == null) {
 				throw new IllegalArgumentException("Invalid bytecode instruction: 0x" + Integer.toHexString(code[i] & 0xFF));
 			} else if (!opcode.has(OpCode.PROP_IS_STANDALONE_VALID)) {
-				if (opcode.has(OpCode.PROP_BRANCH_OFFSET)) {
+				if ((opcode.properties & OpCode.PROP_EXTRA_BYTES_MASK) == OpCode.PROP_BRANCH_OFFSET) {
 					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addBranch() method");
 				} else if (code[i] == GETFIELD || code[i] == GETSTATIC || code[i] == PUTFIELD || code[i] == PUTSTATIC) {
 					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addFieldAccess() method");
@@ -898,106 +895,118 @@ public final class MethodBuilder {
 	 */
 	public MethodBuilder addPrimitiveConversion(final Class<?> from, final Class<?> to) {
 		try {
-			if (!to.isPrimitive()) {
-				if (int.class.equals(from) && to.isAssignableFrom(Integer.class)) {
-					return addInvoke(Integer.class.getMethod("valueOf", int.class));
-				} else if (short.class.equals(from) && to.isAssignableFrom(Short.class)) {
-					return addInvoke(Short.class.getMethod("valueOf", short.class));
-				} else if (byte.class.equals(from) && to.isAssignableFrom(Byte.class)) {
-					return addInvoke(Byte.class.getMethod("valueOf", byte.class));
-				} else if (boolean.class.equals(from) && to.isAssignableFrom(Boolean.class)) {
-					return addInvoke(Boolean.class.getMethod("valueOf", boolean.class));
-				} else if (char.class.equals(from) && to.isAssignableFrom(Character.class)) {
-					return addInvoke(Character.class.getMethod("valueOf", char.class));
-				} else if (long.class.equals(from) && to.isAssignableFrom(Long.class)) {
-					return addInvoke(Long.class.getMethod("valueOf", long.class));
-				} else if (float.class.equals(from) && to.isAssignableFrom(Float.class)) {
-					return addInvoke(Float.class.getMethod("valueOf", float.class));
-				} else if (double.class.equals(from) && to.isAssignableFrom(Double.class)) {
-					return addInvoke(Double.class.getMethod("valueOf", double.class));
-				}
-			} else if (boolean.class.equals(to)) {
-				if (int.class.equals(from) || short.class.equals(from) || byte.class.equals(from) || boolean.class.equals(from) || char.class.equals(from)) {
-					return this;
-				} else if (long.class.equals(from)) {
-					return addCode(LCONST_0, LCMP);
-				} else if (float.class.equals(from)) {
-					return addCode(FCONST_0, FCMPG);
-				} else if (double.class.equals(from)) {
-					return addCode(DCONST_0, DCMPG);
+			if (to.isAssignableFrom(from)) {
+				return this;
+			} else if (!from.isPrimitive()) { // Step 1: Unbox if needed
+				if (Character.class.equals(from)) {
+					return addInvoke(Character.class.getMethod("charValue")).addPrimitiveConversion(char.class, to);
 				} else if (Boolean.class.equals(from)) {
-					return addInvoke(Boolean.class.getMethod("booleanValue"));
+					return addInvoke(Boolean.class.getMethod("booleanValue")).addPrimitiveConversion(boolean.class, to);
+				} else if (Number.class.isAssignableFrom(from)) {
+					if (boolean.class.equals(to) || Boolean.class.equals(to)) { // TODO: Test
+						return addCode(DUP).addInvoke(Number.class.getMethod("doubleValue")).addCode(DCONST_0, DCMPG, SWAP).addInvoke(Number.class.getMethod("longValue")).addCode(DUP2).pushConstant(32).addCode(LUSHR, L2I, DUP_X2, POP, L2I, IOR, IOR).addPrimitiveConversion(int.class, to);
+					} else if (char.class.equals(to) || Character.class.equals(to) || int.class.equals(to) || Integer.class.equals(to)) {
+						return addInvoke(Number.class.getMethod("intValue")).addPrimitiveConversion(int.class, to);
+					} else if (long.class.equals(to) || Long.class.equals(to)) {
+						return addInvoke(Number.class.getMethod("longValue")).addPrimitiveConversion(long.class, to);
+					} else if (double.class.equals(to) || Double.class.equals(to)) {
+						return addInvoke(Number.class.getMethod("doubleValue")).addPrimitiveConversion(double.class, to);
+					} else if (float.class.equals(to) || Float.class.equals(to)) {
+						return addInvoke(Number.class.getMethod("floatValue")).addPrimitiveConversion(float.class, to);
+					} else if (short.class.equals(to) || Short.class.equals(to)) {
+						return addInvoke(Number.class.getMethod("shortValue")).addPrimitiveConversion(short.class, to);
+					} else if (byte.class.equals(to) || Byte.class.equals(to)) {
+						return addInvoke(Number.class.getMethod("byteValue")).addPrimitiveConversion(byte.class, to);
+					}
 				}
-			} else if (Number.class.isAssignableFrom(from)) {
-				if (int.class.equals(to)) {
-					return addInvoke(Integer.class.getMethod("intValue"));
-				} else if (short.class.equals(to)) {
-					return addInvoke(Short.class.getMethod("shortValue"));
-				} else if (byte.class.equals(to)) {
-					return addInvoke(Byte.class.getMethod("byteValue"));
-				} else if (long.class.equals(to)) {
-					return addInvoke(Long.class.getMethod("longValue"));
-				} else if (float.class.equals(to)) {
-					return addInvoke(Float.class.getMethod("floatValue"));
-				} else if (double.class.equals(to)) {
-					return addInvoke(Double.class.getMethod("doubleValue"));
+			} else if (to.isPrimitive()) { // Step 2: Convert primitive if needed
+				if (boolean.class.equals(from) || char.class.equals(from) || int.class.equals(from) || short.class.equals(from) || byte.class.equals(from)) {
+					if (boolean.class.equals(to) || int.class.equals(to)) {
+						return this;
+					} else if (short.class.equals(to)) {
+						return addCode(I2S);
+					} else if (byte.class.equals(to)) {
+						return addCode(I2B);
+					} else if (char.class.equals(to)) {
+						return addCode(I2C);
+					} else if (long.class.equals(to)) {
+						return addCode(I2L);
+					} else if (float.class.equals(to)) {
+						return addCode(I2F);
+					} else if (double.class.equals(to)) {
+						return addCode(I2D);
+					}
+				} else if (long.class.equals(from)) {
+					if (boolean.class.equals(to) || char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
+						return addCode(L2I).addPrimitiveConversion(int.class, to);
+					} else if (float.class.equals(to)) {
+						return addCode(L2F);
+					} else if (double.class.equals(to)) {
+						return addCode(L2D);
+					}
+				} else if (float.class.equals(from)) {
+					if (boolean.class.equals(to) || char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
+						return addCode(F2I).addPrimitiveConversion(int.class, to);
+					} else if (long.class.equals(to)) {
+						return addCode(F2L);
+					} else if (double.class.equals(to)) {
+						return addCode(F2D);
+					}
+				} else if (double.class.equals(from)) {
+					if (boolean.class.equals(to) || char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
+						return addCode(D2I).addPrimitiveConversion(int.class, to);
+					} else if (long.class.equals(to)) {
+						return addCode(D2L);
+					} else if (float.class.equals(to)) {
+						return addCode(D2F);
+					}
 				}
-			} else if (Character.class.equals(from)) {
-				if (char.class.equals(to)) {
-					return addInvoke(Character.class.getMethod("charValue"));
-				}
-			} else if (int.class.equals(from) || short.class.equals(from) || byte.class.equals(from) || boolean.class.equals(from) || char.class.equals(from)) {
-				if (int.class.equals(to)) {
-					return this;
-				} else if (short.class.equals(to)) {
-					return addCode(I2S);
-				} else if (byte.class.equals(to) || boolean.class.equals(to)) {
-					return addCode(I2B);
-				} else if (char.class.equals(to)) {
-					return addCode(I2C);
-				} else if (long.class.equals(to)) {
-					return addCode(I2L);
-				} else if (float.class.equals(to)) {
-					return addCode(I2F);
-				} else if (double.class.equals(to)) {
-					return addCode(I2D);
-				}
-			} else if (long.class.equals(from)) {
-				if (int.class.equals(to) || short.class.equals(to) || byte.class.equals(to) || boolean.class.equals(to) || char.class.equals(to)) {
-					return addCode(L2I).addPrimitiveConversion(int.class, to);
-				} else if (long.class.equals(to)) {
-					return this;
-				} else if (float.class.equals(to)) {
-					return addCode(L2F);
-				} else if (double.class.equals(to)) {
-					return addCode(L2D);
-				}
-			} else if (float.class.equals(from)) {
-				if (int.class.equals(to) || short.class.equals(to) || byte.class.equals(to) || boolean.class.equals(to) || char.class.equals(to)) {
-					return addCode(F2I).addPrimitiveConversion(int.class, to);
-				} else if (long.class.equals(to)) {
-					return addCode(F2L);
-				} else if (float.class.equals(to)) {
-					return this;
-				} else if (double.class.equals(to)) {
-					return addCode(F2D);
-				}
-			} else if (double.class.equals(from)) {
-				if (int.class.equals(to) || short.class.equals(to) || byte.class.equals(to) || boolean.class.equals(to) || char.class.equals(to)) {
-					return addCode(D2I).addPrimitiveConversion(int.class, to);
-				} else if (long.class.equals(to)) {
-					return addCode(D2L);
-				} else if (float.class.equals(to)) {
-					return addCode(D2F);
-				} else if (double.class.equals(to)) {
-					return this;
+			} else { // Step 3: Box primitive if needed
+				if (Boolean.class.equals(to)) {
+					return addPrimitiveConversion(from, boolean.class).addInvoke(Boolean.class.getMethod("valueOf", boolean.class));
+				} else if (Character.class.equals(to)) {
+					return addPrimitiveConversion(from, char.class).addInvoke(Character.class.getMethod("valueOf", char.class));
+				} else if (Integer.class.equals(to)) {
+					return addPrimitiveConversion(from, int.class).addInvoke(Integer.class.getMethod("valueOf", int.class));
+				} else if (Long.class.equals(to)) {
+					return addPrimitiveConversion(from, long.class).addInvoke(Long.class.getMethod("valueOf", long.class));
+				} else if (Double.class.equals(to)) {
+					return addPrimitiveConversion(from, double.class).addInvoke(Double.class.getMethod("valueOf", double.class));
+				} else if (Float.class.equals(to)) {
+					return addPrimitiveConversion(from, float.class).addInvoke(Float.class.getMethod("valueOf", float.class));
+				} else if (Short.class.equals(to)) {
+					return addPrimitiveConversion(from, short.class).addInvoke(Short.class.getMethod("valueOf", short.class));
+				} else if (Byte.class.equals(to)) {
+					return addPrimitiveConversion(from, byte.class).addInvoke(Byte.class.getMethod("valueOf", byte.class));
+				} else if (Object.class.equals(to) || Number.class.equals(to)) {
+					if (Object.class.equals(to) && boolean.class.equals(from)) {
+						return addInvoke(Boolean.class.getMethod("valueOf", boolean.class));
+					} else if (Object.class.equals(to) && char.class.equals(from)) {
+						return addInvoke(Character.class.getMethod("valueOf", char.class));
+					} else if (int.class.equals(from)) {
+						return addInvoke(Integer.class.getMethod("valueOf", int.class));
+					} else if (long.class.equals(from)) {
+						return addInvoke(Long.class.getMethod("valueOf", long.class));
+					} else if (double.class.equals(from)) {
+						return addInvoke(Double.class.getMethod("valueOf", double.class));
+					} else if (float.class.equals(from)) {
+						return addInvoke(Float.class.getMethod("valueOf", float.class));
+					} else if (short.class.equals(from)) {
+						return addInvoke(Short.class.getMethod("valueOf", short.class));
+					} else if (byte.class.equals(from)) {
+						return addInvoke(Byte.class.getMethod("valueOf", byte.class));
+					} else if (boolean.class.equals(from)) {
+						return addInvoke(Integer.class.getMethod("valueOf", int.class));
+					} else if (char.class.equals(from)) {
+						return addInvoke(Integer.class.getMethod("valueOf", int.class));
+					}
 				}
 			}
 		} catch (final ReflectiveOperationException e) {
 			throw new NoSuchMethodError("Failed to get required class member: " + e.getMessage());
 		}
 
-		throw new IllegalArgumentException("The \"from\" type must be convertible to the \"to\" type");
+		throw new IllegalArgumentException("The \"from\" type (" + from.getName() + ") must be convertible to the \"to\" type (" + to.getName() + ")");
 	}
 
 	/**
@@ -1531,7 +1540,7 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder pushConstant(final int value) {
-		if (value >= Short.MIN_VALUE && value <= Short.MAX_VALUE) {
+		if (value == (short)value) {
 			switch (value) {
 			case -1: return addCode(ICONST_M1);
 			case 0:  return addCode(ICONST_0);
@@ -1540,7 +1549,12 @@ public final class MethodBuilder {
 			case 3:  return addCode(ICONST_3);
 			case 4:  return addCode(ICONST_4);
 			case 5:  return addCode(ICONST_5);
-			default: return addCode(SIPUSH, (byte)(value >>> 8), (byte)value);
+			default:
+				if (value == (byte)value) {
+					return addCode(BIPUSH, (byte)value);
+				} else {
+					return addCode(SIPUSH, (byte)(value >>> 8), (byte)value);
+				}
 			}
 		}
 
@@ -1560,7 +1574,7 @@ public final class MethodBuilder {
 			return addCode(LCONST_0);
 		} else if (value == 1) {
 			return addCode(LCONST_1);
-		} else if (value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
+		} else if (value == (int)value) {
 			return pushConstant((int)value).addCode(I2L);
 		}
 
@@ -1753,7 +1767,7 @@ public final class MethodBuilder {
 
 					sb.append("; ");
 					i = j + 12 + (end - start + 1) * 4;
-				} else if (bytes[i] == BIPUSH) {
+				} else if (bytes[i] == BIPUSH || bytes[i] == NEWARRAY) {
 					sb.append(' ').append(bytes[i + 1]).append("; ");
 					i += 2;
 				} else if (bytes[i] == GOTO_W || bytes[i] == JSR_W) {
@@ -1765,21 +1779,20 @@ public final class MethodBuilder {
 				} else if (bytes[i] == LDC) {
 					constantPoolIndex = bytes[i + 1] & 0xFF;
 					i += 2;
-				} else if (bytes[i] == NEWARRAY) {
-					sb.append(' ').append(bytes[i + 1]).append("; ");
-					i += 2;
 				} else if (bytes[i] == SIPUSH) {
 					sb.append(' ').append((short)(bytes[i + 1] << 8) + (bytes[i + 2] & 0xFF)).append("; ");
 					i += 3;
 				} else if (bytes[i] == WIDE) {
 					final OpCode wideOpcode = OPCODES[bytes[i + 1] & 0xFF];
 
-					if (wideOpcode.has(OpCode.PROP_LOCAL_INDEX)) {
-						sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((bytes[i + 2] & 0xFF) << 8) + (bytes[i + 3] & 0xFF)).append("; ");
-						i += 4;
-					} else { // assume IINC
+					if (bytes[i + 1] ==IINC) {
 						sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((bytes[i + 2] & 0xFF) << 8) + (bytes[i + 3] & 0xFF)).append(", ").append((short)(bytes[i + 4] << 8) + (bytes[i + 5] & 0xFF)).append("; ");
 						i += 6;
+					} else if (wideOpcode.has(OpCode.PROP_LOCAL_INDEX)) {
+						sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((bytes[i + 2] & 0xFF) << 8) + (bytes[i + 3] & 0xFF)).append("; ");
+						i += 4;
+					} else {
+						return sb.append(" ???").toString();
 					}
 				}
 			} else {
@@ -1801,7 +1814,7 @@ public final class MethodBuilder {
 			if (constantPoolIndex > 0) {
 				final Object constant = constantPool[constantPoolIndex];
 
-				if (constant instanceof String || constant instanceof UTF8String) {
+				if (constant instanceof String) {
 					sb.append(" \"").append(constant).append(postConstant).append("\"; ");
 				} else if (constant instanceof Member) {
 					if (constant instanceof Method) {
@@ -1815,7 +1828,7 @@ public final class MethodBuilder {
 
 						sb.append(')').append(postConstant).append("; ");
 					} else {
-						sb.append(' ').append(((Member)constant).getName()).append(postConstant).append("; ");
+						sb.append(' ').append(((Member)constant).getDeclaringClass().getName()).append('.').append(((Member)constant).getName()).append(postConstant).append("; ");
 					}
 				} else if (constant instanceof Class) {
 					sb.append(' ').append(((Class<?>)constant).getName()).append(postConstant).append("; ");

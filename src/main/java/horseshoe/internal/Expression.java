@@ -121,8 +121,8 @@ public final class Expression {
 		try {
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", PersistentStack.class, Settings.ContextAccess.class, PersistentStack.class, Settings.ErrorLogger.class);
-			IDENTIFIER_GET_VALUE_BACKREACH = Identifier.class.getMethod("getValue", PersistentStack.class, Settings.ContextAccess.class);
-			IDENTIFIER_GET_VALUE_BACKREACH_METHOD = Identifier.class.getMethod("getValue", PersistentStack.class, Settings.ContextAccess.class, Object[].class);
+			IDENTIFIER_GET_VALUE_BACKREACH = Identifier.class.getMethod("getValue", PersistentStack.class, int.class, Settings.ContextAccess.class);
+			IDENTIFIER_GET_VALUE_BACKREACH_METHOD = Identifier.class.getMethod("getValue", PersistentStack.class, int.class, Settings.ContextAccess.class, Object[].class);
 			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
 			INDEXED_GET_INDEX = Indexed.class.getMethod("getIndex");
@@ -172,16 +172,20 @@ public final class Expression {
 	 * Processes the specified operation. The operand stack will be updated with the results of evaluating the operator.
 	 *
 	 * @param namedExpressions the map used to lookup named expressions
+	 * @param expressions the map used to lookup the index of an expression
+	 * @param identifiers the map used to lookup the index of an identifier
 	 * @param operands the operand stack for the expression
 	 * @param operator the operator to evaluate
 	 */
-	private static void processOperation(final Map<String, Expression> namedExpressions, final Map<Expression, Integer> expressions, final PersistentStack<Operand> operands, final Operator operator) {
+	private static void processOperation(final Map<String, Expression> namedExpressions, final Map<Expression, Integer> expressions, final HashMap<Identifier, Integer> identifiers, final PersistentStack<Operand> operands, final Operator operator) {
 		final Operand right;
 
 		if (operator.has(Operator.NAVIGATION)) { // Navigation operator is handled during parsing
 			return;
 		} else if (operator.has(Operator.METHOD_CALL)) { // Check for a method call
-			if (!operator.has(Operator.KNOWN_OBJECT) && operator.getRightExpressions() <= 1) {
+			final int parameterCount = operator.getRightExpressions();
+
+			if (!operator.has(Operator.KNOWN_OBJECT) && parameterCount <= 1) {
 				final Expression namedExpression = namedExpressions.get(operator.getString());
 
 				// Check for a named expression
@@ -195,36 +199,45 @@ public final class Expression {
 					}
 
 					// Load the context and evaluate the expression
-					if (operator.getRightExpressions() != 0) {
+					if (parameterCount != 0) {
 						expressionResult.addCode(Evaluable.LOAD_CONTEXT).append(operands.peek().toObject(false)).addInvoke(PERSISTENT_STACK_PUSH_OBJECT);
 					}
 
 					expressionResult.addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS).addCode(Evaluable.LOAD_INDEXES).addCode(Evaluable.LOAD_ERROR_LOGGER).addInvoke(EXPRESSION_EVALUATE);
 
-					if (operator.getRightExpressions() != 0) {
+					if (parameterCount != 0) {
 						expressionResult.addCode(Evaluable.LOAD_CONTEXT).addInvoke(PERSISTENT_STACK_POP).addCode(POP);
 					}
 
-					operands.pop(operator.getRightExpressions() + 2).push(new Operand(Object.class, expressionResult));
+					operands.pop(parameterCount + 3).push(new Operand(Object.class, expressionResult));
 					return;
 				}
 			}
 
-			// Get and invoke the appropriate method
-			final MethodBuilder methodResult = operands.peek(operator.getRightExpressions()).builder;
+			// Create the identifier
+			final Identifier identifier = new Identifier(operator.getString(), parameterCount);
+			Integer index = identifiers.get(identifier);
 
-			if (operator.getRightExpressions() == 0) {
+			if (index == null) {
+				index = identifiers.size();
+				identifiers.put(identifier, index);
+			}
+
+			// Get and invoke the appropriate method
+			final MethodBuilder methodResult = operands.peek(parameterCount).builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).append(operands.peek(parameterCount + 1).builder);
+
+			if (parameterCount == 0) {
 				methodResult.addCode(ACONST_NULL);
 			} else {
-				methodResult.pushNewObject(Object.class, operator.getRightExpressions());
+				methodResult.pushNewObject(Object.class, parameterCount);
 
 				// Convert all parameters to objects and store them in the array
-				for (int i = 0; i < operator.getRightExpressions(); i++) {
-					methodResult.addCode(DUP).pushConstant(i).append(operands.peek(operator.getRightExpressions() - 1 - i).toObject(false)).addCode(AASTORE);
+				for (int i = 0; i < parameterCount; i++) {
+					methodResult.addCode(DUP).pushConstant(i).append(operands.peek(parameterCount - 1 - i).toObject(false)).addCode(AASTORE);
 				}
 			}
 
-			operands.push(new Operand(Object.class, methodResult.append(operands.pop(operator.getRightExpressions() + 1).pop().builder)));
+			operands.push(new Operand(Object.class, methodResult.append(operands.pop(parameterCount + 2).pop().builder)));
 			return;
 		} else if (operator.has(Operator.RIGHT_EXPRESSION)) {
 			right = operands.pop();
@@ -462,7 +475,7 @@ public final class Expression {
 
 		case ",":
 			operands.push();
-			processOperation(namedExpressions, expressions, operands, Operator.get("{").addRightExpressions(operator.getRightExpressions() + 1));
+			processOperation(namedExpressions, expressions, identifiers, operands, Operator.get("{").addRightExpressions(operator.getRightExpressions() + 1));
 			break;
 
 		case "(":
@@ -528,8 +541,8 @@ public final class Expression {
 					// Create a new output formed by invoking identifiers[index].getValue(object)
 					mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE);
 				} else {
-					// Create a new output formed by invoking identifiers[index].getValue(context, access)
-					mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_VALUE_BACKREACH);
+					// Create a new output formed by invoking identifiers[index].getValue(context, backreach, access)
+					mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSPECIFIED_BACKREACH).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_VALUE_BACKREACH);
 				}
 			}
 
@@ -578,18 +591,12 @@ public final class Expression {
 							operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
 						} else if (token.endsWith("(")) { // Method
 							final String name = token.startsWith("`") ? unescapeQuotedIdentifier(token.substring(1, token.length() - 2)) : token.substring(0, token.length() - 1);
-							final Identifier identifier = new Identifier(backreach, name, true);
-							Integer index = identifiers.get(identifier);
-
-							if (index == null) {
-								index = identifiers.size();
-								identifiers.put(identifier, index);
-							}
 
 							if (!lastNavigation) {
-								// Create a new output formed by invoking identifiers[index].getValue(context, access, ...)
+								// Create a new output formed by invoking identifiers[index].getValue(context, backreach, access, ...)
 								operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_VALUE_BACKREACH_METHOD)));
-								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS)));
+								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addCode(Evaluable.LOAD_ACCESS)));
+								operands.push(new Operand(Object.class, new MethodBuilder()));
 								lastOperator = operators.push(Operator.createMethod(name, backreach >= 0));
 							} else {
 								// Create a new output formed by invoking identifiers[index].getValue(object, ...)
@@ -599,9 +606,11 @@ public final class Expression {
 								operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(skipFunc)));
 
 								if (lastOperator.has(Operator.SAFE)) {
-									operands.push(new Operand(Object.class, objectBuilder.addCode(DUP).addBranch(IFNULL, skipFunc).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP)));
+									operands.push(new Operand(Object.class, new MethodBuilder().addCode(SWAP)));
+									operands.push(new Operand(Object.class, objectBuilder.addCode(DUP).addBranch(IFNULL, skipFunc)));
 								} else {
-									operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).append(objectBuilder)));
+									operands.push(new Operand(Object.class, objectBuilder));
+									operands.push(new Operand(Object.class, new MethodBuilder()));
 								}
 
 								lastOperator = operators.push(Operator.createMethod(name, true));
@@ -610,7 +619,7 @@ public final class Expression {
 							continue nextToken;
 						} else { // Identifier
 							final String name = token.startsWith("`") ? unescapeQuotedIdentifier(token.substring(1, token.length() - 1)) : token;
-							final Identifier identifier = new Identifier(backreach, name, false);
+							final Identifier identifier = new Identifier(name);
 							Integer index = identifiers.get(identifier);
 
 							if (index == null) {
@@ -619,8 +628,8 @@ public final class Expression {
 							}
 
 							if (!lastNavigation) {
-								// Create a new output formed by invoking identifiers[index].getValue(context, access)
-								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_VALUE_BACKREACH)));
+								// Create a new output formed by invoking identifiers[index].getValue(context, backreach, access)
+								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_VALUE_BACKREACH)));
 							} else if (operators.pop().has(Operator.SAFE)) {
 								// Create a new output formed by invoking identifiers[index].getValue(object)
 								final Label end = operands.peek().builder.newLabel();
@@ -637,7 +646,7 @@ public final class Expression {
 						operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
 					} else if (".isFirst".equals(token)) {
 						operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
-						processOperation(namedExpressions, expressions, operands, Operator.get("!"));
+						processOperation(namedExpressions, expressions, identifiers, operands, Operator.get("!"));
 					} else if (".hasNext".equals(token)) {
 						operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_HAS_NEXT)));
 					} else if (".".equals(token)) {
@@ -743,7 +752,7 @@ public final class Expression {
 					if (operator != null) {
 						// Shunting-yard Algorithm
 						while (!operators.isEmpty() && !operators.peek().isContainer() && (operators.peek().getPrecedence() < operator.getPrecedence() || (operators.peek().getPrecedence() == operator.getPrecedence() && operator.isLeftAssociative()))) {
-							processOperation(namedExpressions, expressions, operands, operators.pop());
+							processOperation(namedExpressions, expressions, identifiers, operands, operators.pop());
 						}
 
 						if (!operators.isEmpty() && operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
@@ -778,13 +787,13 @@ public final class Expression {
 								if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
 									throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + closedOperator.getClosingString() + "'");
 								} else {
-									processOperation(namedExpressions, expressions, operands, closedOperator);
+									processOperation(namedExpressions, expressions, identifiers, operands, closedOperator);
 									lastOperator = closedOperator.getClosingOperator();
 									continue nextToken;
 								}
 							}
 
-							processOperation(namedExpressions, expressions, operands, closedOperator);
+							processOperation(namedExpressions, expressions, identifiers, operands, closedOperator);
 						}
 					}
 
@@ -818,14 +827,13 @@ public final class Expression {
 					}
 				}
 
-				processOperation(namedExpressions, expressions, operands, operator);
+				processOperation(namedExpressions, expressions, identifiers, operands, operator);
 			}
 		}
 
 		// Populate all the identifiers and create the evaluator
 		this.expressions = new Expression[expressions.size()];
 		this.identifiers = new Identifier[identifiers.size()];
-		System.out.println(operands.peek());
 		this.evaluable = operands.pop().toObject(true).load(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		assert operands.isEmpty();
 

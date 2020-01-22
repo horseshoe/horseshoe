@@ -8,24 +8,22 @@ import horseshoe.Settings.ContextAccess;
 public final class Identifier {
 
 	public static final int UNSPECIFIED_BACKREACH = -1;
+	public static final int NOT_A_METHOD = -1;
 	public static final String PATTERN = "[\\p{L}_\\$][\\p{L}\\p{Nd}_\\$]*";
 
 	private final HashMap<Class<?>, Accessor> accessorDatabase = new LinkedHashMap<>();
-	private final int backreach;
 	private final String name;
-	private final boolean isMethod;
+	private final int parameterCount;
 
 	/**
 	 * Creates a new identifier from some amount of backreach and a name.
 	 *
-	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
 	 * @param name the name of the identifier
 	 * @param isMethod true if the identifier is a method, otherwise false
 	 */
-	public Identifier(final int backreach, final String name, final boolean isMethod) {
-		this.backreach = backreach;
+	public Identifier(final String name, final int parameterCount) {
 		this.name = name;
-		this.isMethod = isMethod;
+		this.parameterCount = parameterCount;
 	}
 
 	/**
@@ -34,13 +32,13 @@ public final class Identifier {
 	 * @param name the name of the identifier
 	 */
 	public Identifier(final String name) {
-		this(UNSPECIFIED_BACKREACH, name, false);
+		this(name, NOT_A_METHOD);
 	}
 
 	@Override
 	public boolean equals(final Object object) {
 		if (object instanceof Identifier) {
-			return backreach == ((Identifier)object).backreach && name.equals(((Identifier)object).name) && isMethod == ((Identifier)object).isMethod;
+			return name.equals(((Identifier)object).name) && parameterCount == ((Identifier)object).parameterCount;
 		}
 
 		return false;
@@ -59,11 +57,12 @@ public final class Identifier {
 	 * Gets the value of the identifier given the context object.
 	 *
 	 * @param context the context object used to get the value of the identifier
+	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
 	 * @param access the access used to get the value of the identifier
 	 * @return the value of the identifier
 	 * @throws ReflectiveOperationException if an error occurs while getting the value of the identifier
 	 */
-	public Object getValue(final PersistentStack<Object> context, final ContextAccess access) throws ReflectiveOperationException {
+	public Object getValue(final PersistentStack<Object> context, final int backreach, final ContextAccess access) throws ReflectiveOperationException {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
 		Object object = context.peek(Math.max(backreach, 0));
@@ -125,12 +124,13 @@ public final class Identifier {
 	 * Evaluates the method identifier given the context object and parameters.
 	 *
 	 * @param context the context object used to get the value of the identifier
+	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
 	 * @param access the access used to get the value of the identifier
 	 * @param parameters the parameters used to evaluate the object
 	 * @return the value of the identifier
 	 * @throws ReflectiveOperationException if an error occurs while getting the value of the identifier
 	 */
-	public Object getValue(final PersistentStack<Object> context, final ContextAccess access, final Object... parameters) throws ReflectiveOperationException {
+	public Object getValue(final PersistentStack<Object> context, final int backreach, final ContextAccess access, final Object... parameters) throws ReflectiveOperationException {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
 		Object object = context.peek(Math.max(backreach, 0));
@@ -138,7 +138,7 @@ public final class Identifier {
 		Accessor accessor = accessorDatabase.get(objectClass);
 
 		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(object, this, parameters == null ? 0 : parameters.length);
+			accessor = Accessor.FACTORY.create(object, this, parameterCount);
 			accessorDatabase.put(objectClass, accessor);
 		}
 
@@ -162,7 +162,7 @@ public final class Identifier {
 
 					// Try to create the accessor and add it to the database
 					if (accessor == null) {
-						accessor = Accessor.FACTORY.create(object, this, parameters == null ? 0 : parameters.length);
+						accessor = Accessor.FACTORY.create(object, this, parameterCount);
 						accessorDatabase.put(objectClass, accessor);
 					}
 
@@ -225,7 +225,7 @@ public final class Identifier {
 		Accessor accessor = accessorDatabase.get(objectClass);
 
 		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(context, this, parameters == null ? 0 : parameters.length);
+			accessor = Accessor.FACTORY.create(context, this, parameterCount);
 
 			if (accessor == null) {
 				throw new NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());
@@ -239,7 +239,7 @@ public final class Identifier {
 
 	@Override
 	public int hashCode() {
-		return backreach + name.hashCode() + (isMethod ? Integer.MAX_VALUE : 0);
+		return name.hashCode() + parameterCount;
 	}
 
 	/**
@@ -248,7 +248,7 @@ public final class Identifier {
 	 * @return True if the identifier is a method, otherwise false
 	 */
 	public boolean isMethod() {
-		return isMethod;
+		return parameterCount >= 0;
 	}
 
 	@Override
