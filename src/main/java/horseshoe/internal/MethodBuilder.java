@@ -903,7 +903,7 @@ public final class MethodBuilder {
 				} else if (Boolean.class.equals(from)) {
 					return addInvoke(Boolean.class.getMethod("booleanValue")).addPrimitiveConversion(boolean.class, to);
 				} else if (Number.class.isAssignableFrom(from)) {
-					if (boolean.class.equals(to) || Boolean.class.equals(to)) { // TODO: Test
+					if (boolean.class.equals(to) || Boolean.class.equals(to)) {
 						return addCode(DUP).addInvoke(Number.class.getMethod("doubleValue")).addCode(DCONST_0, DCMPG, SWAP).addInvoke(Number.class.getMethod("longValue")).addCode(DUP2).pushConstant(32).addCode(LUSHR, L2I, DUP_X2, POP, L2I, IOR, IOR).addPrimitiveConversion(int.class, to);
 					} else if (char.class.equals(to) || Character.class.equals(to) || int.class.equals(to) || Integer.class.equals(to)) {
 						return addInvoke(Number.class.getMethod("intValue")).addPrimitiveConversion(int.class, to);
@@ -1650,7 +1650,7 @@ public final class MethodBuilder {
 				pushConstant(dimension);
 			}
 
-			getConstant(type).add(new Location(this, length + 1));
+			getConstant(Array.newInstance(type, new int[dimensions.length]).getClass()).add(new Location(this, length + 1));
 			stackSize -= dimensions.length - 1;
 			return append(MULTIANEWARRAY, B0, B0, (byte)dimensions.length);
 		} else if (dimensions.length != 0) {

@@ -7,6 +7,8 @@ import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
@@ -17,6 +19,39 @@ public class MethodBuilderTests {
 
 	private static final byte B0 = 0;
 	private static final AtomicInteger classCounter = new AtomicInteger(10);
+
+	public static class SwitchClass {
+		public String run(final int a) {
+			return "invalid";
+		}
+	}
+
+	@Test
+	public void switchTest() throws ReflectiveOperationException {
+		final String name = getClass().getName() + "$" + classCounter.getAndIncrement();
+		final MethodBuilder mb = new MethodBuilder();
+		final SortedMap<Integer, Label> labels = new TreeMap<>();
+
+		labels.put(1, mb.newLabel());
+		labels.put(2, mb.newLabel());
+		labels.put(5, mb.newLabel());
+		labels.put(10, mb.newLabel());
+
+		mb.addCode(ILOAD_1).addSwitch(labels, labels.get(2))
+				.updateLabel(labels.get(1)).pushNewObject(boolean.class, 1).pushNewObject(char.class, 1).pushNewObject(byte.class, 1).pushNewObject(short.class, 1).pushNewObject(long.class, 1).pushNewObject(int.class, 1).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addCode(ARETURN)
+				.updateLabel(labels.get(2)).pushNewObject(String.class, 2, 3).addCode(DUP, DUP).pushConstant(0).addCode(AALOAD).pushConstant(1).pushConstant("01").addCode(AASTORE).pushConstant(1).addCode(AALOAD).pushConstant(0).pushConstant("10").addCode(AASTORE).pushConstant(0).addCode(AALOAD).pushConstant(1).addCode(AALOAD).addInvoke(Object.class.getMethod("toString")).addCode(ARETURN)
+				.updateLabel(labels.get(5)).pushNewObject(double.class, 1).addCode(DUP).pushConstant(0).pushConstant(2.0).addCode(DASTORE).pushConstant(0).addCode(DALOAD).addPrimitiveConversion(double.class, Double.class).addInvoke(Object.class.getMethod("toString")).addCode(ARETURN)
+				.updateLabel(labels.get(10)).pushNewObject(float.class, 1).pushConstant(10.0f).addPrimitiveConversion(float.class, Integer.class).addInvoke(Object.class.getMethod("toString")).addCode(ARETURN);
+		assertNotNull(mb.toString());
+
+		final SwitchClass switchTest = mb.load(name, SwitchClass.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
+
+		assertEquals("[I", switchTest.run(1));
+		assertEquals("01", switchTest.run(2));
+		assertEquals("2.0", switchTest.run(5));
+		assertEquals("10", switchTest.run(10));
+		assertEquals("01", switchTest.run(11));
+	}
 
 	public interface SimpleInterface {
 		public String run();
@@ -155,7 +190,6 @@ public class MethodBuilderTests {
 				}
 			}
 		}
-		// TODO: Number.class to Boolean.class
 
 		for (final Class<?> to : allPrimitives) {
 			try {
@@ -165,6 +199,23 @@ public class MethodBuilderTests {
 			} catch (final RuntimeException e) {
 			}
 		}
+
+		// Test Number.class to Boolean.class
+		final String name = getClass().getName() + "$" + classCounter.getAndIncrement();
+		final MethodBuilder mb = new MethodBuilder();
+		final Label fail = mb.newLabel();
+
+		mb.pushConstant(Long.MIN_VALUE).addPrimitiveConversion(long.class, Long.class).addPrimitiveConversion(Number.class, boolean.class).addBranch(IFEQ, fail)
+				.pushConstant(0.8f).addPrimitiveConversion(float.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFEQ, fail)
+				.pushConstant(-2000).addPrimitiveConversion(int.class, Object.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFEQ, fail)
+				.pushConstant(6.7).addPrimitiveConversion(double.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFEQ, fail)
+				.pushConstant(0.0f).addPrimitiveConversion(float.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFNE, fail)
+				.pushConstant(0.0).addPrimitiveConversion(double.class, Number.class).addPrimitiveConversion(Number.class, boolean.class).addBranch(IFNE, fail)
+				.pushConstant(0).addPrimitiveConversion(int.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFNE, fail)
+				.pushConstant(0L).addPrimitiveConversion(long.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFNE, fail)
+				.pushConstant("success").addCode(ARETURN).updateLabel(fail).addThrow(RuntimeException.class, null);
+		final SimpleInterface instance = mb.load(name, SimpleInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
+		assertEquals("success", instance.run());
 	}
 
 }
