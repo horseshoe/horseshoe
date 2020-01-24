@@ -510,10 +510,10 @@ public final class Expression {
 	 * @param location the location of the expression
 	 * @param expressionString the trimmed, advanced expression string
 	 * @param namedExpressions the map used to lookup named expressions
-	 * @param simpleExpression true to parse as a simple expression, false to parse as an advanced expression
+	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
 	 * @throws ReflectiveOperationException if an error occurs while resolving the reflective parts of the expression
 	 */
-	public Expression(final String location, final CharSequence expressionString, final Map<String, Expression> namedExpressions, final boolean simpleExpression) throws ReflectiveOperationException {
+	public Expression(final String location, final CharSequence expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final HashMap<Expression, Integer> expressions = new HashMap<>();
 		final HashMap<Identifier, Integer> identifiers = new HashMap<>();
 		final PersistentStack<Operand> operands = new PersistentStack<>();
@@ -523,7 +523,7 @@ public final class Expression {
 
 		if (".".equals(this.originalString)) {
 			operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(0).addInvoke(PERSISTENT_STACK_PEEK)));
-		} else if (simpleExpression) {
+		} else if (!horseshoeExpressions) {
 			final MethodBuilder mb = new MethodBuilder();
 			final String names[] = originalString.split("\\.", -1);
 

@@ -145,7 +145,7 @@ public class AnnotationTests {
 	@Test
 	public void testOutputRemapping() throws IOException, LoadException {
 		final String filename = "DELETE_ME.test";
-		final Template template = new TemplateLoader().load("Output Remapping", "{{#@File({\"name\":\"" + filename + "\", \"encoding\": \"UTF-8\"})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n");
+		final Template template = new TemplateLoader().load("Output Remapping", "{{#@File(\"" + filename + "\")}}Test 1{{/}}\n{{#@File({\"name\":\"" + filename + "\", \"encoding\": \"UTF-8\"})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n{{#@StdErr}}\nThis should print to stderr\n{{/}}\n");
 		final Settings settings = new Settings();
 		final Writer writer = new StringWriter();
 

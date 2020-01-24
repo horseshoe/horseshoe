@@ -487,9 +487,9 @@ public class TemplateLoader {
 							final String parameters = annotation.group("parameters");
 
 							// Load the annotation arguments
-							sections.push(new Section(sections.peek(), sectionName, parameters == null ? null : new Expression(loader.toLocationString(), parameters, sections.peek().getNamedExpressions(), false), sectionName.substring(1), true));
+							sections.push(new Section(sections.peek(), sectionName, parameters == null ? null : new Expression(loader.toLocationString(), parameters, sections.peek().getNamedExpressions(), true), sectionName.substring(1), true));
 						} else { // Start a new section
-							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), useSimpleExpressions)));
+							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), !useSimpleExpressions)));
 						}
 
 						// Add a new render section action
@@ -508,7 +508,7 @@ public class TemplateLoader {
 
 							actionStack.pop();
 						} else { // Start a new inverted section
-							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), useSimpleExpressions)));
+							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), !useSimpleExpressions)));
 							actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
 						}
 
@@ -552,7 +552,7 @@ public class TemplateLoader {
 						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), useSimpleExpressions), false));
+						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), !useSimpleExpressions), false));
 						break;
 					}
 
@@ -564,13 +564,13 @@ public class TemplateLoader {
 							final Matcher namedExpression = NAMED_EXPRESSION.matcher(expression);
 
 							if (namedExpression.lookingAt()) {
-								sections.peek().getNamedExpressions().put(namedExpression.group("name"), new Expression(loader.toLocationString(), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), false));
+								sections.peek().getNamedExpressions().put(namedExpression.group("name"), new Expression(loader.toLocationString(), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), true));
 								break;
 							}
 						}
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), useSimpleExpressions), true));
+						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), !useSimpleExpressions), true));
 						break;
 					}
 				} catch (final LoadException e) {

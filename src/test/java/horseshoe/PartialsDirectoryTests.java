@@ -90,8 +90,7 @@ public class PartialsDirectoryTests {
 		final File rootIncludeDir = new File(temporaryFolder.getRoot(), this.rootIncludeDir);
 		final Settings settings = new Settings();
 		final TemplateLoader loader = new TemplateLoader(Arrays.asList(rootIncludeDir.toPath()))
-				.setPreventPartialPathTraversal(preventPartialPathTraversal)
-				.setThrowOnPartialNotFound(true);
+				.setPreventPartialPathTraversal(preventPartialPathTraversal);
 		Template template = null;
 		try {
 			template = loader.load("Test", "{{>" + partialNavigationPath + "}}");
