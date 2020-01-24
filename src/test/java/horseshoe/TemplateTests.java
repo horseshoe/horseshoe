@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
@@ -104,10 +105,16 @@ public class TemplateTests {
 
 		assertEquals(" ", new TemplateLoader().load("Simple Test", " ").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 
-		assertEquals("3", new TemplateLoader().add("Dup", new StringReader("1")).add("Dup", "2").load("Dup", new StringReader("3")).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		final TemplateLoader tl1 = new TemplateLoader().add("Dup", new StringReader("1")).add("Dup", "2");
+		tl1.load("Dup", new StringReader("3"));
+		tl1.load("Dup", "55");
+		tl1.load("Dup", Paths.get("fakeFile"), StandardCharsets.UTF_16BE);
+		assertEquals("3", tl1.load("Dup", new StringReader("4")).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 		new TemplateLoader().add("Dup", new StringReader("1")).close();
 
 		assertEquals("a", new TemplateLoader().add(new TemplateLoader().add("a", "a").load("a")).load("b", "{{>a}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+
+		new TemplateLoader().getIncludeDirectories().add(Paths.get("."));
 	}
 
 	@Test(expected = LoadException.class)

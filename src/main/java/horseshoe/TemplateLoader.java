@@ -322,7 +322,7 @@ public class TemplateLoader {
 			try {
 				if (loader == null) {
 					// Try to load the template from the current template directory
-					final Path baseDirectory = loaders.isEmpty() ? Paths.get(".") : loaders.peek().getFile();
+					final Path baseDirectory = loaders.isEmpty() || loaders.peek().getFile() == null ? Paths.get(".") : loaders.peek().getFile().getParent();
 					final Path toLoadFromBase = baseDirectory == null ? null : baseDirectory.resolve(name).normalize();
 
 					if (toLoadFromBase != null && toLoadFromBase.toFile().isFile()) {
@@ -330,7 +330,7 @@ public class TemplateLoader {
 							loader = new Loader(name, toLoadFromBase, charset);
 						} else {
 							for (final Path directory : includeDirectories) {
-								if (toLoadFromBase.startsWith(directory)) {
+								if (toLoadFromBase.startsWith(directory.normalize())) {
 									loader = new Loader(name, toLoadFromBase, charset);
 									break;
 								}
@@ -342,7 +342,7 @@ public class TemplateLoader {
 						for (final Path directory : includeDirectories) {
 							final Path toLoad = directory.resolve(name).normalize();
 
-							if ((!preventPartialPathTraversal || toLoad.startsWith(directory)) && toLoad.toFile().isFile()) {
+							if ((!preventPartialPathTraversal || toLoad.startsWith(directory.normalize())) && toLoad.toFile().isFile()) {
 								loader = new Loader(name, toLoad, charset);
 								break;
 							}
