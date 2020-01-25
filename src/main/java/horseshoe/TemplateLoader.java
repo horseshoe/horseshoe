@@ -32,7 +32,7 @@ public class TemplateLoader {
 	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
 	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=");
 	private static final Pattern ANNOTATION = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL);
-	private static final Pattern NAMED_EXPRESSION = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?->\\s*");
+	private static final Pattern NAMED_EXPRESSION = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?[-=]>\\s*");
 
 	private final Map<String, Template> templates = new HashMap<>();
 	private final Map<String, Loader> templateLoaders = new HashMap<>();

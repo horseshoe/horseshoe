@@ -66,6 +66,8 @@ final class StaticContentRenderer implements Action {
 				writer.write(lines[0].getLine());
 			}
 		} else {
+			final String lineEnding = context.getSettings().getLineEndings();
+
 			// Only write the first line if it is not ignored
 			if (!ignoreFirstLine) {
 				if (indentFirstLine) {
@@ -73,7 +75,7 @@ final class StaticContentRenderer implements Action {
 				}
 
 				writer.write(lines[0].getLine());
-				writer.write(context.getSettings().getLineEnding() == null ? lines[0].getEnding() : context.getSettings().getLineEnding());
+				writer.write(lineEnding == null ? lines[0].getEnding() : lineEnding);
 			}
 
 			// Indent all remaining lines
@@ -85,7 +87,7 @@ final class StaticContentRenderer implements Action {
 					writer.write(line.getLine());
 				}
 
-				writer.write(context.getSettings().getLineEnding() == null ? line.getEnding() : context.getSettings().getLineEnding());
+				writer.write(lineEnding == null ? line.getEnding() : lineEnding);
 			}
 
 			// Skip line ending on the last line

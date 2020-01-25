@@ -1,17 +1,14 @@
 package horseshoe;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 /**
  * The Settings class allows configuring different properties that are used when rendering a {@link Template}.
  */
 public class Settings {
 
 	/**
-	 * Log render errors to stderr.
+	 * The error logger that sends error messages to stderr.
 	 */
-	public static final ErrorLogger LOG_ERRORS_TO_STDERR = new ErrorLogger() {
+	public static final ErrorLogger STDERR_ERROR_LOGGER = new ErrorLogger() {
 		@Override
 		public void log(final String expression, final String location, final Throwable error) {
 			if (error.getMessage() == null) {
@@ -23,80 +20,72 @@ public class Settings {
 	};
 
 	/**
-	 * Disables logging of errors.
+	 * The error logger that consumes any error messages.
 	 */
-	public static final ErrorLogger DO_NOT_LOG_ERRORS = null;
+	public static final ErrorLogger EMPTY_ERROR_LOGGER = null;
 
 	/**
-	 * Do not escape any characters when rendering.
+	 * The escape function that does not escape any characters, returning the same string that was passed to it.
 	 */
-	public static final EscapeFunction DO_NOT_ESCAPE = null;
-
-	private static final Pattern ESCAPE_PATTERN = Pattern.compile("[&<>\"']");
+	public static final EscapeFunction EMPTY_ESCAPE_FUNCTION = null;
 
 	/**
-	 * Escape the text being rendered as HTML.
+	 * The escape function that escapes a string as HTML, specifically the &amp;, &lt;, &gt;, ", and ' characters.
 	 */
-	public static final EscapeFunction ESCAPE_AS_HTML = new EscapeFunction() {
+	public static final EscapeFunction HTML_ESCAPE_FUNCTION = new EscapeFunction() {
 		@Override
 		public String escape(final String raw) {
-			final StringBuilder sb = new StringBuilder();
-			final Matcher matcher = ESCAPE_PATTERN.matcher(raw);
+			final StringBuilder sb = new StringBuilder(raw.length() + 16);
 			int start = 0;
 
-			while (matcher.find()) {
-				final int found = matcher.start();
-				sb.append(raw, start, found);
-
-				switch (raw.charAt(found)) {
-				case '&':  sb.append("&amp;");  break;
-				case '<':  sb.append("&lt;");   break;
-				case '>':  sb.append("&gt;");   break;
-				case '"':  sb.append("&quot;"); break;
-				case '\'': sb.append("&#39;");  break;
-				default: throw new IllegalArgumentException("");
+			for (int i = 0; i < raw.length(); i++) {
+				switch (raw.charAt(i)) {
+				case '&':  sb.append(raw, start, i).append("&amp;");  start = i + 1; break;
+				case '<':  sb.append(raw, start, i).append("&lt;");   start = i + 1; break;
+				case '>':  sb.append(raw, start, i).append("&gt;");   start = i + 1; break;
+				case '"':  sb.append(raw, start, i).append("&quot;"); start = i + 1; break;
+				case '\'': sb.append(raw, start, i).append("&#39;");  start = i + 1; break;
+				default: break;
 				}
-
-				start = matcher.end();
 			}
 
-			return sb.append(raw, start, raw.length()).toString();
+			return start == 0 ? raw : sb.append(raw, start, raw.length()).toString();
 		}
 	};
 
 	/**
-	 * Use the default (system) line endings when rendering the template.
+	 * The system default line endings.
 	 */
-	public static final String USE_DEFAULT_LINE_ENDINGS = System.lineSeparator();
+	public static final String DEFAULT_LINE_ENDINGS = System.lineSeparator();
 
 	/**
-	 * Use the line endings as they exist in the template being rendered.
+	 * The line endings as they exist in the template.
 	 */
-	public static final String USE_TEMPLATE_LINE_ENDINGS = null;
+	public static final String TEMPLATE_LINE_ENDINGS = null;
 
 	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
-	private ErrorLogger errorLogger = LOG_ERRORS_TO_STDERR;
-	private EscapeFunction escapeFunction = DO_NOT_ESCAPE;
-	private String lineEnding = USE_DEFAULT_LINE_ENDINGS;
+	private ErrorLogger errorLogger = STDERR_ERROR_LOGGER;
+	private EscapeFunction escapeFunction = EMPTY_ESCAPE_FUNCTION;
+	private String lineEndings = DEFAULT_LINE_ENDINGS;
 
 	/**
 	 * An enumeration used to control access when checking identifiers in expressions.
 	 */
 	public static enum ContextAccess {
 		/**
-		 * All section scopes will be checked for an identifier in an expression.
+		 * The context access that allows access to all section scopes when resolving an identifier in an expression.
 		 */
 		FULL,
 
 		/**
-		 * Only the current section scope and the root-level section scope will be checked for an identifier in an expression.
+		 * The context access that allows access to the current section scope and the root-level section scope when resolving an identifier in an expression.
 		 */
 		CURRENT_AND_ROOT,
 
 		/**
-		 * Only the current section scope will be checked for an identifier in an expression.
+		 * The context access that allows access to only the current section scope when resolving an identifier in an expression.
 		 */
-		CURRENT_ONLY
+		CURRENT
 	}
 
 	/**
@@ -132,7 +121,7 @@ public class Settings {
 	 * @return new mustache-compatible settings
 	 */
 	public static Settings newMustacheSettings() {
-		return new Settings().setContextAccess(ContextAccess.FULL).setEscapeFunction(ESCAPE_AS_HTML).setLineEnding(USE_TEMPLATE_LINE_ENDINGS);
+		return new Settings().setContextAccess(ContextAccess.FULL).setEscapeFunction(HTML_ESCAPE_FUNCTION).setLineEndings(TEMPLATE_LINE_ENDINGS);
 	}
 
 	/**
@@ -163,12 +152,12 @@ public class Settings {
 	}
 
 	/**
-	 * Gets the line ending used by the rendering process.
+	 * Gets the line endings used by the rendering process.
 	 *
-	 * @return the line ending used by the rendering process. If null, the rendering process will use the line endings in the template.
+	 * @return the line endings used by the rendering process. If null, the rendering process will use the line endings in the template.
 	 */
-	public String getLineEnding() {
-		return lineEnding;
+	public String getLineEndings() {
+		return lineEndings;
 	}
 
 	/**
@@ -205,13 +194,13 @@ public class Settings {
 	}
 
 	/**
-	 * Sets the line ending used by the rendering process.
+	 * Sets the line endings used by the rendering process.
 	 *
-	 * @param lineEnding the line ending used by the rendering process. If null, the rendering process will use the line endings in the template.
+	 * @param lineEndings the line endings used by the rendering process. If null, the rendering process will use the line endings in the template.
 	 * @return this object
 	 */
-	public Settings setLineEnding(final String lineEnding) {
-		this.lineEnding = lineEnding;
+	public Settings setLineEndings(final String lineEndings) {
+		this.lineEndings = lineEndings;
 		return this;
 	}
 

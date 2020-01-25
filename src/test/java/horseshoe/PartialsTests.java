@@ -14,7 +14,7 @@ public final class PartialsTests {
 
 	@Test
 	public void testIndentation() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.add("f", "With a new line!\n")
 				.add("g", "A{{!}} simple {{!}}test!\n{{! Should not show up even as empty line. }}\n\t{{>f}}\nAnd another.\n")
@@ -26,7 +26,7 @@ public final class PartialsTests {
 
 	@Test
 	public void testNestedPartials() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.add("f", "{{#a}}{{>g}}{{b}}{{/a}}{{^a}}{{x}}{{/a}}")
 				.add("g", "{{#x}}{{>f}}{{x}}{{/x}}")
@@ -38,7 +38,7 @@ public final class PartialsTests {
 
 	@Test
 	public void testRecursivePartial() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.add("f", "{{b}}{{#a}}{{>f}}{{/a}}")
 				.load("Test", "{{>f}}");
@@ -49,7 +49,7 @@ public final class PartialsTests {
 
 	@Test (expected = StackOverflowError.class)
 	public void testBadRecursivePartial() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.add("f", "{{b}}{{>Test}}")
 				.load("Test", "{{>f}}");
@@ -59,7 +59,7 @@ public final class PartialsTests {
 
 	@Test
 	public void testInlinePartials() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{<g}}{{#a}}{{b}}{{x}}{{/a}}{{/g}}{{>g}}{{#a}}{{>g}}{{/a}}");
 		final StringWriter writer = new StringWriter();
@@ -69,7 +69,7 @@ public final class PartialsTests {
 
 	@Test
 	public void testInlineRecursivePartialIndentation() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{<g}}\n{{x}}:\n{{#a}}\n\t{{>g}}\n{{/a}}\n{{/g}}\n\t{{>g}}\n");
 		final StringWriter writer = new StringWriter();
@@ -79,7 +79,7 @@ public final class PartialsTests {
 
 	@Test
 	public void testInlineRecursivePartial() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{<f}}\n{{b}}\n{{#a}}\n{{>f}}\n{{/a}}\n{{/f}}\n{{>f}}");
 		final StringWriter writer = new StringWriter();
@@ -89,7 +89,7 @@ public final class PartialsTests {
 
 	@Test (expected = StackOverflowError.class)
 	public void testInlineBadRecursivePartial() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{<f}}\n{{b}}{{>Test}}\n{{/f}}\n{{>f}}");
 		final StringWriter writer = new StringWriter();
@@ -98,7 +98,7 @@ public final class PartialsTests {
 
 	@Test (expected = LoadException.class)
 	public void testInlineBadPartial() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{#a}}{{<f}}\n{{b}}{{>Test}}\n{{/f}}{{/a}}\n{{>f}}");
 		final StringWriter writer = new StringWriter();
@@ -107,7 +107,7 @@ public final class PartialsTests {
 
 	@Test
 	public void testClashingPartialsAndData() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT_ONLY);
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.add("f", "{{f.b}}")
 				.load("Test", "{{#f}}{{<f}}{{a}}{{/f}}{{>f}}{{/f}}{{>f}}");

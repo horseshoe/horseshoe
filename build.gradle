@@ -52,10 +52,13 @@ jacocoTestReport {
 	}
 }
 
-task printVersion {
-	doLast {
-		println project.version
+def getVersion = { ->
+	def stdout = new ByteArrayOutputStream()
+	exec {
+		commandLine 'git', 'describe', '--tags', '--match', 'v[0-9]*'
+		standardOutput = stdout
 	}
+	return stdout.toString().trim().substring(1)
 }
 
-version = '0.1.23'
+version = getVersion()

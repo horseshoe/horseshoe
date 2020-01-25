@@ -22,6 +22,13 @@ public final class AnnotationHandlers {
 
 	private AnnotationHandlers() { }
 
+	/**
+	 * Creates an annotation handler that sends all output to a print stream using a specific character set.
+	 *
+	 * @param printStream the stream to use for rendering text
+	 * @param charset the character set used when rendering text to the stream
+	 * @return the new annotation handler
+	 */
 	public static AnnotationHandler printWriter(final PrintStream printStream, final Charset charset) {
 		return new AnnotationHandler() {
 			@Override
@@ -36,6 +43,11 @@ public final class AnnotationHandlers {
 		};
 	}
 
+	/**
+	 * Creates an annotation handler that sends all output to a file. The file can be specified by passing a string argument or a map argument with a "name" entry to the annotation in the template. If a map argument is used, then a specific character set can be specified using an "encoding" entry.
+	 *
+	 * @return the new annotation handler
+	 */
 	public static AnnotationHandler fileWriter() {
 		return new AnnotationHandler() {
 			private String getDefaultFilename() {
@@ -72,6 +84,9 @@ public final class AnnotationHandlers {
 		};
 	}
 
+	/**
+	 * The map of default annotations that are made available during the rendering process. Valid default annotations include "StdOut", "StdErr", and "File".
+	 */
 	public static final Map<String, AnnotationHandler> DEFAULT_ANNOTATIONS = Collections.unmodifiableMap(new HashMap<String, AnnotationHandler>() {
 		private static final long serialVersionUID = 1L;
 		{
