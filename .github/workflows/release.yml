@@ -18,23 +18,8 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
 
-    - name: Upload JAR
-      uses: JasonEtco/upload-to-release@master
-      with:
-        args: `ls build/libs/horseshoe-*[0-9].jar` application/java-archive
+    - name: Upload Artifacts
+      uses: fnkr/github-action-ghr@v1.2
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload JavaDoc JAR
-      uses: JasonEtco/upload-to-release@master
-      with:
-        args: `ls build/libs/horseshoe-*-javadoc.jar` application/java-archive
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Upload Source JAR
-      uses: JasonEtco/upload-to-release@master
-      with:
-        args: `ls build/libs/horseshoe-*-sources.jar` application/java-archive
-      env:
+        GHR_PATH: build/libs
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
