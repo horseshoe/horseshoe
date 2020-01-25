@@ -19,7 +19,7 @@ jobs:
       run: ./gradlew build
 
     - name: Upload Artifacts
-      uses: fnkr/github-action-ghr@v1.2
-      env:
-        GHR_PATH: build/libs
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: actions/upload-artifact@v1
+      with:
+        name: "JAR Files"
+        path: build/libs
