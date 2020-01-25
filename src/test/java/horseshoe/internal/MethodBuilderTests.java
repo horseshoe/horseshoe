@@ -161,7 +161,15 @@ public class MethodBuilderTests {
 			}
 
 			try {
+				final MethodBuilder mb = new MethodBuilder().addCode((byte)i);
+				assertNotNull(mb.toString());
+			} catch (final RuntimeException e) {
+			}
+
+			try {
 				final MethodBuilder mb = new MethodBuilder().addCode(WIDE, (byte)i, B0, B0, B0, B0, B0);
+				assertNotNull(mb.toString());
+				mb.addCode(WIDE, (byte)i);
 				assertNotNull(mb.toString());
 			} catch (final RuntimeException e) {
 			}
@@ -216,6 +224,26 @@ public class MethodBuilderTests {
 				.pushConstant("success").addCode(ARETURN).updateLabel(fail).addThrow(RuntimeException.class, null);
 		final SimpleInterface instance = mb.load(name, SimpleInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
 		assertEquals("success", instance.run());
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testBadIndex() {
+		new MethodBuilder().addAccess(ALOAD, 65536);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testBadIndex2() {
+		new MethodBuilder().addAccess(ALOAD, -1);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testBadNewObject() {
+		new MethodBuilder().pushNewObject(Object.class, new int[256]);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testBadNewObject2() {
+		new MethodBuilder().pushNewObject(int.class);
 	}
 
 }

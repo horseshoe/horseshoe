@@ -567,14 +567,6 @@ public final class MethodBuilder {
 		 * @return this label
 		 */
 		public abstract Label populate();
-
-		/**
-		 * Sets a new target for the label.
-		 *
-		 * @param target the new target for the label
-		 * @return this label
-		 */
-		public abstract Label setTarget(final Location target);
 	}
 
 	private static final class UTF8String {
@@ -675,7 +667,11 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder addAccess(final byte instruction, final int index) {
-		return index < Byte.MIN_VALUE || index > Byte.MAX_VALUE ? addCode(WIDE, instruction, (byte)(index >>> 8), (byte)index) : addCode(instruction, (byte)index);
+		if (index >> 16 != 0) {
+			throw new IllegalArgumentException("Access index out of range (" + index + "), expecting 0 - 65535");
+		}
+
+		return index >= 256 ? addCode(WIDE, instruction, (byte)(index >>> 8), (byte)index) : addCode(instruction, (byte)index);
 	}
 
 	/**
@@ -768,7 +764,7 @@ public final class MethodBuilder {
 					length = 4;
 				}
 
-				if (i + length >= code.length) {
+				if (i + length > code.length) {
 					break;
 				}
 
@@ -1310,8 +1306,8 @@ public final class MethodBuilder {
 		final int attributeIndex = methodIndex + length + 26;
 		final int endIndex = attributeIndex + 2;
 
-		if (constantPool.count() >= 65536 || maxStackSize >= 65536 || maxLocalVariableIndex >= 65536) {
-			throw new IllegalStateException("Encountered data overflow while building method");
+		if (length >= 65536 || constantPool.count() >= 65536 || maxStackSize >= 65536 || maxLocalVariableIndex >= 65536) {
+			throw new IllegalStateException("Encountered overflow while building method");
 		}
 
 		// Populate all labels and the constant pool
@@ -1521,12 +1517,6 @@ public final class MethodBuilder {
 
 				return this;
 			}
-
-			@Override
-			public Label setTarget(final Location target) {
-				this.target = target;
-				return this;
-			}
 		};
 
 		labels.add(label);
@@ -1728,11 +1718,10 @@ public final class MethodBuilder {
 			int constantPoolIndex = 0;
 			String postConstant = "";
 
+			assert opcode != null : "Invalid opcode detected: 0x" + Integer.toHexString(bytes[i] & 0xFF);
 			sb.append(i).append(": ");
 
-			if (opcode == null) {
-				return sb.append("0x").append(Integer.toHexString(bytes[i] & 0xFF)).append(" ???").toString();
-			} else if (opcode.has(OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_HAS_VARIABLE_LENGTH)) {
+			if (opcode.has(OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_HAS_VARIABLE_LENGTH)) {
 				sb.append(opcode.mnemonic);
 
 				if (bytes[i] == INVOKEINTERFACE || bytes[i] == INVOKEDYNAMIC) {
@@ -1754,7 +1743,7 @@ public final class MethodBuilder {
 					constantPoolIndex = ((bytes[i + 1] & 0xFF) << 8) + (bytes[i + 2] & 0xFF);
 					postConstant = ", " + (bytes[i + 3] & 0xFF);
 					i += 4;
-				} else if (bytes[i] == TABLESWITCH) {
+				} else if (bytes[i] == TABLESWITCH) { // Not currently implemented
 					final int j = (i + 3) & ~3;
 					final int start = (bytes[j + 4] << 24) + ((bytes[j + 5] & 0xFF) << 16) + ((bytes[j + 6]  & 0xFF) << 8) + (bytes[j + 7]  & 0xFF);
 					final int end   = (bytes[j + 8] << 24) + ((bytes[j + 9] & 0xFF) << 16) + ((bytes[j + 10] & 0xFF) << 8) + (bytes[j + 11] & 0xFF);
@@ -1770,13 +1759,13 @@ public final class MethodBuilder {
 				} else if (bytes[i] == BIPUSH || bytes[i] == NEWARRAY) {
 					sb.append(' ').append(bytes[i + 1]).append("; ");
 					i += 2;
-				} else if (bytes[i] == GOTO_W || bytes[i] == JSR_W) {
+				} else if (bytes[i] == GOTO_W || bytes[i] == JSR_W) { // Not currently implemented
 					sb.append(' ').append((bytes[i + 1] << 24) + ((bytes[i + 2] & 0xFF) << 16) + ((bytes[i + 3] & 0xFF) << 8) + (bytes[i + 4] & 0xFF)).append("; ");
 					i += 5;
 				} else if (bytes[i] == IINC) {
 					sb.append(' ').append(bytes[i + 1] & 0xFF).append(", ").append(bytes[i + 2]).append("; ");
 					i += 3;
-				} else if (bytes[i] == LDC) {
+				} else if (bytes[i] == LDC) { // Not currently implemented
 					constantPoolIndex = bytes[i + 1] & 0xFF;
 					i += 2;
 				} else if (bytes[i] == SIPUSH) {
@@ -1785,14 +1774,13 @@ public final class MethodBuilder {
 				} else if (bytes[i] == WIDE) {
 					final OpCode wideOpcode = OPCODES[bytes[i + 1] & 0xFF];
 
-					if (bytes[i + 1] ==IINC) {
+					if (bytes[i + 1] == IINC) {
 						sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((bytes[i + 2] & 0xFF) << 8) + (bytes[i + 3] & 0xFF)).append(", ").append((short)(bytes[i + 4] << 8) + (bytes[i + 5] & 0xFF)).append("; ");
 						i += 6;
-					} else if (wideOpcode.has(OpCode.PROP_LOCAL_INDEX)) {
+					} else {
+						assert wideOpcode.has(OpCode.PROP_LOCAL_INDEX) : "Invalid wide opcode detected: " + wideOpcode == null ? "0x" + Integer.toHexString(bytes[i] & 0xFF) : wideOpcode.mnemonic;
 						sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((bytes[i + 2] & 0xFF) << 8) + (bytes[i + 3] & 0xFF)).append("; ");
 						i += 4;
-					} else {
-						return sb.append(" ???").toString();
 					}
 				}
 			} else {

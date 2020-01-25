@@ -9,10 +9,11 @@ import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import horseshoe.internal.Expression.Evaluable;
 import horseshoe.internal.MethodBuilder.Label;
 
 final class Operand {
+
+	public static final int REQUIRED_LOCAL_VARIABLE_SLOTS = 5;
 
 	public static final int INT_TYPE    = 0b00;
 	public static final int LONG_TYPE   = 0b01;
@@ -60,21 +61,25 @@ final class Operand {
 	 * @param other the other operand used to calculate the result
 	 * @param intBranchOpcode the opcode used to compare and branch the two int operands
 	 * @param compareBranchOpcode the opcode used to branch after a compare of the two operands
+	 * @param firstLocalIndex the first local variable index that can be used for temporary storage
 	 * @return the resulting operand from the comparison
 	 */
-	public Operand execCompareOp(final Operand other, final byte intBranchOpcode, final byte compareBranchOpcode) {
+	public Operand execCompareOp(final Operand other, final byte intBranchOpcode, final byte compareBranchOpcode, final int firstLocalIndex) {
 		if ((type == null || (type.isPrimitive() && !boolean.class.equals(type))) && (other.type == null || (other.type.isPrimitive() && !boolean.class.equals(other.type)))) { // Mathematical comparison
+			final int typeIndex = firstLocalIndex;
+			final int doubleValueIndex = firstLocalIndex + 1;
+			final int longValueIndex = firstLocalIndex + 3;
 			final Label isFloating = builder.newLabel();
 			final Label process2nd = builder.newLabel();
 			final Label use2ndDouble = builder.newLabel();
 			final Label trueLabel = builder.newLabel();
 			final Label end = builder.newLabel();
 
-			return new Operand(boolean.class, toNumeric(true).append(other.toNumeric(true)).addAccess(ISTORE, Evaluable.FIRST_LOCAL).addAccess(DSTORE, Evaluable.FIRST_LOCAL + 1).addAccess(LSTORE, Evaluable.FIRST_LOCAL + 3)
-					.addCode(DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(IOR).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(LCMP).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
-					.updateLabel(isFloating).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, process2nd).addCode(POP2, L2D).addAccess(DLOAD, Evaluable.FIRST_LOCAL + 1).addCode(DCMPG).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
-					.updateLabel(process2nd).addCode(DUP2_X2, POP2, POP2).addAccess(ILOAD, Evaluable.FIRST_LOCAL).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, use2ndDouble).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(L2D, DCMPG).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
-					.updateLabel(use2ndDouble).addAccess(DLOAD, Evaluable.FIRST_LOCAL + 1).addCode(DCMPG).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
+			return new Operand(boolean.class, toNumeric(true).append(other.toNumeric(true)).addAccess(ISTORE, typeIndex).addAccess(DSTORE, doubleValueIndex).addAccess(LSTORE, longValueIndex)
+					.addCode(DUP).addAccess(ILOAD, typeIndex).addCode(IOR).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, longValueIndex).addCode(LCMP).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
+					.updateLabel(isFloating).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, process2nd).addCode(POP2, L2D).addAccess(DLOAD, doubleValueIndex).addCode(DCMPG).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
+					.updateLabel(process2nd).addCode(DUP2_X2, POP2, POP2).addAccess(ILOAD, typeIndex).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, use2ndDouble).addAccess(LLOAD, longValueIndex).addCode(L2D, DCMPG).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
+					.updateLabel(use2ndDouble).addAccess(DLOAD, doubleValueIndex).addCode(DCMPG).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
 					.updateLabel(trueLabel).addCode(ICONST_1).updateLabel(end));
 		}
 
@@ -111,21 +116,25 @@ final class Operand {
 	 * @param intOpcode the opcode used to compute the result of the operation on two int operands
 	 * @param longOpcode the opcode used to compute the result of the operation on two long operands
 	 * @param doubleOpcode the opcode used to compute the result of two double operands
+	 * @param firstLocalIndex the first local variable index that can be used for temporary storage
 	 * @return the resulting operand from the operation
 	 */
-	public Operand execMathOp(final Operand other, final byte intOpcode, final byte longOpcode, final byte doubleOpcode) {
+	public Operand execMathOp(final Operand other, final byte intOpcode, final byte longOpcode, final byte doubleOpcode, final int firstLocalIndex) {
+		final int typeIndex = firstLocalIndex;
+		final int doubleValueIndex = firstLocalIndex + 1;
+		final int longValueIndex = firstLocalIndex + 3;
 		final Label notInt = builder.newLabel();
 		final Label isFloating = builder.newLabel();
 		final Label process2nd = builder.newLabel();
 		final Label use2ndDouble = builder.newLabel();
 		final Label end = builder.newLabel();
 
-		return new Operand(null, toNumeric(true).append(other.toNumeric(true)).addAccess(ISTORE, Evaluable.FIRST_LOCAL).addAccess(DSTORE, Evaluable.FIRST_LOCAL + 1).addAccess(LSTORE, Evaluable.FIRST_LOCAL + 3)
-				.addCode(DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(IOR, DUP).addBranch(IFNE, notInt).addCode(POP2, POP2, L2I).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
-				.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
-				.updateLabel(isFloating).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, process2nd).addCode(POP2, DUP2, L2D).addAccess(DLOAD, Evaluable.FIRST_LOCAL + 1).addCode(doubleOpcode).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end)
-				.updateLabel(process2nd).addAccess(ILOAD, Evaluable.FIRST_LOCAL).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, use2ndDouble).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(L2D, doubleOpcode).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end)
-				.updateLabel(use2ndDouble).addAccess(DLOAD, Evaluable.FIRST_LOCAL + 1).addCode(doubleOpcode).pushConstant(DOUBLE_TYPE).updateLabel(end));
+		return new Operand(null, toNumeric(true).append(other.toNumeric(true)).addAccess(ISTORE, typeIndex).addAccess(DSTORE, doubleValueIndex).addAccess(LSTORE, longValueIndex)
+				.addCode(DUP).addAccess(ILOAD, typeIndex).addCode(IOR, DUP).addBranch(IFNE, notInt).addCode(POP2, POP2, L2I).addAccess(LLOAD, longValueIndex).addCode(L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
+				.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, longValueIndex).addCode(longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
+				.updateLabel(isFloating).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, process2nd).addCode(POP2, DUP2, L2D).addAccess(DLOAD, doubleValueIndex).addCode(doubleOpcode).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end)
+				.updateLabel(process2nd).addAccess(ILOAD, typeIndex).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, use2ndDouble).addAccess(LLOAD, longValueIndex).addCode(L2D, doubleOpcode).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end)
+				.updateLabel(use2ndDouble).addAccess(DLOAD, doubleValueIndex).addCode(doubleOpcode).pushConstant(DOUBLE_TYPE).updateLabel(end));
 	}
 
 	/**
@@ -150,16 +159,19 @@ final class Operand {
 	 * @param intOpcode the opcode used to compute the result of two int operands
 	 * @param longOpcode the opcode used to compute the result of two long operands
 	 * @param secondOperandInt true if the second operand should always be interpreted as an int, otherwise false
+	 * @param firstLocalIndex the first local variable index that can be used for temporary storage
 	 * @return the resulting operand from the operation
 	 */
-	public Operand execIntegralOp(final Operand other, final byte intOpcode, final byte longOpcode, final boolean secondOperandInt) {
+	public Operand execIntegralOp(final Operand other, final byte intOpcode, final byte longOpcode, final boolean secondOperandInt, final int firstLocalIndex) {
+		final int typeIndex = firstLocalIndex;
+		final int longValueIndex = firstLocalIndex + 1;
 		final Label notInt = builder.newLabel();
 		final Label isFloating = builder.newLabel();
 		final Label end = builder.newLabel();
 
-		return new Operand(null, toNumeric(false).append(other.toNumeric(false)).addAccess(ISTORE, Evaluable.FIRST_LOCAL).addAccess(DSTORE, Evaluable.FIRST_LOCAL + 1).addAccess(LSTORE, Evaluable.FIRST_LOCAL + 3)
-				.addCode(DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(IOR, DUP).addBranch(IFNE, notInt).addCode(POP2, POP2, L2I).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode(L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
-				.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, Evaluable.FIRST_LOCAL + 3).addCode((secondOperandInt ? L2I : NOP), longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
+		return new Operand(null, toNumeric(false).append(other.toNumeric(false)).addAccess(ISTORE, typeIndex).addCode(POP2).addAccess(LSTORE, longValueIndex)
+				.addCode(DUP).addAccess(ILOAD, typeIndex).addCode(IOR, DUP).addBranch(IFNE, notInt).addCode(POP2, POP2, L2I).addAccess(LLOAD, longValueIndex).addCode(L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
+				.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, longValueIndex).addCode((secondOperandInt ? L2I : NOP), longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
 				.updateLabel(isFloating).addThrow(RuntimeException.class, "Unexpected floating-point value, expecting integral value").addCode(ACONST_NULL, ARETURN).updateLabel(end));
 	}
 
@@ -174,7 +186,7 @@ final class Operand {
 			final Label end = builder.newLabel();
 
 			return builder.pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP2, LCONST_0, LCMP).addBranch(GOTO, end)
-					.updateLabel(isFloating).addAccess(DSTORE, Evaluable.FIRST_LOCAL).addCode(POP2).addAccess(DLOAD, Evaluable.FIRST_LOCAL).addCode(DCONST_0, DCMPG).updateLabel(end);
+					.updateLabel(isFloating).addCode(DUP2_X2, POP2, POP2).addCode(DCONST_0, DCMPG).updateLabel(end);
 		} else if (type.isPrimitive()) {
 			return builder.addPrimitiveConversion(type, boolean.class);
 		}

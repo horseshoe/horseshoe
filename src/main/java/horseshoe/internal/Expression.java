@@ -77,13 +77,13 @@ public final class Expression {
 	}
 
 	public static abstract class Evaluable {
-		public static final byte LOAD_EXPRESSIONS = ALOAD_1;
-		public static final byte LOAD_IDENTIFIERS = ALOAD_2;
-		public static final byte LOAD_CONTEXT = ALOAD_3;
-		public static final byte LOAD_ACCESS[] = new byte[] { ALOAD, 4 };
-		public static final byte LOAD_INDEXES[] = new byte[] { ALOAD, 5 };
-		public static final byte LOAD_ERROR_LOGGER[] = new byte[] { ALOAD, 6 };
-		public static final int FIRST_LOCAL = 7;
+		private static final byte LOAD_EXPRESSIONS = ALOAD_1;
+		private static final byte LOAD_IDENTIFIERS = ALOAD_2;
+		private static final byte LOAD_CONTEXT = ALOAD_3;
+		private static final byte LOAD_ACCESS[] = new byte[] { ALOAD, 4 };
+		private static final byte LOAD_INDEXES[] = new byte[] { ALOAD, 5 };
+		private static final byte LOAD_ERROR_LOGGER[] = new byte[] { ALOAD, 6 };
+		private static final int FIRST_LOCAL_INDEX = 7;
 
 		/**
 		 * Evaluates the object using the specified parameters.
@@ -112,7 +112,7 @@ public final class Expression {
 		}
 
 		@Override
-		public Iterator<Map.Entry<K, V>> iterator() {
+		public Iterator<Entry<K, V>> iterator() {
 			return entrySet().iterator();
 		}
 	}
@@ -241,10 +241,7 @@ public final class Expression {
 			return;
 		} else if (operator.has(Operator.RIGHT_EXPRESSION)) {
 			right = operands.pop();
-
-			if (Entry.class.equals(right.type) && !operator.has(Operator.ALLOW_PAIRS)) {
-				throw new IllegalArgumentException("Invalid pair operator (':') in expression");
-			}
+			assert !Entry.class.equals(right.type) || operator.has(Operator.ALLOW_PAIRS) : Entry.class + " cannot be passed to operator";
 		} else {
 			right = null;
 		}
@@ -274,7 +271,7 @@ public final class Expression {
 			for (int i = 0; i < operator.getRightExpressions(); i++) {
 				if (Entry.class.equals(operands.peek(i + pairs).type)) {
 					pairs++;
-					assert Entry.class.equals(operands.peek(i + pairs).type);
+					assert Entry.class.equals(operands.peek(i + pairs).type) : Entry.class + " must occur in pairs on the operand stack";
 				}
 			}
 
@@ -320,9 +317,9 @@ public final class Expression {
 			final Label decreasingLoop = left.builder.newLabel();
 			final Label end = left.builder.newLabel();
 
-			operands.push(new Operand(Object.class, left.toNumeric(false).addCode(POP, POP2, L2I, DUP).addAccess(ISTORE, Evaluable.FIRST_LOCAL).append(right.toNumeric(false)).addCode(POP, POP2, L2I, DUP2).addBranch(IF_ICMPGT, decreasing)
-					.addCode(SWAP, ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL + 1).addCode(ICONST_0).updateLabel(increasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(IADD, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, increasingLoop).addBranch(GOTO, end)
-					.updateLabel(decreasing).addCode(ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL + 1).addCode(ICONST_0).updateLabel(decreasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL).addCode(SWAP, ISUB, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, decreasingLoop)
+			operands.push(new Operand(Object.class, left.toNumeric(false).addCode(POP, POP2, L2I, DUP).addAccess(ISTORE, Evaluable.FIRST_LOCAL_INDEX).append(right.toNumeric(false)).addCode(POP, POP2, L2I, DUP2).addBranch(IF_ICMPGT, decreasing)
+					.addCode(SWAP, ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(increasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(IADD, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, increasingLoop).addBranch(GOTO, end)
+					.updateLabel(decreasing).addCode(ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(decreasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(SWAP, ISUB, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, decreasingLoop)
 					.updateLabel(end).addCode(POP)));
 			break;
 		}
@@ -336,7 +333,7 @@ public final class Expression {
 			} else if (String.class.equals(left.type) || String.class.equals(right.type) || StringBuilder.class.equals(right.type)) {
 				operands.push(new Operand(StringBuilder.class, left.toObject(false).pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
 			} else if ((left.type == null || (left.type.isPrimitive() && !boolean.class.equals(left.type))) && (right.type == null || (right.type.isPrimitive() && !boolean.class.equals(right.type)))) { // Mathematical addition
-				operands.push(left.execMathOp(right, IADD, LADD, DADD));
+				operands.push(left.execMathOp(right, IADD, LADD, DADD, Evaluable.FIRST_LOCAL_INDEX));
 			} else { // String concatenation, mathematical addition, or invalid
 				final Label notStringBuilder = left.builder.newLabel();
 				final Label isString = left.builder.newLabel();
@@ -345,9 +342,9 @@ public final class Expression {
 				final Operand result = new Operand(Object.class, left.toObject(false).append(right.toObject(false)).addCode(SWAP, DUP_X1).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notStringBuilder).addCode(SWAP).addCast(StringBuilder.class).addCode(SWAP).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
 					.updateLabel(notStringBuilder).addCode(SWAP, DUP_X1).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notString)
 					.updateLabel(isString).addCode(SWAP).pushNewObject(StringBuilder.class).addCode(DUP_X2, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
-					.updateLabel(notString).addAccess(ASTORE, Evaluable.FIRST_LOCAL));
+					.updateLabel(notString).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX));
 
-				result.execMathOp(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL)), IADD, LADD, DADD).toObject(false).updateLabel(end);
+				result.execMathOp(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX)), IADD, LADD, DADD, Evaluable.FIRST_LOCAL_INDEX).toObject(false).updateLabel(end);
 				operands.push(result);
 			}
 
@@ -356,41 +353,41 @@ public final class Expression {
 			if (left == null) {
 				operands.push(right.execIntegralOp(INEG, LNEG));
 			} else {
-				operands.push(left.execMathOp(right, ISUB, LSUB, DSUB));
+				operands.push(left.execMathOp(right, ISUB, LSUB, DSUB, Evaluable.FIRST_LOCAL_INDEX));
 			}
 
 			break;
 		case "*":
-			operands.push(left.execMathOp(right, IMUL, LMUL, DMUL));
+			operands.push(left.execMathOp(right, IMUL, LMUL, DMUL, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "/":
-			operands.push(left.execMathOp(right, IDIV, LDIV, DDIV));
+			operands.push(left.execMathOp(right, IDIV, LDIV, DDIV, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "%":
-			operands.push(left.execMathOp(right, IREM, LREM, DREM));
+			operands.push(left.execMathOp(right, IREM, LREM, DREM, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 
 		// Integral Operations
 		case "~": // Treat as x ^ -1
-			operands.push(right.execIntegralOp(new Operand(int.class, new MethodBuilder().pushConstant(-1)), IXOR, LXOR, false));
+			operands.push(right.execIntegralOp(new Operand(int.class, new MethodBuilder().pushConstant(-1)), IXOR, LXOR, false, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "<<":
-			operands.push(left.execIntegralOp(right, ISHL, LSHL, true));
+			operands.push(left.execIntegralOp(right, ISHL, LSHL, true, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case ">>":
-			operands.push(left.execIntegralOp(right, ISHR, LSHR, true));
+			operands.push(left.execIntegralOp(right, ISHR, LSHR, true, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case ">>>":
-			operands.push(left.execIntegralOp(right, IUSHR, LUSHR, true));
+			operands.push(left.execIntegralOp(right, IUSHR, LUSHR, true, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "&":
-			operands.push(left.execIntegralOp(right, IAND, LAND, false));
+			operands.push(left.execIntegralOp(right, IAND, LAND, false, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "^":
-			operands.push(left.execIntegralOp(right, IXOR, LXOR, false));
+			operands.push(left.execIntegralOp(right, IXOR, LXOR, false, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "|":
-			operands.push(left.execIntegralOp(right, IOR, LOR, false));
+			operands.push(left.execIntegralOp(right, IOR, LOR, false, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 
 		// Logical Operators
@@ -418,22 +415,22 @@ public final class Expression {
 
 		// Comparison Operators
 		case "<=":
-			operands.push(left.execCompareOp(right, IF_ICMPLE, IFLE));
+			operands.push(left.execCompareOp(right, IF_ICMPLE, IFLE, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case ">=":
-			operands.push(left.execCompareOp(right, IF_ICMPGE, IFGE));
+			operands.push(left.execCompareOp(right, IF_ICMPGE, IFGE, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "<":
-			operands.push(left.execCompareOp(right, IF_ICMPLT, IFLT));
+			operands.push(left.execCompareOp(right, IF_ICMPLT, IFLT, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case ">":
-			operands.push(left.execCompareOp(right, IF_ICMPGT, IFGT));
+			operands.push(left.execCompareOp(right, IF_ICMPGT, IFGT, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "==":
-			operands.push(left.execCompareOp(right, IF_ICMPEQ, IFEQ));
+			operands.push(left.execCompareOp(right, IF_ICMPEQ, IFEQ, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "!=":
-			operands.push(left.execCompareOp(right, IF_ICMPNE, IFNE));
+			operands.push(left.execCompareOp(right, IF_ICMPNE, IFNE, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 
 		// Ternary Operations
@@ -482,7 +479,40 @@ public final class Expression {
 			operands.push();
 			break;
 
+		case "++":
+			operands.push();
+			operands.push(new Operand(int.class, new MethodBuilder().pushConstant(1)));
+			processOperation(namedExpressions, expressions, identifiers, operands, Operator.get("+"));
+			processOperation(namedExpressions, expressions, identifiers, operands, Operator.get("="));
+
+			operands.push(new Operand(int.class, new MethodBuilder().pushConstant(1)));
+			processOperation(namedExpressions, expressions, identifiers, operands, Operator.get("-"));
+			break;
+
+		case "--":
+			operands.push();
+			operands.push(new Operand(int.class, new MethodBuilder().pushConstant(1)));
+			processOperation(namedExpressions, expressions, identifiers, operands, Operator.get("-"));
+			processOperation(namedExpressions, expressions, identifiers, operands, Operator.get("="));
+
+			operands.push(new Operand(int.class, new MethodBuilder().pushConstant(1)));
+			processOperation(namedExpressions, expressions, identifiers, operands, Operator.get("+"));
+			break;
+
+		case "=":
+			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).append(left.builder)));
+			break;
+
 		default:
+			// Check for +=, -=, etc.
+			if (operator.has(Operator.ASSIGNMENT)) {
+				operands.push();
+				operands.push();
+				processOperation(namedExpressions, expressions, identifiers, operands, Operator.get(operator.getString().substring(0, operator.getString().length() - 1)));
+				processOperation(namedExpressions, expressions, identifiers, operands, Operator.get("="));
+				break;
+			}
+
 			throw new IllegalArgumentException("Unrecognized operator '" + operator.getString() + "' while parsing expression");
 		}
 	}
@@ -516,7 +546,9 @@ public final class Expression {
 	public Expression(final String location, final CharSequence expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final HashMap<Expression, Integer> expressions = new HashMap<>();
 		final HashMap<Identifier, Integer> identifiers = new HashMap<>();
+		final HashMap<String, Integer> localVariables = new HashMap<>();
 		final PersistentStack<Operand> operands = new PersistentStack<>();
+		int nextLocalVariableIndex = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS;
 
 		this.location = location;
 		this.originalString = expressionString.toString();
@@ -619,23 +651,49 @@ public final class Expression {
 							continue nextToken;
 						} else { // Identifier
 							final String name = token.startsWith("`") ? unescapeQuotedIdentifier(token.substring(1, token.length() - 1)) : token;
-							final Identifier identifier = new Identifier(name);
-							Integer index = identifiers.get(identifier);
+							final Integer localVariableIndex = backreach < 0 ? localVariables.get(name) : null;
+							final Matcher assignment = OPERATOR_PATTERN.matcher(expressionString).region(matcher.end(), length);
+							final Operator operator = assignment.lookingAt() ? Operator.get(assignment.group("operator")) : null;
 
-							if (index == null) {
-								index = identifiers.size();
-								identifiers.put(identifier, index);
-							}
+							// Look-ahead for an assignment operation
+							if (operator != null && operator.has(Operator.ASSIGNMENT) && (operator.has(Operator.LEFT_EXPRESSION) || (operator.next() != null && operator.next().has(Operator.LEFT_EXPRESSION)))) {
+								if (backreach >= 0) {
+									throw new IllegalArgumentException("Invalid assignment to non-local variable in expression at offset " + matcher.regionStart());
+								}
 
-							if (!lastNavigation) {
-								// Create a new output formed by invoking identifiers[index].getValue(context, backreach, access)
-								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_VALUE_BACKREACH)));
-							} else if (operators.pop().has(Operator.SAFE)) {
-								// Create a new output formed by invoking identifiers[index].getValue(object)
-								final Label end = operands.peek().builder.newLabel();
-								operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
-							} else {
-								operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
+								if (localVariableIndex != null) { // Pre-existing local variable means we can use +=, -=, etc.
+									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, localVariableIndex)));
+
+									if (!"=".equals(operator.getString())) {
+										operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, localVariableIndex)));
+									}
+								} else if (!"=".equals(operator.getString())) { // Non-existing local variable means we can't use +=, -=, etc.
+									throw new IllegalArgumentException("Invalid reference to non-existant local variable in expression at offset " + matcher.regionStart());
+								} else {
+									localVariables.put(name, nextLocalVariableIndex);
+									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, nextLocalVariableIndex++)));
+								}
+							} else if (localVariableIndex != null) { // Check for a local variable
+								operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, localVariableIndex)));
+							} else { // Resolve the identifier
+								final Identifier identifier = new Identifier(name);
+								Integer index = identifiers.get(identifier);
+
+								if (index == null) {
+									index = identifiers.size();
+									identifiers.put(identifier, index);
+								}
+
+								if (!lastNavigation) {
+									// Create a new output formed by invoking identifiers[index].getValue(context, backreach, access)
+									operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_VALUE_BACKREACH)));
+								} else if (operators.pop().has(Operator.SAFE)) {
+									// Create a new output formed by invoking identifiers[index].getValue(object)
+									final Label end = operands.peek().builder.newLabel();
+									operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
+								} else {
+									operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
+								}
 							}
 						}
 					}
@@ -680,10 +738,8 @@ public final class Expression {
 
 						do {
 							sb.append(token, start, backslash);
-
-							if (backslash + 1 >= token.length()) {
-								throw new IllegalArgumentException("Invalid '\\' at end of string literal in expression at offset " + matcher.regionStart());
-							}
+							assert backslash + 1 < token.length() : "Invalid string literal accepted with trailing '\\'"; // According to the pattern, a backslash must be followed by a character
+							start = backslash + 2;
 
 							switch (token.charAt(backslash + 1)) {
 							case '\\': sb.append('\\'); break;
@@ -697,9 +753,10 @@ public final class Expression {
 
 							case 'x':
 								int codePoint = 0;
+								int j = backslash + 2;
 
-								for (int i = 0; i < 8 && backslash + 2 < token.length(); i++, backslash++) {
-									final int digit = token.charAt(backslash + 2);
+								for (int i = 0; i < 8 && j < token.length(); i++, j++) {
+									final int digit = token.charAt(j);
 
 									if (digit >= '0' && digit <= '9') {
 										codePoint = codePoint * 16 + digit - '0';
@@ -713,30 +770,23 @@ public final class Expression {
 								}
 
 								sb.append(Character.toChars(codePoint));
+								start = j;
 								break;
 
 							case 'u':
-								if (backslash + 5 >= token.length()) {
-									throw new IllegalArgumentException("Invalid '\\u' at end of string literal in expression at offset " + matcher.regionStart());
-								}
-
+								assert backslash + 5 < token.length() : "Invalid string literal accepted with trailing '\\u'"; // According to the pattern, \\u must be followed by 4 digits
 								sb.append(Character.toChars(Integer.parseInt(token.substring(backslash + 2, backslash + 6), 16)));
-								backslash += 4;
+								start = backslash + 6;
 								break;
 
 							case 'U':
-								if (backslash + 9 >= token.length()) {
-									throw new IllegalArgumentException("Invalid '\\U' at end of string literal in expression at offset " + matcher.regionStart());
-								}
-
+								assert backslash + 9 < token.length() : "Invalid string literal accepted with trailing '\\U'"; // According to the pattern, \\U must be followed by 8 digits
 								sb.append(Character.toChars(Integer.parseInt(token.substring(backslash + 2, backslash + 10), 16)));
-								backslash += 8;
+								start = backslash + 10;
 								break;
 
-							default: throw new IllegalArgumentException("Invalid character (" + token.charAt(backslash + 1) + ") following '\\' in string literal (offset: " + backslash + ") in expression at offset " + matcher.regionStart());
+							default: assert false : "Invalid string literal accepted with '\\" + token.charAt(backslash + 1) + "'"; // According to the pattern, only the above cases are allowed
 							}
-
-							start = backslash + 2;
 						} while ((backslash = token.indexOf('\\', start)) >= 0);
 
 						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(sb.append(token, start, token.length()).toString())));
@@ -756,10 +806,7 @@ public final class Expression {
 						}
 
 						if (!operators.isEmpty() && operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
-							if (!hasLeftExpression) { // Check for invalid and empty expressions
-								throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
-							}
-
+							assert hasLeftExpression : "Invalid ',' operator should require left expression";
 							operators.push(operators.pop().addRightExpression());
 						} else {
 							operators.push(operator);
@@ -768,19 +815,11 @@ public final class Expression {
 						lastOperator = operator;
 						continue nextToken;
 					} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION) || lastOperator.has(Operator.IGNORE_TRAILING)) { // Check if this token ends an expression on the stack
-						for (boolean nowHasLeftExpression = hasLeftExpression; !operators.isEmpty(); ) {
+						while (!operators.isEmpty()) {
 							Operator closedOperator = operators.pop();
 
-							if (closedOperator.isContainer()) {
-								if (closedOperator.has(Operator.X_RIGHT_EXPRESSIONS)) { // Process multi-argument operators
-									if (hasLeftExpression) { // Add parameter
-										closedOperator = closedOperator.addRightExpression();
-									}
-
-									nowHasLeftExpression = true;
-								} else if (!nowHasLeftExpression) { // Check for empty expressions
-									throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
-								}
+							if (closedOperator.has(Operator.X_RIGHT_EXPRESSIONS) && hasLeftExpression) { // Process multi-argument operators
+								closedOperator = closedOperator.addRightExpression();
 							}
 
 							if (closedOperator.getClosingString() != null) {
@@ -816,7 +855,7 @@ public final class Expression {
 
 				if (operator.getClosingString() != null) {
 					throw new IllegalArgumentException("Unexpected end of expression, expecting '" + operator.getClosingString() + "' (unmatched '" + operator.getString() + "')");
-				} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS) && lastOperator == null) { // Process multi-argument operators, but allow trailing commas
+				} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS) && (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION | Operator.X_RIGHT_EXPRESSIONS))) { // Process multi-argument operators, but allow trailing commas
 					operator = operator.addRightExpression();
 				} else if (lastOperator != null && lastOperator.has(Operator.RIGHT_EXPRESSION)) {
 					if (lastOperator.has(Operator.IGNORE_TRAILING)) {
@@ -834,8 +873,7 @@ public final class Expression {
 		// Populate all the identifiers and create the evaluator
 		this.expressions = new Expression[expressions.size()];
 		this.identifiers = new Identifier[identifiers.size()];
-		this.evaluable = operands.pop().toObject(true).load(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
-		assert operands.isEmpty();
+		final MethodBuilder initializeLocalVariables = new MethodBuilder();
 
 		for (final Entry<Expression, Integer> entry : expressions.entrySet()) {
 			this.expressions[entry.getValue()] = entry.getKey();
@@ -844,12 +882,19 @@ public final class Expression {
 		for (final Entry<Identifier, Integer> entry : identifiers.entrySet()) {
 			this.identifiers[entry.getValue()] = entry.getKey();
 		}
+
+		for (int i = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS; i < nextLocalVariableIndex; i++) {
+			initializeLocalVariables.addCode(ACONST_NULL).addAccess(ASTORE, i);
+		}
+
+		this.evaluable = initializeLocalVariables.append(operands.pop().toObject(true)).load(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
+		assert operands.isEmpty();
 	}
 
 	@Override
 	public boolean equals(final Object object) {
 		if (object instanceof Expression) {
-			return originalString.equals(((Expression)object).originalString);
+			return originalString.equals(((Expression)object).originalString) && location.equals(((Expression)object).location);
 		}
 
 		return false;

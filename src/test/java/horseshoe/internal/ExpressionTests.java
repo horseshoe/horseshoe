@@ -1,6 +1,9 @@
 package horseshoe.internal;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
@@ -18,6 +21,13 @@ public class ExpressionTests {
 	private static final String FILENAME = new Throwable().getStackTrace()[0].getFileName() + ":";
 
 	@Test
+	public void testArrayLookup() throws ReflectiveOperationException {
+		final PersistentStack<Object> context = new PersistentStack<>();
+		context.push(Helper.loadMap("a", new int[] { 5 }, "b", new short[] { 4 }, "c", new char[] { '\n' }, "d", new byte[] { 2 }, "e", new long[] { 1 }, "f", new float[] { 0 }, "g", new double[] { -1 }, "h", new boolean[] { true }));
+		assertEquals("5, 4, \n, 2, 1, 0.0, -1.0, true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "./a[0] + \", \" + b[0] + \", \" + c[0] + \", \" + d[0] + \", \" + e[0] + \", \" + f[0] + \", \" + g[0] + \", \" + h[0]", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER).toString());
+	}
+
+	@Test
 	public void testArraysMaps() throws ReflectiveOperationException {
 		assert((Boolean)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "{\"1\", \"2\"}.getClass().isArray()", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER));
 		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "{\"1\", \"2\",}[1]", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER).toString());
@@ -32,6 +42,7 @@ public class ExpressionTests {
 		assertEquals("8", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(10..5)[2]", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER).toString());
 		assertEquals(6, ((int[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "10..5", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER)).length);
 		assertEquals(1, ((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[10..5]", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER)).length);
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[10..5][5,]", Collections.emptyMap(), true);
 
 		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[5, 6.7, \"string-1\", \"blah\"][1 + 2]", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER).toString());
 		assertEquals("string-1", ((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\", \"blah\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER))[2].toString());
@@ -44,19 +55,174 @@ public class ExpressionTests {
 		assertTrue(((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5,", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER)).length == 1);
 	}
 
-	@Test (expected = RuntimeException.class)
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadArrayClose() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[5)", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadArrayClose2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[5", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadArrayClose3() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a, b[5", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadArrayEmpty() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[,,]", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadArrayEmpty2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), ",,", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadArrayOperation() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5[5]", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadArrayReference() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a[]", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadArrayReference2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a[,]", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadArrayReference3() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a[b,,]", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadBackreachAfterVar() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a../", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
 	public void testBadBackreachTooFar() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "../", Collections.emptyMap(), true);
 	}
 
-	@Test (expected = RuntimeException.class)
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadIdentifier() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "#", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadIdentifier2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a #", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadIdentifier3() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a b", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadIdentifier4() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a 1", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadIdentifier5() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "1 b", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
 	public void testBadEmpty() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "", Collections.emptyMap(), true);
 	}
 
-	@Test (expected = RuntimeException.class)
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadEmptyParentheses() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "()", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadEmptyParentheses2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(,)", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadEmptyParentheses3() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(a,,)", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadLiteral() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"blah\" a", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadLiteral2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"blah\" 3.5", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
 	public void testBadLiteralWithBackreach() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "../3.5", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadLocal() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a += 5", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadLocal2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "./a = 5", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadLocal3() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "./a++", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadLocal4() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a--", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadMethodEmpty() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a(,)", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadOperator() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a +", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadStringLiteral() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"bad\\\"", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadStringLiteral2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"\\q\"", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadStringLiteral3() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"\\u000\"", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadStringLiteral4() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"\\U0000000\"", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadTernary() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "true ? false", Collections.emptyMap(), true);
 	}
 
 	@Test
@@ -71,12 +237,43 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testEquals() throws ReflectiveOperationException {
+		assertNotEquals(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a", Collections.emptyMap(), true), "");
+		assertEquals(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a", Collections.emptyMap(), true), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a", Collections.emptyMap(), true));
+		assertNotEquals(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a", Collections.emptyMap(), true), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "b", Collections.emptyMap(), true));
+		assertNotEquals(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber() + 1, "a", Collections.emptyMap(), true), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a", Collections.emptyMap(), true));
+	}
+
+	@Test
 	public void testIntegralOperators() throws ReflectiveOperationException {
 		final PersistentStack<Object> context = new PersistentStack<>();
 		context.push(Helper.loadMap("r", 10, "i2", 2, "bigNum", 9999999999L));
 		assertEquals((((10 | 2) ^ 2) >> 2) << 10, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(((r | i2) ^ 2) >> 2) << r", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER));
 		assertEquals((9999999999L >>> (9999999999L & 10)) + (9999999999L >>> 10), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(bigNum >>> (bigNum & r)) + (bigNum >> r)", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER));
 		assertEquals(~(0 - +2) - -3, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~(0 - +2) - -3", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER));
+	}
+
+	@Test
+	public void testLocals() throws ReflectiveOperationException {
+		final PersistentStack<Object> context = new PersistentStack<>();
+		context.push(Helper.loadMap("r", 10, "i2", 2, "π", 3.14159265358979311599796346854, "bigNum", 9999999999L));
+		assertTrue(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "π = 3.14159265358979311599796346854; r = 4; \"r = \" + r + \", d = \" + (r * 2) + \", a = \" + (π * r * r)", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER).toString().startsWith("r = 4, d = 8, a = 50.26"));
+		assertEquals(418.87902047863909846168578443727, (Double)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "r = 4; 4 / 3.0 * π * ./r *./r", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER), 0.00001);
+		assertEquals("blah32", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a = 1; b = 2; c = 3; d = 4; e = 5; e *= b; c -= a >>= e %= b; a = (c++ == 2) ? null : 0xFF; b -= (d-- == 4) ? -1 : 5; b--; a ??= \"blah\" + c++ + b", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER).toString());
+		assertEquals("good", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a = 0; a++ == 0 ? (a == 1 ? \"good\" : \"bad\") : \"bad2\"", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER).toString());
+		assertNull(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "b == 0 ? (a = 1) : 4; a", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER));
+
+		{
+			final Object result[] = new Object[2000];
+			final StringBuilder sb = new StringBuilder("[");
+
+			for (int i = 0; i < result.length; i++) {
+				result[i] = i;
+				sb.append('a').append(i).append('=').append(i).append(',');
+			}
+
+			assertArrayEquals(result, (Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), sb.append(']').toString(), Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER));
+		}
 	}
 
 	@Test

@@ -110,24 +110,28 @@ public abstract class Accessor {
 	public static Object lookup(final Object context, final Object lookup) {
 		if (context instanceof Map) {
 			return ((Map<?, ?>)context).get(lookup);
-		} else if (context instanceof Object[]) {
-			return ((Object[])context)[((Number)lookup).intValue()];
-		} else if (context instanceof int[]) {
-			return ((int[])context)[((Number)lookup).intValue()];
-		} else if (context instanceof byte[]) {
-			return ((byte[])context)[((Number)lookup).intValue()];
-		} else if (context instanceof double[]) {
-			return ((double[])context)[((Number)lookup).intValue()];
-		} else if (context instanceof boolean[]) {
-			return ((boolean[])context)[((Number)lookup).intValue()];
-		} else if (context instanceof float[]) {
-			return ((float[])context)[((Number)lookup).intValue()];
-		} else if (context instanceof long[]) {
-			return ((long[])context)[((Number)lookup).intValue()];
-		} else if (context instanceof char[]) {
-			return ((char[])context)[((Number)lookup).intValue()];
 		} else {
-			return ((short[])context)[((Number)lookup).intValue()];
+			final Class<?> componentType = context.getClass().getComponentType();
+
+			if (!componentType.isPrimitive()) {
+				return ((Object[])context)[((Number)lookup).intValue()];
+			} else if (int.class.equals(componentType)) {
+				return ((int[])context)[((Number)lookup).intValue()];
+			} else if (byte.class.equals(componentType)) {
+				return ((byte[])context)[((Number)lookup).intValue()];
+			} else if (double.class.equals(componentType)) {
+				return ((double[])context)[((Number)lookup).intValue()];
+			} else if (boolean.class.equals(componentType)) {
+				return ((boolean[])context)[((Number)lookup).intValue()];
+			} else if (float.class.equals(componentType)) {
+				return ((float[])context)[((Number)lookup).intValue()];
+			} else if (long.class.equals(componentType)) {
+				return ((long[])context)[((Number)lookup).intValue()];
+			} else if (char.class.equals(componentType)) {
+				return ((char[])context)[((Number)lookup).intValue()];
+			} else {
+				return ((short[])context)[((Number)lookup).intValue()];
+			}
 		}
 	}
 

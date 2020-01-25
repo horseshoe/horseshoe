@@ -20,8 +20,9 @@ final class Operator {
 	public static final int NAVIGATION          = 0x00000100; // Is a navigation operator
 	public static final int SAFE                = 0x00000200; // Is a safe operator
 	public static final int IGNORE_TRAILING     = 0x00000400; // Trailing operators should be ignored
+	public static final int ASSIGNMENT          = 0x00000800; // Is an assignment operator
 
-	private static final int CONTAINER          = 0x00000800; // Is a container (has an ending match or comma separator)
+	private static final int CONTAINER          = 0x00001000; // Is a container (has an ending match or comma separator)
 
 	private static final List<Operator> OPERATORS;
 	private static final Map<String, Operator> OPERATOR_LOOKUP = new LinkedHashMap<>();
@@ -46,6 +47,8 @@ final class Operator {
 		operators.add(new Operator("(",    0,  RIGHT_EXPRESSION, "Parentheses", ")", 1));
 		operators.add(new Operator(".",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION, "Navigate"));
 		operators.add(new Operator("?.",   0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | SAFE, "Safe Navigate"));
+		operators.add(new Operator("++",   1,  LEFT_EXPRESSION | ASSIGNMENT, "Postfix Increment"));
+		operators.add(new Operator("--",   1,  LEFT_EXPRESSION | ASSIGNMENT, "Postfix Decrement"));
 		operators.add(new Operator("+",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
 		operators.add(new Operator("-",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Minus"));
 		operators.add(new Operator("~",    2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Bitwise Negate"));
@@ -74,6 +77,20 @@ final class Operator {
 		operators.add(new Operator("??",   14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce (Alternate)"));
 		operators.add(new Operator("?",    14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
 		operators.add(new Operator(":",    14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair"));
+		operators.add(new Operator("=",    15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Assign"));
+		operators.add(new Operator("*=",   15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Multiply Assign"));
+		operators.add(new Operator("/=",   15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Divide Assign"));
+		operators.add(new Operator("%=",   15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Modulus Assign"));
+		operators.add(new Operator("+=",   15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Add Assign"));
+		operators.add(new Operator("-=",   15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Subtract Assign"));
+		operators.add(new Operator("&=",   15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bitwise And Assign"));
+		operators.add(new Operator("^=",   15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bitwise Xor Assign"));
+		operators.add(new Operator("|=",   15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bitwise Or Assign"));
+		operators.add(new Operator("<<=",  15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bitwise Shift Left Assign"));
+		operators.add(new Operator(">>=",  15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bitwise Shift Right Sign Extend Assign"));
+		operators.add(new Operator(">>>=", 15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bitwise Shift Right Zero Extend Assign"));
+		operators.add(new Operator("?:=",  15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Null Coalesce Assign"));
+		operators.add(new Operator("??=",  15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Null Coalesce Assign (Alternate)"));
 		operators.add(new Operator(",",    16, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | IGNORE_TRAILING | CONTAINER, "Array / Map Separator"));
 		operators.add(new Operator(";",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
 
