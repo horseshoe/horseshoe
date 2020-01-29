@@ -19,7 +19,7 @@ import java.util.SortedMap;
 
 public final class MethodBuilder {
 
-	private static final OpCode OPCODES[] = new OpCode[256];
+	private static final Opcode OPCODES[] = new Opcode[256];
 
 	private static final byte B0 = (byte)0;
 
@@ -36,215 +36,215 @@ public final class MethodBuilder {
 	private static final byte NAME_AND_TYPE_CONSTANT = (byte)12;
 
 	// Instructions that must be added through function calls
-	private static final byte ANEWARRAY       = new OpCode("anewarray",       0xBD, 3,  0, OpCode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: count -> arrayref)
-	private static final byte CHECKCAST       = new OpCode("checkcast",       0xC0, 3,  0, OpCode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref -> objectref)
-	private static final byte GETFIELD        = new OpCode("getfield",        0xB4, 3,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref -> value)
-	private static final byte GETSTATIC       = new OpCode("getstatic",       0xB2, 3,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: -> value)
-	private static final byte INSTANCEOF      = new OpCode("instanceof",      0xC1, 3,  0, OpCode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref -> result)
-	private static final byte INVOKEINTERFACE = new OpCode("invokeinterface", 0xB9, 5,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 4: indexbyte1, indexbyte2, count, 0 (stack: objectref, [arg1, arg2, ...] -> result)
-	private static final byte INVOKESPECIAL   = new OpCode("invokespecial",   0xB7, 3,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref, [arg1, arg2, ...] -> result)
-	private static final byte INVOKESTATIC    = new OpCode("invokestatic",    0xB8, 3,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: [arg1, arg2, ...] -> result)
-	private static final byte INVOKEVIRTUAL   = new OpCode("invokevirtual",   0xB6, 3,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref, [arg1, arg2, ...] -> result)
-	private static final byte LDC             = new OpCode("ldc",             0x12, 2,  1, OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES).opcode; // 1: index (stack: -> value)
-	private static final byte LDC_W           = new OpCode("ldc_w",           0x13, 3,  1, OpCode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: -> value)
-	private static final byte LDC2_W          = new OpCode("ldc2_w",          0x14, 3,  2, OpCode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: -> value)
-	private static final byte LOOKUPSWITCH    = new OpCode("lookupswitch",    0xAB, 0, -1, OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_HAS_VARIABLE_LENGTH).opcode; // 8+: [0-3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, npairs1, npairs2, npairs3, npairs4, match-offset pairs... (stack: key ->)
-	private static final byte MULTIANEWARRAY  = new OpCode("multianewarray",  0xC5, 4,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 3: indexbyte1, indexbyte2, dimensions (stack: count1, [count2,...] -> arrayref)
-	private static final byte NEW             = new OpCode("new",             0xBB, 3,  1, OpCode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: -> objectref)
-	private static final byte PUTFIELD        = new OpCode("putfield",        0xB5, 3,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref, value ->)
-	private static final byte PUTSTATIC       = new OpCode("putstatic",       0xB3, 3,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: value ->)
-	private static final byte TABLESWITCH     = new OpCode("tableswitch",     0xAA, 0, -1, OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_HAS_VARIABLE_LENGTH).opcode; // 16+: [0-3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, lowbyte1, lowbyte2, lowbyte3, lowbyte4, highbyte1, highbyte2, highbyte3, highbyte4, jump offsets... (stack: index ->)
+	private static final byte ANEWARRAY       = new Opcode("anewarray",       0xBD, 3,  0, Opcode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: count -> arrayref)
+	private static final byte CHECKCAST       = new Opcode("checkcast",       0xC0, 3,  0, Opcode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref -> objectref)
+	private static final byte GETFIELD        = new Opcode("getfield",        0xB4, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref -> value)
+	private static final byte GETSTATIC       = new Opcode("getstatic",       0xB2, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: -> value)
+	private static final byte INSTANCEOF      = new Opcode("instanceof",      0xC1, 3,  0, Opcode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref -> result)
+	private static final byte INVOKEINTERFACE = new Opcode("invokeinterface", 0xB9, 5,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 4: indexbyte1, indexbyte2, count, 0 (stack: objectref, [arg1, arg2, ...] -> result)
+	private static final byte INVOKESPECIAL   = new Opcode("invokespecial",   0xB7, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref, [arg1, arg2, ...] -> result)
+	private static final byte INVOKESTATIC    = new Opcode("invokestatic",    0xB8, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: [arg1, arg2, ...] -> result)
+	private static final byte INVOKEVIRTUAL   = new Opcode("invokevirtual",   0xB6, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref, [arg1, arg2, ...] -> result)
+	private static final byte LDC             = new Opcode("ldc",             0x12, 2,  1, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES).opcode; // 1: index (stack: -> value)
+	private static final byte LDC_W           = new Opcode("ldc_w",           0x13, 3,  1, Opcode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: -> value)
+	private static final byte LDC2_W          = new Opcode("ldc2_w",          0x14, 3,  2, Opcode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: -> value)
+	private static final byte LOOKUPSWITCH    = new Opcode("lookupswitch",    0xAB, 0, -1, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_LENGTH).opcode; // 8+: [0-3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, npairs1, npairs2, npairs3, npairs4, match-offset pairs... (stack: key ->)
+	private static final byte MULTIANEWARRAY  = new Opcode("multianewarray",  0xC5, 4,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 3: indexbyte1, indexbyte2, dimensions (stack: count1, [count2,...] -> arrayref)
+	private static final byte NEW             = new Opcode("new",             0xBB, 3,  1, Opcode.PROP_CONST_POOL_INDEX).opcode; // 2: indexbyte1, indexbyte2 (stack: -> objectref)
+	private static final byte PUTFIELD        = new Opcode("putfield",        0xB5, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: objectref, value ->)
+	private static final byte PUTSTATIC       = new Opcode("putstatic",       0xB3, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 2: indexbyte1, indexbyte2 (stack: value ->)
+	private static final byte TABLESWITCH     = new Opcode("tableswitch",     0xAA, 0, -1, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_LENGTH).opcode; // 16+: [0-3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, lowbyte1, lowbyte2, lowbyte3, lowbyte4, highbyte1, highbyte2, highbyte3, highbyte4, jump offsets... (stack: index ->)
 
 	// Do not use, added in Java 7, but we only support Java 6
-	private static final byte INVOKEDYNAMIC   = new OpCode("invokedynamic",   0xBA, 5,  0, OpCode.PROP_CONST_POOL_INDEX | OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 4: indexbyte1, indexbyte2, 0, 0 (stack: [arg1, [arg2 ...]] -> result)
+	private static final byte INVOKEDYNAMIC   = new Opcode("invokedynamic",   0xBA, 5,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).opcode; // 4: indexbyte1, indexbyte2, 0, 0 (stack: [arg1, [arg2 ...]] -> result)
 
 	// Instructions that can be added as code
-	public static final byte AALOAD       = new OpCode("aaload",       0x32, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
-	public static final byte AASTORE      = new OpCode("aastore",      0x53, 1, -3, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
-	public static final byte ACONST_NULL  = new OpCode("aconst_null",  0x01, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> null)
-	public static final byte ALOAD        = new OpCode("aload",        0x19, 2,  1, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> objectref)
-	public static final byte ALOAD_0      = new OpCode("aload_0",      0x2A, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> objectref)
-	public static final byte ALOAD_1      = new OpCode("aload_1",      0x2B, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> objectref)
-	public static final byte ALOAD_2      = new OpCode("aload_2",      0x2C, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> objectref)
-	public static final byte ALOAD_3      = new OpCode("aload_3",      0x2D, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> objectref)
-	public static final byte ARETURN      = new OpCode("areturn",      0xB0, 1,  0, OpCode.PROP_HAS_VARIABLE_STACK_OFFSET | OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref -> [empty])
-	public static final byte ARRAYLENGTH  = new OpCode("arraylength",  0xBE, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref -> length)
-	public static final byte ASTORE       = new OpCode("astore",       0x3A, 2, -1, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: objectref ->)
-	public static final byte ASTORE_0     = new OpCode("astore_0",     0x4B, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
-	public static final byte ASTORE_1     = new OpCode("astore_1",     0x4C, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
-	public static final byte ASTORE_2     = new OpCode("astore_2",     0x4D, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
-	public static final byte ASTORE_3     = new OpCode("astore_3",     0x4E, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
-	public static final byte ATHROW       = new OpCode("athrow",       0xBF, 1,  0, OpCode.PROP_HAS_VARIABLE_STACK_OFFSET | OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref -> [empty], objectref)
-	public static final byte BALOAD       = new OpCode("baload",       0x33, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
-	public static final byte BASTORE      = new OpCode("bastore",      0x54, 1, -3, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
-	public static final byte BIPUSH       = new OpCode("bipush",       0x10, 2,  1, OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: byte (stack: -> value)
-	public static final byte BREAKPOINT   = new OpCode("breakpoint",   0xCA, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: )
-	public static final byte CALOAD       = new OpCode("caload",       0x34, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
-	public static final byte CASTORE      = new OpCode("castore",      0x55, 1, -3, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
-	public static final byte D2F          = new OpCode("d2f",          0x90, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte D2I          = new OpCode("d2i",          0x8E, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte D2L          = new OpCode("d2l",          0x8F, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte DADD         = new OpCode("dadd",         0x63, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte DALOAD       = new OpCode("daload",       0x31, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
-	public static final byte DASTORE      = new OpCode("dastore",      0x52, 1, -4, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
-	public static final byte DCMPG        = new OpCode("dcmpg",        0x98, 1, -3, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte DCMPL        = new OpCode("dcmpl",        0x97, 1, -3, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte DCONST_0     = new OpCode("dconst_0",     0x0E, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 0.0)
-	public static final byte DCONST_1     = new OpCode("dconst_1",     0x0F, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 1.0)
-	public static final byte DDIV         = new OpCode("ddiv",         0x6F, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte DLOAD        = new OpCode("dload",        0x18, 2,  2, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> value)
-	public static final byte DLOAD_0      = new OpCode("dload_0",      0x26, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte DLOAD_1      = new OpCode("dload_1",      0x27, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte DLOAD_2      = new OpCode("dload_2",      0x28, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte DLOAD_3      = new OpCode("dload_3",      0x29, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte DMUL         = new OpCode("dmul",         0x6B, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte DNEG         = new OpCode("dneg",         0x77, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte DREM         = new OpCode("drem",         0x73, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte DRETURN      = new OpCode("dreturn",      0xAF, 1,  0, OpCode.PROP_HAS_VARIABLE_STACK_OFFSET | OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> [empty])
-	public static final byte DSTORE       = new OpCode("dstore",       0x39, 2, -2, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: value ->)
-	public static final byte DSTORE_0     = new OpCode("dstore_0",     0x47, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte DSTORE_1     = new OpCode("dstore_1",     0x48, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte DSTORE_2     = new OpCode("dstore_2",     0x49, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte DSTORE_3     = new OpCode("dstore_3",     0x4A, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte DSUB         = new OpCode("dsub",         0x67, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte DUP          = new OpCode("dup",          0x59, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> value, value)
-	public static final byte DUP_X1       = new OpCode("dup_x1",       0x5A, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value2, value1 -> value1, value2, value1)
-	public static final byte DUP_X2       = new OpCode("dup_x2",       0x5B, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value3, value2, value1 -> value1, value3, value2, value1)
-	public static final byte DUP2         = new OpCode("dup2",         0x5C, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: {value2, value1} -> {value2, value1}, {value2, value1})
-	public static final byte DUP2_X1      = new OpCode("dup2_x1",      0x5D, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value3, {value2, value1} -> {value2, value1}, value3, {value2, value1})
-	public static final byte DUP2_X2      = new OpCode("dup2_x2",      0x5E, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: {value4, value3}, {value2, value1} -> {value2, value1}, {value4, value3}, {value2, value1})
-	public static final byte F2D          = new OpCode("f2d",          0x8D, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte F2I          = new OpCode("f2i",          0x8B, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte F2L          = new OpCode("f2l",          0x8C, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte FADD         = new OpCode("fadd",         0x62, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte FALOAD       = new OpCode("faload",       0x30, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
-	public static final byte FASTORE      = new OpCode("fastore",      0x51, 1, -3, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
-	public static final byte FCMPG        = new OpCode("fcmpg",        0x96, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte FCMPL        = new OpCode("fcmpl",        0x95, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte FCONST_0     = new OpCode("fconst_0",     0x0B, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 0.0f)
-	public static final byte FCONST_1     = new OpCode("fconst_1",     0x0C, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 1.0f)
-	public static final byte FCONST_2     = new OpCode("fconst_2",     0x0D, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 2.0f)
-	public static final byte FDIV         = new OpCode("fdiv",         0x6E, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte FLOAD        = new OpCode("fload",        0x17, 2,  1, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> value)
-	public static final byte FLOAD_0      = new OpCode("fload_0",      0x22, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte FLOAD_1      = new OpCode("fload_1",      0x23, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte FLOAD_2      = new OpCode("fload_2",      0x24, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte FLOAD_3      = new OpCode("fload_3",      0x25, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte FMUL         = new OpCode("fmul",         0x6A, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte FNEG         = new OpCode("fneg",         0x76, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte FREM         = new OpCode("frem",         0x72, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte FRETURN      = new OpCode("freturn",      0xAE, 1,  0, OpCode.PROP_HAS_VARIABLE_STACK_OFFSET | OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> [empty])
-	public static final byte FSTORE       = new OpCode("fstore",       0x38, 2, -1, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: value ->)
-	public static final byte FSTORE_0     = new OpCode("fstore_0",     0x43, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte FSTORE_1     = new OpCode("fstore_1",     0x44, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte FSTORE_2     = new OpCode("fstore_2",     0x45, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte FSTORE_3     = new OpCode("fstore_3",     0x46, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte FSUB         = new OpCode("fsub",         0x66, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte GOTO         = new OpCode("goto",         0xA7, 3,  0, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: [no change])
-	public static final byte GOTO_W       = new OpCode("goto_w",       0xC8, 5,  0, OpCode.PROP_BRANCH_OFFSET_4).opcode; // 4: branchbyte1, branchbyte2, branchbyte3, branchbyte4 (stack: [no change])
-	public static final byte I2B          = new OpCode("i2b",          0x91, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte I2C          = new OpCode("i2c",          0x92, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte I2D          = new OpCode("i2d",          0x87, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte I2F          = new OpCode("i2f",          0x86, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte I2L          = new OpCode("i2l",          0x85, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte I2S          = new OpCode("i2s",          0x93, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte IADD         = new OpCode("iadd",         0x60, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte IALOAD       = new OpCode("iaload",       0x2E, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
-	public static final byte IAND         = new OpCode("iand",         0x7E, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte IASTORE      = new OpCode("iastore",      0x4F, 1, -3, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
-	public static final byte ICONST_M1    = new OpCode("iconst_m1",    0x02, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> -1)
-	public static final byte ICONST_0     = new OpCode("iconst_0",     0x03, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 0)
-	public static final byte ICONST_1     = new OpCode("iconst_1",     0x04, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 1)
-	public static final byte ICONST_2     = new OpCode("iconst_2",     0x05, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 2)
-	public static final byte ICONST_3     = new OpCode("iconst_3",     0x06, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 3)
-	public static final byte ICONST_4     = new OpCode("iconst_4",     0x07, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 4)
-	public static final byte ICONST_5     = new OpCode("iconst_5",     0x08, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 5)
-	public static final byte IDIV         = new OpCode("idiv",         0x6C, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte IF_ACMPEQ    = new OpCode("if_acmpeq",    0xA5, 3, -2, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
-	public static final byte IF_ACMPNE    = new OpCode("if_acmpne",    0xA6, 3, -2, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
-	public static final byte IF_ICMPEQ    = new OpCode("if_icmpeq",    0x9F, 3, -2, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
-	public static final byte IF_ICMPGE    = new OpCode("if_icmpge",    0xA2, 3, -2, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
-	public static final byte IF_ICMPGT    = new OpCode("if_icmpgt",    0xA3, 3, -2, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
-	public static final byte IF_ICMPLE    = new OpCode("if_icmple",    0xA4, 3, -2, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
-	public static final byte IF_ICMPLT    = new OpCode("if_icmplt",    0xA1, 3, -2, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
-	public static final byte IF_ICMPNE    = new OpCode("if_icmpne",    0xA0, 3, -2, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
-	public static final byte IFEQ         = new OpCode("ifeq",         0x99, 3, -1, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
-	public static final byte IFGE         = new OpCode("ifge",         0x9C, 3, -1, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
-	public static final byte IFGT         = new OpCode("ifgt",         0x9D, 3, -1, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
-	public static final byte IFLE         = new OpCode("ifle",         0x9E, 3, -1, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
-	public static final byte IFLT         = new OpCode("iflt",         0x9B, 3, -1, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
-	public static final byte IFNE         = new OpCode("ifne",         0x9A, 3, -1, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
-	public static final byte IFNONNULL    = new OpCode("ifnonnull",    0xC7, 3, -1, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
-	public static final byte IFNULL       = new OpCode("ifnull",       0xC6, 3, -1, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
-	public static final byte IINC         = new OpCode("iinc",         0x84, 3,  0, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 2: index, const (stack: [No change])
-	public static final byte ILOAD        = new OpCode("iload",        0x15, 2,  1, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> value)
-	public static final byte ILOAD_0      = new OpCode("iload_0",      0x1A, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte ILOAD_1      = new OpCode("iload_1",      0x1B, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte ILOAD_2      = new OpCode("iload_2",      0x1C, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte ILOAD_3      = new OpCode("iload_3",      0x1D, 1,  1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte IMPDEP1      = new OpCode("impdep1",      0xFE, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: )
-	public static final byte IMPDEP2      = new OpCode("impdep2",      0xFF, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: )
-	public static final byte IMUL         = new OpCode("imul",         0x68, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte INEG         = new OpCode("ineg",         0x74, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte IOR          = new OpCode("ior",          0x80, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte IREM         = new OpCode("irem",         0x70, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte IRETURN      = new OpCode("ireturn",      0xAC, 1,  0, OpCode.PROP_HAS_VARIABLE_STACK_OFFSET | OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> [empty])
-	public static final byte ISHL         = new OpCode("ishl",         0x78, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte ISHR         = new OpCode("ishr",         0x7A, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte ISTORE       = new OpCode("istore",       0x36, 2, -1, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: value ->)
-	public static final byte ISTORE_0     = new OpCode("istore_0",     0x3B, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte ISTORE_1     = new OpCode("istore_1",     0x3C, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte ISTORE_2     = new OpCode("istore_2",     0x3D, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte ISTORE_3     = new OpCode("istore_3",     0x3E, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte ISUB         = new OpCode("isub",         0x64, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte IUSHR        = new OpCode("iushr",        0x7C, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte IXOR         = new OpCode("ixor",         0x82, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte JSR          = new OpCode("jsr",          0xA8, 3,  1, OpCode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: -> address)
-	public static final byte JSR_W        = new OpCode("jsr_w",        0xC9, 5,  1, OpCode.PROP_BRANCH_OFFSET_4).opcode; // 4: branchbyte1, branchbyte2, branchbyte3, branchbyte4 (stack: -> address)
-	public static final byte L2D          = new OpCode("l2d",          0x8A, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte L2F          = new OpCode("l2f",          0x89, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte L2I          = new OpCode("l2i",          0x88, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte LADD         = new OpCode("ladd",         0x61, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LALOAD       = new OpCode("laload",       0x2F, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
-	public static final byte LAND         = new OpCode("land",         0x7F, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LASTORE      = new OpCode("lastore",      0x50, 1, -4, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
-	public static final byte LCMP         = new OpCode("lcmp",         0x94, 1, -3, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LCONST_0     = new OpCode("lconst_0",     0x09, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 0L)
-	public static final byte LCONST_1     = new OpCode("lconst_1",     0x0A, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 1L)
-	public static final byte LDIV         = new OpCode("ldiv",         0x6D, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LLOAD        = new OpCode("lload",        0x16, 2,  2, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> value)
-	public static final byte LLOAD_0      = new OpCode("lload_0",      0x1E, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte LLOAD_1      = new OpCode("lload_1",      0x1F, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte LLOAD_2      = new OpCode("lload_2",      0x20, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte LLOAD_3      = new OpCode("lload_3",      0x21, 1,  2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
-	public static final byte LMUL         = new OpCode("lmul",         0x69, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LNEG         = new OpCode("lneg",         0x75, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
-	public static final byte LOR          = new OpCode("lor",          0x81, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LREM         = new OpCode("lrem",         0x71, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LRETURN      = new OpCode("lreturn",      0xAD, 1,  0, OpCode.PROP_HAS_VARIABLE_STACK_OFFSET | OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> [empty])
-	public static final byte LSHL         = new OpCode("lshl",         0x79, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LSHR         = new OpCode("lshr",         0x7B, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LSTORE       = new OpCode("lstore",       0x37, 2, -2, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: value ->)
-	public static final byte LSTORE_0     = new OpCode("lstore_0",     0x3F, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte LSTORE_1     = new OpCode("lstore_1",     0x40, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte LSTORE_2     = new OpCode("lstore_2",     0x41, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte LSTORE_3     = new OpCode("lstore_3",     0x42, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte LSUB         = new OpCode("lsub",         0x65, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LUSHR        = new OpCode("lushr",        0x7D, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte LXOR         = new OpCode("lxor",         0x83, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
-	public static final byte MONITORENTER = new OpCode("monitorenter", 0xC2, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
-	public static final byte MONITOREXIT  = new OpCode("monitorexit",  0xC3, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
-	public static final byte NEWARRAY     = new OpCode("newarray",     0xBC, 2,  0, OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: atype (stack: count -> arrayref)
-	public static final byte NOP          = new OpCode("nop",          0x00, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: [No change])
-	public static final byte POP          = new OpCode("pop",          0x57, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
-	public static final byte POP2         = new OpCode("pop2",         0x58, 1, -2, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: {value2, value1} ->)
-	public static final byte RET          = new OpCode("ret",          0xA9, 2,  0, OpCode.PROP_LOCAL_INDEX | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: [No change])
-	public static final byte RETURN       = new OpCode("return",       0xB1, 1,  0, OpCode.PROP_HAS_VARIABLE_STACK_OFFSET | OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> [empty])
-	public static final byte SALOAD       = new OpCode("saload",       0x35, 1, -1, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
-	public static final byte SASTORE      = new OpCode("sastore",      0x56, 1, -3, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
-	public static final byte SIPUSH       = new OpCode("sipush",       0x11, 3,  1, OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 2: byte1, byte2 (stack: -> value)
-	public static final byte SWAP         = new OpCode("swap",         0x5F, 1,  0, OpCode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value2, value1 -> value1, value2)
-	public static final byte WIDE         = new OpCode("wide",         0xC4, 0,  0, OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_HAS_VARIABLE_LENGTH | OpCode.PROP_HAS_VARIABLE_STACK_OFFSET | OpCode.PROP_IS_STANDALONE_VALID).opcode; // 3/5: opcode, indexbyte1, indexbyte2 (stack: [same as for corresponding instructions])
+	public static final byte AALOAD       = new Opcode("aaload",       0x32, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
+	public static final byte AASTORE      = new Opcode("aastore",      0x53, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
+	public static final byte ACONST_NULL  = new Opcode("aconst_null",  0x01, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> null)
+	public static final byte ALOAD        = new Opcode("aload",        0x19, 2,  1, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> objectref)
+	public static final byte ALOAD_0      = new Opcode("aload_0",      0x2A, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> objectref)
+	public static final byte ALOAD_1      = new Opcode("aload_1",      0x2B, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> objectref)
+	public static final byte ALOAD_2      = new Opcode("aload_2",      0x2C, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> objectref)
+	public static final byte ALOAD_3      = new Opcode("aload_3",      0x2D, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> objectref)
+	public static final byte ARETURN      = new Opcode("areturn",      0xB0, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref -> [empty])
+	public static final byte ARRAYLENGTH  = new Opcode("arraylength",  0xBE, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref -> length)
+	public static final byte ASTORE       = new Opcode("astore",       0x3A, 2, -1, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: objectref ->)
+	public static final byte ASTORE_0     = new Opcode("astore_0",     0x4B, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
+	public static final byte ASTORE_1     = new Opcode("astore_1",     0x4C, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
+	public static final byte ASTORE_2     = new Opcode("astore_2",     0x4D, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
+	public static final byte ASTORE_3     = new Opcode("astore_3",     0x4E, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
+	public static final byte ATHROW       = new Opcode("athrow",       0xBF, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref -> [empty], objectref)
+	public static final byte BALOAD       = new Opcode("baload",       0x33, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
+	public static final byte BASTORE      = new Opcode("bastore",      0x54, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
+	public static final byte BIPUSH       = new Opcode("bipush",       0x10, 2,  1, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: byte (stack: -> value)
+	public static final byte BREAKPOINT   = new Opcode("breakpoint",   0xCA, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: )
+	public static final byte CALOAD       = new Opcode("caload",       0x34, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
+	public static final byte CASTORE      = new Opcode("castore",      0x55, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
+	public static final byte D2F          = new Opcode("d2f",          0x90, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte D2I          = new Opcode("d2i",          0x8E, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte D2L          = new Opcode("d2l",          0x8F, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte DADD         = new Opcode("dadd",         0x63, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte DALOAD       = new Opcode("daload",       0x31, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
+	public static final byte DASTORE      = new Opcode("dastore",      0x52, 1, -4, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
+	public static final byte DCMPG        = new Opcode("dcmpg",        0x98, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte DCMPL        = new Opcode("dcmpl",        0x97, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte DCONST_0     = new Opcode("dconst_0",     0x0E, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 0.0)
+	public static final byte DCONST_1     = new Opcode("dconst_1",     0x0F, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 1.0)
+	public static final byte DDIV         = new Opcode("ddiv",         0x6F, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte DLOAD        = new Opcode("dload",        0x18, 2,  2, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> value)
+	public static final byte DLOAD_0      = new Opcode("dload_0",      0x26, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte DLOAD_1      = new Opcode("dload_1",      0x27, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte DLOAD_2      = new Opcode("dload_2",      0x28, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte DLOAD_3      = new Opcode("dload_3",      0x29, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte DMUL         = new Opcode("dmul",         0x6B, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte DNEG         = new Opcode("dneg",         0x77, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte DREM         = new Opcode("drem",         0x73, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte DRETURN      = new Opcode("dreturn",      0xAF, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> [empty])
+	public static final byte DSTORE       = new Opcode("dstore",       0x39, 2, -2, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: value ->)
+	public static final byte DSTORE_0     = new Opcode("dstore_0",     0x47, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte DSTORE_1     = new Opcode("dstore_1",     0x48, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte DSTORE_2     = new Opcode("dstore_2",     0x49, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte DSTORE_3     = new Opcode("dstore_3",     0x4A, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte DSUB         = new Opcode("dsub",         0x67, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte DUP          = new Opcode("dup",          0x59, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> value, value)
+	public static final byte DUP_X1       = new Opcode("dup_x1",       0x5A, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value2, value1 -> value1, value2, value1)
+	public static final byte DUP_X2       = new Opcode("dup_x2",       0x5B, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value3, value2, value1 -> value1, value3, value2, value1)
+	public static final byte DUP2         = new Opcode("dup2",         0x5C, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: {value2, value1} -> {value2, value1}, {value2, value1})
+	public static final byte DUP2_X1      = new Opcode("dup2_x1",      0x5D, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value3, {value2, value1} -> {value2, value1}, value3, {value2, value1})
+	public static final byte DUP2_X2      = new Opcode("dup2_x2",      0x5E, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: {value4, value3}, {value2, value1} -> {value2, value1}, {value4, value3}, {value2, value1})
+	public static final byte F2D          = new Opcode("f2d",          0x8D, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte F2I          = new Opcode("f2i",          0x8B, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte F2L          = new Opcode("f2l",          0x8C, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte FADD         = new Opcode("fadd",         0x62, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte FALOAD       = new Opcode("faload",       0x30, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
+	public static final byte FASTORE      = new Opcode("fastore",      0x51, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
+	public static final byte FCMPG        = new Opcode("fcmpg",        0x96, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte FCMPL        = new Opcode("fcmpl",        0x95, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte FCONST_0     = new Opcode("fconst_0",     0x0B, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 0.0f)
+	public static final byte FCONST_1     = new Opcode("fconst_1",     0x0C, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 1.0f)
+	public static final byte FCONST_2     = new Opcode("fconst_2",     0x0D, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 2.0f)
+	public static final byte FDIV         = new Opcode("fdiv",         0x6E, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte FLOAD        = new Opcode("fload",        0x17, 2,  1, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> value)
+	public static final byte FLOAD_0      = new Opcode("fload_0",      0x22, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte FLOAD_1      = new Opcode("fload_1",      0x23, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte FLOAD_2      = new Opcode("fload_2",      0x24, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte FLOAD_3      = new Opcode("fload_3",      0x25, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte FMUL         = new Opcode("fmul",         0x6A, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte FNEG         = new Opcode("fneg",         0x76, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte FREM         = new Opcode("frem",         0x72, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte FRETURN      = new Opcode("freturn",      0xAE, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> [empty])
+	public static final byte FSTORE       = new Opcode("fstore",       0x38, 2, -1, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: value ->)
+	public static final byte FSTORE_0     = new Opcode("fstore_0",     0x43, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte FSTORE_1     = new Opcode("fstore_1",     0x44, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte FSTORE_2     = new Opcode("fstore_2",     0x45, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte FSTORE_3     = new Opcode("fstore_3",     0x46, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte FSUB         = new Opcode("fsub",         0x66, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte GOTO         = new Opcode("goto",         0xA7, 3,  0, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: [no change])
+	public static final byte GOTO_W       = new Opcode("goto_w",       0xC8, 5,  0, Opcode.PROP_BRANCH_OFFSET_4).opcode; // 4: branchbyte1, branchbyte2, branchbyte3, branchbyte4 (stack: [no change])
+	public static final byte I2B          = new Opcode("i2b",          0x91, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte I2C          = new Opcode("i2c",          0x92, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte I2D          = new Opcode("i2d",          0x87, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte I2F          = new Opcode("i2f",          0x86, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte I2L          = new Opcode("i2l",          0x85, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte I2S          = new Opcode("i2s",          0x93, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte IADD         = new Opcode("iadd",         0x60, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte IALOAD       = new Opcode("iaload",       0x2E, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
+	public static final byte IAND         = new Opcode("iand",         0x7E, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte IASTORE      = new Opcode("iastore",      0x4F, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
+	public static final byte ICONST_M1    = new Opcode("iconst_m1",    0x02, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> -1)
+	public static final byte ICONST_0     = new Opcode("iconst_0",     0x03, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 0)
+	public static final byte ICONST_1     = new Opcode("iconst_1",     0x04, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 1)
+	public static final byte ICONST_2     = new Opcode("iconst_2",     0x05, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 2)
+	public static final byte ICONST_3     = new Opcode("iconst_3",     0x06, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 3)
+	public static final byte ICONST_4     = new Opcode("iconst_4",     0x07, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 4)
+	public static final byte ICONST_5     = new Opcode("iconst_5",     0x08, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 5)
+	public static final byte IDIV         = new Opcode("idiv",         0x6C, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte IF_ACMPEQ    = new Opcode("if_acmpeq",    0xA5, 3, -2, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
+	public static final byte IF_ACMPNE    = new Opcode("if_acmpne",    0xA6, 3, -2, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
+	public static final byte IF_ICMPEQ    = new Opcode("if_icmpeq",    0x9F, 3, -2, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
+	public static final byte IF_ICMPGE    = new Opcode("if_icmpge",    0xA2, 3, -2, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
+	public static final byte IF_ICMPGT    = new Opcode("if_icmpgt",    0xA3, 3, -2, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
+	public static final byte IF_ICMPLE    = new Opcode("if_icmple",    0xA4, 3, -2, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
+	public static final byte IF_ICMPLT    = new Opcode("if_icmplt",    0xA1, 3, -2, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
+	public static final byte IF_ICMPNE    = new Opcode("if_icmpne",    0xA0, 3, -2, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value1, value2 ->)
+	public static final byte IFEQ         = new Opcode("ifeq",         0x99, 3, -1, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
+	public static final byte IFGE         = new Opcode("ifge",         0x9C, 3, -1, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
+	public static final byte IFGT         = new Opcode("ifgt",         0x9D, 3, -1, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
+	public static final byte IFLE         = new Opcode("ifle",         0x9E, 3, -1, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
+	public static final byte IFLT         = new Opcode("iflt",         0x9B, 3, -1, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
+	public static final byte IFNE         = new Opcode("ifne",         0x9A, 3, -1, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
+	public static final byte IFNONNULL    = new Opcode("ifnonnull",    0xC7, 3, -1, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
+	public static final byte IFNULL       = new Opcode("ifnull",       0xC6, 3, -1, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: value ->)
+	public static final byte IINC         = new Opcode("iinc",         0x84, 3,  0, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 2: index, const (stack: [No change])
+	public static final byte ILOAD        = new Opcode("iload",        0x15, 2,  1, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> value)
+	public static final byte ILOAD_0      = new Opcode("iload_0",      0x1A, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte ILOAD_1      = new Opcode("iload_1",      0x1B, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte ILOAD_2      = new Opcode("iload_2",      0x1C, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte ILOAD_3      = new Opcode("iload_3",      0x1D, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte IMPDEP1      = new Opcode("impdep1",      0xFE, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: )
+	public static final byte IMPDEP2      = new Opcode("impdep2",      0xFF, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: )
+	public static final byte IMUL         = new Opcode("imul",         0x68, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte INEG         = new Opcode("ineg",         0x74, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte IOR          = new Opcode("ior",          0x80, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte IREM         = new Opcode("irem",         0x70, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte IRETURN      = new Opcode("ireturn",      0xAC, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> [empty])
+	public static final byte ISHL         = new Opcode("ishl",         0x78, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte ISHR         = new Opcode("ishr",         0x7A, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte ISTORE       = new Opcode("istore",       0x36, 2, -1, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: value ->)
+	public static final byte ISTORE_0     = new Opcode("istore_0",     0x3B, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte ISTORE_1     = new Opcode("istore_1",     0x3C, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte ISTORE_2     = new Opcode("istore_2",     0x3D, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte ISTORE_3     = new Opcode("istore_3",     0x3E, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte ISUB         = new Opcode("isub",         0x64, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte IUSHR        = new Opcode("iushr",        0x7C, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte IXOR         = new Opcode("ixor",         0x82, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte JSR          = new Opcode("jsr",          0xA8, 3,  1, Opcode.PROP_BRANCH_OFFSET).opcode; // 2: branchbyte1, branchbyte2 (stack: -> address)
+	public static final byte JSR_W        = new Opcode("jsr_w",        0xC9, 5,  1, Opcode.PROP_BRANCH_OFFSET_4).opcode; // 4: branchbyte1, branchbyte2, branchbyte3, branchbyte4 (stack: -> address)
+	public static final byte L2D          = new Opcode("l2d",          0x8A, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte L2F          = new Opcode("l2f",          0x89, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte L2I          = new Opcode("l2i",          0x88, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte LADD         = new Opcode("ladd",         0x61, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LALOAD       = new Opcode("laload",       0x2F, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
+	public static final byte LAND         = new Opcode("land",         0x7F, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LASTORE      = new Opcode("lastore",      0x50, 1, -4, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
+	public static final byte LCMP         = new Opcode("lcmp",         0x94, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LCONST_0     = new Opcode("lconst_0",     0x09, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 0L)
+	public static final byte LCONST_1     = new Opcode("lconst_1",     0x0A, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> 1L)
+	public static final byte LDIV         = new Opcode("ldiv",         0x6D, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LLOAD        = new Opcode("lload",        0x16, 2,  2, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: -> value)
+	public static final byte LLOAD_0      = new Opcode("lload_0",      0x1E, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte LLOAD_1      = new Opcode("lload_1",      0x1F, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte LLOAD_2      = new Opcode("lload_2",      0x20, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte LLOAD_3      = new Opcode("lload_3",      0x21, 1,  2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> value)
+	public static final byte LMUL         = new Opcode("lmul",         0x69, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LNEG         = new Opcode("lneg",         0x75, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> result)
+	public static final byte LOR          = new Opcode("lor",          0x81, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LREM         = new Opcode("lrem",         0x71, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LRETURN      = new Opcode("lreturn",      0xAD, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value -> [empty])
+	public static final byte LSHL         = new Opcode("lshl",         0x79, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LSHR         = new Opcode("lshr",         0x7B, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LSTORE       = new Opcode("lstore",       0x37, 2, -2, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: value ->)
+	public static final byte LSTORE_0     = new Opcode("lstore_0",     0x3F, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte LSTORE_1     = new Opcode("lstore_1",     0x40, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte LSTORE_2     = new Opcode("lstore_2",     0x41, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte LSTORE_3     = new Opcode("lstore_3",     0x42, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte LSUB         = new Opcode("lsub",         0x65, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LUSHR        = new Opcode("lushr",        0x7D, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte LXOR         = new Opcode("lxor",         0x83, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value1, value2 -> result)
+	public static final byte MONITORENTER = new Opcode("monitorenter", 0xC2, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
+	public static final byte MONITOREXIT  = new Opcode("monitorexit",  0xC3, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: objectref ->)
+	public static final byte NEWARRAY     = new Opcode("newarray",     0xBC, 2,  0, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: atype (stack: count -> arrayref)
+	public static final byte NOP          = new Opcode("nop",          0x00, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: [No change])
+	public static final byte POP          = new Opcode("pop",          0x57, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value ->)
+	public static final byte POP2         = new Opcode("pop2",         0x58, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: {value2, value1} ->)
+	public static final byte RET          = new Opcode("ret",          0xA9, 2,  0, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 1: index (stack: [No change])
+	public static final byte RETURN       = new Opcode("return",       0xB1, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: -> [empty])
+	public static final byte SALOAD       = new Opcode("saload",       0x35, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index -> value)
+	public static final byte SASTORE      = new Opcode("sastore",      0x56, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: arrayref, index, value ->)
+	public static final byte SIPUSH       = new Opcode("sipush",       0x11, 3,  1, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 2: byte1, byte2 (stack: -> value)
+	public static final byte SWAP         = new Opcode("swap",         0x5F, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).opcode; // (stack: value2, value1 -> value1, value2)
+	public static final byte WIDE         = new Opcode("wide",         0xC4, 0,  0, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_LENGTH | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).opcode; // 3/5: opcode, indexbyte1, indexbyte2 (stack: [same as for corresponding instructions])
 
 	private byte[] bytes = new byte[256];
 	private int length = 0;
@@ -322,7 +322,7 @@ public final class MethodBuilder {
 		}
 	};
 
-	private static class OpCode {
+	private static class Opcode {
 		/** The mask for the bytes following the opcode */
 		public static final int PROP_EXTRA_BYTES_MASK = 0x03;
 		/** A 1 byte local variable index follows */
@@ -359,7 +359,7 @@ public final class MethodBuilder {
 		 * @param stackOffset the stack offset as a result of executing the opcode
 		 * @param properties the properties of the opcode
 		 */
-		public OpCode(final String mnemonic, final int opcode, final int length, final int stackOffset, final int properties) {
+		public Opcode(final String mnemonic, final int opcode, final int length, final int stackOffset, final int properties) {
 			this.mnemonic = mnemonic;
 			this.opcode = (byte)opcode;
 			this.length = (byte)length;
@@ -682,9 +682,9 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder addBranch(final byte instruction, final Label label) {
-		final OpCode opcode = OPCODES[instruction & 0xFF];
+		final Opcode opcode = OPCODES[instruction & 0xFF];
 
-		if (opcode == null || !opcode.has(OpCode.PROP_BRANCH_OFFSET)) {
+		if (opcode == null || !opcode.has(Opcode.PROP_BRANCH_OFFSET)) {
 			final String mnemonic = (opcode == null ? "0x" + Integer.toHexString(instruction & 0xFF) : opcode.mnemonic);
 			throw new IllegalArgumentException("Unexpected bytecode instruction: " + mnemonic + ", expecting a branch instruction");
 		}
@@ -723,12 +723,12 @@ public final class MethodBuilder {
 		int i = 0;
 
 		while (i < code.length) {
-			final OpCode opcode = OPCODES[code[i] & 0xFF];
+			final Opcode opcode = OPCODES[code[i] & 0xFF];
 
 			if (opcode == null) {
 				throw new IllegalArgumentException("Invalid bytecode instruction: 0x" + Integer.toHexString(code[i] & 0xFF));
-			} else if (!opcode.has(OpCode.PROP_IS_STANDALONE_VALID)) {
-				if ((opcode.properties & OpCode.PROP_EXTRA_BYTES_MASK) == OpCode.PROP_BRANCH_OFFSET) {
+			} else if (!opcode.has(Opcode.PROP_IS_STANDALONE_VALID)) {
+				if ((opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) == Opcode.PROP_BRANCH_OFFSET) {
 					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addBranch() method");
 				} else if (code[i] == GETFIELD || code[i] == GETSTATIC || code[i] == PUTFIELD || code[i] == PUTSTATIC) {
 					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addFieldAccess() method");
@@ -752,10 +752,10 @@ public final class MethodBuilder {
 					break;
 				}
 
-				final OpCode wideOpcode = OPCODES[code[i + 1] & 0xFF];
+				final Opcode wideOpcode = OPCODES[code[i + 1] & 0xFF];
 				final int length;
 
-				if (wideOpcode == null || !wideOpcode.has(OpCode.PROP_LOCAL_INDEX)) {
+				if (wideOpcode == null || !wideOpcode.has(Opcode.PROP_LOCAL_INDEX)) {
 					final String mnemonic = (wideOpcode == null ? "0x" + Integer.toHexString(code[i + 1] & 0xFF) : wideOpcode.mnemonic);
 					throw new IllegalArgumentException("Invalid wide bytecode instruction: " + mnemonic);
 				} else if (code[i + 1] == IINC) {
@@ -772,7 +772,7 @@ public final class MethodBuilder {
 				i += length;
 				maxStackSize = Math.max(maxStackSize, stackSize += wideOpcode.stackOffset);
 				continue;
-			} else if (opcode.has(OpCode.PROP_LOCAL_INDEX)) {
+			} else if (opcode.has(Opcode.PROP_LOCAL_INDEX)) {
 				maxLocalVariableIndex = Math.max(maxLocalVariableIndex, code[i + 1] & 0xFF);
 			}
 
@@ -1478,7 +1478,7 @@ public final class MethodBuilder {
 		final Location targetLocation = new Location(this, length);
 
 		final Label label = new Label() {
-			private Location target = targetLocation;
+			private final Location target = targetLocation;
 			private final List<Location> references = new ArrayList<>();
 
 			@Override
@@ -1714,14 +1714,14 @@ public final class MethodBuilder {
 
 		// Loop through each instruction (assumes each instruction is already valid and the length is correct)
 		for (int i = 0; i < length; ) {
-			final OpCode opcode = OPCODES[bytes[i] & 0xFF];
+			final Opcode opcode = OPCODES[bytes[i] & 0xFF];
 			int constantPoolIndex = 0;
 			String postConstant = "";
 
 			assert opcode != null : "Invalid opcode detected: 0x" + Integer.toHexString(bytes[i] & 0xFF);
 			sb.append(i).append(": ");
 
-			if (opcode.has(OpCode.PROP_HAS_CUSTOM_EXTRA_BYTES | OpCode.PROP_HAS_VARIABLE_LENGTH)) {
+			if (opcode.has(Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_LENGTH)) {
 				sb.append(opcode.mnemonic);
 
 				if (bytes[i] == INVOKEINTERFACE || bytes[i] == INVOKEDYNAMIC) {
@@ -1772,23 +1772,23 @@ public final class MethodBuilder {
 					sb.append(' ').append((short)(bytes[i + 1] << 8) + (bytes[i + 2] & 0xFF)).append("; ");
 					i += 3;
 				} else if (bytes[i] == WIDE) {
-					final OpCode wideOpcode = OPCODES[bytes[i + 1] & 0xFF];
+					final Opcode wideOpcode = OPCODES[bytes[i + 1] & 0xFF];
 
 					if (bytes[i + 1] == IINC) {
 						sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((bytes[i + 2] & 0xFF) << 8) + (bytes[i + 3] & 0xFF)).append(", ").append((short)(bytes[i + 4] << 8) + (bytes[i + 5] & 0xFF)).append("; ");
 						i += 6;
 					} else {
-						assert wideOpcode.has(OpCode.PROP_LOCAL_INDEX) : "Invalid wide opcode detected: " + wideOpcode == null ? "0x" + Integer.toHexString(bytes[i] & 0xFF) : wideOpcode.mnemonic;
+						assert wideOpcode.has(Opcode.PROP_LOCAL_INDEX) : "Invalid wide opcode detected: " + wideOpcode == null ? "0x" + Integer.toHexString(bytes[i] & 0xFF) : wideOpcode.mnemonic;
 						sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((bytes[i + 2] & 0xFF) << 8) + (bytes[i + 3] & 0xFF)).append("; ");
 						i += 4;
 					}
 				}
 			} else {
-				if ((opcode.properties & OpCode.PROP_EXTRA_BYTES_MASK) == OpCode.PROP_LOCAL_INDEX) { // 2-byte opcode, index
+				if ((opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) == Opcode.PROP_LOCAL_INDEX) { // 2-byte opcode, index
 					sb.append(opcode.mnemonic).append(' ').append(bytes[i + 1] & 0xFF).append("; ");
-				} else if ((opcode.properties & OpCode.PROP_EXTRA_BYTES_MASK) == OpCode.PROP_BRANCH_OFFSET) { // 3-byte opcode, branch offset
+				} else if ((opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) == Opcode.PROP_BRANCH_OFFSET) { // 3-byte opcode, branch offset
 					sb.append(opcode.mnemonic).append(' ').append(i + ((bytes[i + 1] & 0xFF) << 8) + (bytes[i + 2] & 0xFF)).append("; ");
-				} else if ((opcode.properties & OpCode.PROP_EXTRA_BYTES_MASK) == OpCode.PROP_CONST_POOL_INDEX) { // 3-byte opcode, constant pool index
+				} else if ((opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) == Opcode.PROP_CONST_POOL_INDEX) { // 3-byte opcode, constant pool index
 					sb.append(opcode.mnemonic);
 					constantPoolIndex = ((bytes[i + 1] & 0xFF) << 8) + (bytes[i + 2] & 0xFF);
 				} else { // 1-byte opcode
