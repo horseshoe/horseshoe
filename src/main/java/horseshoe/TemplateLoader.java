@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,33 +30,32 @@ import horseshoe.internal.PersistentStack;
 public class TemplateLoader {
 
 	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(Arrays.asList(new ParsedLine("", null)), true);
-	private static final Pattern ONLY_WHITESPACE = Pattern.compile("\\s*");
-	private static final Pattern SET_DELIMITER = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=");
-	private static final Pattern ANNOTATION = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL);
-	private static final Pattern NAMED_EXPRESSION = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?[-=]>\\s*");
+	private static final Pattern WHITESPACE_ONLY_PATTERN = Pattern.compile("\\s*");
+	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=");
+	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL);
+	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?[-=]>\\s*");
 
 	private final Map<String, Template> templates = new HashMap<>();
 	private final Map<String, Loader> templateLoaders = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
 	private Charset charset = StandardCharsets.UTF_8;
 	private boolean preventPartialPathTraversal = true;
-	private boolean throwOnPartialNotFound = true;
-	private boolean useSimpleExpressions = false;
+	private EnumSet<Extension> extensions = EnumSet.allOf(Extension.class);
 
 	private static final class Delimiter {
 
-		private static final Pattern DEFAULT_START = Pattern.compile(Pattern.quote("{{"));
-		private static final Pattern DEFAULT_END = Pattern.compile(Pattern.quote("}}"));
-		private static final Pattern DEFAULT_UNESCAPED_END = Pattern.compile(Pattern.quote("}}}"));
+		private static final Pattern DEFAULT_START_PATTERN = Pattern.compile(Pattern.quote("{{"));
+		private static final Pattern DEFAULT_END_PATTERN = Pattern.compile(Pattern.quote("}}"));
+		private static final Pattern DEFAULT_END_UNESCAPED_PATTERN = Pattern.compile(Pattern.quote("}}}"));
 
 		private final Pattern start;
 		private final Pattern end;
 		private final Pattern unescapedEnd;
 
 		public Delimiter() {
-			this.start = DEFAULT_START;
-			this.end = DEFAULT_END;
-			this.unescapedEnd = DEFAULT_UNESCAPED_END;
+			this.start = DEFAULT_START_PATTERN;
+			this.end = DEFAULT_END_PATTERN;
+			this.unescapedEnd = DEFAULT_END_UNESCAPED_PATTERN;
 		}
 
 		public Delimiter(final String start, final String end) {
@@ -72,7 +72,7 @@ public class TemplateLoader {
 	 * @return the new mustache loader
 	 */
 	public static TemplateLoader newMustacheLoader() {
-		return new TemplateLoader().setThrowOnPartialNotFound(false).setUseSimpleExpressions(true);
+		return new TemplateLoader().setExtensions(EnumSet.noneOf(Extension.class));
 	}
 
 	/**
@@ -236,21 +236,12 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Gets whether or not an exception will be thrown when a partial is not found during loading.
+	 * Gets the Horseshoe extensions that are enabled.
 	 *
-	 * @return true if an exception will be thrown when a partial is not found, otherwise false
+	 * @return the set of enabled Horseshoe extensions
 	 */
-	public boolean getThrowOnPartialNotFound() {
-		return throwOnPartialNotFound;
-	}
-
-	/**
-	 * Gets whether or not simple expressions will be used during loading.
-	 *
-	 * @return true if simple expressions will be used during loading, otherwise false
-	 */
-	public boolean getUseSimpleExpressions() {
-		return useSimpleExpressions;
+	public EnumSet<Extension> getExtensions() {
+		return extensions;
 	}
 
 	/**
@@ -326,7 +317,7 @@ public class TemplateLoader {
 					final Path toLoadFromBase = baseDirectory == null ? null : baseDirectory.resolve(name).normalize();
 
 					if (toLoadFromBase != null && toLoadFromBase.toFile().isFile()) {
-						if (!preventPartialPathTraversal || toLoadFromBase.startsWith(baseDirectory)) {
+						if (!getPreventPartialPathTraversal() || toLoadFromBase.startsWith(baseDirectory)) {
 							loader = new Loader(name, toLoadFromBase, charset);
 						} else {
 							for (final Path directory : includeDirectories) {
@@ -342,7 +333,7 @@ public class TemplateLoader {
 						for (final Path directory : includeDirectories) {
 							final Path toLoad = directory.resolve(name).normalize();
 
-							if ((!preventPartialPathTraversal || toLoad.startsWith(directory.normalize())) && toLoad.toFile().isFile()) {
+							if ((!getPreventPartialPathTraversal() || toLoad.startsWith(directory.normalize())) && toLoad.toFile().isFile()) {
 								loader = new Loader(name, toLoad, charset);
 								break;
 							}
@@ -350,7 +341,7 @@ public class TemplateLoader {
 					}
 
 					if (loader == null) {
-						if (throwOnPartialNotFound) {
+						if (extensions.contains(Extension.THROW_ON_PARTIAL_NOT_FOUND)) {
 							throw new LoadException(loaders, "Template \"" + name + "\" could not be found");
 						} else {
 							return template; // Return empty template, per mustache spec
@@ -403,8 +394,8 @@ public class TemplateLoader {
 
 				// Check for stand-alone tags
 				if (textBeforeStandaloneTag != null && currentText.isMultiline() &&
-						ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches() &&
-						ONLY_WHITESPACE.matcher(currentText.getFirstLine()).matches()) {
+						WHITESPACE_ONLY_PATTERN.matcher(textBeforeStandaloneTag.getLastLine()).matches() &&
+						WHITESPACE_ONLY_PATTERN.matcher(currentText.getFirstLine()).matches()) {
 					textBeforeStandaloneTag.ignoreLastLine();
 					currentText.ignoreFirstLine();
 				}
@@ -417,7 +408,7 @@ public class TemplateLoader {
 				}
 			} else if (tags > 0) { // length == 0
 				// The text can only be following a stand-alone tag if it is at the very end of the template
-				if (!loader.hasNext() && textBeforeStandaloneTag != null && ONLY_WHITESPACE.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
+				if (!loader.hasNext() && textBeforeStandaloneTag != null && WHITESPACE_ONLY_PATTERN.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
 					textBeforeStandaloneTag.ignoreLastLine();
 				}
 
@@ -444,17 +435,6 @@ public class TemplateLoader {
 					case '!': // Comments are completely ignored
 						break;
 
-					case '<': { // Local partial
-						final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
-						final Template partial = new Template(name);
-						final Map<String, Template> localPartials = sections.peek().getLocalPartials();
-
-						localPartials.put(name, partial);
-						sections.push(partial.getSection());
-						actionStack.push(partial.getActions());
-						break;
-					}
-
 					case '>': { // Load partial
 						final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
 						final Template localPartial = sections.peek().getLocalPartials().get(name);
@@ -476,8 +456,8 @@ public class TemplateLoader {
 							final Section repeatedSection = sections.getPoppedItem();
 
 							sections.push(new Section(sections.peek(), "", repeatedSection.getExpression(), null, false).markAsRepeatOf(repeatedSection));
-						} else if (expression.charAt(0) == '@') { // Annotation section
-							final Matcher annotation = ANNOTATION.matcher(expression);
+						} else if (expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
+							final Matcher annotation = ANNOTATION_PATTERN.matcher(expression);
 
 							if (!annotation.matches()) {
 								throw new LoadException(loaders, "Invalid annotation format");
@@ -487,9 +467,9 @@ public class TemplateLoader {
 							final String parameters = annotation.group("parameters");
 
 							// Load the annotation arguments
-							sections.push(new Section(sections.peek(), sectionName, parameters == null ? null : new Expression(loader.toLocationString(), parameters, sections.peek().getNamedExpressions(), true), sectionName.substring(1), true));
+							sections.push(new Section(sections.peek(), sectionName, parameters == null ? null : new Expression(loader.toLocationString(), parameters, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
 						} else { // Start a new section
-							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), !useSimpleExpressions)));
+							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
 						}
 
 						// Add a new render section action
@@ -501,14 +481,14 @@ public class TemplateLoader {
 					case '^': { // Start a new inverted section, or else block for the current section
 						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
-						if (expression.length() == 0) { // Else block for the current section
+						if (expression.length() == 0 && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
 							if (sections.isEmpty() || (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null)) {
 								throw new LoadException(loaders, "Section else tag outside section start tag");
 							}
 
 							actionStack.pop();
 						} else { // Start a new inverted section
-							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), !useSimpleExpressions)));
+							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
 							actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
 						}
 
@@ -520,15 +500,15 @@ public class TemplateLoader {
 					}
 
 					case '/': { // Close the current section
-						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
+						final Section section = sections.pop();
 
-						if (sections.size() <= 1) { // There should always be at least one section on the stack (the template root section)
+						if (sections.isEmpty()) { // There should always be at least one section on the stack (the template root section)
 							throw new LoadException(loaders, "Section close tag without matching section start tag");
 						}
 
-						final Section section = sections.pop();
+						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
-						if (expression.length() != 0 && !section.getName().contentEquals(expression)) {
+						if ((expression.length() > 0 || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression)) {
 							throw new LoadException(loaders, "Unmatched section start tag, expecting \"" + section.getName() + "\"");
 						}
 
@@ -537,7 +517,7 @@ public class TemplateLoader {
 					}
 
 					case '=': { // Set delimiter
-						final Matcher matcher = SET_DELIMITER.matcher(tag);
+						final Matcher matcher = SET_DELIMITER_PATTERN.matcher(tag);
 
 						if (!matcher.matches()) {
 							throw new LoadException(loaders, "Invalid set delimiter tag");
@@ -552,16 +532,27 @@ public class TemplateLoader {
 						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), !useSimpleExpressions), false));
+						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
 						break;
 					}
 
 					default:
+						// Check for a local partial
+						if (tag.charAt(0) == '<' && extensions.contains(Extension.INLINE_PARTIALS)) {
+							final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
+							final Template partial = new Template(name);
+
+							sections.peek().getLocalPartials().put(name, partial);
+							sections.push(partial.getSection());
+							actionStack.push(partial.getActions());
+							break;
+						}
+
 						final CharSequence expression = CharSequenceUtils.trim(tag, 0, tag.length());
 
 						// Check for a named expression
-						if (!useSimpleExpressions) {
-							final Matcher namedExpression = NAMED_EXPRESSION.matcher(expression);
+						if (extensions.containsAll(EnumSet.of(Extension.EXPRESSIONS, Extension.NAMED_EXPRESSIONS))) {
+							final Matcher namedExpression = NAMED_EXPRESSION_PATTERN.matcher(expression);
 
 							if (namedExpression.lookingAt()) {
 								sections.peek().getNamedExpressions().put(namedExpression.group("name"), new Expression(loader.toLocationString(), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), true));
@@ -570,7 +561,7 @@ public class TemplateLoader {
 						}
 
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), !useSimpleExpressions), true));
+						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), true));
 						break;
 					}
 				} catch (final LoadException e) {
@@ -608,6 +599,17 @@ public class TemplateLoader {
 	}
 
 	/**
+	 * Sets the enabled Horseshoe extensions. The extensions to be enabled should be bit-wise OR'd together.
+	 *
+	 * @param extensions the bit-wise OR of the enabled Horseshoe extensions
+	 * @return this object
+	 */
+	public TemplateLoader setExtensions(final EnumSet<Extension> extensions) {
+		this.extensions = extensions;
+		return this;
+	}
+
+	/**
 	 * Sets whether or not traversing paths ("/..." or "../...") is prevented when loading partials.
 	 *
 	 * @param preventPartialPathTraversal true to prevent traversing paths when loading partials, otherwise false
@@ -615,28 +617,6 @@ public class TemplateLoader {
 	 */
 	public TemplateLoader setPreventPartialPathTraversal(final boolean preventPartialPathTraversal) {
 		this.preventPartialPathTraversal = preventPartialPathTraversal;
-		return this;
-	}
-
-	/**
-	 * Sets whether or not an exception will be thrown when a partial is not found during loading.
-	 *
-	 * @param throwOnPartialNotFound true to throw an exception when a partial is not found, otherwise false
-	 * @return this object
-	 */
-	public TemplateLoader setThrowOnPartialNotFound(final boolean throwOnPartialNotFound) {
-		this.throwOnPartialNotFound = throwOnPartialNotFound;
-		return this;
-	}
-
-	/**
-	 * Sets whether or not simple expressions will be used during loading.
-	 *
-	 * @param useSimpleExpressions true to use simple expressions during loading, otherwise false
-	 * @return this object
-	 */
-	public TemplateLoader setUseSimpleExpressions(final boolean useSimpleExpressions) {
-		this.useSimpleExpressions = useSimpleExpressions;
 		return this;
 	}
 

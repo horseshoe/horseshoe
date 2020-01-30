@@ -265,14 +265,16 @@ public class ExpressionTests {
 
 		{
 			final Object result[] = new Object[2000];
-			final StringBuilder sb = new StringBuilder("[");
+			final StringBuilder sb = new StringBuilder("");
+			final StringBuilder resultSB = new StringBuilder("[");
 
 			for (int i = 0; i < result.length; i++) {
 				result[i] = i;
-				sb.append('a').append(i).append('=').append(i).append(',');
+				sb.append('a').append(i).append('=').append(i).append(';');
+				resultSB.append('a').append(i).append(',');
 			}
 
-			assertArrayEquals(result, (Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), sb.append(']').toString(), Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER));
+			assertArrayEquals(result, (Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), sb.append(resultSB).append(']').toString(), Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.STDERR_ERROR_LOGGER));
 		}
 	}
 

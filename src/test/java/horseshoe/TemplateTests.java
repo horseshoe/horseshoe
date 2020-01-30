@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Optional;
 
 import org.junit.Test;
@@ -98,10 +99,9 @@ public class TemplateTests {
 		assertEquals(StandardCharsets.UTF_16, new TemplateLoader().setCharset(StandardCharsets.UTF_16).getCharset());
 		assertEquals(true, new TemplateLoader().setPreventPartialPathTraversal(true).getPreventPartialPathTraversal());
 		assertEquals(false, new TemplateLoader().setPreventPartialPathTraversal(false).getPreventPartialPathTraversal());
-		assertEquals(true, new TemplateLoader().setThrowOnPartialNotFound(true).getThrowOnPartialNotFound());
-		assertEquals(false, new TemplateLoader().setThrowOnPartialNotFound(false).getThrowOnPartialNotFound());
-		assertEquals(true, new TemplateLoader().setUseSimpleExpressions(true).getUseSimpleExpressions());
-		assertEquals(false, new TemplateLoader().setUseSimpleExpressions(false).getUseSimpleExpressions());
+		assertEquals(EnumSet.of(Extension.ELSE_TAGS, Extension.INLINE_PARTIALS), new TemplateLoader().setExtensions(EnumSet.of(Extension.ELSE_TAGS, Extension.INLINE_PARTIALS)).getExtensions());
+		assertEquals(EnumSet.noneOf(Extension.class), new TemplateLoader().setExtensions(EnumSet.noneOf(Extension.class)).getExtensions());
+		assertEquals(EnumSet.allOf(Extension.class), new TemplateLoader().setExtensions(EnumSet.allOf(Extension.class)).getExtensions());
 
 		assertEquals(" ", new TemplateLoader().load("Simple Test", " ").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 
