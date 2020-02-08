@@ -54,9 +54,13 @@ jacocoTestReport {
 
 def getVersion = { ->
 	def stdout = new ByteArrayOutputStream()
-	exec {
+	def result = exec {
 		commandLine 'git', 'describe', '--tags', '--match', 'v[0-9]*'
 		standardOutput = stdout
+		ignoreExitValue true
+	}
+	if (result.getExitValue() != 0) {
+		return 'unofficial'
 	}
 	return stdout.toString().trim().substring(1)
 }

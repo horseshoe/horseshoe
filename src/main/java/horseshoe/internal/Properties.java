@@ -13,4 +13,7 @@ public class Properties {
 
 	public static final double JAVA_VERSION = Double.parseDouble(JAVA_VERSION_MATCHER.group("majorDotMinor"));
 
+	private Properties() {
+	}
+
 }

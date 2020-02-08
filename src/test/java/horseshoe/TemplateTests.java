@@ -21,7 +21,7 @@ public class TemplateTests {
 	@Test
 	public void testBackreach() throws IOException, LoadException {
 		assertEquals("Original String" + LS, new TemplateLoader().load("Backreach", "{{#\"Original String\"}}\n{{#charAt(1)}}\n{{..}}\n{{/}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("Original String" + LS, new TemplateLoader().load("Backreach", "{{#\"Original String\"}}\n{{#charAt(1)}}\n{{.././toString()}}\n{{/}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("Original String" + LS, new TemplateLoader().load("Backreach", "{{#\"Original String\"}}\n{{#charAt(1)}}\n{{../toString()}}\n{{/}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 	@Test
@@ -62,12 +62,6 @@ public class TemplateTests {
 		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS + "Jim is 80 years old." + LS, new TemplateLoader().load("Map Test", new StringReader("{{#(\"Bob\": 45, \"Alice\": 31, \"Jim\": 80)}}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}")).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
-	@Test
-	public void testNamedExpressions() throws IOException, LoadException {
-		assertEquals("ORIGINAL STRING-Original string" + LS, new TemplateLoader().load("Upper", "{{upper->toUpperCase()}}\n{{capitalize=>substring(0, 1).toUpperCase() + substring(1).toLowerCase()}}\n{{#\"orIgInal StrIng\"}}\n{{#charAt(1)}}\n{{upper(..)}}-{{capitalize(..)}}\n{{/}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals(LS + "  ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{>a}}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
-	}
-
 	@Test(expected = IOException.class)
 	public void testRenderException() throws IOException, LoadException {
 		new TemplateLoader().load("Exception Test", " ").render(new Settings(), Collections.emptyMap(), new Writer() {
@@ -84,6 +78,11 @@ public class TemplateTests {
 				throw new IOException();
 			}
 		});
+	}
+
+	@Test
+	public void testRootIdentifiers() throws IOException, LoadException {
+		assertEquals("Root Local Root Root", new TemplateLoader().load("Root", "{{#[\"Value\":\"Local\"]}}{{\\Value}} {{Value}} {{/Value}}{{#/.}} {{Value}}{{/}}{{/}}").render(new Settings(), Collections.singletonMap("Value", "Root"), new java.io.StringWriter()).toString());
 	}
 
 	@Test

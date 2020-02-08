@@ -7,7 +7,7 @@ import horseshoe.Settings.ContextAccess;
 
 public final class Identifier {
 
-	public static final int UNSPECIFIED_BACKREACH = -1;
+	public static final int UNSTATED_BACKREACH = -1;
 	public static final int NOT_A_METHOD = -1;
 	public static final String PATTERN = "[\\p{L}_\\$][\\p{L}\\p{Nd}_\\$]*";
 
@@ -16,10 +16,10 @@ public final class Identifier {
 	private final int parameterCount;
 
 	/**
-	 * Creates a new identifier from some amount of backreach and a name.
+	 * Creates a new identifier from a name and parameter count.
 	 *
 	 * @param name the name of the identifier
-	 * @param isMethod true if the identifier is a method, otherwise false
+	 * @param parameterCount the number of parameters for the method identifier
 	 */
 	public Identifier(final String name, final int parameterCount) {
 		this.name = name;
@@ -54,7 +54,7 @@ public final class Identifier {
 	}
 
 	/**
-	 * Gets the value of the identifier given the context object.
+	 * Finds and gets the value of the identifier given the context object.
 	 *
 	 * @param context the context object used to get the value of the identifier
 	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
@@ -62,7 +62,7 @@ public final class Identifier {
 	 * @return the value of the identifier
 	 * @throws ReflectiveOperationException if an error occurs while getting the value of the identifier
 	 */
-	public Object getValue(final PersistentStack<Object> context, final int backreach, final ContextAccess access) throws ReflectiveOperationException {
+	public Object findValue(final PersistentStack<Object> context, final int backreach, final ContextAccess access) throws ReflectiveOperationException {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
 		Object object = context.peek(Math.max(backreach, 0));
@@ -121,7 +121,7 @@ public final class Identifier {
 	}
 
 	/**
-	 * Evaluates the method identifier given the context object and parameters.
+	 * Finds and evaluates the method identifier given the context object and parameters.
 	 *
 	 * @param context the context object used to get the value of the identifier
 	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
@@ -130,7 +130,7 @@ public final class Identifier {
 	 * @return the value of the identifier
 	 * @throws ReflectiveOperationException if an error occurs while getting the value of the identifier
 	 */
-	public Object getValue(final PersistentStack<Object> context, final int backreach, final ContextAccess access, final Object... parameters) throws ReflectiveOperationException {
+	public Object findValue(final PersistentStack<Object> context, final int backreach, final ContextAccess access, final Object... parameters) throws ReflectiveOperationException {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
 		Object object = context.peek(Math.max(backreach, 0));
@@ -186,6 +186,22 @@ public final class Identifier {
 		}
 
 		throw new NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());
+	}
+
+	/**
+	 * Gets the value of the identifier from the root context object.
+	 *
+	 * @param context the context object used to get the value of the identifier
+	 * @param access the access used to get the value of the identifier
+	 * @return the value of the identifier
+	 * @throws ReflectiveOperationException if an error occurs while getting the value of the identifier
+	 */
+	public Object getRootValue(final PersistentStack<Object> context, final ContextAccess access) throws ReflectiveOperationException {
+		if (access == ContextAccess.FULL || access == ContextAccess.CURRENT_AND_ROOT || context.size() == 1) {
+			return getValue(context.peekBase());
+		}
+
+		throw new NoSuchFieldException("Root field \"" + name + "\" could not be accessed due to insufficient permissions");
 	}
 
 	/**

@@ -5,6 +5,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.EnumSet;
 
 import org.junit.Test;
 
@@ -75,7 +76,7 @@ public class LoadExceptionTests {
 	@Test
 	public void testSectionCloseError() throws IOException {
 		try {
-			new TemplateLoader().load("Close Section", "{{#Test}}\n test\n{{/Bad}}\n{{#}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().setExtensions(EnumSet.complementOf(EnumSet.of(Extension.SMART_END_TAGS))).load("Close Section", "{{#Test}}\n test\n{{/Bad}}\n{{#}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());

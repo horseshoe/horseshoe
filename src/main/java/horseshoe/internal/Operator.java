@@ -91,7 +91,7 @@ final class Operator {
 		operators.add(new Operator(">>>=", 15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bitwise Shift Right Zero Extend Assign"));
 		operators.add(new Operator("?:=",  15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Null Coalesce Assign"));
 		operators.add(new Operator("??=",  15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Null Coalesce Assign (Alternate)"));
-		operators.add(new Operator(",",    16, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | IGNORE_TRAILING | CONTAINER, "Array / Map Separator"));
+		operators.add(new Operator(",",    16, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Array / Map Separator"));
 		operators.add(new Operator(";",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
 
 		for (final Operator operator : operators) {
@@ -113,13 +113,20 @@ final class Operator {
 	}
 
 	/**
-	 * Gets the operator of the specified string representation.
+	 * Gets the operator of the specified string representation left expression property.
 	 *
 	 * @param operator the string representation of the operator
+	 * @param hasLeftExpression true if the operator has a left expression, otherwise false
 	 * @return the matching operator if it exists, otherwise null
 	 */
-	public static Operator get(final String operator) {
-		return OPERATOR_LOOKUP.get(operator);
+	public static Operator get(final String operator, final boolean hasLeftExpression) {
+		Operator possibleOperator = OPERATOR_LOOKUP.get(operator);
+
+		while (possibleOperator != null && (possibleOperator.properties & LEFT_EXPRESSION) == (hasLeftExpression ? 0 : LEFT_EXPRESSION)) {
+			possibleOperator = possibleOperator.next;
+		}
+
+		return possibleOperator;
 	}
 
 	/**
@@ -150,21 +157,21 @@ final class Operator {
 	 * @return the new operator
 	 */
 	public Operator addRightExpression() {
-		return addRightExpressions(1);
+		return withRightExpressions(rightExpressions + 1);
 	}
 
 	/**
-	 * Adds right expressions to the operator.
+	 * Sets the number of right expressions for the operator.
 	 *
-	 * @param expressions the number of right expressions to add
+	 * @param expressions the number of right expressions
 	 * @return the new operator
 	 */
-	public Operator addRightExpressions(final int expressions) {
+	public Operator withRightExpressions(final int expressions) {
 		if (!has(X_RIGHT_EXPRESSIONS)) {
 			throw new UnsupportedOperationException();
 		}
 
-		return new Operator(string, precedence, properties, description, closingString, rightExpressions + expressions);
+		return new Operator(string, precedence, properties, description, closingString, expressions);
 	}
 
 	/**
@@ -246,15 +253,6 @@ final class Operator {
 	 */
 	public boolean isLeftAssociative() {
 		return !has(RIGHT_ASSOCIATIVITY);
-	}
-
-	/**
-	 * Gets the next operator with the same string representation.
-	 *
-	 * @return the next operator with the same string representation, or null if none exists
-	 */
-	public Operator next() {
-		return next;
 	}
 
 	@Override

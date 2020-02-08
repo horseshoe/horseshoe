@@ -429,10 +429,24 @@ public class TemplateLoader {
 				throw new LoadException(loaders, "Unclosed tag, unexpected end of stream");
 			}
 
-			if (tag.length() != 0) {
+			processTag:
+			while (tag.length() != 0) {
 				try {
 					switch (tag.charAt(0)) {
 					case '!': // Comments are completely ignored
+						break processTag;
+
+					case '<': // Local partial
+						if (extensions.contains(Extension.INLINE_PARTIALS)) {
+							final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
+							final Template partial = new Template(name);
+
+							sections.peek().getLocalPartials().put(name, partial);
+							sections.push(partial.getSection());
+							actionStack.push(partial.getActions());
+							break processTag;
+						}
+
 						break;
 
 					case '>': { // Load partial
@@ -442,7 +456,7 @@ public class TemplateLoader {
 
 						sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
 						actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag != null ? textBeforeStandaloneTag : EMPTY_STATIC_CONTENT_RENDERER));
-						break;
+						break processTag;
 					}
 
 					case '#': { // Start a new section, or repeat the previous section
@@ -475,7 +489,7 @@ public class TemplateLoader {
 						// Add a new render section action
 						actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
 						actionStack.push(sections.peek().getActions());
-						break;
+						break processTag;
 					}
 
 					case '^': { // Start a new inverted section, or else block for the current section
@@ -496,24 +510,26 @@ public class TemplateLoader {
 						final List<Action> actions = actionStack.peek(); // TODO: use a more robust method than peeking into the action stack and assuming it is a SectionRenderer
 
 						actionStack.push(((SectionRenderer)actions.get(actions.size() - 1)).getSection().getInvertedActions());
-						break;
+						break processTag;
 					}
 
 					case '/': { // Close the current section
-						final Section section = sections.pop();
-
-						if (sections.isEmpty()) { // There should always be at least one section on the stack (the template root section)
-							throw new LoadException(loaders, "Section close tag without matching section start tag");
-						}
-
 						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
+						final Section section = sections.peek();
 
-						if ((expression.length() > 0 || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression)) {
+						if (sections.size() <= 1) { // There should always be at least one section on the stack (the template root section)
+							throw new LoadException(loaders, "Section close tag without matching section start tag");
+						} else if ((expression.length() > 0 || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression)) {
+							if (expression.length() > 0 && extensions.contains(Extension.SMART_END_TAGS)) {
+								break;
+							}
+
 							throw new LoadException(loaders, "Unmatched section start tag, expecting \"" + section.getName() + "\"");
 						}
 
+						sections.pop();
 						actionStack.pop();
-						break;
+						break processTag;
 					}
 
 					case '=': { // Set delimiter
@@ -524,46 +540,34 @@ public class TemplateLoader {
 						}
 
 						delimiter = new Delimiter(matcher.group("start"), matcher.group("end"));
-						break;
+						break processTag;
 					}
 
-					case '{':
-					case '&': {
-						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
-
+					case '{': // Unescaped content tag
+					case '&':
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
-						break;
-					}
+						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), CharSequenceUtils.trim(tag, 1, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
+						break processTag;
 
 					default:
-						// Check for a local partial
-						if (tag.charAt(0) == '<' && extensions.contains(Extension.INLINE_PARTIALS)) {
-							final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
-							final Template partial = new Template(name);
-
-							sections.peek().getLocalPartials().put(name, partial);
-							sections.push(partial.getSection());
-							actionStack.push(partial.getActions());
-							break;
-						}
-
-						final CharSequence expression = CharSequenceUtils.trim(tag, 0, tag.length());
-
 						// Check for a named expression
 						if (extensions.containsAll(EnumSet.of(Extension.EXPRESSIONS, Extension.NAMED_EXPRESSIONS))) {
+							final CharSequence expression = CharSequenceUtils.trim(tag, 0, tag.length());
 							final Matcher namedExpression = NAMED_EXPRESSION_PATTERN.matcher(expression);
 
 							if (namedExpression.lookingAt()) {
 								sections.peek().getNamedExpressions().put(namedExpression.group("name"), new Expression(loader.toLocationString(), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), true));
-								break;
+								break processTag;
 							}
 						}
 
-						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), true));
 						break;
 					}
+
+					// Default to parsing as a dynamic content tag
+					textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
+					actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), CharSequenceUtils.trim(tag, 0, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), true));
+					break;
 				} catch (final LoadException e) {
 					throw e;
 				} catch (final Exception e) {

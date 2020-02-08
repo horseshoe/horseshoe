@@ -26,6 +26,11 @@ public enum Extension {
 	EMPTY_END_TAGS,
 
 	/**
+	 * End tags ({@code {{/[SectionName]}}}) that do not match the text in start tags will be treated as Horseshoe expressions. Enabling this may result in confusing parse exceptions when loading malformed templates.
+	 */
+	SMART_END_TAGS,
+
+	/**
 	 * Empty inverted sections tags ({@code {{^}}}) will be considered else tags and will be rendered whenever the section currently in scope is not rendered.
 	 */
 	ELSE_TAGS,

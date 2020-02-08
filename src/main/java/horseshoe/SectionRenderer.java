@@ -162,7 +162,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 		}
 
 		if (section.cacheResult()) {
-			context.getSectionData().pushPop(data);
+			context.getSectionData().push(data).pop();
 		}
 	}
 

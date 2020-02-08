@@ -47,9 +47,12 @@ public final class PersistentStack<T> implements Iterable<T> {
 
 	/**
 	 * Clears the stack. This functions the same as calling pop() until the stack is empty.
+	 *
+	 * @return this stack
 	 */
-	public void clear() {
+	public PersistentStack<T> clear() {
 		size = 0;
+		return this;
 	}
 
 	/**
@@ -136,9 +139,9 @@ public final class PersistentStack<T> implements Iterable<T> {
 	 * Pushes an item onto the stack.
 	 *
 	 * @param obj the object to place onto the stack
-	 * @return the object placed onto the stack
+	 * @return this stack
 	 */
-	public T push(final T obj) {
+	public PersistentStack<T> push(final T obj) {
 		// Check if the array needs to be resized
 		if (size == array.length) {
 			@SuppressWarnings("unchecked")
@@ -151,38 +154,18 @@ public final class PersistentStack<T> implements Iterable<T> {
 			array = newArray;
 		}
 
-		return array[size++] = obj;
+		array[size++] = obj;
+		return this;
 	}
 
 	/**
 	 * Pushes the previous item back onto the stack.
 	 *
-	 * @return the object pushed back onto the stack
+	 * @return this stack
 	 */
-	public T push() {
-		return array[size++];
-	}
-
-	/**
-	 * Pushes an item onto the stack and immediately pops it off the stack.
-	 *
-	 * @param obj the object to place onto the stack
-	 * @return the object placed onto the stack
-	 */
-	public T pushPop(final T obj) {
-		push(obj);
-		size--;
-		return obj;
-	}
-
-	/**
-	 * Replaces the top item on the stack.
-	 *
-	 * @param item the item to place of the stack
-	 * @return the item that was replaced
-	 */
-	public T replace(final T item) {
-		return array[size - 1] = item;
+	public PersistentStack<T> push() {
+		size++;
+		return this;
 	}
 
 	/**
