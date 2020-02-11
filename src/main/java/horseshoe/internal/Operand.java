@@ -288,6 +288,8 @@ final class Operand {
 			}
 		} else if (type.isPrimitive()) {
 			builder.addPrimitiveConversion(type, Object.class);
+		} else if (StringBuilder.class.equals(type)) {
+			builder.addInvoke(TO_STRING);
 		}
 
 		return generateReturn ? builder.addCode(ARETURN) : builder;

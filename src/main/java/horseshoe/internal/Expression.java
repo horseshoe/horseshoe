@@ -44,7 +44,6 @@ public final class Expression {
 	private static final Method STRING_BUILDER_APPEND_OBJECT;
 	private static final Constructor<?> STRING_BUILDER_INIT_STRING;
 	private static final Method STRING_VALUE_OF;
-	private static final Method OBJECT_TO_STRING;
 
 	// The patterns used for parsing the grammar
 	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`|[.][.]|[.])[(]?)\\s*");
@@ -138,7 +137,6 @@ public final class Expression {
 			STRING_BUILDER_APPEND_OBJECT = StringBuilder.class.getMethod("append", Object.class);
 			STRING_BUILDER_INIT_STRING = StringBuilder.class.getConstructor(String.class);
 			STRING_VALUE_OF = String.class.getMethod("valueOf", Object.class);
-			OBJECT_TO_STRING = Object.class.getMethod("toString");
 		} catch (final ReflectiveOperationException e) {
 			throw new ExceptionInInitializerError("Failed to get required class member: " + e.getMessage());
 		}
@@ -614,7 +612,7 @@ public final class Expression {
 								switch (prefixString) {
 								case "/":
 								case "\\": isRoot = true; break;
-								default: assert false : "Unrecognized prefix: " + prefixString; break;
+								default: assert false : "Unrecognized prefix: " + prefixString;
 								}
 
 								if (isInternal || identifier.endsWith("(") || (identifier.startsWith(".") && (!".".equals(identifier) || !isRoot))) {
@@ -663,8 +661,7 @@ public final class Expression {
 
 							if (lastNavigation) {
 								// Create a new output formed by invoking identifiers[index].getValue(object, ...)
-								final Operand operand = operands.pop();
-								final MethodBuilder objectBuilder = StringBuilder.class.equals(operand.type) ? operand.builder.addInvoke(OBJECT_TO_STRING) : operand.toObject(false);
+								final MethodBuilder objectBuilder = operands.pop().toObject(false);
 								final Label skipFunc = objectBuilder.newLabel();
 
 								operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(skipFunc)));
@@ -907,9 +904,8 @@ public final class Expression {
 			initializeLocalVariables.addCode(ACONST_NULL).addAccess(ASTORE, i);
 		}
 
-		final Operand operand = operands.pop();
+		this.evaluable = initializeLocalVariables.append(operands.pop().toObject(true)).load(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		assert operands.isEmpty();
-		this.evaluable = initializeLocalVariables.append(StringBuilder.class.equals(operand.type) ? operand.builder.addInvoke(OBJECT_TO_STRING).addCode(ARETURN) : operand.toObject(true)).load(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 	}
 
 	@Override

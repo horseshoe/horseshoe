@@ -23,6 +23,12 @@ public class NamedExprTests {
 	}
 
 	@Test
+	public void testNamedExprMethodCall2() throws IOException, LoadException {
+		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{upper -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : .}}{{upper(\"123a\").replaceAll(\"[aA]\", \"1\") + \", \" + upper(\"Abc\").replaceAll(\"[aA]\", \"1\")}}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{upper -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : .}}{{(upper(\"123a\") + \", \" + upper(\"Abc\")).replaceAll(\"[aA]\", \"1\")}}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
+	}
+
+	@Test
 	public void testNamedExpressions() throws IOException, LoadException {
 		assertEquals("ORIGINAL STRING-Original string" + LS, new TemplateLoader().load("Upper", "{{upper->toUpperCase()}}\n{{capitalize=>substring(0, 1).toUpperCase() + substring(1).toLowerCase()}}\n{{#\"orIgInal StrIng\"}}\n{{#charAt(1)}}\n{{upper(..)}}-{{capitalize(..)}}\n{{/}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
 		assertEquals(LS + "  ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{>a}}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
