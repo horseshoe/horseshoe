@@ -5,6 +5,10 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import horseshoe.internal.HaltRenderingException;
 
 /**
  * Templates represent parsed and resolved Horseshoe template files. They are loaded using the {@link TemplateLoader} class. An example of how to load and render a template is given below:
@@ -78,13 +82,18 @@ public final class Template {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	public Writer render(final Settings settings, final Map<String, Object> globalData, final Writer writer, final Map<String, AnnotationHandler> annotationMap) throws IOException {
-		final RenderContext renderContext = new RenderContext(settings, globalData, annotationMap);
+		try {
+			final RenderContext renderContext = new RenderContext(settings, globalData, annotationMap);
 
-		renderContext.getIndentation().push("");
-		renderContext.getSectionData().push(renderContext.getGlobalData());
+			renderContext.getIndentation().push("");
+			renderContext.getSectionData().push(renderContext.getGlobalData());
 
-		for (final Action action : actions) {
-			action.perform(renderContext, writer);
+			for (final Action action : actions) {
+				action.perform(renderContext, writer);
+			}
+		}
+		catch (final HaltRenderingException e) {
+			Logger.getLogger(Template.class.getName()).log(Level.SEVERE, e.getMessage());
 		}
 
 		return writer;

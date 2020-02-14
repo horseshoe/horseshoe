@@ -1,20 +1,25 @@
 package horseshoe;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * The Settings class allows configuring different properties that are used when rendering a {@link Template}.
  */
 public class Settings {
 
 	/**
-	 * The error logger that sends error messages to stderr.
+	 * The error logger that sends error messages to the {@link Template} class logger.
 	 */
-	public static final ErrorLogger STDERR_ERROR_LOGGER = new ErrorLogger() {
+	public static final ErrorLogger DEFAULT_ERROR_LOGGER = new ErrorLogger() {
+		private final Logger logger = Logger.getLogger(Template.class.getName());
+
 		@Override
 		public void log(final String expression, final String location, final Throwable error) {
 			if (error.getMessage() == null) {
-				System.err.println("Encountered " + error.getClass().getName() + " while evaluating expression \"" + expression + "\" (" + location + ")");
+				logger.log(Level.WARNING, "Encountered {0} while evaluating expression \"{1}\" ({2})", new Object[] { error.getClass().getName(), expression, location });
 			} else {
-				System.err.println("Encountered " + error.getClass().getName() + " while evaluating expression \"" + expression + "\" (" + location + "): " + error.getMessage());
+				logger.log(Level.WARNING, "Encountered {0} while evaluating expression \"{1}\" ({2}): {3}", new Object[] { error.getClass().getName(), expression, location, error.getMessage() });
 			}
 		}
 	};
@@ -64,7 +69,7 @@ public class Settings {
 	public static final String TEMPLATE_LINE_ENDINGS = null;
 
 	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
-	private ErrorLogger errorLogger = STDERR_ERROR_LOGGER;
+	private ErrorLogger errorLogger = DEFAULT_ERROR_LOGGER;
 	private EscapeFunction escapeFunction = EMPTY_ESCAPE_FUNCTION;
 	private String lineEndings = DEFAULT_LINE_ENDINGS;
 

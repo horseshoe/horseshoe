@@ -27,6 +27,7 @@ public final class Expression {
 	// Reflected Methods
 	private static final Method ACCESSOR_LOOKUP;
 	private static final Method EXPRESSION_EVALUATE;
+	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING;
 	private static final Method IDENTIFIER_FIND_VALUE;
 	private static final Method IDENTIFIER_FIND_VALUE_METHOD;
 	private static final Method IDENTIFIER_GET_ROOT_VALUE;
@@ -120,6 +121,7 @@ public final class Expression {
 		try {
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", PersistentStack.class, Settings.ContextAccess.class, PersistentStack.class, Settings.ErrorLogger.class);
+			HALT_EXCEPTION_CTOR_STRING = HaltRenderingException.class.getConstructor(String.class);
 			IDENTIFIER_FIND_VALUE = Identifier.class.getMethod("findValue", PersistentStack.class, int.class, Settings.ContextAccess.class);
 			IDENTIFIER_FIND_VALUE_METHOD = Identifier.class.getMethod("findValue", PersistentStack.class, int.class, Settings.ContextAccess.class, Object[].class);
 			IDENTIFIER_GET_ROOT_VALUE = Identifier.class.getMethod("getRootValue", PersistentStack.class, Settings.ContextAccess.class);
@@ -518,6 +520,13 @@ public final class Expression {
 		case "=":
 			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).append(left.builder)));
 			break;
+
+		case "☠": {
+			final Label isNull = right.builder.newLabel();
+
+			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP, ACONST_NULL).addBranch(IF_ACMPEQ, isNull).addInvoke(STRING_VALUE_OF).updateLabel(isNull).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addCode(ATHROW)));
+			break;
+		}
 
 		default: // Assignment operators (+=, -=, etc.)
 			assert operator.has(Operator.ASSIGNMENT) : "Unrecognized operator '" + operator.getString() + "' while parsing expression";
@@ -929,6 +938,8 @@ public final class Expression {
 	public Object evaluate(final PersistentStack<Object> context, final Settings.ContextAccess access, final PersistentStack<Indexed> indices, final Settings.ErrorLogger errorLogger) {
 		try {
 			return evaluable.evaluate(expressions, identifiers, context, access, indices, errorLogger);
+		} catch (final HaltRenderingException e) {
+			throw e;
 		} catch (final Throwable t) { // Don't let any exceptions escape
 			if (errorLogger != null) {
 				errorLogger.log(originalString, location, t);

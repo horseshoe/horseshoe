@@ -91,8 +91,9 @@ final class Operator {
 		operators.add(new Operator(">>>=", 15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bitwise Shift Right Zero Extend Assign"));
 		operators.add(new Operator("?:=",  15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Null Coalesce Assign"));
 		operators.add(new Operator("??=",  15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Null Coalesce Assign (Alternate)"));
-		operators.add(new Operator(",",    16, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Array / Map Separator"));
-		operators.add(new Operator(";",    16, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
+		operators.add(new Operator("☠",    16, RIGHT_EXPRESSION, "Die"));
+		operators.add(new Operator(",",    17, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Array / Map Separator"));
+		operators.add(new Operator(";",    17, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
 
 		for (final Operator operator : operators) {
 			operator.next = OPERATOR_LOOKUP.put(operator.string, operator);

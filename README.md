@@ -57,7 +57,8 @@ Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an 
 | 13 | a<code>&#124;&#124;</code>b \(Logical Or\) | Left&nbsp;to&nbsp;right |
 | 14 | a<code>?:</code>b \(Null Coalesce\), <br>a<code>??</code>b \(Null Coalesce \(Alternate\)\), <br>a<code>?</code>b \(Ternary\), <br>a<code>:</code>b \(Pair\) | Right&nbsp;to&nbsp;left |
 | 15 | a<code>=</code>b \(Assign\), <br>a<code>\*=</code>b \(Multiply Assign\), <br>a<code>/=</code>b \(Divide Assign\), <br>a<code>%=</code>b \(Modulus Assign\), <br>a<code>\+=</code>b \(Add Assign\), <br>a<code>\-=</code>b \(Subtract Assign\), <br>a<code>&amp;=</code>b \(Bitwise And Assign\), <br>a<code>^=</code>b \(Bitwise Xor Assign\), <br>a<code>&#124;=</code>b \(Bitwise Or Assign\), <br>a<code>&lt;&lt;=</code>b \(Bitwise Shift Left Assign\), <br>a<code>&gt;&gt;=</code>b \(Bitwise Shift Right Sign Extend Assign\), <br>a<code>&gt;&gt;&gt;=</code>b \(Bitwise Shift Right Zero Extend Assign\), <br>a<code>?:=</code>b \(Null Coalesce Assign\), <br>a<code>??=</code>b \(Null Coalesce Assign \(Alternate\)\) | Right&nbsp;to&nbsp;left |
-| 16 | a<code>,</code>b\* \(Array / Map Separator\), <br>a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
+| 16 | <code>☠</code>a \(Die\) | Left&nbsp;to&nbsp;right |
+| 17 | a<code>,</code>b\* \(Array / Map Separator\), <br>a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
 
 ### What extension should be used for Horseshoe template files?
 Horseshoe supports any file extension for template files. However, convention is to use a capital "U", which resembles a horseshoe.
