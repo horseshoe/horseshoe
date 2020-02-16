@@ -34,4 +34,9 @@ public class NamedExprTests {
 		assertEquals(LS + "  ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{>a}}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
 	}
 
+	@Test
+	public void testRecursiveFibonacci() throws IOException, LoadException {
+		assertEquals("011235", new TemplateLoader().load("Test", "{{fib -> . > 1 ? fib(. - 1) + fib(. - 2) : .}}{{fib(0)}}{{fib(1)}}{{fib(2)}}{{fib(3)}}{{fib(4)}}{{fib(5)}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+	}
+
 }
