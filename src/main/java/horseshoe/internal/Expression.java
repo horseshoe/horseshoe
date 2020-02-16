@@ -51,7 +51,7 @@ public final class Expression {
 	private static final Pattern IDENTIFIER_WITH_PREFIX_PATTERN;
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*");
 	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))(?<isLong>[lL])?\\s*");
-	private static final Pattern STRING_PATTERN = Pattern.compile("\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"\\s*");
+	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>[^']*)')\\s*");
 	private static final Pattern OPERATOR_PATTERN;
 
 	private final String location;
@@ -760,8 +760,8 @@ public final class Expression {
 					final String string = matcher.group("string");
 					int backslash = 0;
 
-					if ((backslash = string.indexOf('\\')) < 0) {
-						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(string)));
+					if (string == null || (backslash = string.indexOf('\\')) < 0) {
+						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(string == null ? matcher.group("unescapedString") : string)));
 					} else { // Find escape sequences and replace them with the proper character sequences
 						final StringBuilder sb = new StringBuilder(string.length());
 						int start = 0;

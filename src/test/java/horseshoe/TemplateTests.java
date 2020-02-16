@@ -25,6 +25,11 @@ public class TemplateTests {
 	}
 
 	@Test
+	public void testDie() throws IOException, LoadException {
+		assertEquals("String 1" + LS + "String 2" + LS, new TemplateLoader().load("Die", "{{#'String 1', 'String 2', \"String 3\"}}\n{{^.hasNext}}\n{{☠\"Should print out as a severe log statement\"; 'Did not die'}}\n{{/}}\n{{.}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+	}
+
+	@Test
 	public void testDuplicateSection() throws IOException, LoadException {
 		final Template template = new TemplateLoader().load("Duplicate Section", "Names:\n{{#people}}\n - {{lastName}}, {{firstName}}\n{{/}}\n\nMailing Labels:\n{{#}}\n{{firstName}} {{lastName}}\n{{address}}\n{{city}}, {{state}} {{zip}}\n{{#.hasNext}}\n\n{{/}}\n{{/}}\n");
 
