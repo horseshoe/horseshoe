@@ -521,7 +521,7 @@ public final class Expression {
 			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).append(left.builder)));
 			break;
 
-		case "☠": {
+		case "☠": { // Die
 			final Label isNull = right.builder.newLabel();
 
 			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP, ACONST_NULL).addBranch(IF_ACMPEQ, isNull).addInvoke(STRING_VALUE_OF).updateLabel(isNull).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addCode(ATHROW)));
@@ -562,12 +562,16 @@ public final class Expression {
 	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
 	 * @throws ReflectiveOperationException if an error occurs while resolving the reflective parts of the expression
 	 */
-	public Expression(final String location, final CharSequence expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
+	public Expression(final String location, final String expressionName, final CharSequence expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final HashMap<Expression, Integer> expressions = new HashMap<>();
 		final HashMap<Identifier, Integer> identifiers = new HashMap<>();
 		final HashMap<String, Integer> localVariables = new HashMap<>();
 		final PersistentStack<Operand> operands = new PersistentStack<>();
 		int nextLocalVariableIndex = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS;
+
+		if (expressionName != null) {
+			namedExpressions.put(expressionName, this);
+		}
 
 		this.location = location;
 		this.originalString = expressionString.toString();

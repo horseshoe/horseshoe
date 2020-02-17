@@ -481,9 +481,9 @@ public class TemplateLoader {
 							final String parameters = annotation.group("parameters");
 
 							// Load the annotation arguments
-							sections.push(new Section(sections.peek(), sectionName, parameters == null ? null : new Expression(loader.toLocationString(), parameters, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
+							sections.push(new Section(sections.peek(), sectionName, parameters == null ? null : new Expression(loader.toLocationString(), null, parameters, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
 						} else { // Start a new section
-							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
 						}
 
 						// Add a new render section action
@@ -502,7 +502,7 @@ public class TemplateLoader {
 
 							actionStack.pop();
 						} else { // Start a new inverted section
-							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
 							actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
 						}
 
@@ -546,7 +546,7 @@ public class TemplateLoader {
 					case '{': // Unescaped content tag
 					case '&':
 						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), CharSequenceUtils.trim(tag, 1, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
+						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), null, CharSequenceUtils.trim(tag, 1, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
 						break processTag;
 
 					default:
@@ -556,7 +556,7 @@ public class TemplateLoader {
 							final Matcher namedExpression = NAMED_EXPRESSION_PATTERN.matcher(expression);
 
 							if (namedExpression.lookingAt()) {
-								sections.peek().getNamedExpressions().put(namedExpression.group("name"), new Expression(loader.toLocationString(), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), true));
+								new Expression(loader.toLocationString(), namedExpression.group("name"), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), true);
 								break processTag;
 							}
 						}
@@ -566,7 +566,7 @@ public class TemplateLoader {
 
 					// Default to parsing as a dynamic content tag
 					textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-					actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), CharSequenceUtils.trim(tag, 0, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), true));
+					actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), null, CharSequenceUtils.trim(tag, 0, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), true));
 					break;
 				} catch (final LoadException e) {
 					throw e;

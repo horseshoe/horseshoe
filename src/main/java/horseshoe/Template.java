@@ -91,8 +91,7 @@ public final class Template {
 			for (final Action action : actions) {
 				action.perform(renderContext, writer);
 			}
-		}
-		catch (final HaltRenderingException e) {
+		} catch (final HaltRenderingException e) {
 			Logger.getLogger(Template.class.getName()).log(Level.SEVERE, e.getMessage());
 		}
 
