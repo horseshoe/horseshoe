@@ -7,6 +7,7 @@ Horseshoe for Java
 [![Codacy](https://api.codacy.com/project/badge/Grade/07cec89cb05f4ed4ba8759f6ad8bdc97)](https://www.codacy.com/manual/nicklaus.little/horseshoe-j?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nicklauslittle/horseshoe-j&amp;utm_campaign=Badge_Grade)
 [![Coverage](https://api.codacy.com/project/badge/Coverage/07cec89cb05f4ed4ba8759f6ad8bdc97)](https://www.codacy.com/manual/nicklaus.little/horseshoe-j?utm_source=github.com&utm_medium=referral&utm_content=nicklauslittle/horseshoe-j&utm_campaign=Badge_Coverage)
 [![Coverity](https://scan.coverity.com/projects/20222/badge.svg)](https://scan.coverity.com/projects/nicklauslittle-horseshoe-j)
+[![license](https://img.shields.io/github/license/nicklauslittle/horseshoe-j?label=License&logo=github)](https://github.com/nicklauslittle/horseshoe-j/blob/master/LICENSE)
 
 ## Goals
 *   Mustache-like templates for source code
