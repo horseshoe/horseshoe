@@ -7,6 +7,7 @@ import horseshoe.Settings.ContextAccess;
 
 public final class Identifier {
 
+	private static final Object[] NO_ARGS = new Object[] { };
 	public static final int UNSTATED_BACKREACH = -1;
 	public static final int NOT_A_METHOD = -1;
 	public static final String PATTERN = "[\\p{L}_\\$][\\p{L}\\p{Nd}_\\$]*";
@@ -70,7 +71,7 @@ public final class Identifier {
 		Accessor accessor = accessorDatabase.get(objectClass);
 
 		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(object, this, 0);
+			accessor = Accessor.FACTORY.create(object, this, NO_ARGS);
 			accessorDatabase.put(objectClass, accessor);
 		}
 
@@ -94,7 +95,7 @@ public final class Identifier {
 
 					// Try to create the accessor and add it to the database
 					if (accessor == null) {
-						accessor = Accessor.FACTORY.create(object, this, 0);
+						accessor = Accessor.FACTORY.create(object, this, NO_ARGS);
 						accessorDatabase.put(objectClass, accessor);
 					}
 
@@ -138,7 +139,8 @@ public final class Identifier {
 		Accessor accessor = accessorDatabase.get(objectClass);
 
 		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(object, this, parameterCount);
+			assert (parameters == null && parameterCount == 0) || parameters.length == parameterCount;
+			accessor = Accessor.FACTORY.create(object, this, parameters);
 			accessorDatabase.put(objectClass, accessor);
 		}
 
@@ -162,7 +164,8 @@ public final class Identifier {
 
 					// Try to create the accessor and add it to the database
 					if (accessor == null) {
-						accessor = Accessor.FACTORY.create(object, this, parameterCount);
+						assert (parameters == null && parameterCount == 0) || parameters.length == parameterCount;
+						accessor = Accessor.FACTORY.create(object, this, parameters);
 						accessorDatabase.put(objectClass, accessor);
 					}
 
@@ -216,7 +219,7 @@ public final class Identifier {
 		Accessor accessor = accessorDatabase.get(objectClass);
 
 		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(context, this, 0);
+			accessor = Accessor.FACTORY.create(context, this, NO_ARGS);
 
 			if (accessor == null) {
 				throw new NoSuchFieldException("Field \"" + name + "\" not found in class " + objectClass.getName());
@@ -241,7 +244,8 @@ public final class Identifier {
 		Accessor accessor = accessorDatabase.get(objectClass);
 
 		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(context, this, parameterCount);
+			assert (parameters == null && parameterCount == 0) || parameters.length == parameterCount;
+			accessor = Accessor.FACTORY.create(context, this, parameters);
 
 			if (accessor == null) {
 				throw new NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());

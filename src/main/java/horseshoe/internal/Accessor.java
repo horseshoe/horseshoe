@@ -178,7 +178,8 @@ public abstract class Accessor {
 		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
 		 */
-		public static ClassMethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
+		public static ClassMethodAccessor create(final Class<?> parent, final String methodSignature, final Object[] parameters) {
+			final int parameterCount = parameters == null ? 0 : parameters.length;
 			final MethodSignature signature = new MethodSignature(methodSignature);
 
 			if (Modifier.isPublic(parent.getModifiers())) {
@@ -296,7 +297,8 @@ public abstract class Accessor {
 		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
 		 */
-		public static MethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
+		public static MethodAccessor create(final Class<?> parent, final String methodSignature, final Object[] parameters) {
+			final int parameterCount = parameters == null ? 0 : parameters.length;
 			final MethodSignature signature = new MethodSignature(methodSignature);
 
 			// Find the first public ancestor class, analyzing all interfaces along the way
@@ -380,7 +382,7 @@ public abstract class Accessor {
 
 	static class Factory {
 
-		public Accessor create(final Object context, final Identifier identifier, final int parameters) {
+		public Accessor create(final Object context, final Identifier identifier, final Object[] parameters) {
 			final Class<?> contextClass = context.getClass();
 
 			if (Class.class.equals(contextClass)) { // Static
