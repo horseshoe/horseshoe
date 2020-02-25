@@ -1,5 +1,6 @@
 package horseshoe.internal;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -144,6 +145,21 @@ public abstract class Accessor {
 	 * @throws ReflectiveOperationException if the value cannot be set due to an invalid reflection call
 	 */
 	public abstract Object set(final Object context, final Object value) throws ReflectiveOperationException;
+
+	/**
+	 * Accesses the length of an array
+	 */
+	private static final class ArrayLengthAccessor extends Accessor {
+		@Override
+		public Object get(final Object context) throws ReflectiveOperationException {
+			return Array.getLength(context);
+		}
+
+		@Override
+		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
+			throw new UnsupportedOperationException();
+		}
+	}
 
 	/**
 	 * Accesses a static method or class property method in a class
@@ -377,6 +393,8 @@ public abstract class Accessor {
 				return MethodAccessor.create(contextClass, identifier.getName(), parameters);
 			} else if (Map.class.isAssignableFrom(contextClass)) {
 				return new MapAccessor(identifier.getName());
+			} else if (contextClass.isArray() && "length".equals(identifier.getName())) {
+				return new ArrayLengthAccessor();
 			}
 
 			// Field

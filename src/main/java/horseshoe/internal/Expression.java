@@ -505,34 +505,16 @@ public final class Expression {
 			operands.push();
 			break;
 
-		case "++":
-			processOperation(namedExpressions, expressions, identifiers, operands.push().push(new Operand(int.class, new MethodBuilder().pushConstant(1))), operators.push(Operator.get("+", true)));
-			processOperation(namedExpressions, expressions, identifiers, operands, operators.push(Operator.get("=", true)));
-			processOperation(namedExpressions, expressions, identifiers, operands.push(new Operand(int.class, new MethodBuilder().pushConstant(1))), operators.push(Operator.get("-", true)));
-			break;
-
-		case "--":
-			processOperation(namedExpressions, expressions, identifiers, operands.push().push(new Operand(int.class, new MethodBuilder().pushConstant(1))), operators.push(Operator.get("-", true)));
-			processOperation(namedExpressions, expressions, identifiers, operands, operators.push(Operator.get("=", true)));
-			processOperation(namedExpressions, expressions, identifiers, operands.push(new Operand(int.class, new MethodBuilder().pushConstant(1))), operators.push(Operator.get("+", true)));
-			break;
-
 		case "=":
 			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).append(left.builder)));
 			break;
 
-		case "☠": { // Die
-			final Label isNull = right.builder.newLabel();
-
-			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP, ACONST_NULL).addBranch(IF_ACMPEQ, isNull).addInvoke(STRING_VALUE_OF).updateLabel(isNull).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addCode(ATHROW)));
+		case "☠": // Die
+			operands.push(new Operand(Object.class, right.toObject(false).addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addCode(ATHROW)));
 			break;
-		}
 
-		default: // Assignment operators (+=, -=, etc.)
-			assert operator.has(Operator.ASSIGNMENT) : "Unrecognized operator '" + operator.getString() + "' while parsing expression";
-			processOperation(namedExpressions, expressions, identifiers, operands.push().push(), operators.push(Operator.get(operator.getString().substring(0, operator.getString().length() - 1), true)));
-			processOperation(namedExpressions, expressions, identifiers, operands, operators.push(Operator.get("=", true)));
-			break;
+		default:
+			assert false : "Unrecognized operator '" + operator.getString() + "' while parsing expression";
 		}
 	}
 
@@ -720,18 +702,8 @@ public final class Expression {
 										throw new IllegalArgumentException("Invalid assignment to non-local variable in expression at offset " + matcher.regionStart());
 									}
 
-									if (localVariableIndex != null) { // Pre-existing local variable means we can use +=, -=, etc.
-										operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, localVariableIndex)));
-
-										if (!"=".equals(operator.getString())) {
-											operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, localVariableIndex)));
-										}
-									} else if (!"=".equals(operator.getString())) { // Non-existing local variable means we can't use +=, -=, etc.
-										throw new IllegalArgumentException("Invalid reference to non-existant local variable in expression at offset " + matcher.regionStart());
-									} else {
-										localVariables.put(name, nextLocalVariableIndex);
-										operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, nextLocalVariableIndex++)));
-									}
+									localVariables.put(name, nextLocalVariableIndex);
+									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, nextLocalVariableIndex++)));
 								} else if (localVariableIndex != null) { // Check for a local variable
 									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, localVariableIndex)));
 								} else { // Resolve the identifier
@@ -837,15 +809,13 @@ public final class Expression {
 
 						if (!operators.isEmpty() && operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
 							operators.push(operators.pop().addRightExpression());
-						} else if (operator.has(Operator.ASSIGNMENT) && lastOperator != null) { // Check if an assignment operator follows another operator
-							throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
 						} else {
 							operators.push(operator);
 						}
 
 						lastOperator = operator;
 						continue nextToken;
-					} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION) || lastOperator.has(Operator.IGNORE_TRAILING)) { // Check if this token ends an expression on the stack
+					} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION)) { // Check if this token ends an expression on the stack
 						while (!operators.isEmpty()) {
 							Operator closedOperator = operators.pop();
 

@@ -107,6 +107,11 @@ public class ExpressionTests {
 	}
 
 	@Test (expected = IllegalArgumentException.class)
+	public void testBadAssignment2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "a ; = 2", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
 	public void testBadBackreachAfterVar() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "a../", Collections.emptyMap(), true);
 	}
@@ -296,8 +301,6 @@ public class ExpressionTests {
 		context.push(Helper.loadMap("r", 10, "i2", 2, "π", 3.14159265358979311599796346854, "bigNum", 9999999999L));
 		assertTrue(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "π = 3.14159265358979311599796346854; r = 4; \"r = \" + r + \", d = \" + (r * 2) + \", a = \" + (π * r * r)", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString().startsWith("r = 4, d = 8, a = 50.26"));
 		assertEquals(418.87902047863909846168578443727, (Double)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "r = 4; 4 / 3.0 * π * ./r *./r", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER), 0.00001);
-		assertEquals("blah32", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "a = 1; b = 2; c = 3; d = 4; e = 5; e *= b; c -= a >>= e %= b; a = (c++ == 2) ? null : 0xFF; b -= (d-- == 4) ? -1 : 5; b--; a ??= \"blah\" + c++ + b", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
-		assertEquals("good", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "a = 0; a++ == 0 ? (a == 1 ? \"good\" : \"bad\") : \"bad2\"", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertNull(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "b == 0 ? (a = 1) : 4; a", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER));
 
 		{
