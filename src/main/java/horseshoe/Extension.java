@@ -31,6 +31,11 @@ public enum Extension {
 	SMART_END_TAGS,
 
 	/**
+	 * Empty section tags ({@code {{#}}}) will be interpreted to mean repeat the previous section at the same scope.
+	 */
+	REPEATED_SECTIONS,
+
+	/**
 	 * Empty inverted sections tags ({@code {{^}}}) will be considered else tags and will be rendered whenever the section currently in scope is not rendered.
 	 */
 	ELSE_TAGS,

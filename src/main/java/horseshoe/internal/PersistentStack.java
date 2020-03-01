@@ -56,24 +56,6 @@ public final class PersistentStack<T> implements Iterable<T> {
 	}
 
 	/**
-	 * Gets the previously popped from the stack.
-	 *
-	 * @return the previously popped from the stack
-	 */
-	public T getPoppedItem() {
-		return array[size];
-	}
-
-	/**
-	 * Checks if a previously popped item exists in the stack. An item only exists if it is non-null.
-	 *
-	 * @return true if a previously popped item exists in the stack, otherwise false
-	 */
-	public boolean hasPoppedItem() {
-		return size < array.length && array[size] != null;
-	}
-
-	/**
 	 * Checks if the stack is empty.
 	 *
 	 * @return true if the stack is empty, otherwise false

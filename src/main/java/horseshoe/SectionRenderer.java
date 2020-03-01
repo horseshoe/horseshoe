@@ -65,31 +65,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 		if (data == null) {
 			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 		} else if (data instanceof Iterable<?>) {
-			final Iterator<?> it = ((Iterable<?>)data).iterator();
-			hasNext = it.hasNext();
-			index = 0;
-
-			if (hasNext) {
-				context.getIndexedData().push(this);
-
-				while (true) {
-					final Object object = it.next();
-
-					if (it.hasNext()) {
-						renderActions(context, object, writer, section.getActions());
-					} else {
-						hasNext = false;
-						renderActions(context, object, writer, section.getActions());
-						break;
-					}
-
-					index++;
-				}
-
-				context.getIndexedData().pop();
-			} else {
-				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
-			}
+			dispatchIteratorData(context, ((Iterable<?>)data).iterator(), writer);
 		} else if (data.getClass().isArray()) {
 			final int length = Array.getLength(data);
 			index = 0;
@@ -162,7 +138,42 @@ class SectionRenderer implements Action, Expression.Indexed {
 		}
 
 		if (section.cacheResult()) {
-			context.getSectionData().push(data).pop();
+			context.setRepeatedSectionData(data);
+		}
+	}
+
+	/**
+	 * Dispatches iterator data for rendering.
+	 *
+	 * @param context the render context
+	 * @param it the iterator to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	protected final void dispatchIteratorData(final RenderContext context, final Iterator<?> it, final Writer writer) throws IOException {
+		hasNext = it.hasNext();
+		index = 0;
+
+		if (hasNext) {
+			context.getIndexedData().push(this);
+
+			while (true) {
+				final Object object = it.next();
+
+				if (it.hasNext()) {
+					renderActions(context, object, writer, section.getActions());
+				} else {
+					hasNext = false;
+					renderActions(context, object, writer, section.getActions());
+					break;
+				}
+
+				index++;
+			}
+
+			context.getIndexedData().pop();
+		} else {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 		}
 	}
 
@@ -206,7 +217,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 				}
 			}
 		} else {
-			dispatchData(context, section.useCache() ? context.getSectionData().getPoppedItem() : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), context.getSettings().getErrorLogger()), writer);
+			dispatchData(context, section.useCache() ? context.getRepeatedSectionData() : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), context.getSettings().getErrorLogger()), writer);
 		}
 	}
 
@@ -219,7 +230,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * @param actions the actions to render
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	protected void renderActions(final RenderContext context, final Object data, final Writer writer, final List<Action> actions) throws IOException {
+	protected final void renderActions(final RenderContext context, final Object data, final Writer writer, final List<Action> actions) throws IOException {
 		if (section.isInvisible()) {
 			for (final Action action : actions) {
 				action.perform(context, writer);

@@ -30,12 +30,16 @@ class SectionRenderer_8 extends SectionRenderer {
 			final Optional<?> optional = (Optional<?>)data;
 
 			if (optional.isPresent()) {
-				renderActions(context, optional.get(), writer, section.getActions());
+				dispatchData(context, optional.get(), writer);
 			} else {
-				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+				super.dispatchData(context, null, writer);
 			}
 		} else if (data instanceof Stream<?>) {
-			super.dispatchData(context, ((Stream<?>)data).collect(Collectors.toList()), writer);
+			if (section.cacheResult()) { // Only collect to a list if we are required to cache the results
+				super.dispatchData(context, ((Stream<?>)data).collect(Collectors.toList()), writer);
+			} else {
+				super.dispatchIteratorData(context, ((Stream<?>)data).iterator(), writer);
+			}
 		} else {
 			super.dispatchData(context, data, writer);
 		}

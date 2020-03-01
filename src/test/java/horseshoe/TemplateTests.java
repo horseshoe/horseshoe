@@ -40,6 +40,11 @@ public class TemplateTests {
 		assertEquals("Names:" + LS + " - Doe, John" + LS + " - Doey, Jane" + LS + LS + "Mailing Labels:" + LS + "John Doe" + LS + "101 1st St" + LS + "Seattle, WA 98101" + LS + LS + "Jane Doey" + LS + "202 2nd St" + LS + "Miami, FL 33255" + LS, writer.toString());
 	}
 
+	@Test
+	public void testDuplicateSection2() throws IOException, LoadException {
+		assertEquals("Names:" + LS + " - John Doe" + LS + " - Jane Doey" + LS + LS + "All:" + LS + " - John Doe, Jane Doey" + LS, new TemplateLoader().load("Duplicate Section", "Names:\n{{#people}}\n{{#['first':firstName, 'last':lastname, 'full':firstName + ' ' + lastName]}}\n - {{full}}\n{{/}}\n{{/}}\n\nAll:\n - {{#}}{{#}}{{full}}{{/}}{{#.hasNext}}, {{/}}{{/}}\n").render(new Settings(), Helper.loadMap("people", Helper.loadList(Helper.loadMap("firstName", "John", "lastName", "Doe"), Helper.loadMap("firstName", "Jane", "lastName", "Doey"))), new java.io.StringWriter()).toString());
+	}
+
 	/**
 	 * This test evaluates the example code given in the {@link Template} javadoc and the README markdown file. Any changes to this code should be updated in those locations as well.
 	 */
@@ -93,8 +98,25 @@ public class TemplateTests {
 	@Test
 	public void testSections() throws IOException, LoadException {
 		assertEquals("nil, String, String2, true, false, -128, 127, -, :, -32768, 32767, -2147483648, 2147483647, -9223372036854775808, 9223372036854775807, 1.2, -1.2, 5.6, -5.6", new TemplateLoader().load("Array Test", "{{#arrays}}{{#.}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.singletonMap("arrays", new Object[] { new Object[0], new Object[] { "String", "String2" }, new boolean[] { true, false }, new byte[] { -128, 127 }, new char[] { '-', ':' }, new short[] { -32768, 32767 }, new int[] { -2147483648, 2147483647 }, new long[] { -9223372036854775808L, 9223372036854775807L }, new float[] { 1.2f, -1.2f }, new double[] { 5.6, -5.6 } }), new java.io.StringWriter()).toString());
-		assertEquals("String, 1.6, 1234 -> String, 1.6, 1234", new TemplateLoader().load("Stream Test", "{{#stream}}{{.}}{{#.hasNext}}, {{/}}{{/}} -> {{#}}{{.}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.singletonMap("stream", Arrays.asList("String", 1.6, 1234).stream()), new java.io.StringWriter()).toString());
+		assertEquals("String, 1.6, 1234", new TemplateLoader().load("Stream Test", "{{#stream}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}}").render(new Settings(), Collections.singletonMap("stream", Arrays.asList("String", 1.6, 1234).stream()), new java.io.StringWriter()).toString());
+		assertEquals("nil", new TemplateLoader().load("Empty Stream Test", "{{#stream}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}}").render(new Settings(), Collections.singletonMap("stream", Arrays.asList().stream()), new java.io.StringWriter()).toString());
+		assertEquals("String, 1.6, 1234 -> String, 1.6, 1234", new TemplateLoader().load("Repeat Stream Test", "{{#stream}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}} -> {{#}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}}").render(new Settings(), Collections.singletonMap("stream", Arrays.asList("String", 1.6, 1234).stream()), new java.io.StringWriter()).toString());
 		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}} -> {{#}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
+	}
+
+	@Test(expected = LoadException.class)
+	public void testSectionError1() throws IOException, LoadException {
+		assertEquals("String, 1.6, 1234 -> String, 1.6, 1234", new TemplateLoader().load("Bad Repeat Test", "{{#}}{{/}}").render(new Settings(), Collections.singletonMap("stream", Arrays.asList("String", 1.6, 1234).stream()), new java.io.StringWriter()).toString());
+	}
+
+	@Test(expected = LoadException.class)
+	public void testSectionError2() throws IOException, LoadException {
+		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}} -> {{#}}{{#}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
+	}
+
+	@Test(expected = LoadException.class)
+	public void testSectionError3() throws IOException, LoadException {
+		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{/}} -> {{#}}{{#}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
 	}
 
 	@Test

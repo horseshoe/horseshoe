@@ -12,6 +12,7 @@ final class RenderContext {
 	private final Map<String, Object> globalData;
 	private final Map<String, AnnotationHandler> annotationMap;
 	private final PersistentStack<Object> sectionData = new PersistentStack<>();
+	private Object repeatedSectionData = null;
 	private final PersistentStack<Expression.Indexed> indexedData = new PersistentStack<>();
 	private final PersistentStack<String> indentation = new PersistentStack<>();
 
@@ -65,6 +66,15 @@ final class RenderContext {
 	}
 
 	/**
+	 * Gets the repeated section data used by the rendering process.
+	 *
+	 * @return the repeated section data used by the rendering process
+	 */
+	Object getRepeatedSectionData() {
+		return repeatedSectionData;
+	}
+
+	/**
 	 * Gets the section data used by the rendering process.
 	 *
 	 * @return the section data used by the rendering process
@@ -83,11 +93,14 @@ final class RenderContext {
 	}
 
 	/**
-	 * Resets the context, so it can be reused
+	 * Sets the repeated section data used by the rendering process.
+	 *
+	 * @param repeatedSectionData the repeated section data used by the rendering process
+	 * @return this context
 	 */
-	void reset() {
-		sectionData.clear();
-		indentation.clear();
+	RenderContext setRepeatedSectionData(final Object repeatedSectionData) {
+		this.repeatedSectionData = repeatedSectionData;
+		return this;
 	}
 
 }

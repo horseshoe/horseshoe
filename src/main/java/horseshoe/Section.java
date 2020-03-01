@@ -10,6 +10,11 @@ import horseshoe.internal.OverlayMap;
 
 final class Section {
 
+	private final static int INITIAL_CHILDREN_CAPACITY = 4; // Likely not many nested sections, so don't initialize the full capacity
+	private final static int INITIAL_INVERTED_ACTIONS_CAPACITY = 4; // Likely doesn't exist, or used for error reporting, so don't initialize the full capacity
+
+	private final Section parent;
+	private final List<Section> children = new ArrayList<>(INITIAL_CHILDREN_CAPACITY);
 	private final String name;
 	private final Expression expression;
 	private final String annotation;
@@ -19,18 +24,60 @@ final class Section {
 	private final Map<String, Expression> namedExpressions;
 	private final Map<String, Template> localPartials;
 	private final List<Action> actions = new ArrayList<>();
-	private final List<Action> invertedActions = new ArrayList<>();
+	private final List<Action> invertedActions = new ArrayList<>(INITIAL_INVERTED_ACTIONS_CAPACITY);
+
+	/**
+	 * Creates a new repeated section with the specified parent.
+	 *
+	 * @param parent the parent of the section
+	 * @return the repeated section
+	 */
+	public static Section repeat(final Section parent) {
+		Section repeatContainer = parent;
+		int nested = 0;
+		int skipChildrenSize = 0;
+
+		// Create the repeated section, here is the algorithm:
+		//  1) Starting with the parent section, traverse the ancestors until we find a container with at least one previous child section
+		//  2) Traverse down all single descendants the appropriate number of times ignoring invisible sections (annotations, top-level)
+		//  3) If the repeated section is not nested, use the cache, otherwise use the expression of the repeated section
+		for (; repeatContainer.children.size() == skipChildrenSize; skipChildrenSize = 1, repeatContainer = repeatContainer.parent) {
+			if (repeatContainer.isRepeat()) {
+				nested++;
+			} else if (!repeatContainer.isInvisible() || repeatContainer.parent == null) {
+				throw new IllegalStateException("Cannot repeat section, no previous section exists");
+			}
+		}
+
+		Section repeatedSection = repeatContainer.children.get(repeatContainer.children.size() - 1 - skipChildrenSize);
+
+		for (int skippedChildren = nested; repeatedSection.isInvisible() || skippedChildren-- > 0; repeatedSection = repeatedSection.children.get(0)) {
+			if (repeatedSection.children.size() != 1) {
+				throw new IllegalStateException("Cannot repeat child of section \"" + repeatedSection.getName() + "\", expecting exactly 1 child section");
+			}
+		}
+
+		final Section newSection = new Section(parent, "", repeatedSection.getExpression(), null, false);
+
+		if (nested == 0) {
+			repeatedSection.cacheResult = true;
+			newSection.useCache = true;
+		}
+
+		return newSection;
+	}
 
 	/**
 	 * Creates a new section using the specified expression and specified writer.
 	 *
+	 * @param parent the parent of the section, or null if the section is a top-level section
 	 * @param name the name for the section
 	 * @param expression the expression for the section
 	 * @param annotation the name of the annotation for the section, or null if no annotation exists
-	 * @param parent the parent of the section, or null if the section is a top-level section
 	 * @param isInvisible true if the section is not visible to backreach, otherwise false
 	 */
 	public Section(final Section parent, final String name, final Expression expression, final String annotation, final boolean isInvisible) {
+		this.parent = parent;
 		this.name = name;
 		this.expression = expression;
 		this.annotation = annotation;
@@ -42,6 +89,7 @@ final class Section {
 		} else {
 			this.namedExpressions = new OverlayMap<>(parent.namedExpressions);
 			this.localPartials = new OverlayMap<>(parent.localPartials);
+			parent.children.add(this);
 		}
 	}
 
@@ -137,15 +185,12 @@ final class Section {
 	}
 
 	/**
-	 * Marks this section as a repeat of the other section.
+	 * Checks if the section is a repeat of another section.
 	 *
-	 * @param other the section that is repeated by this section
-	 * @return this section
+	 * @return true if the section is a repeat of another section, otherwise false
 	 */
-	public Section markAsRepeatOf(final Section other) {
-		useCache = true;
-		other.cacheResult = true;
-		return this;
+	private boolean isRepeat() {
+		return name.isEmpty();
 	}
 
 	/**

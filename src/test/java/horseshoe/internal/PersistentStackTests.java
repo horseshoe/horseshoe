@@ -22,16 +22,6 @@ public class PersistentStackTests {
 	}
 
 	@Test
-	public void testHasPoppedItem() {
-		final PersistentStack<Object> objects = new PersistentStack<>();
-
-		objects.push("Test");
-		assertFalse(objects.hasPoppedItem());
-		objects.pop();
-		assertTrue(objects.hasPoppedItem());
-	}
-
-	@Test
 	public void testIsEmpty() {
 		final PersistentStack<Object> objects = new PersistentStack<>();
 

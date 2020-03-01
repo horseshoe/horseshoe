@@ -462,15 +462,9 @@ public class TemplateLoader {
 					case '#': { // Start a new section, or repeat the previous section
 						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
-						if (expression.length() == 0) { // Repeat the previous section
-							if (!sections.hasPoppedItem()) {
-								throw new LoadException(loaders, "Repeat section without prior section");
-							}
-
-							final Section repeatedSection = sections.getPoppedItem();
-
-							sections.push(new Section(sections.peek(), "", repeatedSection.getExpression(), null, false).markAsRepeatOf(repeatedSection));
-						} else if (expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
+						if (expression.length() == 0 && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
+							sections.push(Section.repeat(sections.peek()));
+						} else if (expression.length() != 0 && expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
 							final Matcher annotation = ANNOTATION_PATTERN.matcher(expression);
 
 							if (!annotation.matches()) {
