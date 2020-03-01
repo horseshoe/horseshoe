@@ -47,11 +47,12 @@ public final class Expression {
 	private static final Method STRING_VALUE_OF;
 
 	// The patterns used for parsing the grammar
-	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`|[.][.]|[.])[(]?)\\s*");
+	private static final Pattern COMMENTS_PATTERN = Pattern.compile("(?:(?s://[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|/[*].*?[*]/)\\s*)+", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`|[.][.]|[.])[(]?)\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_WITH_PREFIX_PATTERN;
-	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*");
-	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))(?<isLong>[lL])?\\s*");
-	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>[^']*)')\\s*");
+	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>[^']*)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern OPERATOR_PATTERN;
 
 	private final String location;
@@ -174,8 +175,8 @@ public final class Expression {
 		}
 
 		// Add comma as a separator
-		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<prefix>[&/\\\\])|(?<backreach>(?:[.][.][/\\\\])+)|(?<current>[.][/\\\\])?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?=(?<assignment>" + assignmentOperators.substring(1) + ")(?:[^=]|$))?");
-		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + allOperators.append(",)\\s*").toString());
+		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<prefix>[&/\\\\])|(?<backreach>(?:[.][.][/\\\\])+)|(?<current>[.][/\\\\])?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?=(?:" + COMMENTS_PATTERN + ")?(?<assignment>" + assignmentOperators.substring(1) + ")(?:[^=]|$))?", Pattern.UNICODE_CHARACTER_CLASS);
+		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + allOperators.append(",)\\s*").toString(), Pattern.UNICODE_CHARACTER_CLASS);
 	}
 
 	/**
@@ -587,6 +588,15 @@ public final class Expression {
 			for (final Matcher matcher = IDENTIFIER_WITH_PREFIX_PATTERN.matcher(expressionString); matcher.regionStart() < length; matcher.region(matcher.end(), length)) {
 				final boolean hasLeftExpression = (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION | Operator.X_RIGHT_EXPRESSIONS));
 				final boolean lastNavigation = (lastOperator != null && lastOperator.has(Operator.NAVIGATION));
+
+				// Skip comments
+				if (matcher.usePattern(COMMENTS_PATTERN).lookingAt()) {
+					if (matcher.hitEnd()) {
+						break;
+					}
+
+					matcher.region(matcher.end(), length);
+				}
 
 				// Check for identifier or literal
 				if (!hasLeftExpression && matcher.usePattern(lastNavigation ? IDENTIFIER_PATTERN : IDENTIFIER_WITH_PREFIX_PATTERN).lookingAt()) { // Identifier

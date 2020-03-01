@@ -20,7 +20,7 @@ import horseshoe.internal.ParsedLine;
  */
 public final class Loader implements AutoCloseable {
 
-	private static final Pattern NEW_LINE = Pattern.compile("\\r\\n?|\\n");
+	private static final Pattern NEW_LINE = Pattern.compile("\\r\\n|[\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]");
 
 	private final String name;
 	private final Path file;

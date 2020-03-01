@@ -30,10 +30,10 @@ import horseshoe.internal.PersistentStack;
 public class TemplateLoader {
 
 	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(Arrays.asList(new ParsedLine("", null)), true);
-	private static final Pattern WHITESPACE_ONLY_PATTERN = Pattern.compile("\\s*");
-	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=");
-	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL);
-	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?[-=]>\\s*");
+	private static final Pattern WHITESPACE_ONLY_PATTERN = Pattern.compile("\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL | Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?[-=]>\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<String, Template> templates = new HashMap<>();
 	private final Map<String, Loader> templateLoaders = new HashMap<>();

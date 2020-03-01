@@ -262,6 +262,11 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testComments() throws ReflectiveOperationException {
+		assertEquals("true, false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "// Ignore this comment\n(\"a\" + \"bc\" == \"ab\" + \"c\") + \", \" + /* Ignore multi-line comment with code\n '; ' + */ (5 + 8.3 == 5.31 + 8) /* Trailing double comment */ // Second comment", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+	}
+
+	@Test
 	public void testCompareOperators() throws ReflectiveOperationException {
 		assertEquals("true, false, true, false, true, false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(\"a\" + \"bc\" == \"ab\" + \"c\") + \", \" + (5 + 8.3 == 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 == 0xFFFF) + \", \" + (\"A\" == \"B\") + \", \" + (null == null) + \", \" + (null == 5)", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("false, true, false, true, false, true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(\"a\" + \"bc\" != \"ab\" + \"c\") + \", \" + (5 + 8.3 != 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 != 0xFFFF) + \", \" + (\"A\" != \"B\") + \", \" + (null != null) + \", \" + (null != 5)", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
@@ -299,7 +304,7 @@ public class ExpressionTests {
 	public void testLocals() throws ReflectiveOperationException {
 		final PersistentStack<Object> context = new PersistentStack<>();
 		context.push(Helper.loadMap("r", 10, "i2", 2, "π", 3.14159265358979311599796346854, "bigNum", 9999999999L));
-		assertTrue(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "π = 3.14159265358979311599796346854; r = 4; \"r = \" + r + \", d = \" + (r * 2) + \", a = \" + (π * r * r)", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString().startsWith("r = 4, d = 8, a = 50.26"));
+		assertTrue(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "π = 3.14159265358979311599796346854; r /* radius */ = 4; \"r = \" + r + \", d = \" + (r * 2) + \", a = \" + (π * r * r)", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString().startsWith("r = 4, d = 8, a = 50.26"));
 		assertEquals(418.87902047863909846168578443727, (Double)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "r = 4; 4 / 3.0 * π * ./r *./r", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER), 0.00001);
 		assertNull(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "b == 0 ? (a = 1) : 4; a", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER));
 
