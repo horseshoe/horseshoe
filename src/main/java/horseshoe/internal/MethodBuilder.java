@@ -7,6 +7,8 @@ import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -1466,7 +1468,14 @@ public final class MethodBuilder {
 		classBytecode[attributeIndex]     = 0x00;
 		classBytecode[attributeIndex + 1] = 0x00;
 
-		return new BytecodeLoader<T>(loader).defineClass(name, classBytecode);
+		return AccessController.doPrivileged(
+			new PrivilegedAction<Class<T>>() {
+				@Override
+				public Class<T> run() {
+					return new BytecodeLoader<T>(loader).defineClass(name, classBytecode);
+				}
+			}
+		);
 	}
 
 	/**
@@ -1521,6 +1530,16 @@ public final class MethodBuilder {
 
 		labels.add(label);
 		return label;
+	}
+
+	/**
+	 * Pushes a boolean onto the stack.
+	 *
+	 * @param value the value to push onto the stack
+	 * @return this builder
+	 */
+	public MethodBuilder pushConstant(final boolean value) {
+		return addCode(value ? ICONST_1 :ICONST_0);
 	}
 
 	/**

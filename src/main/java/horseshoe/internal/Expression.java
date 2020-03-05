@@ -4,6 +4,8 @@ import static horseshoe.internal.MethodBuilder.*;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -177,6 +179,104 @@ public final class Expression {
 		// Add comma as a separator
 		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<prefix>[&/\\\\])|(?<backreach>(?:[.][.][/\\\\])+)|(?<current>[.][/\\\\])?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?=(?:" + COMMENTS_PATTERN + ")?(?<assignment>" + assignmentOperators.substring(1) + ")(?:[^=]|$))?", Pattern.UNICODE_CHARACTER_CLASS);
 		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + allOperators.append(",)\\s*").toString(), Pattern.UNICODE_CHARACTER_CLASS);
+	}
+
+	/**
+	 * Compares two objects.
+	 *
+	 * @param equality true to test for equality, false to perform 3-way comparison
+	 * @param first the object to compare
+	 * @param second the object being compared
+	 * @return the result of comparing the two values where a negative value indicates the first object is less than the second, a positive value indicates the first object is greater than the second, and a value of zero indicates the objects are equivalent
+	 */
+	@SuppressWarnings("unchecked")
+	public static int compare(final boolean equality, final Object first, final Object second) {
+		if (first instanceof Number) {
+			if (first instanceof Double || first instanceof Float) {
+				if (second instanceof Number) {
+					if (second instanceof Double || second instanceof Float) {
+						return Double.compare(((Number)first).doubleValue(), ((Number)second).doubleValue());
+					} else if (second instanceof BigDecimal) {
+						return BigDecimal.valueOf(((Number)first).doubleValue()).compareTo((BigDecimal)second);
+					} else if (second instanceof BigInteger) {
+						return BigDecimal.valueOf(((Number)first).doubleValue()).compareTo(new BigDecimal((BigInteger)second));
+					} else {
+						return BigDecimal.valueOf(((Number)first).doubleValue()).compareTo(BigDecimal.valueOf(((Number)second).longValue()));
+					}
+				} else if (second instanceof Character) {
+					return Double.compare(((Number)first).doubleValue(), ((Character)second).charValue());
+				}
+			} else if (first instanceof BigDecimal) {
+				if (second instanceof Number) {
+					if (second instanceof Double || second instanceof Float) {
+						return ((BigDecimal)first).compareTo(BigDecimal.valueOf(((Number)second).doubleValue()));
+					} else if (second instanceof BigDecimal) {
+						return ((BigDecimal)first).compareTo((BigDecimal)second);
+					} else if (second instanceof BigInteger) {
+						return ((BigDecimal)first).compareTo(new BigDecimal((BigInteger)second));
+					} else {
+						return ((BigDecimal)first).compareTo(BigDecimal.valueOf(((Number)second).longValue()));
+					}
+				} else if (second instanceof Character) {
+					return ((BigDecimal)first).compareTo(BigDecimal.valueOf(((Character)second).charValue()));
+				}
+			} else if (first instanceof BigInteger) {
+				if (second instanceof Number) {
+					if (second instanceof Double || second instanceof Float) {
+						return new BigDecimal((BigInteger)first).compareTo(BigDecimal.valueOf(((Number)second).doubleValue()));
+					} else if (second instanceof BigDecimal) {
+						return new BigDecimal((BigInteger)first).compareTo((BigDecimal)second);
+					} else if (second instanceof BigInteger) {
+						return ((BigInteger)first).compareTo((BigInteger)second);
+					} else {
+						return ((BigInteger)first).compareTo(BigInteger.valueOf(((Number)second).longValue()));
+					}
+				} else if (second instanceof Character) {
+					return ((BigInteger)first).compareTo(BigInteger.valueOf(((Character)second).charValue()));
+				}
+			} else {
+				if (second instanceof Number) {
+					if (second instanceof Double || second instanceof Float) {
+						return BigDecimal.valueOf(((Number)first).longValue()).compareTo(BigDecimal.valueOf(((Number)second).doubleValue()));
+					} else if (second instanceof BigDecimal) {
+						return BigDecimal.valueOf(((Number)first).longValue()).compareTo((BigDecimal)second);
+					} else if (second instanceof BigInteger) {
+						return BigInteger.valueOf(((Number)first).longValue()).compareTo((BigInteger)second);
+					} else {
+						return Long.compare(((Number)first).longValue(), ((Number)second).longValue());
+					}
+				} else if (second instanceof Character) {
+					return Long.compare(((Number)first).longValue(), ((Character)second).charValue());
+				}
+			}
+		} else if (first instanceof Character) {
+			if (second instanceof Number) {
+				if (second instanceof Double || second instanceof Float) {
+					return BigDecimal.valueOf(((Character)first).charValue()).compareTo(BigDecimal.valueOf(((Number)second).doubleValue()));
+				} else if (second instanceof BigDecimal) {
+					return BigDecimal.valueOf(((Character)first).charValue()).compareTo((BigDecimal)second);
+				} else if (second instanceof BigInteger) {
+					return BigInteger.valueOf(((Character)first).charValue()).compareTo((BigInteger)second);
+				} else {
+					return Long.compare(((Character)first).charValue(), ((Number)second).longValue());
+				}
+			} else if (second instanceof Character) {
+				return Character.compare(((Character)first).charValue(), ((Character)second).charValue());
+			}
+		} else if ((first instanceof StringBuilder || first instanceof String) &&
+				(second instanceof StringBuilder || second instanceof String)) {
+			return first.toString().compareTo(second.toString());
+		} else if (equality) {
+			return (first == null ? second == null : first.equals(second)) ? 0 : 1;
+		} else if (first instanceof Comparable) {
+			return ((Comparable<Object>)first).compareTo(second);
+		}
+
+		if (equality) {
+			return 1; // Indicate not equal
+		} else {
+			throw new IllegalArgumentException("Unexpected object, expecting comparable object");
+		}
 	}
 
 	/**
@@ -438,22 +538,22 @@ public final class Expression {
 
 		// Comparison Operators
 		case "<=":
-			operands.push(left.execCompareOp(right, IF_ICMPLE, IFLE, Evaluable.FIRST_LOCAL_INDEX));
+			operands.push(left.execCompareOp(right, IFLE, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case ">=":
-			operands.push(left.execCompareOp(right, IF_ICMPGE, IFGE, Evaluable.FIRST_LOCAL_INDEX));
+			operands.push(left.execCompareOp(right, IFGE, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "<":
-			operands.push(left.execCompareOp(right, IF_ICMPLT, IFLT, Evaluable.FIRST_LOCAL_INDEX));
+			operands.push(left.execCompareOp(right, IFLT, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case ">":
-			operands.push(left.execCompareOp(right, IF_ICMPGT, IFGT, Evaluable.FIRST_LOCAL_INDEX));
+			operands.push(left.execCompareOp(right, IFGT, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "==":
-			operands.push(left.execCompareOp(right, IF_ICMPEQ, IFEQ, Evaluable.FIRST_LOCAL_INDEX));
+			operands.push(left.execCompareOp(right, IFEQ, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 		case "!=":
-			operands.push(left.execCompareOp(right, IF_ICMPNE, IFNE, Evaluable.FIRST_LOCAL_INDEX));
+			operands.push(left.execCompareOp(right, IFNE, Evaluable.FIRST_LOCAL_INDEX));
 			break;
 
 		// Ternary Operations

@@ -2,12 +2,18 @@ package horseshoe.internal;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 import org.junit.Test;
@@ -119,6 +125,21 @@ public class ExpressionTests {
 	@Test (expected = IllegalArgumentException.class)
 	public void testBadBackreachTooFar() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "../", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadCompare() throws ReflectiveOperationException {
+		assertEquals("Should have failed", Expression.compare(false, 5, "5"));
+	}
+
+	@Test (expected = ClassCastException.class)
+	public void testBadCompare2() throws ReflectiveOperationException {
+		assertEquals("Should have failed", Expression.compare(false, "5", 5));
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadCompare3() throws ReflectiveOperationException {
+		assertEquals("Should have failed", Expression.compare(false, new Object(), new Object()));
 	}
 
 	@Test (expected = IllegalArgumentException.class)
@@ -264,6 +285,46 @@ public class ExpressionTests {
 	@Test
 	public void testComments() throws ReflectiveOperationException {
 		assertEquals("true, false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "// Ignore this comment\n(\"a\" + \"bc\" == \"ab\" + \"c\") + \", \" + /* Ignore multi-line comment with code\n '; ' + */ (5 + 8.3 == 5.31 + 8) /* Trailing double comment */ // Second comment", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+	}
+
+	@Test
+	public void testCompare() {
+		final Object[] notEqual = { (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), ' ', new AtomicInteger(33), new AtomicLong(34L) };
+
+		for (int i = 0; i < notEqual.length; i++) {
+			for (int j = 0; j < notEqual.length; j++) {
+				if (i == j) {
+					assertTrue(Expression.compare(true, notEqual[i], notEqual[j]) == 0);
+				} else if (i < j) {
+					assertTrue(Expression.compare(true, notEqual[i], notEqual[j]) < 0);
+				} else {
+					assertTrue(Expression.compare(true, notEqual[i], notEqual[j]) > 0);
+				}
+			}
+
+			assertTrue(Expression.compare(true, notEqual[i], new Date(0)) != 0);
+			assertTrue(Expression.compare(true, notEqual[i], null) != 0);
+			assertTrue(Expression.compare(true, null, notEqual[i]) != 0);
+		}
+
+		final Object[] equal = { (byte)32, (short)32, 32, 32L, 32.0f, 32.0, BigDecimal.valueOf(32.0), BigInteger.valueOf(32), ' ', new AtomicInteger(32), new AtomicLong(32L) };
+
+		for (int i = 0; i < equal.length; i++) {
+			for (int j = 0; j < equal.length; j++) {
+				assertTrue(Expression.compare(true, equal[i], equal[j]) == 0);
+			}
+		}
+
+		assertFalse(Expression.compare(true, 5, "5") == 0);
+		assertTrue(Expression.compare(false, "a", "b") < 0);
+		assertTrue(Expression.compare(false, "2", "1") > 0);
+		assertTrue(Expression.compare(true, new Date(0), new Date(0)) == 0);
+		assertTrue(Expression.compare(true, new Date(0), new Date(1)) != 0);
+		assertTrue(Expression.compare(false, new Date(0), new Date(1)) < 0);
+		assertTrue(Expression.compare(false, new Date(1), new Date(0)) > 0);
+		assertTrue(Expression.compare(true, new StringBuilder().append('5'), "5") == 0);
+		assertTrue(Expression.compare(true, "5", new StringBuilder().append('5')) == 0);
+		assertTrue(Expression.compare(true, new StringBuilder().append('5'), new StringBuilder().append('5')) == 0);
 	}
 
 	@Test

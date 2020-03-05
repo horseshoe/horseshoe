@@ -27,8 +27,7 @@ final class Operand {
 	private static final Method DOUBLE_VALUE;
 	private static final Method LONG_VALUE;
 	private static final Method INT_VALUE;
-	private static final Method COMPARE_TO;
-	private static final Method EQUALS;
+	private static final Method COMPARE;
 	private static final Method TO_STRING;
 
 	public final Class<?> type; // null indicates a stack with { long longVal, double doubleVal, int type } on top
@@ -40,14 +39,19 @@ final class Operand {
 			DOUBLE_VALUE = Number.class.getMethod("doubleValue");
 			LONG_VALUE = Long.class.getMethod("longValue");
 			INT_VALUE = Number.class.getMethod("intValue");
-			COMPARE_TO = Comparable.class.getMethod("compareTo", Object.class);
-			EQUALS = Object.class.getMethod("equals", Object.class);
+			COMPARE = Expression.class.getMethod("compare", boolean.class, Object.class, Object.class);
 			TO_STRING = Object.class.getMethod("toString");
 		} catch (final ReflectiveOperationException e) {
 			throw new ExceptionInInitializerError("Failed to get required class member: " + e.getMessage());
 		}
 	}
 
+	/**
+	 * Creates a new operand of the specified type using the builder.
+	 *
+	 * @param type the type of the operand, or null to indicate a stack with { long longVal, double doubleVal, int type } on top
+	 * @param builder the builder used to generate data of the specified type
+	 */
 	public Operand(final Class<?> type, final MethodBuilder builder) {
 		this.type = type;
 		this.builder = builder;
@@ -64,7 +68,7 @@ final class Operand {
 	 * @param firstLocalIndex the first local variable index that can be used for temporary storage
 	 * @return the resulting operand from the comparison
 	 */
-	public Operand execCompareOp(final Operand other, final byte intBranchOpcode, final byte compareBranchOpcode, final int firstLocalIndex) {
+	public Operand execCompareOp(final Operand other, final byte compareBranchOpcode, final int firstLocalIndex) {
 		if ((type == null || (type.isPrimitive() && !boolean.class.equals(type))) && (other.type == null || (other.type.isPrimitive() && !boolean.class.equals(other.type)))) { // Mathematical comparison
 			final int typeIndex = firstLocalIndex;
 			final int doubleValueIndex = firstLocalIndex + 1;
@@ -84,29 +88,11 @@ final class Operand {
 		}
 
 		// Object compare
-		final Label notNumber = builder.newLabel();
-		final Label testSecondStringBuilder = builder.newLabel();
-		final Label compareObjects = builder.newLabel();
-		final Label firstIsNull = builder.newLabel();
-		final Label failure = builder.newLabel();
 		final Label trueLabel = builder.newLabel();
 		final Label end = builder.newLabel();
 
-		final MethodBuilder newBuilder = toObject(false).append(other.toObject(false)).addCode(SWAP, DUP_X1).addInstanceOfCheck(Number.class).addBranch(IFEQ, notNumber).addCode(DUP).addInstanceOfCheck(Number.class).addBranch(IFEQ, notNumber).addCode(SWAP).addCast(Number.class).addInvoke(DOUBLE_VALUE).addCode(DUP2_X1, POP2).addCast(Number.class).addInvoke(DOUBLE_VALUE).addCode(DCMPG).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
-			.updateLabel(notNumber).addCode(SWAP, DUP_X1).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, testSecondStringBuilder).addCode(SWAP).addInvoke(TO_STRING).addCode(SWAP)
-			.updateLabel(testSecondStringBuilder).addCode(DUP).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, compareObjects).addInvoke(TO_STRING);
-
-		if (compareBranchOpcode == IFEQ) {
-			newBuilder.updateLabel(compareObjects).addCode(SWAP, DUP_X1).addBranch(IFNULL, firstIsNull).addInvoke(EQUALS).addBranch(GOTO, end)
-				.updateLabel(firstIsNull).addCode(SWAP, POP).addBranch(IFNULL, trueLabel).addCode(ICONST_0).addBranch(GOTO, end);
-		} else if (compareBranchOpcode == IFNE) {
-			newBuilder.updateLabel(compareObjects).addCode(SWAP, DUP_X1).addBranch(IFNULL, firstIsNull).addInvoke(EQUALS).addBranch(IFEQ, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
-				.updateLabel(firstIsNull).addCode(SWAP, POP).addBranch(IFNONNULL, trueLabel).addCode(ICONST_0).addBranch(GOTO, end);
-		} else {
-			newBuilder.updateLabel(compareObjects).addCode(SWAP, DUP_X1).addInstanceOfCheck(Comparable.class).addBranch(IFEQ, failure).addCode(SWAP).addCast(Comparable.class).addCode(SWAP).addInvoke(COMPARE_TO).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end);
-		}
-
-		return new Operand(boolean.class, newBuilder.updateLabel(failure).addThrow(RuntimeException.class, "Unexpected object, expecting comparable object").addCode(ACONST_NULL, ARETURN).updateLabel(trueLabel).addCode(ICONST_1).updateLabel(end));
+		return new Operand(boolean.class, new MethodBuilder().pushConstant(compareBranchOpcode == IFEQ || compareBranchOpcode == IFNE).append(toObject(false)).append(other.toObject(false)).addInvoke(COMPARE).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
+				.updateLabel(trueLabel).addCode(ICONST_1).updateLabel(end));
 	}
 
 	/**
