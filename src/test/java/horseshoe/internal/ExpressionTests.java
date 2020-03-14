@@ -339,6 +339,17 @@ public class ExpressionTests {
 		assertEquals("true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "\"a\" + \"b\" == \"ab\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 	}
 
+	@Test
+	public void testConvertToBoolean() {
+		for (final Object object : new Object[] { true, (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), ' ', new AtomicInteger(33), new AtomicLong(34L), "", "a" }) {
+			assertTrue(Expression.convertToBoolean(object));
+		}
+
+		for (final Object object : new Object[] { false, (byte)0, (short)0, 0, 0L, 0.0f, 0.0, BigDecimal.valueOf(0.0), BigInteger.valueOf(0), '\0', new AtomicInteger(0), new AtomicLong(0L), null }) {
+			assertFalse(Expression.convertToBoolean(object));
+		}
+	}
+
 	@Test (expected = HaltRenderingException.class)
 	public void testDie() throws ReflectiveOperationException {
 		assertEquals("Should have died", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "☠ \"Should print out as a severe log statement\"; \"Did not die\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
@@ -410,6 +421,12 @@ public class ExpressionTests {
 	@Test
 	public void testNull() throws ReflectiveOperationException {
 		assertEquals(null, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "null.toString()", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER));
+	}
+
+	@Test
+	public void testOperand() throws ReflectiveOperationException {
+		assertEquals("", new Operand(Object.class, null).toString());
+		assertNotEquals("", new Operand(Object.class, new MethodBuilder().pushConstant(0)).toString());
 	}
 
 	@Test

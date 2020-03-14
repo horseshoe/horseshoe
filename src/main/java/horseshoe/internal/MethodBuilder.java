@@ -935,28 +935,34 @@ public final class MethodBuilder {
 						return addCode(I2D);
 					}
 				} else if (long.class.equals(from)) {
-					if (boolean.class.equals(to) || char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
+					if (char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
 						return addCode(L2I).addPrimitiveConversion(int.class, to);
 					} else if (float.class.equals(to)) {
 						return addCode(L2F);
 					} else if (double.class.equals(to)) {
 						return addCode(L2D);
+					} else if (boolean.class.equals(to)) {
+						return addCode(LCONST_0, LCMP);
 					}
 				} else if (float.class.equals(from)) {
-					if (boolean.class.equals(to) || char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
+					if (char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
 						return addCode(F2I).addPrimitiveConversion(int.class, to);
 					} else if (long.class.equals(to)) {
 						return addCode(F2L);
 					} else if (double.class.equals(to)) {
 						return addCode(F2D);
+					} else if (boolean.class.equals(to)) {
+						return addCode(FCONST_0, FCMPG);
 					}
 				} else if (double.class.equals(from)) {
-					if (boolean.class.equals(to) || char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
+					if (char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
 						return addCode(D2I).addPrimitiveConversion(int.class, to);
 					} else if (long.class.equals(to)) {
 						return addCode(D2L);
 					} else if (float.class.equals(to)) {
 						return addCode(D2F);
+					} else if (boolean.class.equals(to)) {
+						return addCode(DCONST_0, DCMPG);
 					}
 				}
 			} else { // Step 3: Box primitive if needed

@@ -257,9 +257,9 @@ public final class Expression {
 					return BigDecimal.valueOf(((Character)first).charValue()).compareTo((BigDecimal)second);
 				} else if (second instanceof BigInteger) {
 					return BigInteger.valueOf(((Character)first).charValue()).compareTo((BigInteger)second);
-				} else {
-					return Long.compare(((Character)first).charValue(), ((Number)second).longValue());
 				}
+
+				return Long.compare(((Character)first).charValue(), ((Number)second).longValue());
 			} else if (second instanceof Character) {
 				return Character.compare(((Character)first).charValue(), ((Character)second).charValue());
 			}
@@ -274,9 +274,35 @@ public final class Expression {
 
 		if (equality) {
 			return 1; // Indicate not equal
-		} else {
-			throw new IllegalArgumentException("Unexpected object, expecting comparable object");
 		}
+
+		throw new IllegalArgumentException("Unexpected object, expecting comparable object");
+	}
+
+	/**
+	 * Converts an object to a boolean.
+	 *
+	 * @param object the object to convert to a boolean
+	 * @return the result of converting the object to a boolean
+	 */
+	public static boolean convertToBoolean(final Object object) {
+		if (object instanceof Number) {
+			if (object instanceof Double || object instanceof Float) {
+				return ((Number)object).doubleValue() != 0.0;
+			} else if (object instanceof BigDecimal) {
+				return BigDecimal.ZERO.compareTo((BigDecimal)object) != 0;
+			} else if (object instanceof BigInteger) {
+				return !BigInteger.ZERO.equals(object);
+			}
+
+			return ((Number)object).longValue() != 0;
+		} else if (object instanceof Boolean) {
+			return ((Boolean)object).booleanValue();
+		} else if (object instanceof Character) {
+			return ((Character)object).charValue() != 0;
+		}
+
+		return object != null;
 	}
 
 	/**

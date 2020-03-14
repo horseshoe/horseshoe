@@ -23,11 +23,11 @@ final class Operand {
 			boolean.class, int.class, long.class, double.class, Object.class, String.class, StringBuilder.class, Entry.class, null)));
 
 	// Reflected Methods
-	private static final Method BOOLEAN_VALUE;
 	private static final Method DOUBLE_VALUE;
 	private static final Method LONG_VALUE;
 	private static final Method INT_VALUE;
 	private static final Method COMPARE;
+	private static final Method CONVERT_TO_BOOLEAN;
 	private static final Method TO_STRING;
 
 	public final Class<?> type; // null indicates a stack with { long longVal, double doubleVal, int type } on top
@@ -35,11 +35,11 @@ final class Operand {
 
 	static {
 		try {
-			BOOLEAN_VALUE = Boolean.class.getMethod("booleanValue");
 			DOUBLE_VALUE = Number.class.getMethod("doubleValue");
 			LONG_VALUE = Long.class.getMethod("longValue");
 			INT_VALUE = Number.class.getMethod("intValue");
 			COMPARE = Expression.class.getMethod("compare", boolean.class, Object.class, Object.class);
+			CONVERT_TO_BOOLEAN = Expression.class.getMethod("convertToBoolean", Object.class);
 			TO_STRING = Object.class.getMethod("toString");
 		} catch (final ReflectiveOperationException e) {
 			throw new ExceptionInInitializerError("Failed to get required class member: " + e.getMessage());
@@ -158,7 +158,7 @@ final class Operand {
 		return new Operand(null, toNumeric(false).append(other.toNumeric(false)).addAccess(ISTORE, typeIndex).addCode(POP2).addAccess(LSTORE, longValueIndex)
 				.addCode(DUP).addAccess(ILOAD, typeIndex).addCode(IOR, DUP).addBranch(IFNE, notInt).addCode(POP2, POP2, L2I).addAccess(LLOAD, longValueIndex).addCode(L2I, intOpcode, I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
 				.updateLabel(notInt).pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP, POP2).addAccess(LLOAD, longValueIndex).addCode((secondOperandInt ? L2I : NOP), longOpcode, DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
-				.updateLabel(isFloating).addThrow(RuntimeException.class, "Unexpected floating-point value, expecting integral value").addCode(ACONST_NULL, ARETURN).updateLabel(end));
+				.updateLabel(isFloating).addThrow(IllegalArgumentException.class, "Unexpected floating-point value, expecting integral value").addCode(ACONST_NULL, ARETURN).updateLabel(end));
 	}
 
 	/**
@@ -168,24 +168,12 @@ final class Operand {
 	 */
 	public MethodBuilder toBoolean() {
 		if (type == null) {
-			final Label isFloating = builder.newLabel();
-			final Label end = builder.newLabel();
-
-			return builder.pushConstant(LONG_TYPE).addBranch(IF_ICMPGT, isFloating).addCode(POP2, LCONST_0, LCMP).addBranch(GOTO, end)
-					.updateLabel(isFloating).addCode(DUP2_X2, POP2, POP2).addCode(DCONST_0, DCMPG).updateLabel(end);
+			return builder.addCode(POP, DCONST_0, DCMPG, DUP_X2, POP, LCONST_0, LCMP, IOR);
 		} else if (type.isPrimitive()) {
 			return builder.addPrimitiveConversion(type, boolean.class);
 		}
 
-		final Label notBoolean = builder.newLabel();
-		final Label notNumber = builder.newLabel();
-		final Label notNull = builder.newLabel();
-		final Label end = builder.newLabel();
-
-		return builder.addCode(DUP).addInstanceOfCheck(Boolean.class).addBranch(IFEQ, notBoolean).addCast(Boolean.class).addInvoke(BOOLEAN_VALUE).addBranch(GOTO, end)
-				.updateLabel(notBoolean).addCode(DUP).addInstanceOfCheck(Number.class).addBranch(IFEQ, notNumber).addCast(Number.class).addInvoke(DOUBLE_VALUE).addCode(DCONST_0, DCMPG).addBranch(GOTO, end)
-				.updateLabel(notNumber).addBranch(IFNONNULL, notNull).addCode(ICONST_0).addBranch(GOTO, end)
-				.updateLabel(notNull).addCode(ICONST_1).updateLabel(end);
+		return builder.addInvoke(CONVERT_TO_BOOLEAN);
 	}
 
 	/**
@@ -201,16 +189,16 @@ final class Operand {
 			} else {
 				final Label end = builder.newLabel();
 
-				return builder.addCode(DUP).pushConstant(LONG_TYPE).addBranch(IF_ICMPLE, end).addThrow(RuntimeException.class, "Unexpected double value, expecting integral value").updateLabel(end);
+				return builder.addCode(DUP).pushConstant(LONG_TYPE).addBranch(IF_ICMPLE, end).addThrow(IllegalArgumentException.class, "Unexpected double value, expecting integral value").updateLabel(end);
 			}
 		} else if (type.isPrimitive()) {
 			if (boolean.class.equals(type)) {
-				return builder.addThrow(RuntimeException.class, "Unexpected boolean value, expecting numeric value");
+				return builder.addThrow(IllegalArgumentException.class, "Unexpected boolean value, expecting numeric value");
 			} else if (double.class.equals(type) || float.class.equals(type)) {
 				if (allowFloating) {
 					return builder.addPrimitiveConversion(type, double.class).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE);
 				} else {
-					return builder.addThrow(RuntimeException.class, "Unexpected " + type.getSimpleName() + " value, expecting integral value");
+					return builder.addThrow(IllegalArgumentException.class, "Unexpected " + type.getSimpleName() + " value, expecting integral value");
 				}
 			} else if (long.class.equals(type)) {
 				return builder.addCode(DCONST_0).pushConstant(LONG_TYPE);
@@ -232,7 +220,7 @@ final class Operand {
 		if (allowFloating) {
 			builder.addCast(Double.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end);
 		} else {
-			builder.addThrow(RuntimeException.class, "Unexpected double value, expecting integral value");
+			builder.addThrow(IllegalArgumentException.class, "Unexpected double value, expecting integral value");
 		}
 
 		builder.updateLabel(notDouble).addCode(DUP).addInstanceOfCheck(Long.class).addBranch(IFEQ, notLong).addCast(Long.class).addInvoke(LONG_VALUE).addCode(DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
@@ -241,11 +229,11 @@ final class Operand {
 		if (allowFloating) {
 			builder.addCast(Float.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end);
 		} else {
-			builder.addThrow(RuntimeException.class, "Unexpected float value, expecting integral value");
+			builder.addThrow(IllegalArgumentException.class, "Unexpected float value, expecting integral value");
 		}
 
 		return builder.updateLabel(notFloat).addCast(Number.class).addInvoke(INT_VALUE).addCode(I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
-				.updateLabel(notNumber).addThrow(RuntimeException.class, "Invalid object, expecting boxed numeric primitive").addCode(ACONST_NULL, ARETURN).updateLabel(end);
+				.updateLabel(notNumber).addThrow(IllegalArgumentException.class, "Invalid object, expecting boxed numeric primitive").addCode(ACONST_NULL, ARETURN).updateLabel(end);
 	}
 
 	/**
