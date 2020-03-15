@@ -40,6 +40,7 @@ public final class Expression {
 	private static final Constructor<?> ITERABLE_MAP_CTOR_INT;
 	private static final Constructor<?> LINKED_HASH_MAP_CTOR_INT;
 	private static final Method MAP_PUT;
+	private static final Method PATTERN_COMPILE;
 	private static final Method PERSISTENT_STACK_PEEK;
 	private static final Method PERSISTENT_STACK_PEEK_BASE;
 	private static final Method PERSISTENT_STACK_POP;
@@ -54,6 +55,7 @@ public final class Expression {
 	private static final Pattern IDENTIFIER_WITH_PREFIX_PATTERN;
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern REGEX_PATTERN = Pattern.compile("~/(?<regex>(?:[^/\\\\]|\\\\.)*)/\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>[^']*)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern OPERATOR_PATTERN;
 
@@ -135,6 +137,7 @@ public final class Expression {
 			ITERABLE_MAP_CTOR_INT = IterableMap.class.getConstructor(int.class);
 			LINKED_HASH_MAP_CTOR_INT = LinkedHashMap.class.getConstructor(int.class);
 			MAP_PUT = Map.class.getMethod("put", Object.class, Object.class);
+			PATTERN_COMPILE = Pattern.class.getMethod("compile", String.class);
 			PERSISTENT_STACK_PEEK = PersistentStack.class.getMethod("peek", int.class);
 			PERSISTENT_STACK_PEEK_BASE = PersistentStack.class.getMethod("peekBase");
 			PERSISTENT_STACK_POP = PersistentStack.class.getMethod("pop");
@@ -933,6 +936,8 @@ public final class Expression {
 
 						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(sb.append(string, start, string.length()).toString())));
 					}
+				} else if (!hasLeftExpression && matcher.usePattern(REGEX_PATTERN).lookingAt()) { // Regular expression literal
+					operands.push(new Operand(Object.class, new MethodBuilder().pushConstant(Pattern.compile(matcher.group("regex")).pattern()).addInvoke(PATTERN_COMPILE)));
 				} else if (matcher.usePattern(OPERATOR_PATTERN).lookingAt()) { // Operator
 					final String token = matcher.group("operator");
 					final Operator operator = Operator.get(token, hasLeftExpression);

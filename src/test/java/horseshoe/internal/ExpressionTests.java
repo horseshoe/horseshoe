@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.junit.Test;
 
@@ -257,6 +258,11 @@ public class ExpressionTests {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "call(/a())", Collections.emptyMap(), true);
 	}
 
+	@Test (expected = PatternSyntaxException.class)
+	public void testBadRegularExpression() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "~/^abc(.\\u0065/.matcher('abcde').matches()", Collections.emptyMap(), true);
+	}
+
 	@Test (expected = IllegalArgumentException.class)
 	public void testBadStringLiteral() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "\"bad\\\"", Collections.emptyMap(), true);
@@ -445,6 +451,12 @@ public class ExpressionTests {
 		assertEquals("a", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "`a\\\\`", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("5", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "`\\`b\\\\\\``", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("a5", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "`a\\\\` + `\\`b\\\\\\``", Collections.emptyMap(), true).evaluate(context, ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+	}
+
+	@Test
+	public void testRegularExpression() throws ReflectiveOperationException {
+		assertEquals("true, false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "~/^abc.\\u0065/.matcher('abcde').matches() + ', ' + ~/^abc.\\u0065/.matcher('abcdef').matches()", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+		assertEquals("true, true, true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "~//.matcher('').matches() + ', ' + ~/\\//.matcher('/').matches() + ', ' + ~/\\\\/.matcher('\\').matches()", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 	}
 
 	@Test
