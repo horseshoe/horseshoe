@@ -63,7 +63,6 @@ final class Operand {
 	 * Generates an operand that is the result of comparing this operand and the other specified operand.
 	 *
 	 * @param other the other operand used to calculate the result
-	 * @param intBranchOpcode the opcode used to compare and branch the two int operands
 	 * @param compareBranchOpcode the opcode used to branch after a compare of the two operands
 	 * @param firstLocalIndex the first local variable index that can be used for temporary storage
 	 * @return the resulting operand from the comparison
@@ -237,10 +236,10 @@ final class Operand {
 	}
 
 	/**
-	 * Converts the operand to an object, combining all builders into the single builder specified. All existing builders are cleared.
+	 * Converts the operand to an object.
 	 *
-	 * @param builder the builder used to combine all other builders
-	 * @return the combined builder that was passed to the method
+	 * @param generateReturn true to generate return instructions rather than place the object on the stack, otherwise false
+	 * @return the resulting object operand
 	 */
 	public MethodBuilder toObject(final boolean generateReturn) {
 		if (type == null) {

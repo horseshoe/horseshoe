@@ -266,8 +266,8 @@ public final class Expression {
 			} else if (second instanceof Character) {
 				return Character.compare(((Character)first).charValue(), ((Character)second).charValue());
 			}
-		} else if ((first instanceof StringBuilder || first instanceof String) &&
-				(second instanceof StringBuilder || second instanceof String)) {
+		} else if ((first instanceof StringBuilder || first instanceof String || first instanceof Character) &&
+				(second instanceof StringBuilder || second instanceof String || second instanceof Character)) {
 			return first.toString().compareTo(second.toString());
 		} else if (equality) {
 			return (first == null ? second == null : first.equals(second)) ? 0 : 1;
@@ -333,7 +333,7 @@ public final class Expression {
 	 * @param expressions the map used to lookup the index of an expression
 	 * @param identifiers the map used to lookup the index of an identifier
 	 * @param operands the operand stack for the expression
-	 * @param operator the operator to evaluate
+	 * @param operators the operator stack to evaluate
 	 */
 	private static void processOperation(final Map<String, Expression> namedExpressions, final Map<Expression, Integer> expressions, final HashMap<Identifier, Integer> identifiers, final PersistentStack<Operand> operands, final PersistentStack<Operator> operators) {
 		final Operator operator = operators.pop();
@@ -402,7 +402,7 @@ public final class Expression {
 		switch (operator.getString()) {
 		// Array / Map Operations
 		case "[":
-		case "?[":
+		case "?[?":
 			if (left != null) {
 				if (!Object.class.equals(left.type)) {
 					throw new IllegalArgumentException("Unexpected '" + operator.getString() + "' operator applied to " + (left.type == null ? "numeric" : left.type.getName()) + " value, expecting map or array type value");
@@ -639,7 +639,7 @@ public final class Expression {
 			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).append(left.builder)));
 			break;
 
-		case "☠": // Die
+		case "\u2620": case "~:<": // Die
 			operands.push(new Operand(Object.class, right.toObject(false).addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addCode(ATHROW)));
 			break;
 
@@ -669,6 +669,7 @@ public final class Expression {
 	 * Creates a new expression.
 	 *
 	 * @param location the location of the expression
+	 * @param expressionName the name of the expression
 	 * @param expressionString the trimmed, advanced expression string
 	 * @param namedExpressions the map used to lookup named expressions
 	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list

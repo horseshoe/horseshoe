@@ -9,7 +9,21 @@ public final class Identifier {
 
 	public static final int UNSTATED_BACKREACH = -1;
 	public static final int NOT_A_METHOD = -1;
-	public static final String PATTERN = "[\\p{L}_\\$][\\p{L}\\p{Nd}_\\$]*";
+
+	private static final String LETTER_CHARACTERS = "\\p{Lu}\\p{Ll}\\p{Lt}\\p{Lm}\\p{Lo}"; // Character.isLetter()
+	private static final String CHARACTERS = LETTER_CHARACTERS // Derived from Character.isJavaIdentifierPart()
+			+ "\\p{Sc}" // Currency symbol
+			+ "\\p{Pc}" // Connecting punctuation character
+			+ "\\p{Nd}" // Digit
+			+ "\\p{Nl}" // Numeric letter
+			+ "\\p{Mc}" // Combining mark
+			+ "\\p{Mn}" // Non-spacing mark
+			+ "\\u0000-\\u0008\\u000E-\\u001B\\u007F-\\u009F\\p{Zl}\\p{Zp}\\p{Cf}"; // Character.isIdentifierIgnorable()
+
+	public static final String CHARACTER_CLASS = "[" + CHARACTERS + "]";
+	public static final String NEGATED_CHARACTER_CLASS = "[^" + CHARACTERS + "]";
+	public static final String PATTERN = "[" + LETTER_CHARACTERS + "\\p{Nl}\\p{Sc}\\p{Pc}" + "]" // Derived from Character.isJavaIdentifierStart()
+			+ CHARACTER_CLASS + "*"; // Derived from Character.isJavaIdentifierPart()
 
 	private final HashMap<Class<?>, Accessor> accessorDatabase = new LinkedHashMap<>();
 	private final String name;

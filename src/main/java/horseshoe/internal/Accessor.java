@@ -172,11 +172,12 @@ public abstract class Accessor {
 		}
 
 		/**
-		 * Creates a new static method accessor.
+		 * Creates a new class method accessor.
 		 *
 		 * @param parent the parent class for the method
 		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
+		 * @return the class method accessor, or null if no method could be found
 		 */
 		public static ClassMethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
 			final MethodSignature signature = new MethodSignature(methodSignature);
@@ -295,6 +296,7 @@ public abstract class Accessor {
 		 * @param parent the parent class for the method
 		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
+		 * @return the method accessor, or null if no method could be found
 		 */
 		public static MethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
 			final MethodSignature signature = new MethodSignature(methodSignature);

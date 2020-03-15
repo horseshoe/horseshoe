@@ -44,7 +44,7 @@ public class ExpressionTests {
 		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[\"1\", \"2\"][1]", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("1", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[7: \"1\", \"2\",][7]", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[\"1\", \"blah\": \"2\"][\"blah\"]", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
-		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "null?[1] ?? \"2\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "null?[?1] ?? \"2\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("4", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(1..5)[3]", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("8", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(10..5)[2]", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals(6, ((int[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "10..5", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER)).length);
@@ -130,17 +130,37 @@ public class ExpressionTests {
 
 	@Test (expected = IllegalArgumentException.class)
 	public void testBadCompare() throws ReflectiveOperationException {
-		assertEquals("Should have failed", Expression.compare(false, 5, "5"));
+		Expression.compare(false, 5, "5");
 	}
 
 	@Test (expected = ClassCastException.class)
 	public void testBadCompare2() throws ReflectiveOperationException {
-		assertEquals("Should have failed", Expression.compare(false, "5", 5));
+		Expression.compare(false, "5", 5);
 	}
 
 	@Test (expected = IllegalArgumentException.class)
 	public void testBadCompare3() throws ReflectiveOperationException {
-		assertEquals("Should have failed", Expression.compare(false, new Object(), new Object()));
+		Expression.compare(false, new Object(), new Object());
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadEmpty() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadEmptyParentheses() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "()", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadEmptyParentheses2() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(,)", Collections.emptyMap(), true);
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadEmptyParentheses3() throws ReflectiveOperationException {
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(a,,)", Collections.emptyMap(), true);
 	}
 
 	@Test (expected = IllegalArgumentException.class)
@@ -166,26 +186,6 @@ public class ExpressionTests {
 	@Test (expected = IllegalArgumentException.class)
 	public void testBadIdentifier5() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "1 b", Collections.emptyMap(), true);
-	}
-
-	@Test (expected = IllegalArgumentException.class)
-	public void testBadEmpty() throws ReflectiveOperationException {
-		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "", Collections.emptyMap(), true);
-	}
-
-	@Test (expected = IllegalArgumentException.class)
-	public void testBadEmptyParentheses() throws ReflectiveOperationException {
-		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "()", Collections.emptyMap(), true);
-	}
-
-	@Test (expected = IllegalArgumentException.class)
-	public void testBadEmptyParentheses2() throws ReflectiveOperationException {
-		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(,)", Collections.emptyMap(), true);
-	}
-
-	@Test (expected = IllegalArgumentException.class)
-	public void testBadEmptyParentheses3() throws ReflectiveOperationException {
-		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(a,,)", Collections.emptyMap(), true);
 	}
 
 	@Test (expected = IllegalArgumentException.class)
@@ -341,7 +341,7 @@ public class ExpressionTests {
 		assertEquals("true, false, true, false",   new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(\"a\" + \"bc\" >= \"ab\" + \"c\") + \", \" + (5 + 8.3 >= 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 >= 0xFFFF) + \", \" + (\"A\" >= \"B\")", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("false, true, false, true",   new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(\"a\" + \"bc\" <  \"ab\" + \"c\") + \", \" + (5 + 8.3 <  5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 <  0xFFFF) + \", \" + (\"A\" <  \"B\")", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("false, false, false, false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(\"a\" + \"bc\" >  \"ab\" + \"c\") + \", \" + (5 + 8.3 >  5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 >  0xFFFF) + \", \" + (\"A\" >  \"B\")", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
-		assertEquals("false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(null?.toString() == true?.toString())", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+		assertEquals("false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(null?.?toString() == true?.?toString())", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "\"a\" + \"b\" == \"ab\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 	}
 
@@ -358,7 +358,12 @@ public class ExpressionTests {
 
 	@Test (expected = HaltRenderingException.class)
 	public void testDie() throws ReflectiveOperationException {
-		assertEquals("Should have died", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "☠ \"Should print out as a severe log statement\"; \"Did not die\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+		assertEquals("Should have died", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "☠ \"Should die with error\"; \"Did not die\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+	}
+
+	@Test (expected = HaltRenderingException.class)
+	public void testDie2() throws ReflectiveOperationException {
+		assertEquals("Should have died", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "~:< 'Should die with error'; \"Did not die\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 	}
 
 	@Test
@@ -411,7 +416,7 @@ public class ExpressionTests {
 		assertEquals("true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "((\"four\".length() == 4) || false)", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(null || !!null)", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(true || 1)", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
-		assertEquals("true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(null?.toString() || true?.toString())", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+		assertEquals("true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(null?.?toString() || true?.?toString())", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 	}
 
 	@Test
@@ -463,8 +468,8 @@ public class ExpressionTests {
 	public void testSafeOperators() throws ReflectiveOperationException {
 		assertEquals("good", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "null ?? \"good\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 		assertEquals("good", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "\"good\" ?: \"bad\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
-		assertEquals("good", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(null?.toString()) ?? \"good\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
-		assertEquals("7", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(7?.toString()) ?? \"bad\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+		assertEquals("good", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(null?.?toString()) ?? \"good\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
+		assertEquals("7", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(7?.?toString()) ?? \"bad\"", Collections.emptyMap(), true).evaluate(new PersistentStack<>(), ContextAccess.CURRENT, null, Settings.DEFAULT_ERROR_LOGGER).toString());
 	}
 
 	@Test
