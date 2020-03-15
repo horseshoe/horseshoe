@@ -5,7 +5,13 @@ import static horseshoe.internal.Operator.METHOD_CALL;
 import static horseshoe.internal.Operator.RIGHT_EXPRESSION;
 import static horseshoe.internal.Operator.X_RIGHT_EXPRESSIONS;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.Test;
 
@@ -21,9 +27,9 @@ public class GenerateOperatorTable {
 
 	@Test
 	public void generateOperationTable() throws Exception {
-		System.out.println(" Operation Table:");
-		System.out.println("| Precedence | Operators | Associativity |");
-		System.out.println("| ---------- | --------- | ------------- |");
+		final String tableHeader = "| Precedence | Operators | Associativity |";
+		final StringBuilder operationTable = new StringBuilder(tableHeader).append(System.lineSeparator())
+				.append(tableHeader.replaceAll("[A-za-z]", "-")).append(System.lineSeparator());
 
 		final String separator = ", <br>";
 		final StringBuilder sb = new StringBuilder();
@@ -63,17 +69,27 @@ public class GenerateOperatorTable {
 					nextOperator = it.next();
 
 					if (operator.getPrecedence() != nextOperator.getPrecedence()) {
-						System.out.println("| " + operator.getPrecedence() + " | " + sb.substring(separator.length()) + " | " + (operator.isLeftAssociative() ? "Left&nbsp;to&nbsp;right" : "Right&nbsp;to&nbsp;left") + " |");
+						operationTable.append("| " + operator.getPrecedence() + " | " + sb.substring(separator.length()) + " | " + (operator.isLeftAssociative() ? "Left&nbsp;to&nbsp;right" : "Right&nbsp;to&nbsp;left") + " |").append(System.lineSeparator());
 						sb.setLength(0);
 					}
 				} else {
-					System.out.println("| " + operator.getPrecedence() + " | " + sb.substring(separator.length()) + " | " + (operator.isLeftAssociative() ? "Left&nbsp;to&nbsp;right" : "Right&nbsp;to&nbsp;left") + " |");
+					operationTable.append("| " + operator.getPrecedence() + " | " + sb.substring(separator.length()) + " | " + (operator.isLeftAssociative() ? "Left&nbsp;to&nbsp;right" : "Right&nbsp;to&nbsp;left") + " |").append(System.lineSeparator());
 					break;
 				}
 			}
 		}
 
-		System.out.println();
+		final String tableText = operationTable.toString();
+
+		System.out.println(" Operation Table:");
+		System.out.println(tableText);
+
+		// Replace the operation table text
+		final Path readmeFile = Paths.get("README.md");
+		final String newReadme = new String(Files.readAllBytes(readmeFile), StandardCharsets.UTF_8)
+				.replaceFirst("(?<=[\\n\\r])" + Pattern.quote(tableHeader) + "[\\n\\r]+(\\|.*[\\n\\r]+)+", Matcher.quoteReplacement(tableText + System.lineSeparator()));
+
+		Files.write(readmeFile, newReadme.getBytes(StandardCharsets.UTF_8));
 	}
 
 }
