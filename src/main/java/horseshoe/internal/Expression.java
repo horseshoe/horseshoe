@@ -18,8 +18,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import horseshoe.Settings;
-import horseshoe.Settings.ContextAccess;
 import horseshoe.internal.MethodBuilder.Label;
 
 public final class Expression {
@@ -29,6 +27,7 @@ public final class Expression {
 	// Reflected Methods
 	private static final Method ACCESSOR_LOOKUP;
 	private static final Method EXPRESSION_EVALUATE;
+	private static final Method EXPRESSION_GET_VALUE;
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING;
 	private static final Method IDENTIFIER_FIND_VALUE;
 	private static final Method IDENTIFIER_FIND_VALUE_METHOD;
@@ -40,11 +39,14 @@ public final class Expression {
 	private static final Constructor<?> ITERABLE_MAP_CTOR_INT;
 	private static final Constructor<?> LINKED_HASH_MAP_CTOR_INT;
 	private static final Method MAP_PUT;
+	private static final Method OBJECT_TO_STRING;
 	private static final Method PATTERN_COMPILE;
 	private static final Method PERSISTENT_STACK_PEEK;
 	private static final Method PERSISTENT_STACK_PEEK_BASE;
 	private static final Method PERSISTENT_STACK_POP;
 	private static final Method PERSISTENT_STACK_PUSH_OBJECT;
+	private static final Method RENDER_CONTEXT_GET_INDEXED_DATA;
+	private static final Method RENDER_CONTEXT_GET_SECTION_DATA;
 	private static final Method STRING_BUILDER_APPEND_OBJECT;
 	private static final Constructor<?> STRING_BUILDER_INIT_STRING;
 	private static final Method STRING_VALUE_OF;
@@ -85,10 +87,7 @@ public final class Expression {
 		private static final byte LOAD_EXPRESSIONS = ALOAD_1;
 		private static final byte LOAD_IDENTIFIERS = ALOAD_2;
 		private static final byte LOAD_CONTEXT = ALOAD_3;
-		private static final byte LOAD_ACCESS[] = new byte[] { ALOAD, 4 };
-		private static final byte LOAD_INDEXES[] = new byte[] { ALOAD, 5 };
-		private static final byte LOAD_ERROR_LOGGER[] = new byte[] { ALOAD, 6 };
-		private static final int FIRST_LOCAL_INDEX = 7;
+		private static final int FIRST_LOCAL_INDEX = 4;
 
 		/**
 		 * Evaluates the object using the specified parameters.
@@ -96,13 +95,10 @@ public final class Expression {
 		 * @param expressions the expressions used to evaluate the object
 		 * @param identifiers the identifiers used to evaluate the object
 		 * @param context the context used to evaluate the object
-		 * @param access the access to the context used to evaluate the object
-		 * @param indices the indexed objects used to evaluate the object
-		 * @param errorLogger the error logger to use while evaluating this expression
 		 * @return the result of evaluating the object
 		 * @throws Exception if an error occurs while evaluating the expression
 		 */
-		public abstract Object evaluate(final Expression expressions[], final Identifier identifiers[], final PersistentStack<Object> context, final ContextAccess access, final PersistentStack<Indexed> indices, final Settings.ErrorLogger errorLogger) throws Exception;
+		public abstract Object evaluate(final Expression expressions[], final Identifier identifiers[], final RenderContext context) throws Exception;
 	}
 
 	@SuppressWarnings("serial")
@@ -125,11 +121,12 @@ public final class Expression {
 	static {
 		try {
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
-			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", PersistentStack.class, Settings.ContextAccess.class, PersistentStack.class, Settings.ErrorLogger.class);
+			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", RenderContext.class);
+			EXPRESSION_GET_VALUE = Expression.class.getMethod("getClass", RenderContext.class, String.class);
 			HALT_EXCEPTION_CTOR_STRING = HaltRenderingException.class.getConstructor(String.class);
-			IDENTIFIER_FIND_VALUE = Identifier.class.getMethod("findValue", PersistentStack.class, int.class, Settings.ContextAccess.class);
-			IDENTIFIER_FIND_VALUE_METHOD = Identifier.class.getMethod("findValue", PersistentStack.class, int.class, Settings.ContextAccess.class, Object[].class);
-			IDENTIFIER_GET_ROOT_VALUE = Identifier.class.getMethod("getRootValue", PersistentStack.class, Settings.ContextAccess.class);
+			IDENTIFIER_FIND_VALUE = Identifier.class.getMethod("findValue", RenderContext.class, int.class);
+			IDENTIFIER_FIND_VALUE_METHOD = Identifier.class.getMethod("findValue", RenderContext.class, int.class, Object[].class);
+			IDENTIFIER_GET_ROOT_VALUE = Identifier.class.getMethod("getRootValue", RenderContext.class);
 			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
 			INDEXED_GET_INDEX = Indexed.class.getMethod("getIndex");
@@ -137,11 +134,14 @@ public final class Expression {
 			ITERABLE_MAP_CTOR_INT = IterableMap.class.getConstructor(int.class);
 			LINKED_HASH_MAP_CTOR_INT = LinkedHashMap.class.getConstructor(int.class);
 			MAP_PUT = Map.class.getMethod("put", Object.class, Object.class);
+			OBJECT_TO_STRING = Object.class.getMethod("toString");
 			PATTERN_COMPILE = Pattern.class.getMethod("compile", String.class);
 			PERSISTENT_STACK_PEEK = PersistentStack.class.getMethod("peek", int.class);
 			PERSISTENT_STACK_PEEK_BASE = PersistentStack.class.getMethod("peekBase");
 			PERSISTENT_STACK_POP = PersistentStack.class.getMethod("pop");
 			PERSISTENT_STACK_PUSH_OBJECT = PersistentStack.class.getMethod("push", Object.class);
+			RENDER_CONTEXT_GET_INDEXED_DATA = RenderContext.class.getMethod("getIndexedData");
+			RENDER_CONTEXT_GET_SECTION_DATA = RenderContext.class.getMethod("getSectionData");
 			STRING_BUILDER_APPEND_OBJECT = StringBuilder.class.getMethod("append", Object.class);
 			STRING_BUILDER_INIT_STRING = StringBuilder.class.getConstructor(String.class);
 			STRING_VALUE_OF = String.class.getMethod("valueOf", Object.class);
@@ -309,6 +309,18 @@ public final class Expression {
 	}
 
 	/**
+	 * Gets the class of the specified name.
+	 *
+	 * @param context the context used to get the class
+	 * @param name the name of the class to get
+	 * @return the class associated with the specified name
+	 * @throws ClassNotFoundException if the class could not be found
+	 */
+	public static Class<?> getClass(final RenderContext context, final String name) throws ClassNotFoundException {
+		return context.getClass(name);
+	}
+
+	/**
 	 * Gets the index for the specified identifier. If the identifier does not exist in the map, a new entry will be created and that index will be returned.
 	 *
 	 * @param identifiers the map of identifiers to indices
@@ -359,13 +371,13 @@ public final class Expression {
 
 					// Load the context and evaluate the expression
 					if (parameterCount != 0) {
-						expressionResult.addCode(Evaluable.LOAD_CONTEXT).append(operands.peek().toObject(false)).addInvoke(PERSISTENT_STACK_PUSH_OBJECT).addCode(POP);
+						expressionResult.addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).append(operands.peek().toObject(false)).addInvoke(PERSISTENT_STACK_PUSH_OBJECT).addCode(POP);
 					}
 
-					expressionResult.addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS).addCode(Evaluable.LOAD_INDEXES).addCode(Evaluable.LOAD_ERROR_LOGGER).addInvoke(EXPRESSION_EVALUATE);
+					expressionResult.addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(EXPRESSION_EVALUATE);
 
 					if (parameterCount != 0) {
-						expressionResult.addCode(Evaluable.LOAD_CONTEXT).addInvoke(PERSISTENT_STACK_POP).addCode(POP);
+						expressionResult.addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(PERSISTENT_STACK_POP).addCode(POP);
 					}
 
 					operands.pop(parameterCount + 3).push(new Operand(Object.class, expressionResult));
@@ -643,6 +655,13 @@ public final class Expression {
 			operands.push(new Operand(Object.class, right.toObject(false).addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addCode(ATHROW)));
 			break;
 
+		case "~@": { // Get class
+			final Label isNull = right.builder.newLabel();
+
+			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(EXPRESSION_GET_VALUE).updateLabel(isNull)));
+			break;
+		}
+
 		default:
 			assert false : "Unrecognized operator '" + operator.getString() + "' while parsing expression";
 		}
@@ -690,7 +709,7 @@ public final class Expression {
 		this.originalString = expressionString.toString();
 
 		if (".".equals(this.originalString)) {
-			operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(0).addInvoke(PERSISTENT_STACK_PEEK)));
+			operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(PERSISTENT_STACK_PEEK)));
 		} else if (!horseshoeExpressions) {
 			final MethodBuilder mb = new MethodBuilder();
 			final String names[] = originalString.split("\\.", -1);
@@ -701,7 +720,7 @@ public final class Expression {
 
 				if (i == 0) {
 					// Create a new output formed by invoking identifiers[index].getValue(context, backreach, access)
-					operands.push(new Operand(Object.class, mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_FIND_VALUE)));
+					operands.push(new Operand(Object.class, mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
 				} else {
 					// Create a new output formed by invoking identifiers[index].getValue(object)
 					mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE);
@@ -773,19 +792,19 @@ public final class Expression {
 						// Process the identifier
 						if (".".equals(identifier)) {
 							if (isRoot) {
-								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(PERSISTENT_STACK_PEEK_BASE)));
+								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(PERSISTENT_STACK_PEEK_BASE)));
 							} else {
-								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK)));
+								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK)));
 							}
 						} else if ("..".equals(identifier)) {
-							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach + 1).addInvoke(PERSISTENT_STACK_PEEK)));
+							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).addInvoke(PERSISTENT_STACK_PEEK)));
 						} else if (isInternal) { // Everything that starts with "." is considered internal
 							switch (identifier) {
-							case "index":   operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX))); break;
-							case "hasNext": operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_HAS_NEXT))); break;
+							case "index":   operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX))); break;
+							case "hasNext": operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_HAS_NEXT))); break;
 
 							case "isFirst":
-								operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_INDEXES).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
+								operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
 								processOperation(namedExpressions, expressions, identifiers, operands, operators.push(Operator.get("!", false)));
 								break;
 
@@ -811,9 +830,9 @@ public final class Expression {
 
 								lastOperator = operators.push(Operator.createMethod(name, true)).peek();
 							} else {
-								// Create a new output formed by invoking identifiers[index].findValue(context, backreach, access, ...)
+								// Create a new output formed by invoking identifiers[index].findValue(context, backreach, ...)
 								operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_FIND_VALUE_METHOD)));
-								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(unstatedBackreach ? Identifier.UNSTATED_BACKREACH : backreach).addCode(Evaluable.LOAD_ACCESS)));
+								operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(unstatedBackreach ? Identifier.UNSTATED_BACKREACH : backreach)));
 								operands.push(new Operand(Object.class, new MethodBuilder()));
 								lastOperator = operators.push(Operator.createMethod(name, !unstatedBackreach)).peek();
 							}
@@ -851,9 +870,9 @@ public final class Expression {
 
 									// Create a new output formed by invoking identifiers[index].getRootValue(context, access) or identifiers[index].findValue(context, backreach, access)
 									if (isRoot) {
-										operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_GET_ROOT_VALUE)));
+										operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_GET_ROOT_VALUE)));
 									} else {
-										operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(unstatedBackreach ? Identifier.UNSTATED_BACKREACH : backreach).addCode(Evaluable.LOAD_ACCESS).addInvoke(IDENTIFIER_FIND_VALUE)));
+										operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(unstatedBackreach ? Identifier.UNSTATED_BACKREACH : backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
 									}
 								}
 							}
@@ -1043,22 +1062,19 @@ public final class Expression {
 	}
 
 	/**
-	 * Evaluates the expression using the given context and access.
+	 * Evaluates the expression using the given render context.
 	 *
-	 * @param context the context used to evaluate the object
-	 * @param access the access to the context used to evaluate the object
-	 * @param indices the indexed objects used to evaluate the object
-	 * @param errorLogger the error logger to use while evaluating this expression
+	 * @param context the render context used to evaluate the object
 	 * @return the evaluated expression or null if the expression could not be evaluated
 	 */
-	public Object evaluate(final PersistentStack<Object> context, final Settings.ContextAccess access, final PersistentStack<Indexed> indices, final Settings.ErrorLogger errorLogger) {
+	public Object evaluate(final RenderContext context) {
 		try {
-			return evaluable.evaluate(expressions, identifiers, context, access, indices, errorLogger);
+			return evaluable.evaluate(expressions, identifiers, context);
 		} catch (final HaltRenderingException e) {
 			throw e;
 		} catch (final Throwable t) { // Don't let any exceptions escape
-			if (errorLogger != null) {
-				errorLogger.log(originalString, location, t);
+			if (context.getSettings().getErrorLogger() != null) {
+				context.getSettings().getErrorLogger().log(originalString, location, t);
 			}
 		}
 

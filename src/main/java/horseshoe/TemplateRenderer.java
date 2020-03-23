@@ -3,6 +3,8 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
+import horseshoe.internal.RenderContext;
+
 final class TemplateRenderer implements Action {
 
 	private final Template template;

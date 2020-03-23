@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 public class GenerateOperatorTable {
@@ -79,17 +80,29 @@ public class GenerateOperatorTable {
 			}
 		}
 
-		final String tableText = operationTable.toString();
+		final String tableText = operationTable.append(System.lineSeparator()).toString();
 
-		System.out.println(" Operation Table:");
-		System.out.println(tableText);
+		// System.out.println(" Operation Table:");
+		// System.out.print(tableText);
 
 		// Replace the operation table text
 		final Path readmeFile = Paths.get("README.md");
-		final String newReadme = new String(Files.readAllBytes(readmeFile), StandardCharsets.UTF_8)
-				.replaceFirst("(?<=[\\n\\r])" + Pattern.quote(tableHeader) + "[\\n\\r]+(\\|.*[\\n\\r]+)+", Matcher.quoteReplacement(tableText + System.lineSeparator()));
+		final String oldReadme = new String(Files.readAllBytes(readmeFile), StandardCharsets.UTF_8);
+		final int tableStart = oldReadme.indexOf(tableHeader);
+
+		if (tableStart < 0) {
+			Assert.fail("Operation table not found in " + readmeFile);
+		}
+
+		final Matcher tableMatcher = Pattern.compile("(?<=[\\n\\r])[^\\n\\r|]").matcher(oldReadme);
+		final int endOfTable = tableMatcher.find(tableStart + 1) ? tableMatcher.start() : oldReadme.length();
+		final String newReadme = oldReadme.substring(0, tableStart) + tableText + oldReadme.substring(endOfTable);
 
 		Files.write(readmeFile, newReadme.getBytes(StandardCharsets.UTF_8));
+
+		if (!tableText.equals(oldReadme.substring(tableStart, endOfTable).replaceAll("\\r?\\n", System.lineSeparator()))) {
+			Assert.fail("Operation table updated, rerun to verify");
+		}
 	}
 
 }

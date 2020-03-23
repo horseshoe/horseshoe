@@ -8,6 +8,7 @@ import java.util.List;
 
 import horseshoe.internal.Expression;
 import horseshoe.internal.Properties;
+import horseshoe.internal.RenderContext;
 
 class SectionRenderer implements Action, Expression.Indexed {
 
@@ -204,7 +205,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 			if (annotationProcessor == null) { // Only write the data if there is an annotation processor available, otherwise take false path with default writer
 				dispatchData(context, false, writer);
 			} else {
-				final Writer newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), context.getSettings().getErrorLogger()));
+				final Writer newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context));
 
 				if (newWriter == null || newWriter == writer) {
 					dispatchData(context, context.getSectionData().peek(), writer);
@@ -217,7 +218,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 				}
 			}
 		} else {
-			dispatchData(context, section.useCache() ? context.getRepeatedSectionData() : section.getExpression().evaluate(context.getSectionData(), context.getSettings().getContextAccess(), context.getIndexedData(), context.getSettings().getErrorLogger()), writer);
+			dispatchData(context, section.useCache() ? context.getRepeatedSectionData() : section.getExpression().evaluate(context), writer);
 		}
 	}
 

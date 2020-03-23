@@ -3,6 +3,8 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
+import horseshoe.internal.RenderContext;
+
 interface Action {
 
 	/**

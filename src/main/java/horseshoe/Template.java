@@ -9,6 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import horseshoe.internal.HaltRenderingException;
+import horseshoe.internal.RenderContext;
 
 /**
  * Templates represent parsed and resolved Horseshoe template files. They are loaded using the {@link TemplateLoader} class. An example of how to load and render a template is given below:
@@ -86,7 +87,6 @@ public final class Template {
 			final RenderContext renderContext = new RenderContext(settings, globalData, annotationMap);
 
 			renderContext.getIndentation().push("");
-			renderContext.getSectionData().push(renderContext.getGlobalData());
 
 			for (final Action action : actions) {
 				action.perform(renderContext, writer);

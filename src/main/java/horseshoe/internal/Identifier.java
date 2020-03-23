@@ -72,14 +72,13 @@ public final class Identifier {
 	 *
 	 * @param context the context object used to get the value of the identifier
 	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
-	 * @param access the access used to get the value of the identifier
 	 * @return the value of the identifier
 	 * @throws ReflectiveOperationException if an error occurs while getting the value of the identifier
 	 */
-	public Object findValue(final PersistentStack<Object> context, final int backreach, final ContextAccess access) throws ReflectiveOperationException {
+	public Object findValue(final RenderContext context, final int backreach) throws ReflectiveOperationException {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
-		Object object = context.peek(Math.max(backreach, 0));
+		Object object = context.getSectionData().peek(Math.max(backreach, 0));
 		Class<?> objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
 		Accessor accessor = accessorDatabase.get(objectClass);
 
@@ -100,9 +99,9 @@ public final class Identifier {
 
 		// If there is no value at the specified scope and the backreach is unspecified, then try to get the value at a different scope
 		if (backreach < 0) {
-			if (access == ContextAccess.FULL) {
-				for (int i = 1; i < context.size(); i++) {
-					object = context.peek(i);
+			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
+				for (int i = 1; i < context.getSectionData().size(); i++) {
+					object = context.getSectionData().peek(i);
 					objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
 					accessor = accessorDatabase.get(objectClass);
 
@@ -122,8 +121,8 @@ public final class Identifier {
 						skippedAccessor = true;
 					}
 				}
-			} else if (access == ContextAccess.CURRENT_AND_ROOT) {
-				return getValue(context.peekBase());
+			} else if (context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT) {
+				return getValue(context.getSectionData().peekBase());
 			}
 		}
 
@@ -139,15 +138,14 @@ public final class Identifier {
 	 *
 	 * @param context the context object used to get the value of the identifier
 	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
-	 * @param access the access used to get the value of the identifier
 	 * @param parameters the parameters used to evaluate the object
 	 * @return the value of the identifier
 	 * @throws ReflectiveOperationException if an error occurs while getting the value of the identifier
 	 */
-	public Object findValue(final PersistentStack<Object> context, final int backreach, final ContextAccess access, final Object... parameters) throws ReflectiveOperationException {
+	public Object findValue(final RenderContext context, final int backreach, final Object... parameters) throws ReflectiveOperationException {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
-		Object object = context.peek(Math.max(backreach, 0));
+		Object object = context.getSectionData().peek(Math.max(backreach, 0));
 		Class<?> objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
 		Accessor accessor = accessorDatabase.get(objectClass);
 
@@ -168,9 +166,9 @@ public final class Identifier {
 
 		// If there is no value at the specified scope and the backreach is unspecified, then try to get the value at a different scope
 		if (backreach < 0) {
-			if (access == ContextAccess.FULL) {
-				for (int i = 1; i < context.size(); i++) {
-					object = context.peek(i);
+			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
+				for (int i = 1; i < context.getSectionData().size(); i++) {
+					object = context.getSectionData().peek(i);
 					objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
 					accessor = accessorDatabase.get(objectClass);
 
@@ -190,8 +188,8 @@ public final class Identifier {
 						skippedAccessor = true;
 					}
 				}
-			} else if (access == ContextAccess.CURRENT_AND_ROOT) {
-				return getValue(context.peekBase(), parameters);
+			} else if (context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT) {
+				return getValue(context.getSectionData().peekBase(), parameters);
 			}
 		}
 
@@ -206,13 +204,12 @@ public final class Identifier {
 	 * Gets the value of the identifier from the root context object.
 	 *
 	 * @param context the context object used to get the value of the identifier
-	 * @param access the access used to get the value of the identifier
 	 * @return the value of the identifier
 	 * @throws ReflectiveOperationException if an error occurs while getting the value of the identifier
 	 */
-	public Object getRootValue(final PersistentStack<Object> context, final ContextAccess access) throws ReflectiveOperationException {
-		if (access == ContextAccess.FULL || access == ContextAccess.CURRENT_AND_ROOT || context.size() == 1) {
-			return getValue(context.peekBase());
+	public Object getRootValue(final RenderContext context) throws ReflectiveOperationException {
+		if (context.getSettings().getContextAccess() == ContextAccess.FULL || context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT || context.getSectionData().size() == 1) {
+			return getValue(context.getSectionData().peekBase());
 		}
 
 		throw new NoSuchFieldException("Root field \"" + name + "\" could not be accessed due to insufficient permissions");

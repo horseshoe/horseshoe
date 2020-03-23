@@ -1,5 +1,8 @@
 package horseshoe;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -72,6 +75,49 @@ public class Settings {
 	private ErrorLogger errorLogger = DEFAULT_ERROR_LOGGER;
 	private EscapeFunction escapeFunction = EMPTY_ESCAPE_FUNCTION;
 	private String lineEndings = DEFAULT_LINE_ENDINGS;
+	private final Set<String> loadableClasses = new HashSet<>(Arrays.asList(
+			"java.lang.Integer", "Integer",
+			"java.lang.Byte", "Byte",
+			"java.lang.Short", "Short",
+			"java.lang.Long", "Long",
+			"java.math.BigInteger",
+			"java.lang.Float", "Float",
+			"java.lang.Double", "Double",
+			"java.math.BigDecimal",
+			"java.lang.Character", "Character",
+			"java.lang.Boolean", "Boolean",
+
+			"java.lang.Math", "Math",
+			"java.lang.Enum", "Enum",
+			"java.lang.String", "String",
+
+			"java.util.Arrays",
+			"java.util.BitSet",
+			"java.util.Calendar",
+			"java.util.Collections",
+			"java.util.Currency",
+			"java.util.Date",
+			"java.util.EnumSet",
+			"java.util.GregorianCalendar",
+			"java.util.Objects",
+			"java.util.regex.Matcher",
+			"java.util.regex.Pattern",
+
+			// Java 8 classes
+			"java.time.Duration",
+			"java.time.Instant",
+			"java.util.Optional",
+			"java.util.OptionalDouble",
+			"java.util.OptionalInt",
+			"java.util.OptionalLong",
+			"java.util.Spliterators",
+			"java.util.stream.StreamSupport",
+			"java.util.stream.Stream",
+			"java.util.stream.DoubleStream",
+			"java.util.stream.IntStream",
+			"java.util.stream.LongStream",
+			"java.util.stream.Collector",
+			"java.util.stream.Collectors"));
 
 	/**
 	 * An enumeration used to control access when checking identifiers in expressions.
@@ -163,6 +209,15 @@ public class Settings {
 	 */
 	public String getLineEndings() {
 		return lineEndings;
+	}
+
+	/**
+	 * Gets the classes that can be loaded by the template during the rendering process.
+	 *
+	 * @return the set of classes that can be loaded by the template during the rendering process
+	 */
+	public Set<String> getLoadableClasses() {
+		return loadableClasses;
 	}
 
 	/**

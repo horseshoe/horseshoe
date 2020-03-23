@@ -42,7 +42,7 @@ Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an 
 ### Which operators are supported by Horseshoe expressions?
 | Precedence | Operators | Associativity |
 | ---------- | --------- | ------------- |
-| 0 | <code>\{</code>a\*<code>\}</code> \(Array / Map Literal \(Iterating\)\), <br><code>\[</code>a\*<code>\]</code> \(Array / Map Literal\), <br><code>\[:\]</code> \(Empty Map\), <br>a<code>\[</code>b<code>\]</code> \(Lookup\), <br>a<code>?\[?</code>b<code>\]</code> \(Safe Lookup\), <br>a<code>\(</code>b\*<code>\)</code> \(Call Method\), <br><code>\(</code>a<code>\)</code> \(Parentheses\), <br>a<code>\.</code>b \(Navigate\), <br>a<code>?\.?</code>b \(Safe Navigate\) | Left&nbsp;to&nbsp;right |
+| 0 | <code>\{</code>a\*<code>\}</code> \(Array / Map Literal \- Iterating\), <br><code>\[</code>a\*<code>\]</code> \(Array / Map Literal\), <br><code>\[:\]</code> \(Empty Map\), <br>a<code>\[</code>b<code>\]</code> \(Lookup\), <br>a<code>?\[?</code>b<code>\]</code> \(Safe Lookup\), <br>a<code>\(</code>b\*<code>\)</code> \(Call Method\), <br><code>\(</code>a<code>\)</code> \(Parentheses\), <br><code>~@</code>a \(Get Class\), <br>a<code>\.</code>b \(Navigate\), <br>a<code>?\.?</code>b \(Safe Navigate\) | Left&nbsp;to&nbsp;right |
 | 2 | <code>\+</code>a \(Unary Plus\), <br><code>\-</code>a \(Unary Minus\), <br><code>~</code>a \(Bitwise Negate\), <br><code>\!</code>a \(Logical Negate\) | Right&nbsp;to&nbsp;left |
 | 3 | a<code>\.\.</code>b \(Range\) | Left&nbsp;to&nbsp;right |
 | 4 | a<code>\*</code>b \(Multiply\), <br>a<code>/</code>b \(Divide\), <br>a<code>%</code>b \(Modulus\) | Left&nbsp;to&nbsp;right |
@@ -55,10 +55,10 @@ Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an 
 | 11 | a<code>&#124;</code>b \(Bitwise Or\) | Left&nbsp;to&nbsp;right |
 | 12 | a<code>&amp;&amp;</code>b \(Logical And\) | Left&nbsp;to&nbsp;right |
 | 13 | a<code>&#124;&#124;</code>b \(Logical Or\) | Left&nbsp;to&nbsp;right |
-| 14 | a<code>?:</code>b \(Null Coalesce\), <br>a<code>??</code>b \(Null Coalesce \(Alternate\)\), <br>a<code>?</code>b \(Ternary\), <br>a<code>:</code>b \(Pair\) | Right&nbsp;to&nbsp;left |
-| 15 | a<code>=</code>b \(Assign\) | Right&nbsp;to&nbsp;left |
-| 16 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \(Alternate\)\) | Left&nbsp;to&nbsp;right |
-| 17 | a<code>,</code>b\* \(Array / Map Separator\), <br>a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
+| 14 | a<code>?:</code>b \(Null Coalesce\), <br>a<code>??</code>b \(Null Coalesce \- Alternate\), <br>a<code>?</code>b \(Ternary\), <br>a<code>:</code>b \(Pair\) | Right&nbsp;to&nbsp;left |
+| 15 | a<code>=</code>b \(Bind\) | Right&nbsp;to&nbsp;left |
+| 16 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\) | Left&nbsp;to&nbsp;right |
+| 17 | a<code>,</code>b\* \(Item Separator\), <br>a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
 
 ### What extension should be used for Horseshoe template files?
 Horseshoe supports any file extension for template files. However, convention is to use a capital "U", which resembles a horseshoe.

@@ -25,6 +25,13 @@ public class TemplateTests {
 	}
 
 	@Test
+	public void testClassLoading() throws IOException, LoadException {
+		final Settings settings = new Settings();
+		settings.getLoadableClasses().add("NonExistantClass");
+		assertEquals("73.7", new TemplateLoader().load("ClassLoading", "{{#classes}}{{^~@.}}Bad{{/}}{{/}}{{#~@'Blah'}}Bad{{/}}{{#~@'NonExistantClass'}}Bad{{/}}{{~@'Integer'.parseInt('67') + ~@'Double'.parseDouble('6.7')}}").render(settings, Collections.singletonMap("classes", new Settings().getLoadableClasses()), new java.io.StringWriter()).toString());
+	}
+
+	@Test
 	public void testDie() throws IOException, LoadException {
 		assertEquals("String 1" + LS + "String 2" + LS, new TemplateLoader().load("Die", "{{#'String 1', 'String 2', \"String 3\"}}\n{{^.hasNext}}\n{{☠\"Should print out as a severe log statement\"; 'Did not die'}}\n{{/}}\n{{.}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}

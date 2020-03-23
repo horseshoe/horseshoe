@@ -6,6 +6,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import horseshoe.internal.RenderContext;
+
 class SectionRenderer_8 extends SectionRenderer {
 
 	public static class Factory extends SectionRenderer.Factory {

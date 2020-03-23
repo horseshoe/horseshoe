@@ -77,13 +77,14 @@ final class Operator {
 	static {
 		final List<Operator> operators = new ArrayList<>();
 
-		operators.add(new Operator("{",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal (Iterating)", "}", 0));
+		operators.add(new Operator("{",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal - Iterating", "}", 0));
 		operators.add(new Operator("[",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal", "]", 0));
 		operators.add(new Operator("[:]",    0,  0, "Empty Map"));
 		operators.add(new Operator("[",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Lookup", "]", 1));
 		operators.add(new Operator("?[?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | SAFE, "Safe Lookup", "]", 1));
 		operators.add(createMethod("(", true));
 		operators.add(new Operator("(",      0,  RIGHT_EXPRESSION, "Parentheses", ")", 1));
+		operators.add(new Operator("~@",     0,  RIGHT_EXPRESSION, "Get Class"));
 		operators.add(new Operator(".",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION, "Navigate"));
 		operators.add(new Operator("?.?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | SAFE, "Safe Navigate"));
 		operators.add(new Operator("+",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
@@ -111,13 +112,13 @@ final class Operator {
 		operators.add(new Operator("&&",     12, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical And"));
 		operators.add(new Operator("||",     13, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical Or"));
 		operators.add(new Operator("?:",     14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce"));
-		operators.add(new Operator("??",     14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce (Alternate)"));
+		operators.add(new Operator("??",     14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce - Alternate"));
 		operators.add(new Operator("?",      14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
 		operators.add(new Operator(":",      14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair"));
-		operators.add(new Operator("=",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Assign"));
+		operators.add(new Operator("=",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind"));
 		operators.add(new Operator("\u2620", 16, RIGHT_EXPRESSION, "Die"));
-		operators.add(new Operator("~:<",    16, RIGHT_EXPRESSION, "Die (Alternate)"));
-		operators.add(new Operator(",",      17, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Array / Map Separator"));
+		operators.add(new Operator("~:<",    16, RIGHT_EXPRESSION, "Die - Alternate"));
+		operators.add(new Operator(",",      17, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
 		operators.add(new Operator(";",      17, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
 
 		// These operators have known assertion failures and may contain ambiguities with other operators or Horseshoe features. These ambiguities have been thoroughly analyzed and deemed acceptable.
