@@ -3,11 +3,14 @@ package horseshoe.internal;
 import static horseshoe.internal.MethodBuilder.*;
 
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 
 import horseshoe.internal.MethodBuilder.Label;
 
@@ -26,6 +29,7 @@ final class Operand {
 	private static final Method DOUBLE_VALUE;
 	private static final Method LONG_VALUE;
 	private static final Method INT_VALUE;
+	private static final Method CHAR_VALUE;
 	private static final Method COMPARE;
 	private static final Method CONVERT_TO_BOOLEAN;
 	private static final Method TO_STRING;
@@ -36,8 +40,9 @@ final class Operand {
 	static {
 		try {
 			DOUBLE_VALUE = Number.class.getMethod("doubleValue");
-			LONG_VALUE = Long.class.getMethod("longValue");
+			LONG_VALUE = Number.class.getMethod("longValue");
 			INT_VALUE = Number.class.getMethod("intValue");
+			CHAR_VALUE = Character.class.getMethod("charValue");
 			COMPARE = Expression.class.getMethod("compare", boolean.class, Object.class, Object.class);
 			CONVERT_TO_BOOLEAN = Expression.class.getMethod("convertToBoolean", Object.class);
 			TO_STRING = Object.class.getMethod("toString");
@@ -188,7 +193,7 @@ final class Operand {
 			} else {
 				final Label end = builder.newLabel();
 
-				return builder.addCode(DUP).pushConstant(LONG_TYPE).addBranch(IF_ICMPLE, end).addThrow(IllegalArgumentException.class, "Unexpected double value, expecting integral value").updateLabel(end);
+				return builder.addCode(DUP).pushConstant(LONG_TYPE).addBranch(IF_ICMPLE, end).addThrow(IllegalArgumentException.class, "Unexpected floating point value, expecting integral value").updateLabel(end);
 			}
 		} else if (type.isPrimitive()) {
 			if (boolean.class.equals(type)) {
@@ -206,33 +211,41 @@ final class Operand {
 			}
 		}
 
-		final Label notNumber = builder.newLabel();
+		final Label getDouble = builder.newLabel();
 		final Label notDouble = builder.newLabel();
+		final Label getLong = builder.newLabel();
 		final Label notLong = builder.newLabel();
-		final Label notFloat = builder.newLabel();
+		final Label notNumber = builder.newLabel();
+		final Label elseCase = builder.newLabel();
 		final Label end = builder.newLabel();
 
-		// TODO: Handle AtomicLong, BigInteger & BigDecimal?
-		builder.addCode(DUP, DUP).addInstanceOfCheck(Number.class).addBranch(IFEQ, notNumber)
-				.addInstanceOfCheck(Double.class).addBranch(IFEQ, notDouble);
+		/*
+		 *	if (instanceof Number) {
+		 *		if (instanceof Double || instanceof Float || instanceof BigDecimal) {
+		 *			use .doubleValue();
+		 *		} else if (instanceof Long || instanceof BigInteger || instanceof AtomicLong) {
+		 *			use .longValue();
+		 *		} else {
+		 *			use .intValue();
+		 *		}
+		 *	} else if (second instanceof Character) {
+		 *		use .charValue();
+		 *	}
+		 */
+		builder.addCode(DUP).addInstanceOfCheck(Number.class).addBranch(IFEQ, notNumber)
+				.addCode(DUP).addInstanceOfCheck(Double.class).addBranch(IFNE, getDouble).addCode(DUP).addInstanceOfCheck(Float.class).addBranch(IFNE, getDouble).addCode(DUP).addInstanceOfCheck(BigDecimal.class).addBranch(IFNE, getDouble).addBranch(GOTO, notDouble);
 
 		if (allowFloating) {
-			builder.addCast(Double.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end);
+			builder.updateLabel(getDouble).addCast(Number.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end);
 		} else {
-			builder.addThrow(IllegalArgumentException.class, "Unexpected double value, expecting integral value");
+			builder.updateLabel(getDouble).addThrow(IllegalArgumentException.class, "Unexpected floating point value, expecting integral value");
 		}
 
-		builder.updateLabel(notDouble).addCode(DUP).addInstanceOfCheck(Long.class).addBranch(IFEQ, notLong).addCast(Long.class).addInvoke(LONG_VALUE).addCode(DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
-				.updateLabel(notLong).addCode(DUP).addInstanceOfCheck(Float.class).addBranch(IFEQ, notFloat);
-
-		if (allowFloating) {
-			builder.addCast(Float.class).addInvoke(DOUBLE_VALUE).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE).addBranch(GOTO, end);
-		} else {
-			builder.addThrow(IllegalArgumentException.class, "Unexpected float value, expecting integral value");
-		}
-
-		return builder.updateLabel(notFloat).addCast(Number.class).addInvoke(INT_VALUE).addCode(I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
-				.updateLabel(notNumber).addThrow(IllegalArgumentException.class, "Invalid object, expecting boxed numeric primitive").addCode(ACONST_NULL, ARETURN).updateLabel(end);
+		return builder.updateLabel(notDouble).addCode(DUP).addInstanceOfCheck(Long.class).addBranch(IFNE, getLong).addCode(DUP).addInstanceOfCheck(BigInteger.class).addBranch(IFNE, getLong).addCode(DUP).addInstanceOfCheck(AtomicLong.class).addBranch(IFNE, getLong).addBranch(GOTO, notLong)
+				.updateLabel(getLong).addCast(Number.class).addInvoke(LONG_VALUE).addCode(DCONST_0).pushConstant(LONG_TYPE).addBranch(GOTO, end)
+				.updateLabel(notLong).addCast(Number.class).addInvoke(INT_VALUE).addCode(I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
+				.updateLabel(notNumber).addCode(DUP).addInstanceOfCheck(Character.class).addBranch(IFEQ, elseCase).addCast(Character.class).addInvoke(CHAR_VALUE).addCode(I2L, DCONST_0).pushConstant(INT_TYPE).addBranch(GOTO, end)
+				.updateLabel(elseCase).addThrow(IllegalArgumentException.class, "Invalid object, expecting boxed numeric primitive").updateLabel(end);
 	}
 
 	/**
