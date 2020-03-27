@@ -5,33 +5,33 @@ package horseshoe.internal;
  */
 public final class Buffer implements CharSequence {
 
-	private final char buffer[];
+	private final char[] data;
 	private int length;
 
 	/**
 	 * A character sequence that wraps a buffer without copying data. Note that the wrapper references the underlying buffer, so any changes to the buffer will be reflected in the wrapper object.
 	 */
 	public static final class Wrapper implements CharSequence {
-		private final char buffer[];
+		private final char[] data;
 		private final int start;
 		private final int end;
 
 		/**
 		 * Creates a new wrapper for the buffer.
 		 *
-		 * @param buffer the buffer to wrap
+		 * @param data the data to wrap
 		 * @param start the start index (inclusive) of the wrapped buffer
 		 * @param end the end index (exclusive) of the wrapped buffer
 		 */
-		public Wrapper(final char buffer[], final int start, final int end) {
-			this.buffer = buffer;
+		public Wrapper(final char[] data, final int start, final int end) {
+			this.data = data;
 			this.start = start;
 			this.end = end;
 		}
 
 		@Override
 		public char charAt(final int index) {
-			return buffer[start + index];
+			return data[start + index];
 		}
 
 		@Override
@@ -41,12 +41,12 @@ public final class Buffer implements CharSequence {
 
 		@Override
 		public Wrapper subSequence(final int start, final int end) {
-			return new Wrapper(buffer, this.start + start, this.start + end);
+			return new Wrapper(data, this.start + start, this.start + end);
 		}
 
 		@Override
 		public String toString() {
-			return new String(buffer, start, end - start);
+			return new String(data, start, end - start);
 		}
 	}
 
@@ -57,7 +57,7 @@ public final class Buffer implements CharSequence {
 	 * @param length the length of useful data in the buffer
 	 */
 	public Buffer(final int capacity, final int length) {
-		this.buffer = new char[capacity];
+		this.data = new char[capacity];
 		this.length = length;
 	}
 
@@ -76,21 +76,21 @@ public final class Buffer implements CharSequence {
 	 * @return the capacity of the buffer
 	 */
 	public int capacity() {
-		return buffer.length;
+		return data.length;
 	}
 
 	@Override
 	public char charAt(final int index) {
-		return buffer[index];
+		return data[index];
 	}
 
 	/**
-	 * Gets the underlying character array used as the buffer
+	 * Gets the underlying character data used as the buffer
 	 *
-	 * @return the underlying character array used as the buffer
+	 * @return the underlying character data used as the buffer
 	 */
-	public char[] getBuffer() {
-		return buffer;
+	public char[] getData() {
+		return data;
 	}
 
 	@Override
@@ -111,12 +111,12 @@ public final class Buffer implements CharSequence {
 
 	@Override
 	public Wrapper subSequence(final int start, final int end) {
-		return new Wrapper(buffer, start, end);
+		return new Wrapper(data, start, end);
 	}
 
 	@Override
 	public String toString() {
-		return new String(buffer, 0, length);
+		return new String(data, 0, length);
 	}
 
 	/**
@@ -127,7 +127,7 @@ public final class Buffer implements CharSequence {
 	 * @return the created string
 	 */
 	public String toString(final int start, final int end) {
-		return new String(buffer, start, end - start);
+		return new String(data, start, end - start);
 	}
 
 }

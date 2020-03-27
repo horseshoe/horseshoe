@@ -9,9 +9,9 @@ import horseshoe.internal.RenderContext;
 
 final class StaticContentRenderer implements Action {
 
-	private static final ParsedLine EMPTY_LINES[] = new ParsedLine[0];
+	private static final ParsedLine[] EMPTY_LINES = new ParsedLine[0];
 
-	private final ParsedLine lines[];
+	private final ParsedLine[] lines;
 	private final boolean indentFirstLine;
 	private boolean ignoreFirstLine = false;
 	private boolean ignoreLastLine = false;
@@ -59,7 +59,7 @@ final class StaticContentRenderer implements Action {
 
 		if (lines.length == 1) {
 			// Only write the line if it is not ignored
-			if (!(ignoreFirstLine | ignoreLastLine)) {
+			if (!(ignoreFirstLine || ignoreLastLine)) {
 				if (indentFirstLine) {
 					writer.write(indentation);
 				}

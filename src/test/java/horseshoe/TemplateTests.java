@@ -3,6 +3,7 @@ package horseshoe;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +30,25 @@ public class TemplateTests {
 		final Settings settings = new Settings();
 		settings.getLoadableClasses().add("NonExistantClass");
 		assertEquals("73.7", new TemplateLoader().load("ClassLoading", "{{#classes}}{{^~@.}}Bad{{/}}{{/}}{{#~@'Blah'}}Bad{{/}}{{#~@'NonExistantClass'}}Bad{{/}}{{~@'Integer'.parseInt('67') + ~@'Double'.parseDouble('6.7')}}").render(settings, Collections.singletonMap("classes", new Settings().getLoadableClasses()), new java.io.StringWriter()).toString());
+	}
+
+	@Test (expected = Test.None.class) // No exception expected
+	public void testCloseException() throws LoadException {
+		final String templateName = "Duplicate Template Close Exception";
+		final TemplateLoader loader = new TemplateLoader().add(templateName, new StringReader(""));
+
+		loader.load(templateName);
+		loader.add(templateName, new Reader() {
+			@Override
+			public int read(final char[] cbuf, final int off, final int len) {
+				return -1;
+			}
+
+			@Override
+			public void close() throws IOException {
+				throw new IOException("Logged-only close IOException");
+			}
+		});
 	}
 
 	@Test
@@ -79,7 +99,7 @@ public class TemplateTests {
 		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS + "Jim is 80 years old." + LS, new TemplateLoader().load("Map Test", new StringReader("{{#(\"Bob\": 45, \"Alice\": 31, \"Jim\": 80)}}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}")).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
-	@Test(expected = IOException.class)
+	@Test (expected = IOException.class)
 	public void testRenderException() throws IOException, LoadException {
 		new TemplateLoader().load("Exception Test", " ").render(new Settings(), Collections.emptyMap(), new Writer() {
 			@Override
@@ -111,17 +131,17 @@ public class TemplateTests {
 		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}} -> {{#}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
 	}
 
-	@Test(expected = LoadException.class)
+	@Test (expected = LoadException.class)
 	public void testSectionError1() throws IOException, LoadException {
 		assertEquals("String, 1.6, 1234 -> String, 1.6, 1234", new TemplateLoader().load("Bad Repeat Test", "{{#}}{{/}}").render(new Settings(), Collections.singletonMap("stream", Arrays.asList("String", 1.6, 1234).stream()), new java.io.StringWriter()).toString());
 	}
 
-	@Test(expected = LoadException.class)
+	@Test (expected = LoadException.class)
 	public void testSectionError2() throws IOException, LoadException {
 		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}} -> {{#}}{{#}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
 	}
 
-	@Test(expected = LoadException.class)
+	@Test (expected = LoadException.class)
 	public void testSectionError3() throws IOException, LoadException {
 		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{/}} -> {{#}}{{#}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
 	}
@@ -150,7 +170,7 @@ public class TemplateTests {
 		new TemplateLoader().getIncludeDirectories().add(Paths.get("."));
 	}
 
-	@Test(expected = LoadException.class)
+	@Test (expected = LoadException.class)
 	public void testTemplateLoaderException() throws IOException, LoadException {
 		new TemplateLoader().load("Exception Test", new StringReader(" ") {
 			@Override

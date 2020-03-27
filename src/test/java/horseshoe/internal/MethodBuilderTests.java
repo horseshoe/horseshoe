@@ -226,22 +226,76 @@ public class MethodBuilderTests {
 		assertEquals("success", instance.run());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test (expected = IllegalArgumentException.class)
+	public void testAppendSelf() {
+		final MethodBuilder mb = new MethodBuilder();
+		mb.append(mb);
+	}
+
+	public static interface MultipleMethodInterface {
+		public static void staticMethod() { /* Empty test method */ }
+		public void method1();
+		public void method2();
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadBase() throws ReflectiveOperationException {
+		new MethodBuilder().addCode(RETURN).load("BadBase", MultipleMethodInterface.class, MethodBuilderTests.class.getClassLoader());
+	}
+
+	public static abstract class MultipleAbstractMethodClass {
+		public abstract void method1();
+		public abstract void method2();
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadBase2() throws ReflectiveOperationException {
+		new MethodBuilder().addCode(RETURN).load("BadBase2", MultipleAbstractMethodClass.class, MethodBuilderTests.class.getClassLoader());
+	}
+
+	public static class MultipleMethodClass {
+		public void method1() { /* Empty test method */ }
+		public void method2() { /* Empty test method */ }
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadBase3() throws ReflectiveOperationException {
+		new MethodBuilder().addCode(RETURN).load("BadBase3", MultipleMethodClass.class, MethodBuilderTests.class.getClassLoader());
+	}
+
+	public static class NoMethodClass {
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadBase4() throws ReflectiveOperationException {
+		new MethodBuilder().addCode(RETURN).load("BadBase4", NoMethodClass.class, MethodBuilderTests.class.getClassLoader());
+	}
+
+	public static final class FinalClass {
+		public void method1() { /* Empty test method */ }
+	}
+
+	@Test (expected = IllegalArgumentException.class)
+	public void testBadBase5() throws ReflectiveOperationException {
+		new MethodBuilder().addCode(RETURN).load("BadBase5", FinalClass.class, MethodBuilderTests.class.getClassLoader());
+	}
+
+	@Test (expected = IllegalArgumentException.class)
 	public void testBadIndex() {
 		new MethodBuilder().addAccess(ALOAD, 65536);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test (expected = IllegalArgumentException.class)
 	public void testBadIndex2() {
 		new MethodBuilder().addAccess(ALOAD, -1);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test (expected = IllegalArgumentException.class)
 	public void testBadNewObject() {
 		new MethodBuilder().pushNewObject(Object.class, new int[256]);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test (expected = IllegalArgumentException.class)
 	public void testBadNewObject2() {
 		new MethodBuilder().pushNewObject(int.class);
 	}

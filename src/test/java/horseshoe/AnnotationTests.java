@@ -17,6 +17,30 @@ public class AnnotationTests {
 
 	private static final String LS = System.lineSeparator();
 
+	private static class TestWriter extends Writer {
+		private final Writer writer = new StringWriter();
+
+		@Override
+		public void write(final char[] cbuf, final int off, final int len) throws IOException {
+			writer.write(cbuf, off, len);
+		}
+
+		@Override
+		public void flush() throws IOException {
+			writer.flush();
+		}
+
+		@Override
+		public void close() throws IOException {
+			writer.close();
+		}
+
+		@Override
+		public String toString() {
+			return writer.toString();
+		}
+	}
+
 	private static final class MapAnnotation implements AnnotationHandler {
 		final Map<String, String> map = new LinkedHashMap<>();
 		@Override
@@ -83,6 +107,56 @@ public class AnnotationTests {
 		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
 		Assert.assertEquals("456", mapAnnotation.map.get("value123"));
 		Assert.assertEquals("ab456cd", writer.toString());
+	}
+
+	@Test (expected = Test.None.class) // No exception expected
+	public void testCloseException() throws IOException, LoadException {
+		new TemplateLoader().load("Exception Writer", "a{{#@Test}}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
+			@Override
+			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+				return new TestWriter() {
+					@Override
+					public void close() throws IOException {
+						throw new IOException("Logged-only close IOException");
+					}
+				};
+			}
+		}));
+	}
+
+	@Test (expected = IOException.class)
+	public void testException() throws IOException, LoadException {
+		new TemplateLoader().load("Exception Writer", "a{{#@Test}}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
+			@Override
+			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+				return new TestWriter() {
+					@Override
+					public void write(final char[] cbuf, final int off, final int len) throws IOException {
+						throw new IOException("Test write IOException");
+					}
+				};
+			}
+		}));
+	}
+
+	@Test (expected = IOException.class)
+	public void testExceptionWithCloseException() throws IOException, LoadException {
+		new TemplateLoader().load("Exception Writer", "a{{#@Test}}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
+			@Override
+			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+				return new TestWriter() {
+					@Override
+					public void close() throws IOException {
+						throw new IOException("Logged-only, suppressed close IOException");
+					}
+
+					@Override
+					public void write(final char[] cbuf, final int off, final int len) throws IOException {
+						throw new IOException("Test write IOException");
+					}
+				};
+			}
+		}));
 	}
 
 	@Test
@@ -155,6 +229,21 @@ public class AnnotationTests {
 			Assert.assertEquals("Good things are happening!" + LS + "More good things!" + LS, String.join(LS, new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8)));
 			Files.delete(Paths.get(filename));
 		}
+	}
+
+	@Test
+	public void testSameWriter() throws IOException, LoadException {
+		final Template template = new TemplateLoader().load("Same Writer", "a{{#@Test}}b{{^}}d{{/}}c");
+		final Settings settings = new Settings();
+		final StringWriter writer = new StringWriter();
+
+		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", new AnnotationHandler() {
+			@Override
+			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+				return writer;
+			}
+		}));
+		Assert.assertEquals("abc", writer.toString());
 	}
 
 }

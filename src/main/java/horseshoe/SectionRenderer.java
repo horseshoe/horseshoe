@@ -5,6 +5,7 @@ import java.io.Writer;
 import java.lang.reflect.Array;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
 
 import horseshoe.internal.Expression;
 import horseshoe.internal.Properties;
@@ -19,7 +20,6 @@ class SectionRenderer implements Action, Expression.Indexed {
 	protected int index;
 
 	public static class Factory {
-
 		/**
 		 * Creates a new section renderer using the specified section.
 		 *
@@ -29,7 +29,6 @@ class SectionRenderer implements Action, Expression.Indexed {
 		SectionRenderer create(final Section section){
 			return new SectionRenderer(section);
 		}
-
 	}
 
 	static {
@@ -40,6 +39,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 				factory = (Factory)Factory.class.getClassLoader().loadClass(Factory.class.getName().replace(SectionRenderer.class.getSimpleName(), SectionRenderer.class.getSimpleName() + "_8")).getConstructor().newInstance();
 			}
 		} catch (final ReflectiveOperationException e) {
+			Template.LOGGER.log(Level.WARNING, "Failed to load class: {0}, falling back to default", e.getMessage());
 		}
 
 		FACTORY = factory;
@@ -144,6 +144,35 @@ class SectionRenderer implements Action, Expression.Indexed {
 	}
 
 	/**
+	 * Dispatches the data for rendering using the appropriate transformation for the specified data. Lists are iterated, booleans are evaluated, etc. The writer is guaranteed to be closed when this method finishes or an exception is thrown. This method implements similar functionality to try-with-resources, but uses the exception to determine if we should log a failed close.
+	 *
+	 * @param context the render context
+	 * @param data the data to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchDataAndCloseWriter(final RenderContext context, final Object data, final Writer writer) throws IOException {
+		Exception dispatchException = null;
+
+		try {
+			dispatchData(context, data, writer);
+		} catch (final IOException e) {
+			dispatchException = e;
+			throw e;
+		} finally {
+			try {
+				writer.close();
+			} catch (final IOException e) {
+				if (dispatchException == null) { // Log only when there is no causing exception to prevent confusion
+					context.getSettings().getLogger().log(Level.WARNING, "Failed to close writer (" + section.getLocation() + ")", e);
+				} else { // If there is a causing exception, add this one as a suppressed exception
+					dispatchException.addSuppressed(e);
+				}
+			}
+		}
+	}
+
+	/**
 	 * Dispatches iterator data for rendering.
 	 *
 	 * @param context the render context
@@ -199,26 +228,27 @@ class SectionRenderer implements Action, Expression.Indexed {
 
 	@Override
 	public final void perform(final RenderContext context, final Writer writer) throws IOException {
-		if (section.getAnnotation() != null) {
-			final AnnotationHandler annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
-
-			if (annotationProcessor == null) { // Only write the data if there is an annotation processor available, otherwise take false path with default writer
-				dispatchData(context, false, writer);
+		try {
+			if (section.getAnnotation() == null) {
+				dispatchData(context, section.useCache() ? context.getRepeatedSectionData() : section.getExpression().evaluate(context), writer);
 			} else {
-				final Writer newWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context));
+				final AnnotationHandler annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
 
-				if (newWriter == null || newWriter == writer) {
-					dispatchData(context, context.getSectionData().peek(), writer);
+				if (annotationProcessor == null) { // Only write the data if there is an annotation processor available, otherwise take false path with default writer
+					dispatchData(context, false, writer);
 				} else {
-					try {
-						dispatchData(context, context.getSectionData().peek(), newWriter);
-					} finally {
-						newWriter.close();
+					final Writer annotationWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context));
+
+					if (annotationWriter == null || annotationWriter == writer) { // If we are not using a new writer, then don't close it
+						dispatchData(context, context.getSectionData().peek(), writer);
+					} else {
+						dispatchDataAndCloseWriter(context, context.getSectionData().peek(), annotationWriter);
 					}
 				}
 			}
-		} else {
-			dispatchData(context, section.useCache() ? context.getRepeatedSectionData() : section.getExpression().evaluate(context), writer);
+		} catch (final IOException e) {
+			context.getSettings().getLogger().log(Level.SEVERE, "Failed to render section (" + section.getLocation() + ")", e);
+			throw e;
 		}
 	}
 

@@ -4,18 +4,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import horseshoe.internal.Expression;
 import horseshoe.internal.OverlayMap;
 
 final class Section {
 
-	private final static int INITIAL_CHILDREN_CAPACITY = 4; // Likely not many nested sections, so don't initialize the full capacity
-	private final static int INITIAL_INVERTED_ACTIONS_CAPACITY = 4; // Likely doesn't exist, or used for error reporting, so don't initialize the full capacity
+	private static final int INITIAL_CHILDREN_CAPACITY = 4; // Likely not many nested sections, so don't initialize the full capacity
+	private static final int INITIAL_INVERTED_ACTIONS_CAPACITY = 4; // Likely doesn't exist, or used for error reporting, so don't initialize the full capacity
 
 	private final Section parent;
 	private final List<Section> children = new ArrayList<>(INITIAL_CHILDREN_CAPACITY);
 	private final String name;
+	private final String location;
 	private final Expression expression;
 	private final String annotation;
 	private final boolean isInvisible;
@@ -30,9 +32,10 @@ final class Section {
 	 * Creates a new repeated section with the specified parent.
 	 *
 	 * @param parent the parent of the section
+	 * @param location the location of the section
 	 * @return the repeated section
 	 */
-	public static Section repeat(final Section parent) {
+	public static Section repeat(final Section parent, final String location) {
 		Section repeatContainer = parent;
 		int nested = 0;
 		int skipChildrenSize = 0;
@@ -57,7 +60,7 @@ final class Section {
 			}
 		}
 
-		final Section newSection = new Section(parent, "", repeatedSection.getExpression(), null, false);
+		final Section newSection = new Section(parent, "", location, repeatedSection.getExpression(), null, false);
 
 		if (nested == 0) {
 			repeatedSection.cacheResult = true;
@@ -72,13 +75,15 @@ final class Section {
 	 *
 	 * @param parent the parent of the section, or null if the section is a top-level section
 	 * @param name the name for the section
+	 * @param location the location of the section
 	 * @param expression the expression for the section
 	 * @param annotation the name of the annotation for the section, or null if no annotation exists
 	 * @param isInvisible true if the section is not visible to backreach, otherwise false
 	 */
-	public Section(final Section parent, final String name, final Expression expression, final String annotation, final boolean isInvisible) {
+	public Section(final Section parent, final String name, final String location, final Expression expression, final String annotation, final boolean isInvisible) {
 		this.parent = parent;
-		this.name = name;
+		this.name = Objects.requireNonNull(name, "Encountered null section name");
+		this.location = Objects.requireNonNull(location, "Encountered null location");
 		this.expression = expression;
 		this.annotation = annotation;
 		this.isInvisible = isInvisible;
@@ -97,10 +102,11 @@ final class Section {
 	 * Creates a new section using the specified expression.
 	 *
 	 * @param parent the parent of the section, or null if the section is a top-level section
+	 * @param location the location of the section
 	 * @param expression the expression for the section
 	 */
-	public Section(final Section parent, final Expression expression) {
-		this(parent, expression.toString(), expression, null, false);
+	public Section(final Section parent, final String location, final Expression expression) {
+		this(parent, expression.toString(), location, expression, null, false);
 	}
 
 	/**
@@ -140,15 +146,6 @@ final class Section {
 	}
 
 	/**
-	 * Gets the map of named expressions associated with the section.
-	 *
-	 * @return the map of named expressions associated with the section
-	 */
-	public Map<String, Expression> getNamedExpressions() {
-		return namedExpressions;
-	}
-
-	/**
 	 * Gets the inverted actions associated with the section.
 	 *
 	 * @return the inverted actions associated with the section
@@ -167,12 +164,30 @@ final class Section {
 	}
 
 	/**
+	 * Gets the location where the section begins.
+	 *
+	 * @return the location where the section begins
+	 */
+	public String getLocation() {
+		return location;
+	}
+
+	/**
 	 * Gets the name of the section.
 	 *
 	 * @return the name of the section
 	 */
 	public String getName() {
 		return name;
+	}
+
+	/**
+	 * Gets the map of named expressions associated with the section.
+	 *
+	 * @return the map of named expressions associated with the section
+	 */
+	public Map<String, Expression> getNamedExpressions() {
+		return namedExpressions;
 	}
 
 	/**

@@ -28,7 +28,7 @@ final class DynamicContentRenderer implements Action {
 
 		if (value != null) {
 			final String string = value.toString();
-			writer.write(escaped && context.getSettings().getEscapeFunction() != null ? context.getSettings().getEscapeFunction().escape(string) : string);
+			writer.write(escaped ? context.getSettings().getEscapeFunction().escape(string) : string);
 		}
 	}
 

@@ -12,7 +12,7 @@ public abstract class Accessor {
 
 	private static final class MethodSignature {
 		private final String name;
-		private final String types[];
+		private final String[] types;
 
 		/**
 		 * Creates a new method signature from a string.
@@ -36,8 +36,8 @@ public abstract class Accessor {
 				name = signature.substring(0, endOfName);
 				types = new String[count + 1];
 
-				for (int end = signature.indexOf(',', start), i = 0; end >= 0; start = end + 1, end = signature.indexOf(',', start)) {
-					types[i++] = signature.substring(start, end);
+				for (int end = signature.indexOf(',', start), i = 0; end >= 0; i++, start = end + 1, end = signature.indexOf(',', start)) {
+					types[i] = signature.substring(start, end);
 				}
 
 				types[count] = signature.substring(start);
@@ -56,7 +56,7 @@ public abstract class Accessor {
 			}
 
 			if (types != null) {
-				final Class<?> parameterTypes[] = method.getParameterTypes();
+				final Class<?>[] parameterTypes = method.getParameterTypes();
 				final int length = Math.min(parameterTypes.length, types.length);
 
 				for (int i = 0; i < length; i++) {

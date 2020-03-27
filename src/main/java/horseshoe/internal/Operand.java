@@ -57,7 +57,7 @@ final class Operand {
 	 * @param type the type of the operand, or null to indicate a stack with { long longVal, double doubleVal, int type } on top
 	 * @param builder the builder used to generate data of the specified type
 	 */
-	public Operand(final Class<?> type, final MethodBuilder builder) {
+	Operand(final Class<?> type, final MethodBuilder builder) {
 		this.type = type;
 		this.builder = builder;
 
@@ -72,7 +72,7 @@ final class Operand {
 	 * @param firstLocalIndex the first local variable index that can be used for temporary storage
 	 * @return the resulting operand from the comparison
 	 */
-	public Operand execCompareOp(final Operand other, final byte compareBranchOpcode, final int firstLocalIndex) {
+	Operand execCompareOp(final Operand other, final byte compareBranchOpcode, final int firstLocalIndex) {
 		if ((type == null || (type.isPrimitive() && !boolean.class.equals(type))) && (other.type == null || (other.type.isPrimitive() && !boolean.class.equals(other.type)))) { // Mathematical comparison
 			final int typeIndex = firstLocalIndex;
 			final int doubleValueIndex = firstLocalIndex + 1;
@@ -109,7 +109,7 @@ final class Operand {
 	 * @param firstLocalIndex the first local variable index that can be used for temporary storage
 	 * @return the resulting operand from the operation
 	 */
-	public Operand execMathOp(final Operand other, final byte intOpcode, final byte longOpcode, final byte doubleOpcode, final int firstLocalIndex) {
+	Operand execMathOp(final Operand other, final byte intOpcode, final byte longOpcode, final byte doubleOpcode, final int firstLocalIndex) {
 		final int typeIndex = firstLocalIndex;
 		final int doubleValueIndex = firstLocalIndex + 1;
 		final int longValueIndex = firstLocalIndex + 3;
@@ -134,7 +134,7 @@ final class Operand {
 	 * @param longOpcode the opcode used to compute the result of the operation
 	 * @return the resulting operand from the operation
 	 */
-	public Operand execIntegralOp(final byte intOpcode, final byte longOpcode) {
+	Operand execIntegralOp(final byte intOpcode, final byte longOpcode) {
 		final Label notInt = builder.newLabel();
 		final Label end = builder.newLabel();
 
@@ -152,7 +152,7 @@ final class Operand {
 	 * @param firstLocalIndex the first local variable index that can be used for temporary storage
 	 * @return the resulting operand from the operation
 	 */
-	public Operand execIntegralOp(final Operand other, final byte intOpcode, final byte longOpcode, final boolean secondOperandInt, final int firstLocalIndex) {
+	Operand execIntegralOp(final Operand other, final byte intOpcode, final byte longOpcode, final boolean secondOperandInt, final int firstLocalIndex) {
 		final int typeIndex = firstLocalIndex;
 		final int longValueIndex = firstLocalIndex + 1;
 		final Label notInt = builder.newLabel();
@@ -170,7 +170,7 @@ final class Operand {
 	 *
 	 * @return the resulting boolean operand
 	 */
-	public MethodBuilder toBoolean() {
+	MethodBuilder toBoolean() {
 		if (type == null) {
 			return builder.addCode(POP, DCONST_0, DCMPG, DUP_X2, POP, LCONST_0, LCMP, IOR);
 		} else if (type.isPrimitive()) {
@@ -186,7 +186,7 @@ final class Operand {
 	 * @param allowFloating true to allow floating point values, otherwise false
 	 * @return the resulting primitive, numeric operand
 	 */
-	public MethodBuilder toNumeric(final boolean allowFloating) {
+	MethodBuilder toNumeric(final boolean allowFloating) {
 		if (type == null) {
 			if (allowFloating) {
 				return builder;
@@ -219,7 +219,8 @@ final class Operand {
 		final Label elseCase = builder.newLabel();
 		final Label end = builder.newLabel();
 
-		/*
+		/* The builder implements the following algorithm to convert to a numeric value:
+		 *
 		 *	if (instanceof Number) {
 		 *		if (instanceof Double || instanceof Float || instanceof BigDecimal) {
 		 *			use .doubleValue();
@@ -254,7 +255,7 @@ final class Operand {
 	 * @param generateReturn true to generate return instructions rather than place the object on the stack, otherwise false
 	 * @return the resulting object operand
 	 */
-	public MethodBuilder toObject(final boolean generateReturn) {
+	MethodBuilder toObject(final boolean generateReturn) {
 		if (type == null) {
 			final Label isFloating = builder.newLabel();
 			final Label isLong = builder.newLabel();

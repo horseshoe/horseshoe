@@ -133,9 +133,9 @@ final class Operator {
 				assert string != null && !string.isEmpty() : "Operators cannot consist of a null or empty string";
 
 				if (operator.has(LEFT_EXPRESSION)) { // All binary operators must start with a binary operator character
-					assert BINARY_OPERATOR_CHARACTER_PATTERN.matcher(string).matches() : "Invalid binary operator '" + string + "', must match the following pattern: '" + BINARY_OPERATOR_CHARACTER_PATTERN + "'";
+					assert BINARY_OPERATOR_CHARACTER_PATTERN.matcher(string).matches() : "Invalid binary operator \"" + string + "\", must match the following pattern: \"" + BINARY_OPERATOR_CHARACTER_PATTERN + "\"";
 				} else { // All unary operators must start with a unary operator character
-					assert UNARY_OPERATOR_CHARACTER_PATTERN.matcher(string).matches() : "Invalid unary operator '" + string + "', must match the following pattern: '" + UNARY_OPERATOR_CHARACTER_PATTERN + "'";
+					assert UNARY_OPERATOR_CHARACTER_PATTERN.matcher(string).matches() : "Invalid unary operator \"" + string + "\", must match the following pattern: \"" + UNARY_OPERATOR_CHARACTER_PATTERN + "\"";
 				}
 			}
 

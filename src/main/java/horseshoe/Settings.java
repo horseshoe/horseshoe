@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * The Settings class allows configuring different properties that are used when rendering a {@link Template}.
@@ -12,30 +11,51 @@ import java.util.logging.Logger;
 public class Settings {
 
 	/**
-	 * The error logger that sends error messages to the {@link Template} class logger.
+	 * The logger that sends messages to the {@link Template} class logger.
 	 */
-	public static final ErrorLogger DEFAULT_ERROR_LOGGER = new ErrorLogger() {
-		private final Logger logger = Logger.getLogger(Template.class.getName());
+	public static final Logger DEFAULT_LOGGER = new Logger() {
+		@Override
+		public void log(final Level level, final String message) {
+			Template.LOGGER.log(level, message);
+		}
 
 		@Override
-		public void log(final String expression, final String location, final Throwable error) {
-			if (error.getMessage() == null) {
-				logger.log(Level.WARNING, "Encountered {0} while evaluating expression \"{1}\" ({2})", new Object[] { error.getClass().getName(), expression, location });
-			} else {
-				logger.log(Level.WARNING, "Encountered {0} while evaluating expression \"{1}\" ({2}): {3}", new Object[] { error.getClass().getName(), expression, location, error.getMessage() });
-			}
+		public void log(final Level level, final String message, final Object... params) {
+			Template.LOGGER.log(level, message, params);
+		}
+
+		@Override
+		public void log(final Level level, final String message, final Throwable error) {
+			Template.LOGGER.log(level, message, error);
 		}
 	};
 
 	/**
-	 * The error logger that consumes any error messages.
+	 * The logger that consumes all messages without reporting them.
 	 */
-	public static final ErrorLogger EMPTY_ERROR_LOGGER = null;
+	public static final Logger EMPTY_LOGGER = new Logger() {
+		@Override
+		public void log(final Level level, final String message) { // Intentionally left empty
+		}
+
+		@Override
+		public void log(final Level level, final String message, final Object... params) { // Intentionally left empty
+		}
+
+		@Override
+		public void log(final Level level, final String message, final Throwable error) { // Intentionally left empty
+		}
+	};
 
 	/**
 	 * The escape function that does not escape any characters, returning the same string that was passed to it.
 	 */
-	public static final EscapeFunction EMPTY_ESCAPE_FUNCTION = null;
+	public static final EscapeFunction EMPTY_ESCAPE_FUNCTION = new EscapeFunction() {
+		@Override
+		public String escape(final String raw) {
+			return raw;
+		}
+	};
 
 	/**
 	 * The escape function that escapes a string as HTML, specifically the &amp;, &lt;, &gt;, ", and ' characters.
@@ -72,7 +92,7 @@ public class Settings {
 	public static final String TEMPLATE_LINE_ENDINGS = null;
 
 	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
-	private ErrorLogger errorLogger = DEFAULT_ERROR_LOGGER;
+	private Logger logger = DEFAULT_LOGGER;
 	private EscapeFunction escapeFunction = EMPTY_ESCAPE_FUNCTION;
 	private String lineEndings = DEFAULT_LINE_ENDINGS;
 	private final Set<String> loadableClasses = new HashSet<>(Arrays.asList(
@@ -122,7 +142,7 @@ public class Settings {
 	/**
 	 * An enumeration used to control access when checking identifiers in expressions.
 	 */
-	public static enum ContextAccess {
+	public enum ContextAccess {
 		/**
 		 * The context access that allows access to all section scopes when resolving an identifier in an expression.
 		 */
@@ -137,20 +157,6 @@ public class Settings {
 		 * The context access that allows access to only the current section scope when resolving an identifier in an expression.
 		 */
 		CURRENT
-	}
-
-	/**
-	 * An ErrorLogger is used to log errors during the evaluation of expressions.
-	 */
-	public static interface ErrorLogger {
-		/**
-		 * Logs the specified error.
-		 *
-		 * @param expression the expression that threw the error
-		 * @param location the location of the expression that threw the error
-		 * @param error the error to log
-		 */
-		public void log(final String expression, final String location, final Throwable error);
 	}
 
 	/**
@@ -185,18 +191,18 @@ public class Settings {
 	}
 
 	/**
-	 * Gets the expression error logger used by the rendering process.
+	 * Gets the logger used by the rendering process.
 	 *
-	 * @return the expression error logger used by the rendering process. If null, the rendering process will not log expression errors.
+	 * @return the logger used by the rendering process
 	 */
-	public ErrorLogger getErrorLogger() {
-		return errorLogger;
+	public Logger getLogger() {
+		return logger;
 	}
 
 	/**
 	 * Gets the escape function used by the rendering process.
 	 *
-	 * @return the escape function used by the rendering process. If null, the rendering process will not escape the text.
+	 * @return the escape function used by the rendering process.
 	 */
 	public EscapeFunction getEscapeFunction() {
 		return escapeFunction;
@@ -232,24 +238,24 @@ public class Settings {
 	}
 
 	/**
-	 * Sets the expression error logger used by the rendering process.
+	 * Sets the logger used by the rendering process.
 	 *
-	 * @param errorLogger the expression error logger used by the rendering process. If null, the rendering process will not log expression errors.
+	 * @param logger the logger used by the rendering process. If null, the logger will be set to the empty logger.
 	 * @return this object
 	 */
-	public Settings setErrorLogger(final ErrorLogger errorLogger) {
-		this.errorLogger = errorLogger;
+	public Settings setLogger(final Logger logger) {
+		this.logger = (logger == null ? EMPTY_LOGGER : logger);
 		return this;
 	}
 
 	/**
 	 * Sets the escape function used by the rendering process.
 	 *
-	 * @param escapeFunction the escape function used by the rendering process. If null, the rendering process will not escape the text.
+	 * @param escapeFunction the escape function used by the rendering process. If null, the escape function will be set to the empty escape function.
 	 * @return this object
 	 */
 	public Settings setEscapeFunction(final EscapeFunction escapeFunction) {
-		this.escapeFunction = escapeFunction;
+		this.escapeFunction = (escapeFunction == null ? EMPTY_ESCAPE_FUNCTION : escapeFunction);
 		return this;
 	}
 

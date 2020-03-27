@@ -29,6 +29,8 @@ import horseshoe.internal.RenderContext;
  */
 public final class Template {
 
+	static final Logger LOGGER = Logger.getLogger(Template.class.getName());
+
 	private final String name;
 	private final Section section;
 	private final List<Action> actions = new ArrayList<>();
@@ -40,7 +42,7 @@ public final class Template {
 	 */
 	Template(final String name) {
 		this.name = name;
-		this.section = new Section(null, name, null, null, true);
+		this.section = new Section(null, name, name, null, null, true);
 
 		section.getLocalPartials().put(name, this);
 	}
@@ -73,7 +75,7 @@ public final class Template {
 	}
 
 	/**
-	 * Renders the template to the specified writer using the specified context and global data. The global data is copied and will not be modified while rendering the template.
+	 * Renders the template to the specified writer using the specified context and global data. The global data is copied and will not be modified while rendering the template. The writer is not closed, so that chaining can be used, if desired.
 	 *
 	 * @param settings the settings used while rendering
 	 * @param globalData the global data used while rendering
@@ -92,14 +94,14 @@ public final class Template {
 				action.perform(renderContext, writer);
 			}
 		} catch (final HaltRenderingException e) {
-			Logger.getLogger(Template.class.getName()).log(Level.SEVERE, e.getMessage());
+			settings.getLogger().log(Level.SEVERE, e.getMessage());
 		}
 
 		return writer;
 	}
 
 	/**
-	 * Renders the template to the specified writer using the specified context and global data. The global data is copied and will not be modified while rendering the template.
+	 * Renders the template to the specified writer using the specified context and global data. The global data is copied and will not be modified while rendering the template. The writer is not closed, so that chaining can be used, if desired.
 	 *
 	 * @param settings the settings used while rendering
 	 * @param globalData the global data used while rendering

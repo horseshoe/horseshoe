@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -191,6 +192,7 @@ public class TemplateLoader {
 			try {
 				reader.close();
 			} catch (final IOException e) {
+				Template.LOGGER.log(Level.WARNING, "Failed to close reader for template \"" + name + "\"", e);
 			}
 		}
 
@@ -386,7 +388,7 @@ public class TemplateLoader {
 		for (int tags = 0; true; tags++) {
 			// Get text before this tag
 			final List<ParsedLine> lines = new ArrayList<>();
-			final CharSequence freeText = loader.next(delimiter.start, lines);
+			final CharSequence freeText = loader.setDelimiter(delimiter.start).next(lines);
 
 			if (freeText.length() > 0) {
 				final StaticContentRenderer currentText = new StaticContentRenderer(lines, actionStack.peek().isEmpty());
@@ -423,7 +425,7 @@ public class TemplateLoader {
 			}
 
 			// Parse the expression
-			final CharSequence tag = loader.next(loader.checkNext("{") ? delimiter.unescapedEnd : delimiter.end, null);
+			final CharSequence tag = loader.setDelimiter(loader.checkNext("{") ? delimiter.unescapedEnd : delimiter.end).next();
 
 			if (!loader.hasNext()) {
 				throw new LoadException(loaders, "Unclosed tag, unexpected end of stream");
@@ -463,7 +465,7 @@ public class TemplateLoader {
 						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
 						if (expression.length() == 0 && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
-							sections.push(Section.repeat(sections.peek()));
+							sections.push(Section.repeat(sections.peek(), loader.toLocationString()));
 						} else if (expression.length() != 0 && expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
 							final Matcher annotation = ANNOTATION_PATTERN.matcher(expression);
 
@@ -473,11 +475,14 @@ public class TemplateLoader {
 
 							final String sectionName = annotation.group("name");
 							final String parameters = annotation.group("parameters");
+							final String location = loader.toLocationString();
 
 							// Load the annotation arguments
-							sections.push(new Section(sections.peek(), sectionName, parameters == null ? null : new Expression(loader.toLocationString(), null, parameters, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
+							sections.push(new Section(sections.peek(), sectionName, location, parameters == null ? null : new Expression(location, null, parameters, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
 						} else { // Start a new section
-							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+							final String location = loader.toLocationString();
+
+							sections.push(new Section(sections.peek(), location, new Expression(location, null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
 						}
 
 						// Add a new render section action
@@ -490,18 +495,20 @@ public class TemplateLoader {
 						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
 						if (expression.length() == 0 && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
-							if (sections.isEmpty() || (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null)) {
+							if (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null) {
 								throw new LoadException(loaders, "Section else tag outside section start tag");
 							}
 
 							actionStack.pop();
 						} else { // Start a new inverted section
-							sections.push(new Section(sections.peek(), new Expression(loader.toLocationString(), null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+							final String location = loader.toLocationString();
+
+							sections.push(new Section(sections.peek(), location, new Expression(location, null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
 							actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
 						}
 
 						// Grab the inverted action list from the section
-						final List<Action> actions = actionStack.peek(); // TODO: use a more robust method than peeking into the action stack and assuming it is a SectionRenderer
+						final List<Action> actions = actionStack.peek();
 
 						actionStack.push(((SectionRenderer)actions.get(actions.size() - 1)).getSection().getInvertedActions());
 						break processTag;

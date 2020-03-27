@@ -10,7 +10,7 @@ import java.util.NoSuchElementException;
 public final class PersistentStack<T> implements Iterable<T> {
 
 	@SuppressWarnings("unchecked")
-	private T array[] = (T[])new Object[8];
+	private T[] array = (T[])new Object[8];
 	private int size = 0;
 
 	private class LIFOIterator implements java.util.Iterator<T> {
@@ -129,10 +129,7 @@ public final class PersistentStack<T> implements Iterable<T> {
 			@SuppressWarnings("unchecked")
 			final T newArray[] = (T[])new Object[array.length * 2];
 
-			for (int i = 0; i < size; i++) {
-				newArray[i] = array[i];
-			}
-
+			System.arraycopy(array, 0, newArray, 0, size);
 			array = newArray;
 		}
 

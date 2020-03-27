@@ -12,9 +12,11 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -63,8 +65,8 @@ public final class Expression {
 
 	private final String location;
 	private final String originalString;
-	private final Expression expressions[];
-	private final Identifier identifiers[];
+	private final Expression[] expressions;
+	private final Identifier[] identifiers;
 	private final Evaluable evaluable;
 
 	public static interface Indexed {
@@ -83,7 +85,7 @@ public final class Expression {
 		public boolean hasNext();
 	}
 
-	public static abstract class Evaluable {
+	public abstract static class Evaluable {
 		private static final byte LOAD_EXPRESSIONS = ALOAD_1;
 		private static final byte LOAD_IDENTIFIERS = ALOAD_2;
 		private static final byte LOAD_CONTEXT = ALOAD_3;
@@ -98,7 +100,7 @@ public final class Expression {
 		 * @return the result of evaluating the object
 		 * @throws Exception if an error occurs while evaluating the expression
 		 */
-		public abstract Object evaluate(final Expression expressions[], final Identifier identifiers[], final RenderContext context) throws Exception;
+		public abstract Object evaluate(final Expression[] expressions, final Identifier[] identifiers, final RenderContext context) throws Exception;
 	}
 
 	@SuppressWarnings("serial")
@@ -270,7 +272,7 @@ public final class Expression {
 				(second instanceof StringBuilder || second instanceof String || second instanceof Character)) {
 			return first.toString().compareTo(second.toString());
 		} else if (equality) {
-			return (first == null ? second == null : first.equals(second)) ? 0 : 1;
+			return Objects.equals(first, second) ? 0 : 1;
 		} else if (first instanceof Comparable) {
 			return ((Comparable<Object>)first).compareTo(second);
 		}
@@ -417,7 +419,7 @@ public final class Expression {
 		case "?[?":
 			if (left != null) {
 				if (!Object.class.equals(left.type)) {
-					throw new IllegalArgumentException("Unexpected '" + operator.getString() + "' operator applied to " + (left.type == null ? "numeric" : left.type.getName()) + " value, expecting map or array type value");
+					throw new IllegalArgumentException("Unexpected \"" + operator.getString() + "\" operator applied to " + (left.type == null ? "numeric" : left.type.getName()) + " value, expecting map or array type value");
 				}
 
 				final Label end = left.builder.newLabel();
@@ -428,7 +430,7 @@ public final class Expression {
 
 				operands.push(new Operand(Object.class, left.builder.append(right.toObject(false)).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
 				break;
-			}
+			} // Intentional fall-through if left is null
 		case "{": {
 			int pairs = 0;
 
@@ -607,7 +609,7 @@ public final class Expression {
 		}
 		case "?": {
 			if (!Entry.class.equals(right.type)) {
-				throw new IllegalArgumentException("Incomplete ternary operator, missing ':'");
+				throw new IllegalArgumentException("Incomplete ternary operator, missing \":\"");
 			}
 
 			assert Entry.class.equals(left.type);
@@ -663,7 +665,7 @@ public final class Expression {
 		}
 
 		default:
-			assert false : "Unrecognized operator '" + operator.getString() + "' while parsing expression";
+			assert false : "Unrecognized operator \"" + operator.getString() + "\" while parsing expression";
 		}
 	}
 
@@ -695,9 +697,9 @@ public final class Expression {
 	 * @throws ReflectiveOperationException if an error occurs while resolving the reflective parts of the expression
 	 */
 	public Expression(final String location, final String expressionName, final CharSequence expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
-		final HashMap<Expression, Integer> expressions = new HashMap<>();
-		final HashMap<Identifier, Integer> identifiers = new HashMap<>();
-		final HashMap<String, Integer> localVariables = new HashMap<>();
+		final HashMap<Expression, Integer> expressionMap = new HashMap<>();
+		final HashMap<Identifier, Integer> identifierMap = new HashMap<>();
+		final HashMap<String, Integer> localVariableMap = new HashMap<>();
 		final PersistentStack<Operand> operands = new PersistentStack<>();
 		int nextLocalVariableIndex = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS;
 
@@ -712,11 +714,11 @@ public final class Expression {
 			operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(PERSISTENT_STACK_PEEK)));
 		} else if (!horseshoeExpressions) {
 			final MethodBuilder mb = new MethodBuilder();
-			final String names[] = originalString.split("\\.", -1);
+			final String[] names = originalString.split("[.]", -1);
 
 			// Load the identifiers
 			for (int i = 0; i < names.length; i++) {
-				final int index = getIdentifierIndex(identifiers, new Identifier(names[i].trim()));
+				final int index = getIdentifierIndex(identifierMap, new Identifier(names[i].trim()));
 
 				if (i == 0) {
 					// Create a new output formed by invoking identifiers[index].getValue(context, backreach, access)
@@ -770,7 +772,7 @@ public final class Expression {
 								}
 
 								if (isInternal || identifier.endsWith("(") || (identifier.startsWith(".") && (!".".equals(identifier) || !isRoot))) {
-									throw new IllegalArgumentException("Invalid identifier with prefix '" + prefixString + "' in expression at offset " + matcher.regionStart());
+									throw new IllegalArgumentException("Invalid identifier with prefix \"" + prefixString + "\" in expression at offset " + matcher.regionStart());
 								}
 							} else {
 								final String backreachString = matcher.group("backreach");
@@ -805,7 +807,7 @@ public final class Expression {
 
 							case "isFirst":
 								operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
-								processOperation(namedExpressions, expressions, identifiers, operands, operators.push(Operator.get("!", false)));
+								processOperation(namedExpressions, expressionMap, identifierMap, operands, operators.push(Operator.get("!", false)));
 								break;
 
 							default: operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL))); break;
@@ -842,7 +844,7 @@ public final class Expression {
 							final String name = identifier.startsWith("`") ? unescapeQuotedIdentifier(identifier.substring(1, identifier.length() - 1)) : identifier;
 
 							if (lastNavigation) {
-								final int index = getIdentifierIndex(identifiers, new Identifier(name));
+								final int index = getIdentifierIndex(identifierMap, new Identifier(name));
 
 								if (operators.pop().has(Operator.SAFE)) {
 									// Create a new output formed by invoking identifiers[index].getValue(object)
@@ -852,7 +854,7 @@ public final class Expression {
 									operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
 								}
 							} else {
-								final Integer localVariableIndex = unstatedBackreach ? localVariables.get(name) : null;
+								final Integer localVariableIndex = unstatedBackreach ? localVariableMap.get(name) : null;
 								final Operator operator = Operator.get(matcher.group("assignment"), true);
 
 								// Look-ahead for an assignment operation
@@ -861,12 +863,12 @@ public final class Expression {
 										throw new IllegalArgumentException("Invalid assignment to non-local variable in expression at offset " + matcher.regionStart());
 									}
 
-									localVariables.put(name, nextLocalVariableIndex);
+									localVariableMap.put(name, nextLocalVariableIndex);
 									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, nextLocalVariableIndex++)));
 								} else if (localVariableIndex != null) { // Check for a local variable
 									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, localVariableIndex)));
 								} else { // Resolve the identifier
-									final int index = getIdentifierIndex(identifiers, new Identifier(name));
+									final int index = getIdentifierIndex(identifierMap, new Identifier(name));
 
 									// Create a new output formed by invoking identifiers[index].getRootValue(context, access) or identifiers[index].findValue(context, backreach, access)
 									if (isRoot) {
@@ -903,7 +905,7 @@ public final class Expression {
 
 						do {
 							sb.append(string, start, backslash);
-							assert backslash + 1 < string.length() : "Invalid string literal accepted with trailing '\\'"; // According to the pattern, a backslash must be followed by a character
+							assert backslash + 1 < string.length() : "Invalid string literal accepted with trailing \"\\\""; // According to the pattern, a backslash must be followed by a character
 							start = backslash + 2;
 
 							switch (string.charAt(backslash + 1)) {
@@ -939,18 +941,18 @@ public final class Expression {
 								break;
 
 							case 'u':
-								assert backslash + 5 < string.length() : "Invalid string literal accepted with trailing '\\u'"; // According to the pattern, \\u must be followed by 4 digits
+								assert backslash + 5 < string.length() : "Invalid string literal accepted with trailing \"\\u\""; // According to the pattern, \\u must be followed by 4 digits
 								sb.append(Character.toChars(Integer.parseInt(string.substring(backslash + 2, backslash + 6), 16)));
 								start = backslash + 6;
 								break;
 
 							case 'U':
-								assert backslash + 9 < string.length() : "Invalid string literal accepted with trailing '\\U'"; // According to the pattern, \\U must be followed by 8 digits
+								assert backslash + 9 < string.length() : "Invalid string literal accepted with trailing \"\\U\""; // According to the pattern, \\U must be followed by 8 digits
 								sb.append(Character.toChars(Integer.parseInt(string.substring(backslash + 2, backslash + 10), 16)));
 								start = backslash + 10;
 								break;
 
-							default: assert false : "Invalid string literal accepted with '\\" + string.charAt(backslash + 1) + "'"; // According to the pattern, only the above cases are allowed
+							default: assert false : "Invalid string literal accepted with \"\\" + string.charAt(backslash + 1) + "\""; // According to the pattern, only the above cases are allowed
 							}
 						} while ((backslash = string.indexOf('\\', start)) >= 0);
 
@@ -965,7 +967,7 @@ public final class Expression {
 					if (operator != null) {
 						// Shunting-yard Algorithm
 						while (!operators.isEmpty() && !operators.peek().isContainer() && (operators.peek().getPrecedence() < operator.getPrecedence() || (operators.peek().getPrecedence() == operator.getPrecedence() && operator.isLeftAssociative()))) {
-							processOperation(namedExpressions, expressions, identifiers, operands, operators);
+							processOperation(namedExpressions, expressionMap, identifierMap, operands, operators);
 						}
 
 						if (!operators.isEmpty() && operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
@@ -986,19 +988,19 @@ public final class Expression {
 
 							if (closedOperator.getClosingString() != null) {
 								if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
-									throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart() + ", expecting '" + closedOperator.getClosingString() + "'");
+									throw new IllegalArgumentException("Unexpected \"" + token + "\" in expression at offset " + matcher.regionStart() + ", expecting \"" + closedOperator.getClosingString() + "\"");
 								}
 
-								processOperation(namedExpressions, expressions, identifiers, operands, operators.push(closedOperator));
+								processOperation(namedExpressions, expressionMap, identifierMap, operands, operators.push(closedOperator));
 								lastOperator = closedOperator.getClosingOperator();
 								continue nextToken;
 							}
 
-							processOperation(namedExpressions, expressions, identifiers, operands, operators.push(closedOperator));
+							processOperation(namedExpressions, expressionMap, identifierMap, operands, operators.push(closedOperator));
 						}
 					}
 
-					throw new IllegalArgumentException("Unexpected '" + token + "' in expression at offset " + matcher.regionStart());
+					throw new IllegalArgumentException("Unexpected \"" + token + "\" in expression at offset " + matcher.regionStart());
 				} else {
 					throw new IllegalArgumentException("Unrecognized identifier in expression at offset " + matcher.regionStart());
 				}
@@ -1011,7 +1013,7 @@ public final class Expression {
 				Operator operator = operators.pop();
 
 				if (operator.getClosingString() != null) {
-					throw new IllegalArgumentException("Unexpected end of expression, expecting '" + operator.getClosingString() + "' (unmatched '" + operator.getString() + "')");
+					throw new IllegalArgumentException("Unexpected end of expression, expecting \"" + operator.getClosingString() + "\" (unmatched \"" + operator.getString() + "\")");
 				} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS) && (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION | Operator.X_RIGHT_EXPRESSIONS))) { // Process multi-argument operators, but allow trailing commas
 					operator = operator.addRightExpression();
 				} else if (lastOperator != null && lastOperator.has(Operator.RIGHT_EXPRESSION)) {
@@ -1023,7 +1025,7 @@ public final class Expression {
 					}
 				}
 
-				processOperation(namedExpressions, expressions, identifiers, operands, operators.push(operator));
+				processOperation(namedExpressions, expressionMap, identifierMap, operands, operators.push(operator));
 			}
 		}
 
@@ -1032,15 +1034,15 @@ public final class Expression {
 		}
 
 		// Populate all the identifiers and create the evaluator
-		this.expressions = new Expression[expressions.size()];
-		this.identifiers = new Identifier[identifiers.size()];
+		this.expressions = new Expression[expressionMap.size()];
+		this.identifiers = new Identifier[identifierMap.size()];
 		final MethodBuilder initializeLocalVariables = new MethodBuilder();
 
-		for (final Entry<Expression, Integer> entry : expressions.entrySet()) {
+		for (final Entry<Expression, Integer> entry : expressionMap.entrySet()) {
 			this.expressions[entry.getValue()] = entry.getKey();
 		}
 
-		for (final Entry<Identifier, Integer> entry : identifiers.entrySet()) {
+		for (final Entry<Identifier, Integer> entry : identifierMap.entrySet()) {
 			this.identifiers[entry.getValue()] = entry.getKey();
 		}
 
@@ -1072,9 +1074,11 @@ public final class Expression {
 			return evaluable.evaluate(expressions, identifiers, context);
 		} catch (final HaltRenderingException e) {
 			throw e;
-		} catch (final Throwable t) { // Don't let any exceptions escape
-			if (context.getSettings().getErrorLogger() != null) {
-				context.getSettings().getErrorLogger().log(originalString, location, t);
+		} catch (final Exception | LinkageError e) { // Don't let any exceptions escape
+			if (e.getMessage() == null) {
+				context.getSettings().getLogger().log(Level.WARNING, "Encountered {0} while evaluating expression \"{1}\" ({2})", e.getClass().getName(), originalString, location);
+			} else {
+				context.getSettings().getLogger().log(Level.WARNING, "Encountered {0} while evaluating expression \"{1}\" ({2}): {3}", e.getClass().getName(), originalString, location, e.getMessage());
 			}
 		}
 

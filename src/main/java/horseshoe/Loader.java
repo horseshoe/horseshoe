@@ -8,6 +8,7 @@ import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -131,7 +132,7 @@ public final class Loader implements AutoCloseable {
 			try {
 				reader.close();
 			} catch (final IOException e) {
-				// Assuming use of the reader is finished at this point, so disregard the exception
+				Template.LOGGER.log(Level.WARNING, "Failed to close reader for template \"" + name + "\"", e);
 			}
 		}
 	}
@@ -199,10 +200,10 @@ public final class Loader implements AutoCloseable {
 			}
 
 			// Copy the data to the beginning of the buffer and try to read more data
-			System.arraycopy(oldBuffer.getBuffer(), bufferOffset, streamBuffer.getBuffer(), 0, length);
+			System.arraycopy(oldBuffer.getData(), bufferOffset, streamBuffer.getData(), 0, length);
 		}
 
-		final int read = reader.read(streamBuffer.getBuffer(), length, streamBuffer.capacity() - length);
+		final int read = reader.read(streamBuffer.getData(), length, streamBuffer.capacity() - length);
 
 		if (read < 0) {
 			streamBuffer.setLength(length);
@@ -274,16 +275,24 @@ public final class Loader implements AutoCloseable {
 	}
 
 	/**
-	 * Replaces the delimiter and gets the next character sequence up to the next match or end-of-stream. The delimiter will be used in subsequent calls to next(). Any previous results are invalidated through the use of this function.
+	 * Gets the next character sequence up to the next matching delimiter or end-of-stream. On construction, the delimiter is initialized as a new line. Any previous results are invalidated through the use of this function.
 	 *
-	 * @param delimiter the replacement delimiter used for subsequent calls to next()
-	 * @param lines the list of lines to be updated as part of the call (may be null)
 	 * @return the next character sequence up to the next matching delimiter or end-of-stream
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	CharSequence next(final Pattern delimiter, final List<ParsedLine> lines) throws IOException {
+	CharSequence next() throws IOException {
+		return next(null);
+	}
+
+	/**
+	 * Replaces the delimiter. The delimiter will be used in subsequent calls to next(). Any previous results are invalidated through the use of this function.
+	 *
+	 * @param delimiter the replacement delimiter used for subsequent calls to next()
+	 * @return this loader
+	 */
+	Loader setDelimiter(final Pattern delimiter) {
 		matcher.usePattern(delimiter);
-		return next(lines);
+		return this;
 	}
 
 	/**

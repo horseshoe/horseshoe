@@ -5,13 +5,14 @@ import java.io.StringWriter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Level;
 
 import org.junit.Assert;
 import org.junit.Test;
 
 import horseshoe.Settings.ContextAccess;
 
-public class ContextAccessTests {
+public class SettingsTests {
 
 	public static class FieldClass {
 		public String testField = "test";
@@ -54,6 +55,41 @@ public class ContextAccessTests {
 		final StringWriter writer = new StringWriter();
 		template.render(settings, data, writer);
 		Assert.assertEquals("123value" + data.entrySet() + data.get("field") + "test", writer.toString());
+	}
+
+	@Test
+	public void testEscapeFunctionAccess() {
+		Assert.assertEquals(Settings.EMPTY_ESCAPE_FUNCTION, new Settings().getEscapeFunction());
+		Assert.assertEquals(Settings.HTML_ESCAPE_FUNCTION, new Settings().setEscapeFunction(Settings.HTML_ESCAPE_FUNCTION).getEscapeFunction());
+		Assert.assertEquals(Settings.EMPTY_ESCAPE_FUNCTION, new Settings().setEscapeFunction(Settings.EMPTY_ESCAPE_FUNCTION).getEscapeFunction());
+		Assert.assertEquals(Settings.EMPTY_ESCAPE_FUNCTION, new Settings().setEscapeFunction(null).getEscapeFunction());
+	}
+
+	@Test
+	public void testHTMLEscaping() {
+		Assert.assertEquals("&amp;&lt;&gt;&quot;&#39;", Settings.HTML_ESCAPE_FUNCTION.escape("&<>\"'"));
+	}
+
+	@Test
+	public void testNoEscaping() {
+		Assert.assertEquals("&<>\"'", Settings.EMPTY_ESCAPE_FUNCTION.escape("&<>\"'"));
+	}
+
+	@Test
+	public void testLoggerAccess() {
+		Assert.assertEquals(Settings.DEFAULT_LOGGER, new Settings().getLogger());
+		Assert.assertEquals(Settings.DEFAULT_LOGGER, new Settings().setLogger(Settings.DEFAULT_LOGGER).getLogger());
+		Assert.assertEquals(Settings.EMPTY_LOGGER, new Settings().setLogger(Settings.EMPTY_LOGGER).getLogger());
+		Assert.assertEquals(Settings.EMPTY_LOGGER, new Settings().setLogger(null).getLogger());
+	}
+
+	@Test (expected = Test.None.class) // No exception expected
+	public void testLoggers() {
+		for (final Logger logger : new Logger[] { Settings.DEFAULT_LOGGER, Settings.EMPTY_LOGGER }) {
+			logger.log(Level.INFO, "Info log for " + logger.toString());
+			logger.log(Level.WARNING, "Warning log for {0}, with {1}", logger.toString(), "argument");
+			logger.log(Level.SEVERE, "Severe log for " + logger.toString(), new IllegalArgumentException("Test exception for logger"));
+		}
 	}
 
 }

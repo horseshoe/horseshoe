@@ -7,6 +7,11 @@ Horseshoe for Java
 [![Codacy](https://api.codacy.com/project/badge/Grade/07cec89cb05f4ed4ba8759f6ad8bdc97)](https://www.codacy.com/manual/nicklaus.little/horseshoe-j?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nicklauslittle/horseshoe-j&amp;utm_campaign=Badge_Grade)
 [![Coverage](https://api.codacy.com/project/badge/Coverage/07cec89cb05f4ed4ba8759f6ad8bdc97)](https://www.codacy.com/manual/nicklaus.little/horseshoe-j?utm_source=github.com&utm_medium=referral&utm_content=nicklauslittle/horseshoe-j&utm_campaign=Badge_Coverage)
 [![Coverity](https://scan.coverity.com/projects/20222/badge.svg)](https://scan.coverity.com/projects/nicklauslittle-horseshoe-j)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=security_rating)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=bugs)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=alert_status)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
 [![license](https://img.shields.io/github/license/nicklauslittle/horseshoe-j?label=License&logo=github)](https://github.com/nicklauslittle/horseshoe-j/blob/master/LICENSE)
 
 ## Goals

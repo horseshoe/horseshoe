@@ -64,10 +64,10 @@ public class PartialsDirectoryTests {
 					{ "./test1/test2", "../test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "This partial renders text!") }, true, null },
 					{ "./test1/test2", "../test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "This partial renders text!") }, false, null },
 					{ "./test1/test3", "../test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{>../test2/Partial2}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, LoadException.class },
-					{ "./test1", "test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{>../test2/Partial2}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, null },
-					{ "./test1", "test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{>../test2/Partial2}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, false, null },
-					{ "./test1", "test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "{{>../test2/Partial2}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, null },
-					{ "./test1", "test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "{{>../test2/Partial2}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, false, null },
+					{ "./test1", "test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{#true}}{{>../test2/Partial2}}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, null },
+					{ "./test1", "test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{#true}}{{>../test2/Partial2}}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, false, null },
+					{ "./test1", "test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "{{#true}}{{>../test2/Partial2}}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, null },
+					{ "./test1", "test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "{{#true}}{{>../test2/Partial2}}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, false, null },
 			});
 	}
 
