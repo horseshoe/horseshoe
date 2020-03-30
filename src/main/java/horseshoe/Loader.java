@@ -225,24 +225,24 @@ public final class Loader implements AutoCloseable {
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
 	CharSequence next(final List<ParsedLine> lines) throws IOException {
-		int start = bufferOffset;
-		int end;
+		boolean foundMatch;
 
-		while (true) {
-			if (matcher.find()) {
-				end = matcher.start();
-				bufferOffset = matcher.end();
-				break;
-			} else if (isFullyLoaded) { // Check if we've reached the end
-				end = bufferOffset = buffer.length();
-				break;
-			} else { // If we haven't reached the end, then attempt to pull in more data
-				loadMoreData();
-				start = bufferOffset;
-			}
+		// Find the next match and increment the buffer offset
+		for (foundMatch = matcher.find(); !foundMatch && !isFullyLoaded; foundMatch = matcher.find()) {
+			loadMoreData();
 		}
 
-		// Match the new lines
+		final int start = bufferOffset;
+		final int end;
+
+		if (foundMatch) {
+			end = matcher.start();
+			bufferOffset = matcher.end();
+		} else { // Fully loaded
+			end = bufferOffset = buffer.length();
+		}
+
+		// Find the new lines
 		int startOfLine = start;
 		int line = nextLocation.line;
 		int column = nextLocation.column;
@@ -251,10 +251,10 @@ public final class Loader implements AutoCloseable {
 
 		if (lines != null) {
 			for (; newLineMatcher.find(); line++, column = Location.FIRST_COLUMN) {
-				final int newLineStart = Math.min(newLineMatcher.start(), end);
-				final int newLineEnd = Math.min(newLineMatcher.end(), end);
-
 				if (startOfLine <= end) {
+					final int newLineStart = Math.min(newLineMatcher.start(), end);
+					final int newLineEnd = Math.min(newLineMatcher.end(), end);
+
 					lines.add(new ParsedLine(buffer.subSequence(startOfLine, newLineStart).toString(), buffer.subSequence(newLineStart, newLineEnd).toString()));
 				}
 

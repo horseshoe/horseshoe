@@ -190,25 +190,24 @@ final class Operand {
 		if (type == null) {
 			if (allowFloating) {
 				return builder;
-			} else {
-				final Label end = builder.newLabel();
-
-				return builder.addCode(DUP).pushConstant(LONG_TYPE).addBranch(IF_ICMPLE, end).addThrow(IllegalArgumentException.class, "Unexpected floating point value, expecting integral value").updateLabel(end);
 			}
+
+			final Label end = builder.newLabel();
+			return builder.addCode(DUP).pushConstant(LONG_TYPE).addBranch(IF_ICMPLE, end).addThrow(IllegalArgumentException.class, "Unexpected floating point value, expecting integral value").updateLabel(end);
 		} else if (type.isPrimitive()) {
 			if (boolean.class.equals(type)) {
 				return builder.addThrow(IllegalArgumentException.class, "Unexpected boolean value, expecting numeric value");
 			} else if (double.class.equals(type) || float.class.equals(type)) {
 				if (allowFloating) {
 					return builder.addPrimitiveConversion(type, double.class).addCode(LCONST_0, DUP2_X2, POP2).pushConstant(DOUBLE_TYPE);
-				} else {
-					return builder.addThrow(IllegalArgumentException.class, "Unexpected " + type.getSimpleName() + " value, expecting integral value");
 				}
+
+				return builder.addThrow(IllegalArgumentException.class, "Unexpected " + type.getSimpleName() + " value, expecting integral value");
 			} else if (long.class.equals(type)) {
 				return builder.addCode(DCONST_0).pushConstant(LONG_TYPE);
-			} else {
-				return builder.addPrimitiveConversion(type, long.class).addCode(DCONST_0).pushConstant(INT_TYPE);
 			}
+
+			return builder.addPrimitiveConversion(type, long.class).addCode(DCONST_0).pushConstant(INT_TYPE);
 		}
 
 		final Label getDouble = builder.newLabel();

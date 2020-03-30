@@ -313,10 +313,10 @@ public final class MethodBuilder {
 		ConstantPool populate() {
 			for (final ConstantPoolEntry entry : constants.values()) {
 				for (final Location location : entry.locations) {
-					final byte[] bytes = (location.container == this ? constantData : ((MethodBuilder)location.container).bytes);
+					final byte[] containerData = (location.container == this ? constantData : ((MethodBuilder)location.container).bytes);
 
-					bytes[location.offset]     = (byte)(entry.index >>> 8);
-					bytes[location.offset + 1] = (byte)(entry.index);
+					containerData[location.offset]     = (byte)(entry.index >>> 8);
+					containerData[location.offset + 1] = (byte)(entry.index);
 				}
 			}
 
@@ -781,23 +781,24 @@ public final class MethodBuilder {
 				}
 
 				final Opcode wideOpcode = OPCODES[code[i + 1] & 0xFF];
-				final int length;
+				final int opcodeLength;
 
-				if (wideOpcode == null || !wideOpcode.has(Opcode.PROP_LOCAL_INDEX)) {
-					final String mnemonic = (wideOpcode == null ? "0x" + Integer.toHexString(code[i + 1] & 0xFF) : wideOpcode.mnemonic);
-					throw new IllegalArgumentException("Invalid wide bytecode instruction: " + mnemonic);
+				if (wideOpcode == null) {
+					throw new IllegalArgumentException("Invalid wide bytecode instruction: 0x" + Integer.toHexString(code[i + 1] & 0xFF));
+				} else if (!wideOpcode.has(Opcode.PROP_LOCAL_INDEX)) {
+					throw new IllegalArgumentException("Invalid wide bytecode instruction: " + wideOpcode.mnemonic);
 				} else if (code[i + 1] == IINC) {
-					length = 6;
+					opcodeLength = 6;
 				} else {
-					length = 4;
+					opcodeLength = 4;
 				}
 
-				if (i + length > code.length) {
+				if (i + opcodeLength > code.length) {
 					break;
 				}
 
 				maxLocalVariableIndex = Math.max(maxLocalVariableIndex, ((code[i + 2] & 0xFF) << 8) + (code[i + 3] & 0xFF));
-				i += length;
+				i += opcodeLength;
 				stackSize += wideOpcode.stackOffset;
 				maxStackSize = Math.max(maxStackSize, stackSize);
 				continue;
@@ -1246,7 +1247,7 @@ public final class MethodBuilder {
 		} else if (value instanceof Member) {
 			// Build the signature
 			final Member member = (Member)value;
-			final ConstantPoolEntry name = getConstant(new UTF8String(value instanceof Constructor ? "<init>" : member.getName()));
+			final ConstantPoolEntry name = getConstant(new UTF8String(member instanceof Constructor ? "<init>" : member.getName()));
 			final ConstantPoolEntry signature = getConstant(new UTF8String(getSignature(member)));
 			final ConstantPoolEntry declaringClass = getConstant(member.getDeclaringClass());
 
@@ -1255,11 +1256,13 @@ public final class MethodBuilder {
 			constantPool.add(new Object(), NAME_AND_TYPE_CONSTANT, B0, B0, B0, B0).locations.add(new Location(constantPool, constantPool.getLength() + 3));
 			declaringClass.locations.add(new Location(constantPool, constantPool.getLength() + 1));
 
-			if (value instanceof Field) { // Field
-				return constantPool.add(value, FIELD_CONSTANT, B0, B0, B0, B0);
-			} else { // Method / Constructor
-				return constantPool.add(value, (member.getDeclaringClass().getModifiers() & Modifier.INTERFACE) == 0 ? METHOD_CONSTANT : IMETHOD_CONSTANT, B0, B0, B0, B0);
+			if (member instanceof Field) { // Field
+				return constantPool.add(member, FIELD_CONSTANT, B0, B0, B0, B0);
+			} else if ((member.getDeclaringClass().getModifiers() & Modifier.INTERFACE) != 0) { // Interface method
+				return constantPool.add(member, IMETHOD_CONSTANT, B0, B0, B0, B0);
 			}
+
+			return constantPool.add(member, METHOD_CONSTANT, B0, B0, B0, B0);
 		}
 
 		throw new IllegalArgumentException("Cannot add a constant of type " + value.getClass().toString());
@@ -1597,7 +1600,8 @@ public final class MethodBuilder {
 		}
 
 		getConstant(value).locations.add(new Location(this, length + 1));
-		maxStackSize = Math.max(maxStackSize, stackSize += 2);
+		stackSize += 2;
+		maxStackSize = Math.max(maxStackSize, stackSize);
 		return append(LDC2_W, B0, B0);
 	}
 
@@ -1617,7 +1621,8 @@ public final class MethodBuilder {
 		}
 
 		getConstant(value).locations.add(new Location(this, length + 1));
-		maxStackSize = Math.max(maxStackSize, ++stackSize);
+		stackSize++;
+		maxStackSize = Math.max(maxStackSize, stackSize);
 		return append(LDC_W, B0, B0);
 	}
 
@@ -1637,7 +1642,8 @@ public final class MethodBuilder {
 		}
 
 		getConstant(value).locations.add(new Location(this, length + 1));
-		maxStackSize = Math.max(maxStackSize, stackSize += 2);
+		stackSize += 2;
+		maxStackSize = Math.max(maxStackSize, stackSize);
 		return append(LDC2_W, B0, B0);
 	}
 
@@ -1649,7 +1655,8 @@ public final class MethodBuilder {
 	 */
 	public MethodBuilder pushConstant(final String value) {
 		getConstant(value).locations.add(new Location(this, length + 1));
-		maxStackSize = Math.max(maxStackSize, ++stackSize);
+		stackSize++;
+		maxStackSize = Math.max(maxStackSize, stackSize);
 		return append(LDC_W, B0, B0);
 	}
 
@@ -1701,7 +1708,8 @@ public final class MethodBuilder {
 		}
 
 		getConstant(type).locations.add(new Location(this, length + 1));
-		maxStackSize = Math.max(maxStackSize, ++stackSize);
+		stackSize++;
+		maxStackSize = Math.max(maxStackSize, stackSize);
 		return append(NEW, B0, B0);
 	}
 
@@ -1732,10 +1740,10 @@ public final class MethodBuilder {
 			label.populate();
 		}
 
-		final Object[] constantPool = new Object[this.constantPool.populate().getEntries().size() + 1];
+		final Object[] constantPoolArray = new Object[this.constantPool.populate().getEntries().size() + 1];
 
 		for (final Entry<Object, ConstantPoolEntry> entry : this.constantPool.getEntries()) {
-			constantPool[entry.getValue().index] = entry.getKey();
+			constantPoolArray[entry.getValue().index] = entry.getKey();
 		}
 
 		final StringBuilder sb = new StringBuilder("[ ");
@@ -1811,7 +1819,7 @@ public final class MethodBuilder {
 
 			// If using a constant pool entry, then print it out
 			if (constantPoolIndex > 0) {
-				final Object constant = constantPool[constantPoolIndex];
+				final Object constant = constantPoolArray[constantPoolIndex];
 
 				if (constant instanceof String) {
 					sb.append(" \"").append(constant).append(postConstant).append("\"; ");

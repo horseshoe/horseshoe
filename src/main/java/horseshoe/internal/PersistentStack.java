@@ -127,7 +127,7 @@ public final class PersistentStack<T> implements Iterable<T> {
 		// Check if the array needs to be resized
 		if (size == array.length) {
 			@SuppressWarnings("unchecked")
-			final T newArray[] = (T[])new Object[array.length * 2];
+			final T[] newArray = (T[])new Object[array.length * 2];
 
 			System.arraycopy(array, 0, newArray, 0, size);
 			array = newArray;

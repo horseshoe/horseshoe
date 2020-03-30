@@ -55,6 +55,77 @@ class SectionRenderer implements Action, Expression.Indexed {
 	}
 
 	/**
+	 * Dispatches an array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final Object data, final Writer writer) throws IOException {
+		final int length = Array.getLength(data);
+		index = 0;
+
+		if (length == 0) {
+			hasNext = false;
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			return;
+		}
+
+		final Class<?> componentType = data.getClass().getComponentType();
+		context.getIndexedData().push(this);
+
+		if (!componentType.isPrimitive()) {
+			for (final Object[] array = (Object[])data; index < length; index++) {
+				hasNext = index + 1 < length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+		} else if (int.class.equals(componentType)) {
+			for (final int[] array = (int[])data; index < length; index++) {
+				hasNext = index + 1 < length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+		} else if (byte.class.equals(componentType)) {
+			for (final byte[] array = (byte[])data; index < length; index++) {
+				hasNext = index + 1 < length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+		} else if (double.class.equals(componentType)) {
+			for (final double[] array = (double[])data; index < length; index++) {
+				hasNext = index + 1 < length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+		} else if (boolean.class.equals(componentType)) {
+			for (final boolean[] array = (boolean[])data; index < length; index++) {
+				hasNext = index + 1 < length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+		} else if (float.class.equals(componentType)) {
+			for (final float[] array = (float[])data; index < length; index++) {
+				hasNext = index + 1 < length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+		} else if (long.class.equals(componentType)) {
+			for (final long[] array = (long[])data; index < length; index++) {
+				hasNext = index + 1 < length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+		} else if (char.class.equals(componentType)) {
+			for (final char[] array = (char[])data; index < length; index++) {
+				hasNext = index + 1 < length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+		} else {
+			for (final short[] array = (short[])data; index < length; index++) {
+				hasNext = index + 1 < length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+		}
+
+		context.getIndexedData().pop();
+	}
+
+	/**
 	 * Dispatches the data for rendering using the appropriate transformation for the specified data. Lists are iterated, booleans are evaluated, etc.
 	 *
 	 * @param context the render context
@@ -68,66 +139,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 		} else if (data instanceof Iterable<?>) {
 			dispatchIteratorData(context, ((Iterable<?>)data).iterator(), writer);
 		} else if (data.getClass().isArray()) {
-			final int length = Array.getLength(data);
-			index = 0;
-
-			if (length > 0) {
-				final Class<?> componentType = data.getClass().getComponentType();
-
-				context.getIndexedData().push(this);
-
-				if (!componentType.isPrimitive()) {
-					for (final Object[] array = (Object[])data; index < length; index++) {
-						hasNext = index < length - 1;
-						renderActions(context, array[index], writer, section.getActions());
-					}
-				} else if (int.class.equals(componentType)) {
-					for (final int[] array = (int[])data; index < length; index++) {
-						hasNext = index < length - 1;
-						renderActions(context, array[index], writer, section.getActions());
-					}
-				} else if (byte.class.equals(componentType)) {
-					for (final byte[] array = (byte[])data; index < length; index++) {
-						hasNext = index < length - 1;
-						renderActions(context, array[index], writer, section.getActions());
-					}
-				} else if (double.class.equals(componentType)) {
-					for (final double[] array = (double[])data; index < length; index++) {
-						hasNext = index < length - 1;
-						renderActions(context, array[index], writer, section.getActions());
-					}
-				} else if (boolean.class.equals(componentType)) {
-					for (final boolean[] array = (boolean[])data; index < length; index++) {
-						hasNext = index < length - 1;
-						renderActions(context, array[index], writer, section.getActions());
-					}
-				} else if (float.class.equals(componentType)) {
-					for (final float[] array = (float[])data; index < length; index++) {
-						hasNext = index < length - 1;
-						renderActions(context, array[index], writer, section.getActions());
-					}
-				} else if (long.class.equals(componentType)) {
-					for (final long[] array = (long[])data; index < length; index++) {
-						hasNext = index < length - 1;
-						renderActions(context, array[index], writer, section.getActions());
-					}
-				} else if (char.class.equals(componentType)) {
-					for (final char[] array = (char[])data; index < length; index++) {
-						hasNext = index < length - 1;
-						renderActions(context, array[index], writer, section.getActions());
-					}
-				} else {
-					for (final short[] array = (short[])data; index < length; index++) {
-						hasNext = index < length - 1;
-						renderActions(context, array[index], writer, section.getActions());
-					}
-				}
-
-				context.getIndexedData().pop();
-			} else {
-				hasNext = false;
-				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
-			}
+			dispatchArray(context, data, writer);
 		} else if (data instanceof Boolean) {
 			if ((Boolean)data) {
 				renderActions(context, context.getSectionData().peek(), writer, section.getActions());
@@ -184,27 +196,28 @@ class SectionRenderer implements Action, Expression.Indexed {
 		hasNext = it.hasNext();
 		index = 0;
 
-		if (hasNext) {
-			context.getIndexedData().push(this);
+		if (!hasNext) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			return;
+		}
 
-			while (true) {
-				final Object object = it.next();
+		context.getIndexedData().push(this);
 
-				if (it.hasNext()) {
-					renderActions(context, object, writer, section.getActions());
-				} else {
-					hasNext = false;
-					renderActions(context, object, writer, section.getActions());
-					break;
-				}
+		while (true) {
+			final Object object = it.next();
 
-				index++;
+			if (it.hasNext()) {
+				renderActions(context, object, writer, section.getActions());
+			} else {
+				hasNext = false;
+				renderActions(context, object, writer, section.getActions());
+				break;
 			}
 
-			context.getIndexedData().pop();
-		} else {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			index++;
 		}
+
+		context.getIndexedData().pop();
 	}
 
 	@Override

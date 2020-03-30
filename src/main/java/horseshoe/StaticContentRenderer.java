@@ -55,48 +55,58 @@ final class StaticContentRenderer implements Action {
 
 	@Override
 	public void perform(final RenderContext context, final Writer writer) throws IOException {
-		final String indentation = context.getIndentation().peek();
-
 		if (lines.length == 1) {
-			// Only write the line if it is not ignored
-			if (!(ignoreFirstLine || ignoreLastLine)) {
-				if (indentFirstLine) {
-					writer.write(indentation);
-				}
+			renderSingleLine(context, writer);
+			return;
+		}
 
-				writer.write(lines[0].getLine());
-			}
-		} else {
-			final String lineEnding = context.getSettings().getLineEndings();
+		final String indentation = context.getIndentation().peek();
+		final String lineEnding = context.getSettings().getLineEndings();
 
-			// Only write the first line if it is not ignored
-			if (!ignoreFirstLine) {
-				if (indentFirstLine) {
-					writer.write(indentation);
-				}
-
-				writer.write(lines[0].getLine());
-				writer.write(lineEnding == null ? lines[0].getEnding() : lineEnding);
-			}
-
-			// Indent all remaining lines
-			for (int i = 1; i < lines.length - 1; i++) {
-				final ParsedLine line = lines[i];
-
-				if (!line.getLine().isEmpty()) {
-					writer.write(indentation);
-					writer.write(line.getLine());
-				}
-
-				writer.write(lineEnding == null ? line.getEnding() : lineEnding);
-			}
-
-			// Skip line ending on the last line
-			if (!ignoreLastLine) {
+		// Only write the first line if it is not ignored
+		if (!ignoreFirstLine) {
+			if (indentFirstLine) {
 				writer.write(indentation);
-				writer.write(lines[lines.length - 1].getLine());
 			}
+
+			writer.write(lines[0].getLine());
+			writer.write(lineEnding == null ? lines[0].getEnding() : lineEnding);
+		}
+
+		// Write all remaining lines (with indentation)
+		for (int i = 1; i < lines.length - 1; i++) {
+			final ParsedLine line = lines[i];
+
+			if (!line.getLine().isEmpty()) {
+				writer.write(indentation);
+				writer.write(line.getLine());
+			}
+
+			writer.write(lineEnding == null ? line.getEnding() : lineEnding);
+		}
+
+		// Skip line ending on the last line
+		if (!ignoreLastLine) {
+			writer.write(indentation);
+			writer.write(lines[lines.length - 1].getLine());
 		}
 	}
 
+	/**
+	 * Renders the single line content.
+	 *
+	 * @param context the current render context
+	 * @param writer the writer used to render the content
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void renderSingleLine(final RenderContext context, final Writer writer) throws IOException {
+		// Only write the line if it is not ignored
+		if (!(ignoreFirstLine || ignoreLastLine)) {
+			if (indentFirstLine) {
+				writer.write(context.getIndentation().peek());
+			}
+
+			writer.write(lines[0].getLine());
+		}
+	}
 }

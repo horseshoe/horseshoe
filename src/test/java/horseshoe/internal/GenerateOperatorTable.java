@@ -98,9 +98,8 @@ public class GenerateOperatorTable {
 		final int endOfTable = tableMatcher.find(tableStart + 1) ? tableMatcher.start() : oldReadme.length();
 		final String newReadme = oldReadme.substring(0, tableStart) + tableText + oldReadme.substring(endOfTable);
 
-		Files.write(readmeFile, newReadme.getBytes(StandardCharsets.UTF_8));
-
 		if (!tableText.equals(oldReadme.substring(tableStart, endOfTable).replaceAll("\\r?\\n", System.lineSeparator()))) {
+			Files.write(readmeFile, newReadme.getBytes(StandardCharsets.UTF_8));
 			Assert.fail("Operation table updated, rerun to verify");
 		}
 	}
