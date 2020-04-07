@@ -126,7 +126,7 @@ public class AnnotationTests {
 
 	@Test (expected = IOException.class)
 	public void testException() throws IOException, LoadException {
-		new TemplateLoader().load("Exception Writer", "a{{#@Test}}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
+		new TemplateLoader().load("Exception Writer", "a{{#@Test}}{{#true}}b{{/}}{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
 				return new TestWriter() {
@@ -141,7 +141,7 @@ public class AnnotationTests {
 
 	@Test (expected = IOException.class)
 	public void testExceptionWithCloseException() throws IOException, LoadException {
-		new TemplateLoader().load("Exception Writer", "a{{#@Test}}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
+		new TemplateLoader().load("Exception Writer", "a{{#true}}{{#@Test}}b{{^}}d{{/}}{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
 				return new TestWriter() {

@@ -4,6 +4,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.List;
 import java.util.Map;
 
 public abstract class Accessor {
@@ -111,29 +112,31 @@ public abstract class Accessor {
 	public static Object lookup(final Object context, final Object lookup) {
 		if (context instanceof Map) {
 			return ((Map<?, ?>)context).get(lookup);
-		} else {
-			final Class<?> componentType = context.getClass().getComponentType();
-
-			if (!componentType.isPrimitive()) {
-				return ((Object[])context)[((Number)lookup).intValue()];
-			} else if (int.class.equals(componentType)) {
-				return ((int[])context)[((Number)lookup).intValue()];
-			} else if (byte.class.equals(componentType)) {
-				return ((byte[])context)[((Number)lookup).intValue()];
-			} else if (double.class.equals(componentType)) {
-				return ((double[])context)[((Number)lookup).intValue()];
-			} else if (boolean.class.equals(componentType)) {
-				return ((boolean[])context)[((Number)lookup).intValue()];
-			} else if (float.class.equals(componentType)) {
-				return ((float[])context)[((Number)lookup).intValue()];
-			} else if (long.class.equals(componentType)) {
-				return ((long[])context)[((Number)lookup).intValue()];
-			} else if (char.class.equals(componentType)) {
-				return ((char[])context)[((Number)lookup).intValue()];
-			} else {
-				return ((short[])context)[((Number)lookup).intValue()];
-			}
+		} else if (context instanceof List) {
+			return ((List<?>)context).get(((Number)lookup).intValue());
 		}
+
+		final Class<?> componentType = context.getClass().getComponentType();
+
+		if (!componentType.isPrimitive()) {
+			return ((Object[])context)[((Number)lookup).intValue()];
+		} else if (int.class.equals(componentType)) {
+			return ((int[])context)[((Number)lookup).intValue()];
+		} else if (byte.class.equals(componentType)) {
+			return ((byte[])context)[((Number)lookup).intValue()];
+		} else if (double.class.equals(componentType)) {
+			return ((double[])context)[((Number)lookup).intValue()];
+		} else if (boolean.class.equals(componentType)) {
+			return ((boolean[])context)[((Number)lookup).intValue()];
+		} else if (float.class.equals(componentType)) {
+			return ((float[])context)[((Number)lookup).intValue()];
+		} else if (long.class.equals(componentType)) {
+			return ((long[])context)[((Number)lookup).intValue()];
+		} else if (char.class.equals(componentType)) {
+			return ((char[])context)[((Number)lookup).intValue()];
+		}
+
+		return ((short[])context)[((Number)lookup).intValue()];
 	}
 
 	/**
@@ -385,14 +388,14 @@ public abstract class Accessor {
 		public Accessor create(final Object context, final Identifier identifier, final int parameters) {
 			final Class<?> contextClass = context.getClass();
 
-			if (Class.class.equals(contextClass)) { // Static
-				if (identifier.isMethod()) { // Method
+			if (identifier.isMethod()) { // Method
+				if (Class.class.equals(contextClass)) { // Class method
 					return ClassMethodAccessor.create((Class<?>)context, identifier.getName(), parameters);
-				} else { // Field
-					return StaticFieldAccessor.create((Class<?>)context, identifier.getName());
 				}
-			} else if (identifier.isMethod()) { // Method
+
 				return MethodAccessor.create(contextClass, identifier.getName(), parameters);
+			} else if (Class.class.equals(contextClass)) { // Static field
+				return StaticFieldAccessor.create((Class<?>)context, identifier.getName());
 			} else if (Map.class.isAssignableFrom(contextClass)) {
 				return new MapAccessor(identifier.getName());
 			} else if (contextClass.isArray() && "length".equals(identifier.getName())) {

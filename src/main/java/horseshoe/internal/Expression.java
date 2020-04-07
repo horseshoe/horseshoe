@@ -6,10 +6,12 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -27,6 +29,7 @@ public final class Expression {
 	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
 
 	// Reflected Methods
+	private static final Constructor<?> ARRAY_LIST_CTOR_INT;
 	private static final Method ACCESSOR_LOOKUP;
 	private static final Method EXPRESSION_EVALUATE;
 	private static final Method EXPRESSION_GET_VALUE;
@@ -38,8 +41,9 @@ public final class Expression {
 	private static final Method IDENTIFIER_GET_VALUE_METHOD;
 	private static final Method INDEXED_GET_INDEX;
 	private static final Method INDEXED_HAS_NEXT;
-	private static final Constructor<?> ITERABLE_MAP_CTOR_INT;
 	private static final Constructor<?> LINKED_HASH_MAP_CTOR_INT;
+	private static final Constructor<?> LINKED_HASH_SET_CTOR_INT;
+	private static final Method LIST_ADD;
 	private static final Method MAP_PUT;
 	private static final Method OBJECT_TO_STRING;
 	private static final Method PATTERN_COMPILE;
@@ -49,6 +53,7 @@ public final class Expression {
 	private static final Method PERSISTENT_STACK_PUSH_OBJECT;
 	private static final Method RENDER_CONTEXT_GET_INDEXED_DATA;
 	private static final Method RENDER_CONTEXT_GET_SECTION_DATA;
+	private static final Method SET_ADD;
 	private static final Method STRING_BUILDER_APPEND_OBJECT;
 	private static final Constructor<?> STRING_BUILDER_INIT_STRING;
 	private static final Method STRING_VALUE_OF;
@@ -103,25 +108,9 @@ public final class Expression {
 		public abstract Object evaluate(final Expression[] expressions, final Identifier[] identifiers, final RenderContext context) throws Exception;
 	}
 
-	@SuppressWarnings("serial")
-	public static class IterableMap<K, V> extends LinkedHashMap<K, V> implements Iterable<Entry<K, V>> {
-		/**
-		 * Creates a new iterable map.
-		 *
-		 * @param initialCapacity the initial capacity of the map
-		 */
-		public IterableMap(final int initialCapacity) {
-			super(initialCapacity);
-		}
-
-		@Override
-		public Iterator<Entry<K, V>> iterator() {
-			return entrySet().iterator();
-		}
-	}
-
 	static {
 		try {
+			ARRAY_LIST_CTOR_INT = ArrayList.class.getConstructor(int.class);
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", RenderContext.class);
 			EXPRESSION_GET_VALUE = Expression.class.getMethod("getClass", RenderContext.class, String.class);
@@ -133,8 +122,9 @@ public final class Expression {
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
 			INDEXED_GET_INDEX = Indexed.class.getMethod("getIndex");
 			INDEXED_HAS_NEXT = Indexed.class.getMethod("hasNext");
-			ITERABLE_MAP_CTOR_INT = IterableMap.class.getConstructor(int.class);
 			LINKED_HASH_MAP_CTOR_INT = LinkedHashMap.class.getConstructor(int.class);
+			LINKED_HASH_SET_CTOR_INT = LinkedHashSet.class.getConstructor(int.class);
+			LIST_ADD = List.class.getMethod("add", Object.class);
 			MAP_PUT = Map.class.getMethod("put", Object.class, Object.class);
 			OBJECT_TO_STRING = Object.class.getMethod("toString");
 			PATTERN_COMPILE = Pattern.class.getMethod("compile", String.class);
@@ -144,6 +134,7 @@ public final class Expression {
 			PERSISTENT_STACK_PUSH_OBJECT = PersistentStack.class.getMethod("push", Object.class);
 			RENDER_CONTEXT_GET_INDEXED_DATA = RenderContext.class.getMethod("getIndexedData");
 			RENDER_CONTEXT_GET_SECTION_DATA = RenderContext.class.getMethod("getSectionData");
+			SET_ADD = Set.class.getMethod("add", Object.class);
 			STRING_BUILDER_APPEND_OBJECT = StringBuilder.class.getMethod("append", Object.class);
 			STRING_BUILDER_INIT_STRING = StringBuilder.class.getConstructor(String.class);
 			STRING_VALUE_OF = String.class.getMethod("valueOf", Object.class);
@@ -444,30 +435,32 @@ public final class Expression {
 
 			if (pairs > 0) { // Create a map
 				final int totalPairs = pairs;
-				final MethodBuilder builder;
+				final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_MAP_CTOR_INT);
 
-				if ("[".equals(operator.getString())) {
-					builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_MAP_CTOR_INT);
-				} else {
-					builder = new MethodBuilder().pushNewObject(IterableMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(ITERABLE_MAP_CTOR_INT);
-				}
-
-				for (int i = operator.getRightExpressions() - 1, j = 0; i >= 0; j++, i--) {
+				for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
 					final Operand first = operands.peek(i + pairs);
 
 					if (Entry.class.equals(first.type)) {
 						builder.addCode(DUP).append(first.toObject(false)).append(operands.peek(i + --pairs).toObject(false)).addInvoke(MAP_PUT).addCode(POP);
 					} else {
-						builder.addCode(DUP).pushConstant(j).addPrimitiveConversion(int.class, Object.class).append(first.toObject(false)).addInvoke(MAP_PUT).addCode(POP);
+						builder.addCode(DUP).append(first.toObject(false)).addCode(DUP).addInvoke(MAP_PUT).addCode(POP);
 					}
 				}
 
 				operands.pop(operator.getRightExpressions() + totalPairs).push(new Operand(Object.class, builder));
-			} else { // Create an array
-				final MethodBuilder builder = new MethodBuilder().pushNewObject(Object.class, operator.getRightExpressions());
+			} else if ("[".equals(operator.getString())) { // Create a list
+				final MethodBuilder builder = new MethodBuilder().pushNewObject(ArrayList.class).addCode(DUP).pushConstant(operator.getRightExpressions()).addInvoke(ARRAY_LIST_CTOR_INT);
 
-				for (int i = operator.getRightExpressions() - 1, j = 0; i >= 0; j++, i--) {
-					builder.addCode(DUP).pushConstant(j).append(operands.peek(i).toObject(false)).addCode(AASTORE);
+				for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
+					builder.addCode(DUP).append(operands.peek(i).toObject(false)).addInvoke(LIST_ADD).addCode(POP);
+				}
+
+				operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
+			} else { // Create a set
+				final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashSet.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_SET_CTOR_INT);
+
+				for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
+					builder.addCode(DUP).append(operands.peek(i).toObject(false)).addInvoke(SET_ADD).addCode(POP);
 				}
 
 				operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
@@ -642,7 +635,7 @@ public final class Expression {
 			break;
 
 		case ",":
-			processOperation(namedExpressions, expressions, identifiers, operands.push(), operators.push(Operator.get("{", false).withRightExpressions(operator.getRightExpressions() + 1)));
+			processOperation(namedExpressions, expressions, identifiers, operands.push(), operators.push(Operator.get("[", false).withRightExpressions(operator.getRightExpressions() + 1)));
 			break;
 
 		case "(":

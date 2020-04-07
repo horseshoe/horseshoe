@@ -1,6 +1,5 @@
 package horseshoe.internal;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -9,8 +8,10 @@ import static org.junit.Assert.assertTrue;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -31,35 +32,6 @@ public class ExpressionTests {
 	public void testArrayLookup() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("a", new int[] { 5 }, "b", new short[] { 4 }, "c", new char[] { '\n' }, "d", new byte[] { 2 }, "e", new long[] { 1 }, "f", new float[] { 0 }, "g", new double[] { -1 }, "h", new boolean[] { true });
 		assertEquals("5, 4, \n, 2, 1, 0.0, -1.0, true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "./a[0] + \", \" + b[0] + \", \" + c[0] + \", \" + d[0] + \", \" + e[0] + \", \" + f[0] + \", \" + g[0] + \", \" + h[0]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
-	}
-
-	@Test
-	public void testArraysMaps() throws ReflectiveOperationException {
-		assert((Boolean)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "{\"1\", \"2\"}.getClass().isArray()", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
-		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "{\"1\", \"2\",}[1]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assertEquals("1", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "{7: \"1\", \"2\"}[7]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "{\"1\", \"blah\": \"2\"}[\"blah\"]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assert((Boolean)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[\"1\", \"2\"].getClass().isArray()", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
-		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[\"1\", \"2\"][1]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assertEquals("1", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[7: \"1\", \"2\",][7]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[\"1\", \"blah\": \"2\"][\"blah\"]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "null?[?1] ?? \"2\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assertEquals("4", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(1..5)[3]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assertEquals("8", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(10..5)[2]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assertEquals(6, ((int[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "10..5", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).length);
-		assertEquals(1, ((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[10..5]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).length);
-		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[10..5][5,]", Collections.emptyMap(), true);
-
-		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[5, 6.7, \"string-1\", \"blah\"][1 + 2]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-		assertEquals("string-1", ((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "5, 6.7, \"string-1\", \"blah\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())))[2].toString());
-		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "5, 6.7, \"string-1\": 7, \"blah\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
-		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "5, 6.7, \"string-1\": 7, \"blah\",", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
-		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(5, 6.7, \"string-1\": 7, \"blah\",)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
-		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "7:5,", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
-		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "7:5", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
-		assertTrue(((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[:]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).isEmpty());
-		assertTrue(((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).length == 0);
-		assertTrue(((Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "5,", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).length == 1);
 	}
 
 	@Test (expected = IllegalArgumentException.class)
@@ -382,6 +354,35 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testListsMaps() throws ReflectiveOperationException {
+		assertFalse((Boolean)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "{\"1\", \"2\"}.getClass().isArray()", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[\"1\", \"2\",][1]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("1", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "{7: \"1\", \"2\"}[7]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "{\"1\", \"blah\": \"2\"}[\"blah\"]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertFalse((Boolean)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[\"1\", \"2\"].getClass().isArray()", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[\"1\", \"2\"][1]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("1", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[7: \"1\", \"2\",][7]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[\"1\", \"blah\": \"2\"][\"blah\"]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "null?[?1] ?? \"2\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("4", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(1..5)[3]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("8", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(10..5)[2]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals(6, ((int[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "10..5", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).length);
+		assertEquals(1, ((List<?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[10..5]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
+		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[10..5][5,]", Collections.emptyMap(), true);
+
+		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[5, 6.7, \"string-1\", \"blah\"][1 + 2]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("string-1", ((List<?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "5, 6.7, \"string-1\", \"blah\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).get(2).toString());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "5, 6.7, \"string-1\": 7, \"blah\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "5, 6.7, \"string-1\": 7, \"blah\",", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "(5, 6.7, \"string-1\": 7, \"blah\",)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
+		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "7:5,", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
+		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "7:5", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size());
+		assertTrue(((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[:]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).isEmpty());
+		assertTrue(((List<?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "[]", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).isEmpty());
+		assertTrue(((List<?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "5,", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap()))).size() == 1);
+	}
+
+	@Test
 	public void testLocals() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("r", 10, "i2", 2, "π", 3.14159265358979311599796346854, "bigNum", 9999999999L);
 		assertTrue(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "π = 3.14159265358979311599796346854; r /* radius */ = 4; \"r = \" + r + \", d = \" + (r * 2) + \", a = \" + (π * r * r)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString().startsWith("r = 4, d = 8, a = 50.26"));
@@ -389,17 +390,18 @@ public class ExpressionTests {
 		assertNull(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "b == 0 ? (a = 1) : 4; a", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
 
 		{
-			final Object result[] = new Object[2000];
+			final int length = 2000;
+			final ArrayList<Object> result = new ArrayList<>(length);
 			final StringBuilder sb = new StringBuilder("");
 			final StringBuilder resultSB = new StringBuilder("[");
 
-			for (int i = 0; i < result.length; i++) {
-				result[i] = i;
+			for (int i = 0; i < length; i++) {
+				result.add(i, i);
 				sb.append('a').append(i).append('=').append(i).append(';');
 				resultSB.append('a').append(i).append(',');
 			}
 
-			assertArrayEquals(result, (Object[])new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, sb.append(resultSB).append(']').toString(), Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
+			assertEquals(result, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, sb.append(resultSB).append(']').toString(), Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
 		}
 	}
 

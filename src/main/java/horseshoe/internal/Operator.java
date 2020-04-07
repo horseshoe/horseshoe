@@ -77,8 +77,8 @@ final class Operator {
 	static {
 		final List<Operator> operators = new ArrayList<>();
 
-		operators.add(new Operator("{",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal - Iterating", "}", 0));
-		operators.add(new Operator("[",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Array / Map Literal", "]", 0));
+		operators.add(new Operator("{",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Set / Map Literal", "}", 0));
+		operators.add(new Operator("[",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "List / Map Literal", "]", 0));
 		operators.add(new Operator("[:]",    0,  0, "Empty Map"));
 		operators.add(new Operator("[",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Lookup", "]", 1));
 		operators.add(new Operator("?[?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | SAFE, "Safe Lookup", "]", 1));

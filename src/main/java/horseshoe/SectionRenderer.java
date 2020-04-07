@@ -2,7 +2,6 @@ package horseshoe;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.reflect.Array;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
@@ -63,66 +62,243 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private void dispatchArray(final RenderContext context, final Object data, final Writer writer) throws IOException {
-		final int length = Array.getLength(data);
-		index = 0;
-
-		if (length == 0) {
-			hasNext = false;
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
-			return;
-		}
-
 		final Class<?> componentType = data.getClass().getComponentType();
-		context.getIndexedData().push(this);
 
 		if (!componentType.isPrimitive()) {
-			for (final Object[] array = (Object[])data; index < length; index++) {
-				hasNext = index + 1 < length;
-				renderActions(context, array[index], writer, section.getActions());
-			}
+			dispatchArray(context, (Object[])data, writer);
 		} else if (int.class.equals(componentType)) {
-			for (final int[] array = (int[])data; index < length; index++) {
-				hasNext = index + 1 < length;
-				renderActions(context, array[index], writer, section.getActions());
-			}
+			dispatchArray(context, (int[])data, writer);
 		} else if (byte.class.equals(componentType)) {
-			for (final byte[] array = (byte[])data; index < length; index++) {
-				hasNext = index + 1 < length;
-				renderActions(context, array[index], writer, section.getActions());
-			}
+			dispatchArray(context, (byte[])data, writer);
 		} else if (double.class.equals(componentType)) {
-			for (final double[] array = (double[])data; index < length; index++) {
-				hasNext = index + 1 < length;
-				renderActions(context, array[index], writer, section.getActions());
-			}
-		} else if (boolean.class.equals(componentType)) {
-			for (final boolean[] array = (boolean[])data; index < length; index++) {
-				hasNext = index + 1 < length;
-				renderActions(context, array[index], writer, section.getActions());
-			}
+			dispatchArray(context, (double[])data, writer);
 		} else if (float.class.equals(componentType)) {
-			for (final float[] array = (float[])data; index < length; index++) {
-				hasNext = index + 1 < length;
-				renderActions(context, array[index], writer, section.getActions());
-			}
-		} else if (long.class.equals(componentType)) {
-			for (final long[] array = (long[])data; index < length; index++) {
-				hasNext = index + 1 < length;
-				renderActions(context, array[index], writer, section.getActions());
-			}
+			dispatchArray(context, (float[])data, writer);
 		} else if (char.class.equals(componentType)) {
-			for (final char[] array = (char[])data; index < length; index++) {
-				hasNext = index + 1 < length;
-				renderActions(context, array[index], writer, section.getActions());
-			}
+			dispatchArray(context, (char[])data, writer);
+		} else if (long.class.equals(componentType)) {
+			dispatchArray(context, (long[])data, writer);
+		} else if (boolean.class.equals(componentType)) {
+			dispatchArray(context, (boolean[])data, writer);
 		} else {
-			for (final short[] array = (short[])data; index < length; index++) {
-				hasNext = index + 1 < length;
+			dispatchArray(context, (short[])data, writer);
+		}
+	}
+
+	/**
+	 * Dispatches an object array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final Object[] array, final Writer writer) throws IOException {
+		if (array.length == 0) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else {
+			context.getIndexedData().push(this);
+
+			for (int i = 0; i < array.length; i++) {
+				index = i;
+				hasNext = i + 1 < array.length;
 				renderActions(context, array[index], writer, section.getActions());
 			}
-		}
 
-		context.getIndexedData().pop();
+			context.getIndexedData().pop();
+		}
+	}
+
+	/**
+	 * Dispatches an int array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final int[] data, final Writer writer) throws IOException {
+		if (data.length == 0) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else {
+			context.getIndexedData().push(this);
+
+			for (int i = 0; i < data.length; i++) {
+				index = i;
+				hasNext = i + 1 < data.length;
+				renderActions(context, data[index], writer, section.getActions());
+			}
+
+			context.getIndexedData().pop();
+		}
+	}
+
+	/**
+	 * Dispatches a byte array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final byte[] data, final Writer writer) throws IOException {
+		if (data.length == 0) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else {
+			context.getIndexedData().push(this);
+
+			for (int i = 0; i < data.length; i++) {
+				index = i;
+				hasNext = i + 1 < data.length;
+				renderActions(context, data[index], writer, section.getActions());
+			}
+
+			context.getIndexedData().pop();
+		}
+	}
+
+	/**
+	 * Dispatches a double array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final double[] data, final Writer writer) throws IOException {
+		if (data.length == 0) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else {
+			context.getIndexedData().push(this);
+
+			for (int i = 0; i < data.length; i++) {
+				index = i;
+				hasNext = i + 1 < data.length;
+				renderActions(context, data[index], writer, section.getActions());
+			}
+
+			context.getIndexedData().pop();
+		}
+	}
+
+	/**
+	 * Dispatches a float array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final float[] array, final Writer writer) throws IOException {
+		if (array.length == 0) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else {
+			context.getIndexedData().push(this);
+
+			for (int i = 0; i < array.length; i++) {
+				index = i;
+				hasNext = i + 1 < array.length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+
+			context.getIndexedData().pop();
+		}
+	}
+
+	/**
+	 * Dispatches a char array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final char[] array, final Writer writer) throws IOException {
+		if (array.length == 0) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else {
+			context.getIndexedData().push(this);
+
+			for (int i = 0; i < array.length; i++) {
+				index = i;
+				hasNext = i + 1 < array.length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+
+			context.getIndexedData().pop();
+		}
+	}
+
+	/**
+	 * Dispatches a long array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final long[] array, final Writer writer) throws IOException {
+		if (array.length == 0) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else {
+			context.getIndexedData().push(this);
+
+			for (int i = 0; i < array.length; i++) {
+				index = i;
+				hasNext = i + 1 < array.length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+
+			context.getIndexedData().pop();
+		}
+	}
+
+	/**
+	 * Dispatches a boolean array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final boolean[] array, final Writer writer) throws IOException {
+		if (array.length == 0) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else {
+			context.getIndexedData().push(this);
+
+			for (int i = 0; i < array.length; i++) {
+				index = i;
+				hasNext = i + 1 < array.length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+
+			context.getIndexedData().pop();
+		}
+	}
+
+	/**
+	 * Dispatches a short array for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the array to render
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchArray(final RenderContext context, final short[] array, final Writer writer) throws IOException {
+		if (array.length == 0) {
+			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+		} else {
+			context.getIndexedData().push(this);
+
+			for (int i = 0; i < array.length; i++) {
+				index = i;
+				hasNext = i + 1 < array.length;
+				renderActions(context, array[index], writer, section.getActions());
+			}
+
+			context.getIndexedData().pop();
+		}
 	}
 
 	/**
@@ -176,7 +352,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 				writer.close();
 			} catch (final IOException e) {
 				if (dispatchException == null) { // Log only when there is no causing exception to prevent confusion
-					context.getSettings().getLogger().log(Level.WARNING, "Failed to close writer (" + section.getLocation() + ")", e);
+					context.getSettings().getLogger().log(Level.WARNING, "Failed to close writer for section \"" + section.getName() + "\" (" + section.getLocation() + ")", e);
 				} else { // If there is a causing exception, add this one as a suppressed exception
 					dispatchException.addSuppressed(e);
 				}
@@ -193,28 +369,23 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	protected final void dispatchIteratorData(final RenderContext context, final Iterator<?> it, final Writer writer) throws IOException {
-		hasNext = it.hasNext();
-		index = 0;
-
-		if (!hasNext) {
+		if (!it.hasNext()) {
 			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
 			return;
 		}
 
 		context.getIndexedData().push(this);
 
-		while (true) {
+		for (hasNext = true, index = 0; true; index++) {
 			final Object object = it.next();
 
-			if (it.hasNext()) {
-				renderActions(context, object, writer, section.getActions());
-			} else {
+			if (!it.hasNext()) {
 				hasNext = false;
 				renderActions(context, object, writer, section.getActions());
 				break;
 			}
 
-			index++;
+			renderActions(context, object, writer, section.getActions());
 		}
 
 		context.getIndexedData().pop();
@@ -226,7 +397,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 	}
 
 	/**
-	 * Gets the section that is rendered by this action
+	 * Gets the section that is rendered by this action.
 	 *
 	 * @return the section that is rendered by this action
 	 */
@@ -241,26 +412,33 @@ class SectionRenderer implements Action, Expression.Indexed {
 
 	@Override
 	public final void perform(final RenderContext context, final Writer writer) throws IOException {
+		final int contextSize = context.getSectionData().size();
+
 		try {
-			if (section.getAnnotation() == null) {
+			if (section.getAnnotation() == null) { // Dispatch the data as normal, if not an annotation
 				dispatchData(context, section.useCache() ? context.getRepeatedSectionData() : section.getExpression().evaluate(context), writer);
-			} else {
-				final AnnotationHandler annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
-
-				if (annotationProcessor == null) { // Only write the data if there is an annotation processor available, otherwise take false path with default writer
-					dispatchData(context, false, writer);
-				} else {
-					final Writer annotationWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context));
-
-					if (annotationWriter == null || annotationWriter == writer) { // If we are not using a new writer, then don't close it
-						dispatchData(context, context.getSectionData().peek(), writer);
-					} else {
-						dispatchDataAndCloseWriter(context, context.getSectionData().peek(), annotationWriter);
-					}
-				}
+				return;
 			}
-		} catch (final IOException e) {
-			context.getSettings().getLogger().log(Level.SEVERE, "Failed to render section (" + section.getLocation() + ")", e);
+
+			final AnnotationHandler annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
+
+			if (annotationProcessor == null) { // Dispatch null data, if the annotation processor is not available
+				dispatchData(context, null, writer);
+				return;
+			}
+
+			final Writer annotationWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context));
+
+			if (annotationWriter == null || annotationWriter == writer) { // Dispatch the data without closing the writer, if the writer is not changed
+				dispatchData(context, context.getSectionData().peek(), writer);
+			} else { // Dispatch the data to the new writer and close it when finished
+				dispatchDataAndCloseWriter(context, context.getSectionData().peek(), annotationWriter);
+			}
+		} catch (final IOException e) { // Bubble up the exception, only logging at the lowest level
+			if (contextSize + (section.isInvisible() ? 0 : 1) == context.getSectionData().size()) {
+				context.getSettings().getLogger().log(Level.SEVERE, "Encountered exception while rendering section \"" + section.getName() + "\" (" + section.getLocation() + ")", e);
+			}
+
 			throw e;
 		}
 	}

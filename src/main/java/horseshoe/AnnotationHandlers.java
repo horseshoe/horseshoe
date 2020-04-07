@@ -18,7 +18,20 @@ import java.util.Map;
  */
 public final class AnnotationHandlers {
 
-	private static int filesCount = 0;
+	/**
+	 * The map of default annotations that are made available during the rendering process. Valid default annotations include "StdOut", "StdErr", and "File".
+	 */
+	public static final Map<String, AnnotationHandler> DEFAULT_ANNOTATIONS;
+
+	static {
+		final Map<String, AnnotationHandler> defaultAnnotations = new HashMap<>();
+
+		defaultAnnotations.put("StdErr", printWriter(System.err, Charset.defaultCharset()));
+		defaultAnnotations.put("StdOut", printWriter(System.out, Charset.defaultCharset()));
+		defaultAnnotations.put("File", fileWriter());
+
+		DEFAULT_ANNOTATIONS = Collections.unmodifiableMap(defaultAnnotations);
+	}
 
 	private AnnotationHandlers() { }
 
@@ -50,10 +63,6 @@ public final class AnnotationHandlers {
 	 */
 	public static AnnotationHandler fileWriter() {
 		return new AnnotationHandler() {
-			private String getDefaultFilename() {
-				return "Horseshoe_" + filesCount + ".out";
-			}
-
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
 				final File file;
@@ -63,13 +72,13 @@ public final class AnnotationHandlers {
 					final Object name = ((Map<?, ?>)value).get("name");
 					final Object encoding = ((Map<?, ?>)value).get("encoding");
 
-					file = new File(name == null ? getDefaultFilename() : name.toString());
+					file = new File(String.valueOf(name));
 
 					if (encoding != null) {
 						charset = Charset.forName(encoding.toString());
 					}
 				} else {
-					file = new File(value == null ? getDefaultFilename() : value.toString());
+					file = new File(String.valueOf(value));
 				}
 
 				final File directory = file.getParentFile();
@@ -78,22 +87,9 @@ public final class AnnotationHandlers {
 					throw new IOException("Failed to create directory " + directory.toString());
 				}
 
-				filesCount++;
 				return new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), charset));
 			}
 		};
 	}
-
-	/**
-	 * The map of default annotations that are made available during the rendering process. Valid default annotations include "StdOut", "StdErr", and "File".
-	 */
-	public static final Map<String, AnnotationHandler> DEFAULT_ANNOTATIONS = Collections.unmodifiableMap(new HashMap<String, AnnotationHandler>() {
-		private static final long serialVersionUID = 1L;
-		{
-			put("StdErr", printWriter(System.err, Charset.defaultCharset()));
-			put("StdOut", printWriter(System.out, Charset.defaultCharset()));
-			put("File", fileWriter());
-		}
-	});
 
 }
