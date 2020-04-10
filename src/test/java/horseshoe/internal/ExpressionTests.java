@@ -293,15 +293,21 @@ public class ExpressionTests {
 		}
 
 		assertFalse(Expression.compare(true, 5, "5") == 0);
+		assertFalse(Expression.compare(true, "5", 5) == 0);
 		assertTrue(Expression.compare(false, "a", "b") < 0);
 		assertTrue(Expression.compare(false, "2", "1") > 0);
 		assertTrue(Expression.compare(true, new Date(0), new Date(0)) == 0);
 		assertTrue(Expression.compare(true, new Date(0), new Date(1)) != 0);
 		assertTrue(Expression.compare(false, new Date(0), new Date(1)) < 0);
 		assertTrue(Expression.compare(false, new Date(1), new Date(0)) > 0);
-		assertTrue(Expression.compare(true, new StringBuilder().append('5'), "5") == 0);
-		assertTrue(Expression.compare(true, "5", new StringBuilder().append('5')) == 0);
-		assertTrue(Expression.compare(true, new StringBuilder().append('5'), new StringBuilder().append('5')) == 0);
+
+		final Object[] stringEquivalents = { new StringBuilder().append("5"), "5", '5' };
+
+		for (int i = 0; i < stringEquivalents.length; i++) {
+			for (int j = 0; j < stringEquivalents.length; j++) {
+				assertTrue(Expression.compare(true, stringEquivalents[i], stringEquivalents[j]) == 0);
+			}
+		}
 	}
 
 	@Test
@@ -485,7 +491,7 @@ public class ExpressionTests {
 
 	@Test
 	public void testStringLiterals() throws ReflectiveOperationException {
-		assertEquals("d \\\"\'\b\t\n\f\rƪāĂ\t", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "\"d \\\\\\\"\\\'\\b\\t\\n\\f\\r\\x1Aa\\u0101\\U00000102\\x9\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("d \\\"\'\b\t\n\f\r\0\0πƪāĂ\t", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "\"d \\\\\\\"\\\'\\b\\t\\n\\f\\r\\0\\x0π\\x1Aa\\u0101\\U00000102\\x9\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
 		assertEquals("d \\\\\\\"\\b\\t\\n\\f\\r\\x1Aa\\u0101\\U00000102\\x9", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "'d \\\\\\\"\\b\\t\\n\\f\\r\\x1Aa\\u0101\\U00000102\\x9'", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
 	}
 

@@ -2,6 +2,7 @@ package horseshoe.internal;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * A map that overlays other maps, caching items retrieved from the base map.
@@ -32,6 +33,14 @@ public final class OverlayMap<K, V> extends HashMap<K, V> {
 	}
 
 	@Override
+	public boolean equals(final Object obj) {
+		return this == obj || (obj != null && getClass().equals(obj.getClass()) &&
+				entrySet().equals(((OverlayMap<?, ?>)obj).entrySet()) &&
+				baseOverlayMap == ((OverlayMap<?, ?>)obj).baseOverlayMap &&
+				baseMap == ((OverlayMap<?, ?>)obj).baseMap);
+	}
+
+	@Override
 	@SuppressWarnings("unchecked")
 	public V get(final Object key) {
 		final V value = super.get(key);
@@ -44,6 +53,16 @@ public final class OverlayMap<K, V> extends HashMap<K, V> {
 
 		super.put((K)key, newValue);
 		return newValue;
+	}
+
+	@Override
+	public int hashCode() {
+		return super.hashCode() ^ Objects.hash(baseOverlayMap, baseMap);
+	}
+
+	@Override
+	public String toString() {
+		return super.toString() + " -> " + (baseOverlayMap != null ? baseOverlayMap : baseMap);
 	}
 
 	/**

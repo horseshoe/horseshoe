@@ -65,8 +65,15 @@ public final class Expression {
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern REGEX_PATTERN = Pattern.compile("~/(?<regex>(?:[^/\\\\]|\\\\.)*)/\\s*", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\x[0-9A-Fa-f]{1,8}|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>[^']*)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\0|\\\\x[0-9A-Fa-f]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>[^']*)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern OPERATOR_PATTERN;
+
+	private static final byte[] CHAR_VALUE = new byte[] {
+			127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+			127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,   0,   1,   2,   3,   4,   5,   6,   7,   8,   9, 127, 127, 127, 127, 127, 127,
+			127,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35, 127, 127, 127, 127, 127,
+			127,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35, 127, 127, 127, 127, 127
+	};
 
 	private final String location;
 	private final String originalString;
@@ -256,10 +263,10 @@ public final class Expression {
 				}
 
 				return Long.compare(((Character)first).charValue(), ((Number)second).longValue());
-			} else if (second instanceof Character) {
-				return Character.compare(((Character)first).charValue(), ((Character)second).charValue());
+			} else if (second instanceof StringBuilder || second instanceof String || second instanceof Character) {
+				return first.toString().compareTo(second.toString());
 			}
-		} else if ((first instanceof StringBuilder || first instanceof String || first instanceof Character) &&
+		} else if ((first instanceof StringBuilder || first instanceof String) &&
 				(second instanceof StringBuilder || second instanceof String || second instanceof Character)) {
 			return first.toString().compareTo(second.toString());
 		} else if (equality) {
@@ -329,6 +336,90 @@ public final class Expression {
 		}
 
 		return index;
+	}
+
+	/**
+	 * Parse a string literal, substituting character escape sequences as necessary.
+	 *
+	 * @param matcher the matcher with the current string literal matched
+	 * @return the parsed string representation of the string literal
+	 */
+	private static String parseStringLiteral(final Matcher matcher) {
+		final String string = matcher.group("string");
+		int backslash = 0;
+
+		if (string == null || (backslash = string.indexOf('\\')) < 0) {
+			return string == null ? matcher.group("unescapedString") : string;
+		}
+
+		// Find escape sequences and replace them with the proper character sequences
+		final StringBuilder sb = new StringBuilder(string.length());
+		int start = 0;
+
+		do {
+			sb.append(string, start, backslash);
+			assert backslash + 1 < string.length() : "Invalid string literal accepted with trailing \"\\\""; // According to the pattern, a backslash must be followed by a character
+			start = backslash + 2;
+
+			switch (string.charAt(backslash + 1)) {
+			case '\\': sb.append('\\'); break;
+			case '"':  sb.append('\"'); break;
+			case '\'': sb.append('\''); break;
+			case 'b':  sb.append('\b'); break;
+			case 't':  sb.append('\t'); break;
+			case 'n':  sb.append('\n'); break;
+			case 'f':  sb.append('\f'); break;
+			case 'r':  sb.append('\r'); break;
+			case '0':  sb.appendCodePoint(0); break; // Only allow zero, not the octal escape of C, C++, Java, etc.
+
+			case 'x':
+				start = parseStringLiteralHex(sb, string, start);
+				break;
+
+			case 'u':
+				assert backslash + 5 < string.length() : "Invalid string literal accepted with trailing \"\\u\""; // According to the pattern, \\u must be followed by 4 digits
+				sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 6), 16));
+				start = backslash + 6;
+				break;
+
+			case 'U':
+				assert backslash + 9 < string.length() : "Invalid string literal accepted with trailing \"\\U\""; // According to the pattern, \\U must be followed by 8 digits
+				sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 10), 16));
+				start = backslash + 10;
+				break;
+
+			default:
+				assert false : "Invalid string literal accepted with \"\\" + string.charAt(backslash + 1) + "\" escape sequence"; // According to the pattern, only the above cases are allowed
+			}
+		} while ((backslash = string.indexOf('\\', start)) >= 0);
+
+		return sb.append(string, start, string.length()).toString();
+	}
+
+	/**
+	 * Parse a string literal hex escape of arbitrary length, and append the code point using a string builder.
+	 *
+	 * @param sb the string builder used to build the string
+	 * @param string the string literal being parsed
+	 * @param index the index of the first hex character in the string literal
+	 * @return the index after the hex escape
+	 */
+	private static int parseStringLiteralHex(final StringBuilder sb, final String string, final int index) {
+		int codePoint = 0;
+		int i = index;
+
+		for (; i < string.length() && string.charAt(i) < CHAR_VALUE.length; i++) {
+			final int value = CHAR_VALUE[string.charAt(i)];
+
+			if ((value & 0xF0) != 0) {
+				break;
+			}
+
+			codePoint = codePoint * 16 + value;
+		}
+
+		sb.appendCodePoint(codePoint);
+		return i;
 	}
 
 	/**
@@ -692,9 +783,8 @@ public final class Expression {
 	public Expression(final String location, final String expressionName, final CharSequence expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final HashMap<Expression, Integer> expressionMap = new HashMap<>();
 		final HashMap<Identifier, Integer> identifierMap = new HashMap<>();
-		final HashMap<String, Integer> localVariableMap = new HashMap<>();
 		final PersistentStack<Operand> operands = new PersistentStack<>();
-		int nextLocalVariableIndex = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS;
+		int nextLocalBindingIndex = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS;
 
 		if (expressionName != null) {
 			namedExpressions.put(expressionName, this);
@@ -707,22 +797,17 @@ public final class Expression {
 			operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(PERSISTENT_STACK_PEEK)));
 		} else if (!horseshoeExpressions) {
 			final MethodBuilder mb = new MethodBuilder();
-			final String[] names = originalString.split("[.]", -1);
+			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(originalString, -1);
 
-			// Load the identifiers
-			for (int i = 0; i < names.length; i++) {
-				final int index = getIdentifierIndex(identifierMap, new Identifier(names[i].trim()));
+			// Push a new operand formed by invoking identifiers[index].getValue(context, backreach, access)
+			operands.push(new Operand(Object.class, mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(getIdentifierIndex(identifierMap, new Identifier(names[0]))).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
 
-				if (i == 0) {
-					// Create a new output formed by invoking identifiers[index].getValue(context, backreach, access)
-					operands.push(new Operand(Object.class, mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
-				} else {
-					// Create a new output formed by invoking identifiers[index].getValue(object)
-					mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE);
-				}
+			// Load the identifiers and invoke identifiers[index].getValue(object)
+			for (int i = 1; i < names.length; i++) {
+				mb.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(getIdentifierIndex(identifierMap, new Identifier(names[i]))).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE);
 			}
-		} else {
-			// Tokenize the entire expression, using the shunting yard algorithm
+		} else { // Tokenize the entire expression, using the shunting yard algorithm
+			final HashMap<String, Integer> localBindingMap = new HashMap<>();
 			final PersistentStack<Operator> operators = new PersistentStack<>();
 			final int length = expressionString.length();
 			Operator lastOperator = Operator.get("(", false);
@@ -847,7 +932,7 @@ public final class Expression {
 									operands.push(new Operand(Object.class, operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
 								}
 							} else {
-								final Integer localVariableIndex = unstatedBackreach ? localVariableMap.get(name) : null;
+								final Integer localBindingIndex = unstatedBackreach ? localBindingMap.get(name) : null;
 								final Operator operator = Operator.get(matcher.group("assignment"), true);
 
 								// Look-ahead for an assignment operation
@@ -856,10 +941,10 @@ public final class Expression {
 										throw new IllegalArgumentException("Invalid assignment to non-local variable in expression at offset " + matcher.regionStart());
 									}
 
-									localVariableMap.put(name, nextLocalVariableIndex);
-									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, nextLocalVariableIndex++)));
-								} else if (localVariableIndex != null) { // Check for a local variable
-									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, localVariableIndex)));
+									localBindingMap.put(name, nextLocalBindingIndex);
+									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, nextLocalBindingIndex++)));
+								} else if (localBindingIndex != null) { // Check for a local binding
+									operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, localBindingIndex)));
 								} else { // Resolve the identifier
 									final int index = getIdentifierIndex(identifierMap, new Identifier(name));
 
@@ -887,70 +972,7 @@ public final class Expression {
 						operands.push(new Operand(int.class, new MethodBuilder().pushConstant((int)value)));
 					}
 				} else if (!hasLeftExpression && matcher.usePattern(STRING_PATTERN).lookingAt()) { // String literal
-					final String string = matcher.group("string");
-					int backslash = 0;
-
-					if (string == null || (backslash = string.indexOf('\\')) < 0) {
-						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(string == null ? matcher.group("unescapedString") : string)));
-					} else { // Find escape sequences and replace them with the proper character sequences
-						final StringBuilder sb = new StringBuilder(string.length());
-						int start = 0;
-
-						do {
-							sb.append(string, start, backslash);
-							assert backslash + 1 < string.length() : "Invalid string literal accepted with trailing \"\\\""; // According to the pattern, a backslash must be followed by a character
-							start = backslash + 2;
-
-							switch (string.charAt(backslash + 1)) {
-							case '\\': sb.append('\\'); break;
-							case '"':  sb.append('\"'); break;
-							case '\'': sb.append('\''); break;
-							case 'b':  sb.append('\b'); break;
-							case 't':  sb.append('\t'); break;
-							case 'n':  sb.append('\n'); break;
-							case 'f':  sb.append('\f'); break;
-							case 'r':  sb.append('\r'); break;
-
-							case 'x':
-								int codePoint = 0;
-								int j = backslash + 2;
-
-								for (int i = 0; i < 8 && j < string.length(); i++, j++) {
-									final int digit = string.charAt(j);
-
-									if (digit >= '0' && digit <= '9') {
-										codePoint = codePoint * 16 + digit - '0';
-									} else if (digit >= 'A' && digit <= 'F') {
-										codePoint = codePoint * 16 + digit + (10 - 'A');
-									} else if (digit >= 'a' && digit <= 'f') {
-										codePoint = codePoint * 16 + digit + (10 - 'a');
-									} else {
-										break;
-									}
-								}
-
-								sb.append(Character.toChars(codePoint));
-								start = j;
-								break;
-
-							case 'u':
-								assert backslash + 5 < string.length() : "Invalid string literal accepted with trailing \"\\u\""; // According to the pattern, \\u must be followed by 4 digits
-								sb.append(Character.toChars(Integer.parseInt(string.substring(backslash + 2, backslash + 6), 16)));
-								start = backslash + 6;
-								break;
-
-							case 'U':
-								assert backslash + 9 < string.length() : "Invalid string literal accepted with trailing \"\\U\""; // According to the pattern, \\U must be followed by 8 digits
-								sb.append(Character.toChars(Integer.parseInt(string.substring(backslash + 2, backslash + 10), 16)));
-								start = backslash + 10;
-								break;
-
-							default: assert false : "Invalid string literal accepted with \"\\" + string.charAt(backslash + 1) + "\""; // According to the pattern, only the above cases are allowed
-							}
-						} while ((backslash = string.indexOf('\\', start)) >= 0);
-
-						operands.push(new Operand(String.class, new MethodBuilder().pushConstant(sb.append(string, start, string.length()).toString())));
-					}
+					operands.push(new Operand(String.class, new MethodBuilder().pushConstant(parseStringLiteral(matcher))));
 				} else if (!hasLeftExpression && matcher.usePattern(REGEX_PATTERN).lookingAt()) { // Regular expression literal
 					operands.push(new Operand(Object.class, new MethodBuilder().pushConstant(Pattern.compile(matcher.group("regex")).pattern()).addInvoke(PATTERN_COMPILE)));
 				} else if (matcher.usePattern(OPERATOR_PATTERN).lookingAt()) { // Operator
@@ -1029,7 +1051,7 @@ public final class Expression {
 		// Populate all the identifiers and create the evaluator
 		this.expressions = new Expression[expressionMap.size()];
 		this.identifiers = new Identifier[identifierMap.size()];
-		final MethodBuilder initializeLocalVariables = new MethodBuilder();
+		final MethodBuilder initializeLocalBindings = new MethodBuilder();
 
 		for (final Entry<Expression, Integer> entry : expressionMap.entrySet()) {
 			this.expressions[entry.getValue()] = entry.getKey();
@@ -1039,11 +1061,11 @@ public final class Expression {
 			this.identifiers[entry.getValue()] = entry.getKey();
 		}
 
-		for (int i = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS; i < nextLocalVariableIndex; i++) {
-			initializeLocalVariables.addCode(ACONST_NULL).addAccess(ASTORE, i);
+		for (int i = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS; i < nextLocalBindingIndex; i++) {
+			initializeLocalBindings.addCode(ACONST_NULL).addAccess(ASTORE, i);
 		}
 
-		this.evaluable = initializeLocalVariables.append(operands.pop().toObject(true)).load(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
+		this.evaluable = initializeLocalBindings.append(operands.pop().toObject(true)).build(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		assert operands.isEmpty();
 	}
 

@@ -1,16 +1,17 @@
 package horseshoe.internal;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,6 +48,7 @@ public final class MethodBuilder {
 	private static final byte INVOKESPECIAL   = new Opcode("invokespecial",   0xB7, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).id; // 2: indexbyte1, indexbyte2 (stack: objectref, [arg1, arg2, ...] -> result)
 	private static final byte INVOKESTATIC    = new Opcode("invokestatic",    0xB8, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).id; // 2: indexbyte1, indexbyte2 (stack: [arg1, arg2, ...] -> result)
 	private static final byte INVOKEVIRTUAL   = new Opcode("invokevirtual",   0xB6, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).id; // 2: indexbyte1, indexbyte2 (stack: objectref, [arg1, arg2, ...] -> result)
+	@SuppressWarnings("unused")
 	private static final byte LDC             = new Opcode("ldc",             0x12, 2,  1, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES).id; // 1: index (stack: -> value)
 	private static final byte LDC_W           = new Opcode("ldc_w",           0x13, 3,  1, Opcode.PROP_CONST_POOL_INDEX).id; // 2: indexbyte1, indexbyte2 (stack: -> value)
 	private static final byte LDC2_W          = new Opcode("ldc2_w",          0x14, 3,  2, Opcode.PROP_CONST_POOL_INDEX).id; // 2: indexbyte1, indexbyte2 (stack: -> value)
@@ -55,6 +57,7 @@ public final class MethodBuilder {
 	private static final byte NEW             = new Opcode("new",             0xBB, 3,  1, Opcode.PROP_CONST_POOL_INDEX).id; // 2: indexbyte1, indexbyte2 (stack: -> objectref)
 	private static final byte PUTFIELD        = new Opcode("putfield",        0xB5, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).id; // 2: indexbyte1, indexbyte2 (stack: objectref, value ->)
 	private static final byte PUTSTATIC       = new Opcode("putstatic",       0xB3, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).id; // 2: indexbyte1, indexbyte2 (stack: value ->)
+	@SuppressWarnings("unused")
 	private static final byte TABLESWITCH     = new Opcode("tableswitch",     0xAA, 0, -1, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_LENGTH).id; // 16+: [0-3 bytes padding], defaultbyte1, defaultbyte2, defaultbyte3, defaultbyte4, lowbyte1, lowbyte2, lowbyte3, lowbyte4, highbyte1, highbyte2, highbyte3, highbyte4, jump offsets... (stack: index ->)
 
 	// Do not use, added in Java 7, but we only support Java 6
@@ -630,62 +633,6 @@ public final class MethodBuilder {
 	}
 
 	/**
-	 * Gets the string signature of a member (constructor or method).
-	 *
-	 * @param member the member used to create the signature
-	 * @return the signature of the member
-	 */
-	private static String getSignature(final Member member) {
-		if (member instanceof Field) {
-			return Array.newInstance(((Field)member).getType(), 0).getClass().getName().substring(1);
-		}
-
-		final StringBuilder sb = new StringBuilder("(");
-		final Class<?>[] parameters = (member instanceof Method ? ((Method)member).getParameterTypes() :
-			member instanceof Constructor ? ((Constructor<?>)member).getParameterTypes() : new Class<?>[0]);
-		final Class<?> returnType = (member instanceof Method ? ((Method)member).getReturnType() : void.class);
-
-		for (final Class<?> type : parameters) {
-			sb.append(Array.newInstance(type, 0).getClass().getName().substring(1));
-		}
-
-		if (returnType == void.class) {
-			sb.append(")V");
-		} else {
-			sb.append(")").append(Array.newInstance(returnType, 0).getClass().getName().substring(1));
-		}
-
-		return sb.toString().replace('.', '/');
-	}
-
-	/**
-	 * Gets the stack offset that results from invoking (or getting) a member (field, method, constructor). The object for non-static members is not factored into the stack offset.
-	 *
-	 * @param member the member to analyze
-	 * @return the stack offset that results from invoking (or getting) the member
-	 */
-	private static int getCallStackOffset(final Member member) {
-		if (member instanceof Method) {
-			final Method method = (Method)member;
-			int offset = getStackSize(method.getReturnType());
-
-			for (final Class<?> type : method.getParameterTypes()) {
-				offset -= getStackSize(type);
-			}
-
-			return offset;
-		} else {
-			int offset = 0;
-
-			for (final Class<?> type : ((Constructor<?>)member).getParameterTypes()) {
-				offset -= getStackSize(type);
-			}
-
-			return offset;
-		}
-	}
-
-	/**
 	 * Adds an access (load / store) instruction. This is a convenience method that applies the "wide" instruction prefix if needed.
 	 *
 	 * @param instruction the load or store instruction
@@ -742,80 +689,72 @@ public final class MethodBuilder {
 	}
 
 	/**
-	 * Adds code to the builder, reserving extra space in the builder if necessary. The length is automatically extended.
+	 * Adds code to the builder, reserving extra space in the builder if necessary. The length is automatically extended. Any exception will leave the builder in a valid state where all code up to the opcode that caused the exception has been added to the builder.
 	 *
-	 * @param code the code to append to the builder
+	 * @param code the code to add to the builder
 	 * @return this builder
 	 */
 	public MethodBuilder addCode(final byte... code) {
 		int i = 0;
 
-		while (i < code.length) {
-			final Opcode opcode = OPCODES[code[i] & 0xFF];
+		try {
+			while (i < code.length) {
+				i += addCode(code, i);
+			}
+		} finally {
+			append(code, i);
+		}
 
-			if (opcode == null) {
-				throw new IllegalArgumentException("Invalid bytecode instruction: 0x" + Integer.toHexString(code[i] & 0xFF));
-			} else if (!opcode.has(Opcode.PROP_IS_STANDALONE_VALID)) {
-				if ((opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) == Opcode.PROP_BRANCH_OFFSET) {
-					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addBranch() method");
-				} else if (code[i] == GETFIELD || code[i] == GETSTATIC || code[i] == PUTFIELD || code[i] == PUTSTATIC) {
-					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addFieldAccess() method");
-				} else if (code[i] == LOOKUPSWITCH || code[i] == TABLESWITCH) {
-					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addSwitch() method");
-				} else if (code[i] == INVOKEDYNAMIC || code[i] == INVOKEINTERFACE || code[i] == INVOKESPECIAL || code[i] == INVOKESTATIC || code[i] == INVOKEVIRTUAL) {
-					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addInvoke() method");
-				} else if (code[i] == CHECKCAST) {
-					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addCast() method");
-				} else if (code[i] == INSTANCEOF) {
-					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the addInstanceOfCheck() method");
-				} else if (code[i] == LDC || code[i] == LDC_W || code[i] == LDC2_W) {
-					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the pushConstant() method");
-				} else if (code[i] == ANEWARRAY || code[i] == MULTIANEWARRAY || code[i] == NEW) {
-					throw new IllegalArgumentException("The " + opcode.mnemonic + " instruction must use the pushNewObject() method");
-				}
+		return this;
+	}
 
-				throw new IllegalArgumentException("Invalid bytecode instruction: " + opcode.mnemonic);
-			} else if (code[i] == WIDE) {
-				if (i + 1 >= code.length) {
-					break;
-				}
+	/**
+	 * Adds the specified opcode at the starting index in the code array to the builder. The code is not actually copied
+	 *
+	 * @param code the code array containing the opcode to add to the builder
+	 * @param start the starting index of the opcode within the code array
+	 * @return the length of the opcode, in bytes
+	 */
+	private int addCode(final byte[] code, final int start) {
+		final Opcode opcode = OPCODES[code[start] & 0xFF];
 
-				final Opcode wideOpcode = OPCODES[code[i + 1] & 0xFF];
-				final int opcodeLength;
-
-				if (wideOpcode == null) {
-					throw new IllegalArgumentException("Invalid wide bytecode instruction: 0x" + Integer.toHexString(code[i + 1] & 0xFF));
-				} else if (!wideOpcode.has(Opcode.PROP_LOCAL_INDEX)) {
-					throw new IllegalArgumentException("Invalid wide bytecode instruction: " + wideOpcode.mnemonic);
-				} else if (code[i + 1] == IINC) {
-					opcodeLength = 6;
-				} else {
-					opcodeLength = 4;
-				}
-
-				if (i + opcodeLength > code.length) {
-					break;
-				}
-
-				maxLocalVariableIndex = Math.max(maxLocalVariableIndex, ((code[i + 2] & 0xFF) << 8) + (code[i + 3] & 0xFF));
-				i += opcodeLength;
-				stackSize += wideOpcode.stackOffset;
-				maxStackSize = Math.max(maxStackSize, stackSize);
-				continue;
-			} else if (opcode.has(Opcode.PROP_LOCAL_INDEX)) {
-				maxLocalVariableIndex = Math.max(maxLocalVariableIndex, code[i + 1] & 0xFF);
+		if (opcode == null) {
+			throw new IllegalArgumentException("Invalid bytecode instruction 0x" + Integer.toHexString(code[start] & 0xFF) + " at index " + start);
+		} else if (!opcode.has(Opcode.PROP_IS_STANDALONE_VALID)) {
+			throw new IllegalArgumentException("Illegal bytecode instruction " + opcode.mnemonic + " at index " + start + ", instuction cannot be added directly");
+		} else if (code[start] == WIDE) {
+			if (start + 1 >= code.length) {
+				throw new IllegalArgumentException("Incomplete bytecode instruction " + opcode.mnemonic + " at index " + start);
 			}
 
-			i += opcode.length;
-			stackSize += opcode.stackOffset;
+			final Opcode wideOpcode = OPCODES[code[start + 1] & 0xFF];
+			final int opcodeLength;
+
+			if (wideOpcode == null) {
+				throw new IllegalArgumentException("Invalid bytecode instruction " + opcode.mnemonic + " 0x" + Integer.toHexString(code[start + 1] & 0xFF) + " at index " + start);
+			} else if (!wideOpcode.has(Opcode.PROP_LOCAL_INDEX)) {
+				throw new IllegalArgumentException("Invalid bytecode instruction " + opcode.mnemonic + " " + wideOpcode.mnemonic + " at index " + start);
+			} else if (code[start + 1] == IINC) {
+				opcodeLength = 6;
+			} else {
+				opcodeLength = 4;
+			}
+
+			if (start + opcodeLength > code.length) {
+				throw new IllegalArgumentException("Incomplete bytecode instruction " + opcode.mnemonic + " " + wideOpcode.mnemonic + " at index " + start);
+			}
+
+			maxLocalVariableIndex = Math.max(maxLocalVariableIndex, ((code[start + 2] & 0xFF) << 8) + (code[start + 3] & 0xFF));
+			stackSize += wideOpcode.stackOffset;
 			maxStackSize = Math.max(maxStackSize, stackSize);
+			return opcodeLength;
+		} else if (opcode.has(Opcode.PROP_LOCAL_INDEX)) {
+			maxLocalVariableIndex = Math.max(maxLocalVariableIndex, code[start + 1] & 0xFF);
 		}
 
-		if (i != code.length) {
-			throw new IllegalArgumentException("Invalid bytecode (length mismatch)");
-		}
-
-		return append(code);
+		stackSize += opcode.stackOffset;
+		maxStackSize = Math.max(maxStackSize, stackSize);
+		return opcode.length;
 	}
 
 	/**
@@ -833,10 +772,10 @@ public final class MethodBuilder {
 				stackSize += getStackSize(field.getType());
 				maxStackSize = Math.max(maxStackSize, stackSize);
 				return append(GETSTATIC, B0, B0);
-			} else {
-				stackSize -= getStackSize(field.getType());
-				return append(PUTSTATIC, B0, B0);
 			}
+
+			stackSize -= getStackSize(field.getType());
+			return append(PUTSTATIC, B0, B0);
 		} else if (load) {
 			stackSize += getStackSize(field.getType()) - 1;
 			maxStackSize = Math.max(maxStackSize, stackSize);
@@ -1081,9 +1020,9 @@ public final class MethodBuilder {
 		try {
 			if (message == null) {
 				return pushNewObject(throwable).addCode(DUP).addInvoke(throwable.getConstructor()).addCode(ATHROW);
-			} else {
-				return pushNewObject(throwable).addCode(DUP).pushConstant(message).addInvoke(throwable.getConstructor(String.class)).addCode(ATHROW);
 			}
+
+			return pushNewObject(throwable).addCode(DUP).pushConstant(message).addInvoke(throwable.getConstructor(String.class)).addCode(ATHROW);
 		} catch (final ReflectiveOperationException e) {
 			throw new IncompatibleClassChangeError("Failed to get required class constructor: " + e.getMessage());
 		}
@@ -1199,100 +1138,16 @@ public final class MethodBuilder {
 	}
 
 	/**
-	 * Gets the specified object from the constant pool. If the object does not already exist in the constant pool, it will be added and the newly created information returned.
+	 * Builds the method by loading the bytecode of the method builder into a new class.
 	 *
-	 * @param value the object to get from the constant pool
-	 * @return the constant pool information for the object
-	 */
-	private ConstantPoolEntry getConstant(final Object value) {
-		final ConstantPoolEntry info = constantPool.get(value);
-
-		if (info != null) {
-			return info;
-		}
-
-		if (value instanceof Integer) {
-			final int number = (Integer)value;
-			return constantPool.add(value, INTEGER_CONSTANT,
-					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
-		} else if (value instanceof Long) {
-			final long number = (Long)value;
-			final ConstantPoolEntry entry = constantPool.add(value, LONG_CONSTANT,
-					(byte)(number >>> 56), (byte)(number >>> 48), (byte)(number >>> 40), (byte)(number >>> 32),
-					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
-			constantPool.add(new Object());
-			return entry;
-		} else if (value instanceof Float) {
-			final long number = Float.floatToRawIntBits((Float)value);
-			return constantPool.add(value, FLOAT_CONSTANT,
-					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
-		} else if (value instanceof Double) {
-			final long number = Double.doubleToRawLongBits((Double)value);
-			final ConstantPoolEntry entry = constantPool.add(value, DOUBLE_CONSTANT,
-					(byte)(number >>> 56), (byte)(number >>> 48), (byte)(number >>> 40), (byte)(number >>> 32),
-					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
-			constantPool.add(new Object());
-			return entry;
-		} else if (value instanceof UTF8String) {
-			final byte[] utfChars = value.toString().getBytes(StandardCharsets.UTF_8); // Note no length or invalid character checks
-			final byte[] data = Arrays.copyOf(new byte[] { STRING_CONSTANT, (byte)(utfChars.length >>> 8), (byte)(utfChars.length) }, 3 + utfChars.length);
-			System.arraycopy(utfChars, 0, data, 3, utfChars.length);
-			return constantPool.add(value, data);
-		} else if (value instanceof String) {
-			getConstant(new UTF8String(value.toString())).locations.add(new Location(constantPool, constantPool.getLength() + 1));
-			return constantPool.add(value, STRING_REF_CONSTANT, B0, B0);
-		} else if (value instanceof Class) {
-			getConstant(new UTF8String(((Class<?>)value).getName().replace('.', '/'))).locations.add(new Location(constantPool, constantPool.getLength() + 1));
-			return constantPool.add(value, CLASS_CONSTANT, B0, B0);
-		} else if (value instanceof Member) {
-			// Build the signature
-			final Member member = (Member)value;
-			final ConstantPoolEntry name = getConstant(new UTF8String(member instanceof Constructor ? "<init>" : member.getName()));
-			final ConstantPoolEntry signature = getConstant(new UTF8String(getSignature(member)));
-			final ConstantPoolEntry declaringClass = getConstant(member.getDeclaringClass());
-
-			name.locations.add(new Location(constantPool, constantPool.getLength() + 1));
-			signature.locations.add(new Location(constantPool, constantPool.getLength() + 3));
-			constantPool.add(new Object(), NAME_AND_TYPE_CONSTANT, B0, B0, B0, B0).locations.add(new Location(constantPool, constantPool.getLength() + 3));
-			declaringClass.locations.add(new Location(constantPool, constantPool.getLength() + 1));
-
-			if (member instanceof Field) { // Field
-				return constantPool.add(member, FIELD_CONSTANT, B0, B0, B0, B0);
-			} else if ((member.getDeclaringClass().getModifiers() & Modifier.INTERFACE) != 0) { // Interface method
-				return constantPool.add(member, IMETHOD_CONSTANT, B0, B0, B0, B0);
-			}
-
-			return constantPool.add(member, METHOD_CONSTANT, B0, B0, B0, B0);
-		}
-
-		throw new IllegalArgumentException("Cannot add a constant of type " + value.getClass().toString());
-	}
-
-	/**
-	 * Gets the stack size of the specified type.
-	 *
-	 * @param type the type to evaluate
-	 * @return the stack size of the specified type
-	 */
-	private static int getStackSize(final Class<?> type) {
-		if (type.equals(double.class) || type.equals(long.class)) {
-			return 2;
-		} else if (type.equals(void.class)) {
-			return 0;
-		}
-
-		return 1;
-	}
-	/**
-	 * Loads the bytecode of the method builder into a new class.
 	 * @param <T> the type of the base class
-	 * @param name the name of the class being loaded
-	 * @param base the base class of the class being loaded
-	 * @param loader the class loader to use to load the new class
-	 * @return the loaded class
+	 * @param name the name of the new class
+	 * @param base the base class of the new class
+	 * @param loader the class loader used to load the new class
+	 * @return the new class
 	 * @throws ReflectiveOperationException if the loader throws an exception while loading the bytecode
 	 */
-	public <T> Class<T> load(final String name, final Class<T> base, final ClassLoader loader) throws ReflectiveOperationException {
+	public <T> Class<T> build(final String name, final Class<T> base, final ClassLoader loader) throws ReflectiveOperationException {
 		// Add this class
 		getConstant(new UTF8String(name.replace('.', '/'))).locations.add(new Location(constantPool, constantPool.getLength() + 1));
 		final ConstantPoolEntry classNameInfo = constantPool.add(this, CLASS_CONSTANT, B0, B0);
@@ -1306,7 +1161,7 @@ public final class MethodBuilder {
 			for (final Method check : base.getMethods()) {
 				if (!Modifier.isStatic(check.getModifiers())) {
 					if (method != null) {
-						throw new IllegalArgumentException("Interface " + base.getName() + " must have exactly 1 non-static method (contains multiple)");
+						throw new IllegalArgumentException("Base interface " + base.getName() + " must have exactly 1 non-static method (contains multiple)");
 					}
 
 					method = check;
@@ -1320,7 +1175,7 @@ public final class MethodBuilder {
 			for (final Method check : base.getMethods()) {
 				if (Modifier.isAbstract(check.getModifiers())) {
 					if (method != null) {
-						throw new IllegalArgumentException("Class " + base.getName() + " must have exactly 1 abstract method (contains multiple)");
+						throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method (contains multiple)");
 					}
 
 					method = check;
@@ -1331,7 +1186,7 @@ public final class MethodBuilder {
 				for (final Method check : base.getDeclaredMethods()) {
 					if ((check.getModifiers() & (Modifier.FINAL | Modifier.NATIVE | Modifier.PRIVATE | Modifier.PROTECTED | Modifier.STATIC)) == 0 && !check.isSynthetic() ) {
 						if (method != null) {
-							throw new IllegalArgumentException("Class " + base.getName() + " must have exactly 1 abstract method (contains none) or 1 public declared non-static, non-final, non-native method (contains multiple)");
+							throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method (contains none) or 1 public declared non-static, non-final, non-native method (contains multiple)");
 						}
 
 						method = check;
@@ -1342,11 +1197,11 @@ public final class MethodBuilder {
 			baseClassInfo = interfaceClassInfo = getConstant(base);
 			baseConstructorInfo = getConstant(base.getDeclaredConstructor());
 		} else {
-			throw new IllegalArgumentException("Class " + base.getName() + " must not be marked final");
+			throw new IllegalArgumentException("Base class " + base.getName() + " must not be marked final");
 		}
 
 		if (method == null) {
-			throw new IllegalArgumentException("Class " + base.getName() + " must have exactly 1 abstract method or 1 public declared non-static, non-final, non-native method (contains none)");
+			throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method or 1 public declared non-static, non-final, non-native method (contains none)");
 		}
 
 		final ConstantPoolEntry ctorNameInfo = getConstant(new UTF8String("<init>"));
@@ -1381,10 +1236,7 @@ public final class MethodBuilder {
 		classBytecode[2] = (byte)0xBA;
 		classBytecode[3] = (byte)0xBE;
 
-		// Version number
-		classBytecode[4] = 0x00;
-		classBytecode[5] = 0x00;
-		classBytecode[6] = 0x00;
+		// Version number [4 - 6] = 0
 		classBytecode[7] = (byte)0x31; // Use Java 1.5, so we don't have to generate stackmaps
 
 		// Constants count
@@ -1405,23 +1257,16 @@ public final class MethodBuilder {
 		classBytecode[10 + constantPool.getLength() + 4] = (byte)(baseClassInfo.index >>> 8);
 		classBytecode[10 + constantPool.getLength() + 5] = (byte)(baseClassInfo.index);
 
-		// Add the interface we are implementing
+		// Add the interface we are implementing (ignore if class; [6 - 7] = 0)
 		if (base.isInterface()) {
-			classBytecode[10 + constantPool.getLength() + 6] = 0x00;
-			classBytecode[10 + constantPool.getLength() + 7] = 0x01;
+			classBytecode[10 + constantPool.getLength() + 7] = 0x01; // [6] = 0
 			classBytecode[10 + constantPool.getLength() + 8] = (byte)(interfaceClassInfo.index >>> 8);
 			classBytecode[10 + constantPool.getLength() + 9] = (byte)(interfaceClassInfo.index);
-		} else {
-			classBytecode[10 + constantPool.getLength() + 6] = 0x00;
-			classBytecode[10 + constantPool.getLength() + 7] = 0x00;
 		}
 
-		// No fields
-		classBytecode[fieldIndex]     = 0x00;
-		classBytecode[fieldIndex + 1] = 0x00;
+		// Fields (none) [0 - 1] = 0
 
-		// Methods - constructor and interface method
-		classBytecode[fieldIndex + 2] = 0x00;
+		// Methods (constructor and interface method) [2] = 0
 		classBytecode[fieldIndex + 3] = 0x02;
 
 		{ // Constructor
@@ -1435,26 +1280,17 @@ public final class MethodBuilder {
 			classBytecode[ctorIndex + 4] = (byte)(ctorSignatureInfo.index >>> 8);
 			classBytecode[ctorIndex + 5] = (byte)(ctorSignatureInfo.index);
 
-			classBytecode[ctorIndex + 6] = 0x00;
-			classBytecode[ctorIndex + 7] = 0x01;
+			classBytecode[ctorIndex + 7] = 0x01; // [6] = 0
 			classBytecode[ctorIndex + 8] = (byte)(codeAttributeInfo.index >>> 8);
 			classBytecode[ctorIndex + 9] = (byte)(codeAttributeInfo.index);
 
-			classBytecode[ctorIndex + 10] = 0x00;
-			classBytecode[ctorIndex + 11] = 0x00;
-			classBytecode[ctorIndex + 12] = 0x00;
-			classBytecode[ctorIndex + 13] = 0x11;
+			classBytecode[ctorIndex + 13] = 0x11; // [10 - 12] = 0
 
 			// Code
-			classBytecode[ctorIndex + 14] = 0x00;
-			classBytecode[ctorIndex + 15] = 0x01;
-			classBytecode[ctorIndex + 16] = 0x00;
-			classBytecode[ctorIndex + 17] = 0x01;
+			classBytecode[ctorIndex + 15] = 0x01; // [14] = 0
+			classBytecode[ctorIndex + 17] = 0x01; // [16] = 0
 
-			classBytecode[ctorIndex + 18] = 0x00;
-			classBytecode[ctorIndex + 19] = 0x00;
-			classBytecode[ctorIndex + 20] = 0x00;
-			classBytecode[ctorIndex + 21] = 0x05;
+			classBytecode[ctorIndex + 21] = 0x05; // [18 - 20] = 0
 
 			classBytecode[ctorIndex + 22] = ALOAD_0;
 			classBytecode[ctorIndex + 23] = INVOKESPECIAL;
@@ -1462,10 +1298,7 @@ public final class MethodBuilder {
 			classBytecode[ctorIndex + 25] = (byte)(baseConstructorInfo.index);
 			classBytecode[ctorIndex + 26] = RETURN;
 
-			classBytecode[ctorIndex + 27] = 0x00;
-			classBytecode[ctorIndex + 28] = 0x00;
-			classBytecode[ctorIndex + 29] = 0x00;
-			classBytecode[ctorIndex + 30] = 0x00;
+			// [27 - 30] = 0
 		}
 
 		int maxLocalVariableSize = maxLocalVariableIndex + 1;
@@ -1485,8 +1318,7 @@ public final class MethodBuilder {
 			classBytecode[methodIndex + 4] = (byte)(methodSignatureInfo.index >>> 8);
 			classBytecode[methodIndex + 5] = (byte)(methodSignatureInfo.index);
 
-			classBytecode[methodIndex + 6] = 0x00;
-			classBytecode[methodIndex + 7] = 0x01;
+			classBytecode[methodIndex + 7] = 0x01; // [6] = 0
 			classBytecode[methodIndex + 8] = (byte)(codeAttributeInfo.index >>> 8);
 			classBytecode[methodIndex + 9] = (byte)(codeAttributeInfo.index);
 
@@ -1509,18 +1341,9 @@ public final class MethodBuilder {
 			classBytecode[methodIndex + 21] = (byte)(length);
 
 			System.arraycopy(bytes, 0, classBytecode, methodIndex + 22, length);
-
-			final int methodIndex2 = methodIndex + length;
-
-			classBytecode[methodIndex2 + 22] = 0x00;
-			classBytecode[methodIndex2 + 23] = 0x00;
-			classBytecode[methodIndex2 + 24] = 0x00;
-			classBytecode[methodIndex2 + 25] = 0x00;
 		}
 
-		// Attributes
-		classBytecode[attributeIndex]     = 0x00;
-		classBytecode[attributeIndex + 1] = 0x00;
+		// Attributes [0 - 1] = 0
 
 		return AccessController.doPrivileged(
 			new PrivilegedAction<Class<T>>() {
@@ -1530,6 +1353,168 @@ public final class MethodBuilder {
 				}
 			}
 		);
+	}
+
+	/**
+	 * Gets the stack offset that results from invoking (or getting) a member (field, method, constructor). The object for non-static members is not factored into the stack offset.
+	 *
+	 * @param member the member to analyze
+	 * @return the stack offset that results from invoking (or getting) the member
+	 */
+	private static int getCallStackOffset(final Member member) {
+		if (member instanceof Method) {
+			final Method method = (Method)member;
+			int offset = getStackSize(method.getReturnType());
+
+			for (final Class<?> type : method.getParameterTypes()) {
+				offset -= getStackSize(type);
+			}
+
+			return offset;
+		}
+
+		int offset = 0;
+
+		for (final Class<?> type : ((Constructor<?>)member).getParameterTypes()) {
+			offset -= getStackSize(type);
+		}
+
+		return offset;
+	}
+
+	/**
+	 * Gets the specified object from the constant pool. If the object does not already exist in the constant pool, it will be added and the newly created information returned.
+	 *
+	 * @param value the object to get from the constant pool
+	 * @return the constant pool information for the object
+	 */
+	private ConstantPoolEntry getConstant(final Object value) {
+		final ConstantPoolEntry info = constantPool.get(value);
+
+		if (info != null) {
+			return info;
+		} else if (value instanceof Integer) {
+			final int number = (Integer)value;
+
+			return constantPool.add(value, INTEGER_CONSTANT,
+					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
+		} else if (value instanceof Long) {
+			final long number = (Long)value;
+			final ConstantPoolEntry entry = constantPool.add(value, LONG_CONSTANT,
+					(byte)(number >>> 56), (byte)(number >>> 48), (byte)(number >>> 40), (byte)(number >>> 32),
+					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
+
+			constantPool.add(new Object());
+
+			return entry;
+		} else if (value instanceof Float) {
+			final long number = Float.floatToRawIntBits((Float)value);
+
+			return constantPool.add(value, FLOAT_CONSTANT,
+					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
+		} else if (value instanceof Double) {
+			final long number = Double.doubleToRawLongBits((Double)value);
+			final ConstantPoolEntry entry = constantPool.add(value, DOUBLE_CONSTANT,
+					(byte)(number >>> 56), (byte)(number >>> 48), (byte)(number >>> 40), (byte)(number >>> 32),
+					(byte)(number >>> 24), (byte)(number >>> 16), (byte)(number >>> 8),  (byte)number);
+
+			constantPool.add(new Object());
+
+			return entry;
+		} else if (value instanceof UTF8String) {
+			final String string = value.toString();
+
+			try (final ByteArrayOutputStream os = new ByteArrayOutputStream(3 + string.length() * 3);
+					final DataOutputStream ds = new DataOutputStream(os)) {
+				ds.writeByte(STRING_CONSTANT);
+				ds.writeUTF(string); // Writes the length of the string as the first 2 bytes, followed by the modified UTF-8 version of the string
+
+				return constantPool.add(value, os.toByteArray());
+			} catch (final IOException e) {
+				throw new IllegalArgumentException("Failed to add string to constant pool", e);
+			}
+		} else if (value instanceof String) {
+			getConstant(new UTF8String(value.toString())).locations.add(new Location(constantPool, constantPool.getLength() + 1));
+
+			return constantPool.add(value, STRING_REF_CONSTANT, B0, B0);
+		} else if (value instanceof Class) {
+			getConstant(new UTF8String(((Class<?>)value).getName().replace('.', '/'))).locations.add(new Location(constantPool, constantPool.getLength() + 1));
+
+			return constantPool.add(value, CLASS_CONSTANT, B0, B0);
+		} else if (value instanceof Member) {
+			// Build the signature
+			final Member member = (Member)value;
+			final ConstantPoolEntry name = getConstant(new UTF8String(member instanceof Constructor ? "<init>" : member.getName()));
+			final ConstantPoolEntry signature = getConstant(new UTF8String(getSignature(member)));
+			final ConstantPoolEntry declaringClass = getConstant(member.getDeclaringClass());
+
+			name.locations.add(new Location(constantPool, constantPool.getLength() + 1));
+			signature.locations.add(new Location(constantPool, constantPool.getLength() + 3));
+			constantPool.add(new Object(), NAME_AND_TYPE_CONSTANT, B0, B0, B0, B0).locations.add(new Location(constantPool, constantPool.getLength() + 3));
+			declaringClass.locations.add(new Location(constantPool, constantPool.getLength() + 1));
+
+			if (member instanceof Field) { // Field
+				return constantPool.add(member, FIELD_CONSTANT, B0, B0, B0, B0);
+			} else if ((member.getDeclaringClass().getModifiers() & Modifier.INTERFACE) != 0) { // Interface method
+				return constantPool.add(member, IMETHOD_CONSTANT, B0, B0, B0, B0);
+			}
+
+			return constantPool.add(member, METHOD_CONSTANT, B0, B0, B0, B0);
+		}
+
+		throw new IllegalArgumentException("Cannot add a constant of type " + value.getClass().toString());
+	}
+
+	/**
+	 * Gets the string signature of a member (constructor or method).
+	 *
+	 * @param member the member used to create the signature
+	 * @return the signature of the member
+	 */
+	private static String getSignature(final Member member) {
+		final Class<?>[] parameters;
+		final Class<?> returnType;
+
+		if (member instanceof Method) {
+			parameters = ((Method)member).getParameterTypes();
+			returnType = ((Method)member).getReturnType();
+		} else if (member instanceof Constructor) {
+			parameters = ((Constructor<?>)member).getParameterTypes();
+			returnType = void.class;
+		} else { // Assume field
+			assert member instanceof Field : "Unknown member type " + member.getClass().getName();
+			return Array.newInstance(((Field)member).getType(), 0).getClass().getName().substring(1);
+		}
+
+		final StringBuilder sb = new StringBuilder("(");
+
+		for (final Class<?> type : parameters) {
+			sb.append(Array.newInstance(type, 0).getClass().getName().substring(1));
+		}
+
+		if (returnType == void.class) {
+			sb.append(")V");
+		} else {
+			sb.append(")").append(Array.newInstance(returnType, 0).getClass().getName().substring(1));
+		}
+
+		return sb.toString().replace('.', '/');
+	}
+
+	/**
+	 * Gets the stack size of the specified type.
+	 *
+	 * @param type the type to evaluate
+	 * @return the stack size of the specified type
+	 */
+	private static int getStackSize(final Class<?> type) {
+		if (type.equals(double.class) || type.equals(long.class)) {
+			return 2;
+		} else if (type.equals(void.class)) {
+			return 0;
+		}
+
+		return 1;
 	}
 
 	/**
@@ -1561,22 +1546,22 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder pushConstant(final int value) {
-		if (value == (short)value) {
-			switch (value) {
-			case -1: return addCode(ICONST_M1);
-			case 0:  return addCode(ICONST_0);
-			case 1:  return addCode(ICONST_1);
-			case 2:  return addCode(ICONST_2);
-			case 3:  return addCode(ICONST_3);
-			case 4:  return addCode(ICONST_4);
-			case 5:  return addCode(ICONST_5);
-			default:
-				if (value == (byte)value) {
-					return addCode(BIPUSH, (byte)value);
-				} else {
-					return addCode(SIPUSH, (byte)(value >>> 8), (byte)value);
-				}
+		switch (value) {
+		case -1: return addCode(ICONST_M1);
+		case 0:  return addCode(ICONST_0);
+		case 1:  return addCode(ICONST_1);
+		case 2:  return addCode(ICONST_2);
+		case 3:  return addCode(ICONST_3);
+		case 4:  return addCode(ICONST_4);
+		case 5:  return addCode(ICONST_5);
+		default:
+			if (value == (byte)value) {
+				return addCode(BIPUSH, (byte)value);
+			} else if (value == (short)value) {
+				return addCode(SIPUSH, (byte)(value >>> 8), (byte)value);
 			}
+
+			break;
 		}
 
 		getConstant(value).locations.add(new Location(this, length + 1));
@@ -1749,104 +1734,104 @@ public final class MethodBuilder {
 		final StringBuilder sb = new StringBuilder("[ ");
 
 		// Loop through each instruction (assumes each instruction is already valid and the length is correct)
-		for (int i = 0; i < length; ) {
-			final Opcode opcode = OPCODES[bytes[i] & 0xFF];
-			int constantPoolIndex = 0;
-			String postConstant = "";
-
-			assert opcode != null : "Invalid opcode detected: 0x" + Integer.toHexString(bytes[i] & 0xFF);
-			sb.append(i).append(": ");
-
-			if (opcode.has(Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_LENGTH)) {
-				sb.append(opcode.mnemonic);
-
-				if (bytes[i] == INVOKEINTERFACE || bytes[i] == INVOKEDYNAMIC) {
-					constantPoolIndex = ((bytes[i + 1] & 0xFF) << 8) + (bytes[i + 2] & 0xFF);
-					i += opcode.length;
-				} else if (bytes[i] == LOOKUPSWITCH) {
-					final int j = (i + 3) & ~3;
-					final int npairs = (bytes[j + 4] << 24) + ((bytes[j + 5] & 0xFF) << 16) + ((bytes[j + 6] & 0xFF) << 8) + (bytes[j + 7] & 0xFF);
-
-					sb.append(' ').append(i + (bytes[j] << 24) + ((bytes[j + 1] & 0xFF) << 16) + ((bytes[j + 2] & 0xFF) << 8) + (bytes[j + 3] & 0xFF));
-
-					for (int k = 1; k <= npairs; k++) {
-						sb.append(", ").append((bytes[j + k * 8] << 24) + ((bytes[j + k * 8 + 1] & 0xFF) << 16) + ((bytes[j + k * 8 + 2] & 0xFF) << 8) + (bytes[j + k * 8 + 3] & 0xFF)).append(" -> ").append(i + (bytes[j + k * 8 + 4] << 24) + ((bytes[j + k * 8 + 5] & 0xFF) << 16) + ((bytes[j + k * 8 + 6] & 0xFF) << 8) + (bytes[j + k * 8 + 7] & 0xFF));
-					}
-
-					sb.append("; ");
-					i = j + 8 + npairs * 8;
-				} else if (bytes[i] == MULTIANEWARRAY) {
-					constantPoolIndex = ((bytes[i + 1] & 0xFF) << 8) + (bytes[i + 2] & 0xFF);
-					postConstant = ", " + (bytes[i + 3] & 0xFF);
-					i += 4;
-				} else if (bytes[i] == BIPUSH || bytes[i] == NEWARRAY) {
-					sb.append(' ').append(bytes[i + 1]).append("; ");
-					i += 2;
-				} else if (bytes[i] == IINC) {
-					sb.append(' ').append(bytes[i + 1] & 0xFF).append(", ").append(bytes[i + 2]).append("; ");
-					i += 3;
-				} else if (bytes[i] == SIPUSH) {
-					sb.append(' ').append((short)(bytes[i + 1] << 8) + (bytes[i + 2] & 0xFF)).append("; ");
-					i += 3;
-				} else if (bytes[i] == WIDE) {
-					final Opcode wideOpcode = OPCODES[bytes[i + 1] & 0xFF];
-
-					if (bytes[i + 1] == IINC) {
-						sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((bytes[i + 2] & 0xFF) << 8) + (bytes[i + 3] & 0xFF)).append(", ").append((short)(bytes[i + 4] << 8) + (bytes[i + 5] & 0xFF)).append("; ");
-						i += 6;
-					} else {
-						assert wideOpcode.has(Opcode.PROP_LOCAL_INDEX) : "Invalid wide opcode detected: " + wideOpcode == null ? "0x" + Integer.toHexString(bytes[i] & 0xFF) : wideOpcode.mnemonic;
-						sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((bytes[i + 2] & 0xFF) << 8) + (bytes[i + 3] & 0xFF)).append("; ");
-						i += 4;
-					}
-				} else {
-					throw new IllegalStateException("Variable length opcode missing conversion to string: " + opcode.mnemonic);
-				}
-			} else {
-				if ((opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) == Opcode.PROP_LOCAL_INDEX) { // 2-byte opcode, index
-					sb.append(opcode.mnemonic).append(' ').append(bytes[i + 1] & 0xFF).append("; ");
-				} else if ((opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) == Opcode.PROP_BRANCH_OFFSET) { // 3-byte opcode, branch offset
-					sb.append(opcode.mnemonic).append(' ').append(i + ((bytes[i + 1] & 0xFF) << 8) + (bytes[i + 2] & 0xFF)).append("; ");
-				} else if ((opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) == Opcode.PROP_CONST_POOL_INDEX) { // 3-byte opcode, constant pool index
-					sb.append(opcode.mnemonic);
-					constantPoolIndex = ((bytes[i + 1] & 0xFF) << 8) + (bytes[i + 2] & 0xFF);
-				} else { // 1-byte opcode
-					sb.append(opcode.mnemonic).append("; ");
-				}
-
-				i += opcode.length;
-			}
-
-			// If using a constant pool entry, then print it out
-			if (constantPoolIndex > 0) {
-				final Object constant = constantPoolArray[constantPoolIndex];
-
-				if (constant instanceof String) {
-					sb.append(" \"").append(constant).append(postConstant).append("\"; ");
-				} else if (constant instanceof Member) {
-					if (constant instanceof Method) {
-						String separator = "";
-						sb.append(' ').append(((Method)constant).getDeclaringClass().getName()).append('.').append(((Method)constant).getName()).append('(');
-
-						for (final Class<?> parameterType : ((Method)constant).getParameterTypes()) {
-							sb.append(separator).append(parameterType.getName());
-							separator = ", ";
-						}
-
-						sb.append(')').append(postConstant).append("; ");
-					} else {
-						sb.append(' ').append(((Member)constant).getDeclaringClass().getName()).append('.').append(((Member)constant).getName()).append(postConstant).append("; ");
-					}
-				} else if (constant instanceof Class) {
-					sb.append(' ').append(((Class<?>)constant).getName()).append(postConstant).append("; ");
-				} else {
-					sb.append(' ').append(constant).append(postConstant).append("; ");
-				}
-			}
-		}
+		for (int i = 0; i < length; i += toString(sb, constantPoolArray, bytes, i));
 
 		sb.setLength(sb.length() - 2);
 		return sb.append(" ]").toString();
+	}
+
+	/**
+	 * Converts the opcode at the specified starting index to a string. The string is appended to the string builder. The string always starts with the starting index + ": " and ends with "; ", so the strings can easily be concatenated.
+	 *
+	 * @param sb the string builder to use to write the opcode string
+	 * @param constantPoolArray the array used to look up constant pool values
+	 * @param code the code array containing the opcode to write as a string
+	 * @param start the starting index of the opcode within the code array
+	 * @return the length of the opcode, in bytes
+	 */
+	private static int toString(final StringBuilder sb, final Object[] constantPoolArray, final byte[] code, final int start) {
+		final Opcode opcode = OPCODES[code[start] & 0xFF];
+
+		assert opcode != null : "Invalid opcode instruction 0x" + Integer.toHexString(code[start] & 0xFF);
+		sb.append(start).append(": ").append(opcode.mnemonic);
+
+		if (!opcode.has(Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_LENGTH)) {
+			switch (opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) {
+			case Opcode.PROP_LOCAL_INDEX:      sb.append(' ').append(code[start + 1] & 0xFF).append("; "); break; // 2-byte opcode with index
+			case Opcode.PROP_CONST_POOL_INDEX: toStringConstant(sb, constantPoolArray[((code[start + 1] & 0xFF) << 8) + (code[start + 2] & 0xFF)], ""); break; // 3-byte opcode with constant pool index;
+			case Opcode.PROP_BRANCH_OFFSET:    sb.append(' ').append(start + ((code[start + 1] & 0xFF) << 8) + (code[start + 2] & 0xFF)).append("; "); break; // 3-byte opcode with branch offset
+			default:                           sb.append("; "); break; // 1-byte opcode
+			}
+		} else if (code[start] == INVOKEINTERFACE || code[start] == INVOKEDYNAMIC) {
+			toStringConstant(sb, constantPoolArray[((code[start + 1] & 0xFF) << 8) + (code[start + 2] & 0xFF)], "");
+		} else if (code[start] == LOOKUPSWITCH) {
+			final int j = (start + 3) & ~3;
+			final int npairs = (code[j + 4] << 24) + ((code[j + 5] & 0xFF) << 16) + ((code[j + 6] & 0xFF) << 8) + (code[j + 7] & 0xFF);
+
+			sb.append(' ').append(start + (code[j] << 24) + ((code[j + 1] & 0xFF) << 16) + ((code[j + 2] & 0xFF) << 8) + (code[j + 3] & 0xFF));
+
+			for (int k = 1; k <= npairs; k++) {
+				sb.append(", ").append((code[j + k * 8] << 24) + ((code[j + k * 8 + 1] & 0xFF) << 16) + ((code[j + k * 8 + 2] & 0xFF) << 8) + (code[j + k * 8 + 3] & 0xFF)).append(" -> ").append(start + (code[j + k * 8 + 4] << 24) + ((code[j + k * 8 + 5] & 0xFF) << 16) + ((code[j + k * 8 + 6] & 0xFF) << 8) + (code[j + k * 8 + 7] & 0xFF));
+			}
+
+			sb.append("; ");
+			return j + 8 + npairs * 8;
+		} else if (code[start] == MULTIANEWARRAY) {
+			toStringConstant(sb, constantPoolArray[((code[start + 1] & 0xFF) << 8) + (code[start + 2] & 0xFF)], ", " + (code[start + 3] & 0xFF));
+		} else if (code[start] == BIPUSH || code[start] == NEWARRAY) {
+			sb.append(' ').append(code[start + 1]).append("; ");
+		} else if (code[start] == IINC) {
+			sb.append(' ').append(code[start + 1] & 0xFF).append(", ").append(code[start + 2]).append("; ");
+		} else if (code[start] == SIPUSH) {
+			sb.append(' ').append((short)(code[start + 1] << 8) + (code[start + 2] & 0xFF)).append("; ");
+		} else if (code[start] == WIDE) {
+			final Opcode wideOpcode = OPCODES[code[start + 1] & 0xFF];
+
+			if (code[start + 1] == IINC) {
+				sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((code[start + 2] & 0xFF) << 8) + (code[start + 3] & 0xFF)).append(", ").append((short)(code[start + 4] << 8) + (code[start + 5] & 0xFF)).append("; ");
+				return 6;
+			}
+
+			assert wideOpcode.has(Opcode.PROP_LOCAL_INDEX) : "Invalid wide opcode detected: " + wideOpcode == null ? "0x" + Integer.toHexString(code[start] & 0xFF) : wideOpcode.mnemonic;
+			sb.append(' ').append(wideOpcode.mnemonic).append(' ').append(((code[start + 2] & 0xFF) << 8) + (code[start + 3] & 0xFF)).append("; ");
+			return 4;
+		} else {
+			throw new IllegalStateException("Variable length opcode missing to string conversion: " + opcode.mnemonic);
+		}
+
+		assert opcode.length > 0: "Invalid opcode length (" + opcode.length + "): " + opcode.mnemonic;
+		return opcode.length;
+	}
+
+	/**
+	 * Appends a constant pool value to a string builder.
+	 *
+	 * @param sb the string builder to use to write the constant pool value
+	 * @param constant the constant pool value to append to the string builder
+	 * @param extra the code array containing the opcode to write as a string
+	 */
+	private static void toStringConstant(final StringBuilder sb, final Object constant, final String extra) {
+		if (constant instanceof String) {
+			sb.append(" \"").append(constant).append(extra).append("\"; ");
+		} else if (constant instanceof Member) {
+			if (constant instanceof Method) {
+				String separator = "";
+				sb.append(' ').append(((Method)constant).getDeclaringClass().getName()).append('.').append(((Method)constant).getName()).append('(');
+
+				for (final Class<?> parameterType : ((Method)constant).getParameterTypes()) {
+					sb.append(separator).append(parameterType.getName());
+					separator = ", ";
+				}
+
+				sb.append(')').append(extra).append("; ");
+			} else {
+				sb.append(' ').append(((Member)constant).getDeclaringClass().getName()).append('.').append(((Member)constant).getName()).append(extra).append("; ");
+			}
+		} else if (constant instanceof Class) {
+			sb.append(' ').append(((Class<?>)constant).getName()).append(extra).append("; ");
+		} else {
+			sb.append(' ').append(constant).append(extra).append("; ");
+		}
 	}
 
 	/**
