@@ -33,37 +33,22 @@ Horseshoe does not have the same design goals as Mustache, resulting in many dif
 Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an expression syntax that supports method calls. Expressions can be named and reused to support similar functionality to Mustache lambdas.
 
 ### What literal types are supported in Horseshoe expressions?
+The following table summarizes the literals supported by Horseshoe. A more detailed explanation of each can be found in the [Expressions](#expressions) section.
+
 | Java Type | Horseshoe Literal |
-|-----------|------|
-| `java.lang.String` | `"a string"` |
-| T`[]` | `[1,2,3]` / `1..3` / `[]` |
-| `java.util.Map` | `[1:2,3:4]` / `[:]` |
+|-----------|-------------------|
 | `int` | `123` |
 | `long` | `123L` / `0x100000000` |
 | `double` | `3.14` |
 | `boolean` | `true` / `false` |
 | `java.lang.Object` | `null` |
+| `java.lang.String` | `"a string"` |
+| `java.util.regex.Pattern` | `~/pattern/` |
+| `java.util.List` | `[1,2,3,4]` |
+| `java.util.Map` | `[1:2,3:4]` / `[:]` |
 
 ### Which operators are supported by Horseshoe expressions?
-| Precedence | Operators | Associativity |
-| ---------- | --------- | ------------- |
-| 0 | <code>\{</code>a\*<code>\}</code> \(Set / Map Literal\), <br><code>\[</code>a\*<code>\]</code> \(List / Map Literal\), <br><code>\[:\]</code> \(Empty Map\), <br>a<code>\[</code>b<code>\]</code> \(Lookup\), <br>a<code>?\[?</code>b<code>\]</code> \(Safe Lookup\), <br>a<code>\(</code>b\*<code>\)</code> \(Call Method\), <br><code>\(</code>a<code>\)</code> \(Parentheses\), <br><code>~@</code>a \(Get Class\), <br>a<code>\.</code>b \(Navigate\), <br>a<code>?\.?</code>b \(Safe Navigate\) | Left&nbsp;to&nbsp;right |
-| 2 | <code>\+</code>a \(Unary Plus\), <br><code>\-</code>a \(Unary Minus\), <br><code>~</code>a \(Bitwise Negate\), <br><code>\!</code>a \(Logical Negate\) | Right&nbsp;to&nbsp;left |
-| 3 | a<code>\.\.</code>b \(Range\) | Left&nbsp;to&nbsp;right |
-| 4 | a<code>\*</code>b \(Multiply\), <br>a<code>/</code>b \(Divide\), <br>a<code>%</code>b \(Modulus\) | Left&nbsp;to&nbsp;right |
-| 5 | a<code>\+</code>b \(Add\), <br>a<code>\-</code>b \(Subtract\) | Left&nbsp;to&nbsp;right |
-| 6 | a<code>&lt;&lt;</code>b \(Bitwise Shift Left\), <br>a<code>&gt;&gt;</code>b \(Bitwise Shift Right Sign Extend\), <br>a<code>&gt;&gt;&gt;</code>b \(Bitwise Shift Right Zero Extend\) | Left&nbsp;to&nbsp;right |
-| 7 | a<code>&lt;=</code>b \(Less Than or Equal\), <br>a<code>&gt;=</code>b \(Greater Than or Equal\), <br>a<code>&lt;</code>b \(Less Than\), <br>a<code>&gt;</code>b \(Greater Than\) | Left&nbsp;to&nbsp;right |
-| 8 | a<code>==</code>b \(Equal\), <br>a<code>\!=</code>b \(Not Equal\) | Left&nbsp;to&nbsp;right |
-| 9 | a<code>&amp;</code>b \(Bitwise And\) | Left&nbsp;to&nbsp;right |
-| 10 | a<code>^</code>b \(Bitwise Xor\) | Left&nbsp;to&nbsp;right |
-| 11 | a<code>&#124;</code>b \(Bitwise Or\) | Left&nbsp;to&nbsp;right |
-| 12 | a<code>&amp;&amp;</code>b \(Logical And\) | Left&nbsp;to&nbsp;right |
-| 13 | a<code>&#124;&#124;</code>b \(Logical Or\) | Left&nbsp;to&nbsp;right |
-| 14 | a<code>?:</code>b \(Null Coalesce\), <br>a<code>??</code>b \(Null Coalesce \- Alternate\), <br>a<code>?</code>b \(Ternary\), <br>a<code>:</code>b \(Pair\) | Right&nbsp;to&nbsp;left |
-| 15 | a<code>=</code>b \(Bind\) | Right&nbsp;to&nbsp;left |
-| 16 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\) | Left&nbsp;to&nbsp;right |
-| 17 | a<code>,</code>b\* \(Item Separator\), <br>a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
+Horseshoe supports most non-assigning operators used in common languages. The equals operator can be used to bind a name to a local statement. For more information, see the [Supported Operators](#supported-operators) section.
 
 ### What extension should be used for Horseshoe template files?
 Horseshoe supports any file extension for template files. However, convention is to use a capital "U", which resembles a horseshoe.
@@ -112,3 +97,56 @@ Horseshoe uses "tags" to specify dynamic parts of a template. The tags typically
 #### Inline Partial (`{{< partial}}`)
 
 ### Expressions
+Horseshoe expressions look a lot like . Expressions can contain comments using C, C++, and Java style comments using either `/*...*/` or `//...`.
+
+Horseshoe now uses `;` for separating statements and the `,` operator is strictly for arrays / maps or as a method parameter separator. A trailing `;` is optional.
+
+Horseshoe now uses `[]` or `{}` for array and map literals. The `{}` is now used for creating iterable arrays and maps. If commas are used in a context where they would otherwise not be allowed (e.g. `{{4, 5}}`, the result is interpreted as if it were wrapped in `{}` (iterable). These are considered "auto-converted" maps and arrays. The `[]` should be used anywhere iteration is not desired.
+
+#### Integer Literals
+Integer literals are sequences of digits or `0x` followed by hexadecimal digits. The value can be prefixed with `-` or `+` to indicate sign and is parsed as a 32-bit signed integer. If the value does not fit into a 32-bit signed integer, or the literal is suffixed with `L` or `l`, then the value is parsed as a 64-bit signed integer. Octal and binary integer literals as well as underscores within integer literals are not supported.
+
+#### Double Literals
+Double literals are sequences of digits, hexadecimal digits, `.`, exponents, and binary exponents as specified in float and double literals of C, C++, and Java. The value can be prefixed with `-` or `+` to indicate sign. Differences from the languages specifications include 1) literals containing a `.` must have digits (or hexadecimal digits) immediately preceding the `.` and digits (or hexadecimal digits) or an exponent (or binary exponent) immediately following the `.` (to reduce syntax ambiguity) and 2) literals can optionally end in either `d` or `D` in lieu of `f` or `F`, which affects the precision of the resulting value. Additionally, the literals `-Infinity` and `+Infinity` are supported. Long double literals as well as underscores within double literals are not supported.
+
+#### String Literals
+String literals are sequences of characters wrapped in either single quotes or double quotes. When wrapped in single quotes no escape sequences are allowed and the literal consists of the exact characters given. The following escape sequences are substituted for string literals wrapped in double quotes:
+- `\\` - Backslash (`\`)
+- `\"` - Double quote (`"`)
+- `\'` - Single quote (`'`)
+- `\b` - Backspace
+- `\t` - Tab
+- `\n` - Newline
+- `\f` - Form feed
+- `\r` - Carriage return
+- `\0` - Null (Octal escape sequences not supported)
+- `\xh...` - Unicode character with hex code point `h...`
+- `\uhhhh` - Unicode character with hex code point `hhhh`
+- `\Uhhhhhhhh` - Unicode character with hex code point `hhhhhhhh`
+
+#### Regular Expression Literals
+Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a valid `java.util.regex.Pattern`. Literal forward slashes can be escaped using a preceding backslash (`~/."\/'\./` matches `a"/'.`).
+
+#### Supported Operators
+| Precedence | Operators | Associativity |
+| ---------- | --------- | ------------- |
+| 0 | <code>\{</code>a\*<code>\}</code> \(Set / Map Literal\), <br><code>\[</code>a\*<code>\]</code> \(List / Map Literal\), <br><code>\[:\]</code> \(Empty Map\), <br>a<code>\[</code>b<code>\]</code> \(Lookup\), <br>a<code>?\[?</code>b<code>\]</code> \(Safe Lookup\), <br>a<code>\(</code>b\*<code>\)</code> \(Call Method\), <br><code>\(</code>a<code>\)</code> \(Parentheses\), <br><code>~@</code>a \(Get Class\), <br>a<code>\.</code>b \(Navigate\), <br>a<code>?\.?</code>b \(Safe Navigate\) | Left&nbsp;to&nbsp;right |
+| 2 | <code>\+</code>a \(Unary Plus\), <br><code>\-</code>a \(Unary Minus\), <br><code>~</code>a \(Bitwise Negate\), <br><code>\!</code>a \(Logical Negate\) | Right&nbsp;to&nbsp;left |
+| 3 | a<code>\.\.</code>b \(Range\) | Left&nbsp;to&nbsp;right |
+| 4 | a<code>\*</code>b \(Multiply\), <br>a<code>/</code>b \(Divide\), <br>a<code>%</code>b \(Modulus\) | Left&nbsp;to&nbsp;right |
+| 5 | a<code>\+</code>b \(Add\), <br>a<code>\-</code>b \(Subtract\) | Left&nbsp;to&nbsp;right |
+| 6 | a<code>&lt;&lt;</code>b \(Bitwise Shift Left\), <br>a<code>&gt;&gt;</code>b \(Bitwise Shift Right Sign Extend\), <br>a<code>&gt;&gt;&gt;</code>b \(Bitwise Shift Right Zero Extend\) | Left&nbsp;to&nbsp;right |
+| 7 | a<code>&lt;=</code>b \(Less Than or Equal\), <br>a<code>&gt;=</code>b \(Greater Than or Equal\), <br>a<code>&lt;</code>b \(Less Than\), <br>a<code>&gt;</code>b \(Greater Than\) | Left&nbsp;to&nbsp;right |
+| 8 | a<code>==</code>b \(Equal\), <br>a<code>\!=</code>b \(Not Equal\) | Left&nbsp;to&nbsp;right |
+| 9 | a<code>&amp;</code>b \(Bitwise And\) | Left&nbsp;to&nbsp;right |
+| 10 | a<code>^</code>b \(Bitwise Xor\) | Left&nbsp;to&nbsp;right |
+| 11 | a<code>&#124;</code>b \(Bitwise Or\) | Left&nbsp;to&nbsp;right |
+| 12 | a<code>&amp;&amp;</code>b \(Logical And\) | Left&nbsp;to&nbsp;right |
+| 13 | a<code>&#124;&#124;</code>b \(Logical Or\) | Left&nbsp;to&nbsp;right |
+| 14 | a<code>?:</code>b \(Null Coalesce\), <br>a<code>??</code>b \(Null Coalesce \- Alternate\), <br>a<code>?</code>b \(Ternary\), <br>a<code>:</code>b \(Pair\) | Right&nbsp;to&nbsp;left |
+| 15 | a<code>=</code>b \(Bind\) | Right&nbsp;to&nbsp;left |
+| 16 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\) | Left&nbsp;to&nbsp;right |
+| 17 | a<code>,</code>b\* \(Item Separator\), <br>a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
+
+#### Named Expressions
+Named expressions are tags with the form `{{name->expression}}` or `{{name()->expression}}`. (These tags qualify for stand-aloneness.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags). Referencing a named expression using a function-like syntax with an optional argument (`name()` to evaluate the currently scoped object, `name(..)` to evaluate the parent object) evaluates the expression on the given argument. Named expressions have scope and are only allowed within the scope they are declared. They always take precedence over equivalently named methods. If a method is preferred over a named expression, it can be prefixed (using `./` or `../`).

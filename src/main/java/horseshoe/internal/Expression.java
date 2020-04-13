@@ -62,8 +62,8 @@ public final class Expression {
 	private static final Pattern COMMENTS_PATTERN = Pattern.compile("(?:(?s://[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|/[*].*?[*]/)\\s*)+", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>(?:" + Identifier.PATTERN + "|`(?:[^`\\\\]|\\\\[`\\\\])+`|[.][.]|[.])[(]?)\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_WITH_PREFIX_PATTERN;
-	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[0-9][0-9]*[.][0-9]+)\\s*", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern LONG_PATTERN = Pattern.compile("(?:0[Xx](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[0-9]+))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[-+]Infinity|[-+]?(?:[0-9]+[fFdD]|(?:[0-9]+[.]?[eE][-+]?[0-9]+|[0-9]+[.][0-9]+(?:[eE][-+]?[0-9]+)?|0[xX](?:[0-9A-Fa-f]+[.]?|[0-9A-Fa-f]+[.][0-9A-Fa-f]+)[pP][-+]?[0-9]+)[fFdD]?))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern LONG_PATTERN = Pattern.compile("(?:(?<hexsign>[-+]?)0[xX](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[-+]?[0-9]+))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern REGEX_PATTERN = Pattern.compile("~/(?<regex>(?:[^/\\\\]|\\\\.)*)/\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\0|\\\\x[0-9A-Fa-f]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>[^']*)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern OPERATOR_PATTERN;
@@ -964,7 +964,7 @@ public final class Expression {
 					operands.push(new Operand(double.class, new MethodBuilder().pushConstant(Double.parseDouble(matcher.group("double")))));
 				} else if (!hasLeftExpression && matcher.usePattern(LONG_PATTERN).lookingAt()) { // Long literal
 					final String decimal = matcher.group("decimal");
-					final long value = decimal == null ? Long.parseLong(matcher.group("hexadecimal"), 16) : Long.parseLong(decimal);
+					final long value = decimal == null ? Long.parseLong(matcher.group("hexsign") + matcher.group("hexadecimal"), 16) : Long.parseLong(decimal);
 
 					if (matcher.group("isLong") != null || value > Integer.MAX_VALUE || value < Integer.MIN_VALUE) {
 						operands.push(new Operand(long.class, new MethodBuilder().pushConstant(value)));

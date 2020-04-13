@@ -389,6 +389,27 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testLiterals() throws ReflectiveOperationException {
+		assertEquals(-255, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "-0xFF", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(255, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "0xFF", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(-255L, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "-0xFFL", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(255L, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "0xffl", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(2.0, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "2d", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(2.0, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "2e0", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(2.0, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "2f", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(2.0, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "2D", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(2.0, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "2F", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(2.0, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "2.0", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(2.0, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "2.e-0", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(0.5, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "0.5", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(-0.5, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "-0.5", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(1.5, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "0x3p-1", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(-9.0, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "-0x1.2p3", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(Double.NEGATIVE_INFINITY, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "-Infinity", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+		assertEquals(Double.POSITIVE_INFINITY, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "+Infinity", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())));
+	}
+
+	@Test
 	public void testLocals() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("r", 10, "i2", 2, "π", 3.14159265358979311599796346854, "bigNum", 9999999999L);
 		assertTrue(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "π = 3.14159265358979311599796346854; r /* radius */ = 4; \"r = \" + r + \", d = \" + (r * 2) + \", a = \" + (π * r * r)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString().startsWith("r = 4, d = 8, a = 50.26"));
