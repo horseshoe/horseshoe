@@ -111,18 +111,18 @@ Double literals are sequences of digits, hexadecimal digits, `.`, exponents, and
 
 #### String Literals
 String literals are sequences of characters wrapped in either single quotes or double quotes. When wrapped in single quotes no escape sequences are allowed and the literal consists of the exact characters given. The following escape sequences are substituted for string literals wrapped in double quotes:
-- `\\` - Backslash (`\`)
-- `\"` - Double quote (`"`)
-- `\'` - Single quote (`'`)
-- `\b` - Backspace
-- `\t` - Tab
-- `\n` - Newline
-- `\f` - Form feed
-- `\r` - Carriage return
-- `\0` - Null (Octal escape sequences not supported)
-- `\xh...` - Unicode character with hex code point `h...`
-- `\uhhhh` - Unicode character with hex code point `hhhh`
-- `\Uhhhhhhhh` - Unicode character with hex code point `hhhhhhhh`
+* `\\` - Backslash (`\`)
+* `\"` - Double quote (`"`)
+* `\'` - Single quote (`'`)
+* `\b` - Backspace
+* `\t` - Tab
+* `\n` - Newline
+* `\f` - Form feed
+* `\r` - Carriage return
+* `\0` - Null (Octal escape sequences not supported)
+* `\xh...` - Unicode character with hex code point `h...`
+* `\uhhhh` - Unicode character with hex code point `hhhh`
+* `\Uhhhhhhhh` - Unicode character with hex code point `hhhhhhhh`
 
 #### Regular Expression Literals
 Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a valid `java.util.regex.Pattern`. Literal forward slashes can be escaped using a preceding backslash (`~/."\/'\./` matches `a"/'.`).
