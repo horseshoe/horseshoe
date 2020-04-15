@@ -19,6 +19,7 @@ test {
 
 dependencies {
 	testImplementation 'junit:junit:4.+'
+	testImplementation 'com.github.stefanbirkner:system-rules:1.+'
 	testImplementation 'org.yaml:snakeyaml:1.+'
 }
 
@@ -66,9 +67,17 @@ def getVersion = { ->
 		ignoreExitValue true
 	}
 	if (result.getExitValue() != 0) {
-		return 'unofficial'
+		return 'unspecified'
 	}
 	return stdout.toString().trim().substring(1)
 }
 
 version = getVersion()
+
+jar {
+	manifest {
+		attributes 'Implementation-Title': project.name,
+			'Implementation-Version': project.version,
+			'Main-Class': 'horseshoe.Runner'
+	}
+}

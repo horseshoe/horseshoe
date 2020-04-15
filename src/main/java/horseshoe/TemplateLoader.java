@@ -37,7 +37,7 @@ public class TemplateLoader {
 	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?[-=]>\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<String, Template> templates = new HashMap<>();
-	private final Map<String, Loader> templateLoaders = new HashMap<>();
+	private final Map<String, Loader> loaderMap = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
 	private Charset charset = StandardCharsets.UTF_8;
 	private boolean preventPartialPathTraversal = true;
@@ -117,7 +117,7 @@ public class TemplateLoader {
 	 */
 	public TemplateLoader add(final String name, final CharSequence value) {
 		if (!templates.containsKey(name)) {
-			final Loader loader = templateLoaders.put(name, new Loader(name, value));
+			final Loader loader = loaderMap.put(name, new Loader(name, value));
 
 			if (loader != null) {
 				loader.close();
@@ -152,7 +152,7 @@ public class TemplateLoader {
 	 */
 	public TemplateLoader add(final String name, final Path file, final Charset charset) throws FileNotFoundException {
 		if (!templates.containsKey(name)) {
-			final Loader loader = templateLoaders.put(name, new Loader(name, file, charset));
+			final Loader loader = loaderMap.put(name, new Loader(name, file, charset));
 
 			if (loader != null) {
 				loader.close();
@@ -183,7 +183,7 @@ public class TemplateLoader {
 	 */
 	public TemplateLoader add(final String name, final Reader reader) {
 		if (!templates.containsKey(name)) {
-			final Loader loader = templateLoaders.put(name, new Loader(name, reader));
+			final Loader loader = loaderMap.put(name, new Loader(name, reader));
 
 			if (loader != null) {
 				loader.close();
@@ -203,11 +203,11 @@ public class TemplateLoader {
 	 * Closes any open readers. If no open readers exist, this has no effect. This can be used to cleanup after a load exception occurs.
 	 */
 	public void close() {
-		for (final Loader loader : templateLoaders.values()) {
+		for (final Loader loader : loaderMap.values()) {
 			loader.close();
 		}
 
-		templateLoaders.clear();
+		loaderMap.clear();
 	}
 
 	/**
@@ -310,7 +310,7 @@ public class TemplateLoader {
 			template = new Template(name);
 			templates.put(name, template);
 
-			Loader loader = templateLoaders.remove(name);
+			Loader loader = loaderMap.remove(name);
 
 			try {
 				if (loader == null) {

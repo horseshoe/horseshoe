@@ -29,7 +29,10 @@ import horseshoe.internal.RenderContext;
  */
 public final class Template {
 
+	private static final String IMPLEMENTATION_VERSION = Template.class.getPackage().getImplementationVersion();
+
 	static final Logger LOGGER = Logger.getLogger(Template.class.getName());
+	static final String VERSION = IMPLEMENTATION_VERSION == null ? "unspecified" : IMPLEMENTATION_VERSION;
 
 	private final String name;
 	private final Section section;
