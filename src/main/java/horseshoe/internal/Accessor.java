@@ -4,6 +4,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,6 +13,7 @@ public abstract class Accessor {
 	static final Factory FACTORY = new Factory();
 
 	private static final class MethodSignature {
+
 		private final String name;
 		private final String[] types;
 
@@ -69,6 +71,7 @@ public abstract class Accessor {
 
 			return true;
 		}
+
 	}
 
 	/**
@@ -140,16 +143,6 @@ public abstract class Accessor {
 	}
 
 	/**
-	 * Sets the value of an identifier given the specified context as part of an expression.
-	 *
-	 * @param context the context object to resolve
-	 * @param value the value to assign the identifier
-	 * @return the assigned value
-	 * @throws ReflectiveOperationException if the value cannot be set due to an invalid reflection call
-	 */
-	public abstract Object set(final Object context, final Object value) throws ReflectiveOperationException;
-
-	/**
 	 * Accesses the length of an array
 	 */
 	private static final class ArrayLengthAccessor extends Accessor {
@@ -157,84 +150,55 @@ public abstract class Accessor {
 		public Object get(final Object context) throws ReflectiveOperationException {
 			return Array.getLength(context);
 		}
-
-		@Override
-		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
-			throw new UnsupportedOperationException();
-		}
-	}
-
-	/**
-	 * Accesses a static method or class property method in a class
-	 */
-	private static final class ClassMethodAccessor extends Accessor {
-		private final Method method;
-
-		private ClassMethodAccessor(final Method method) {
-			this.method = method;
-		}
-
-		/**
-		 * Creates a new class method accessor.
-		 *
-		 * @param parent the parent class for the method
-		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
-		 * @param parameterCount the number of parameters that the method takes
-		 * @return the class method accessor, or null if no method could be found
-		 */
-		public static ClassMethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
-			final MethodSignature signature = new MethodSignature(methodSignature);
-
-			if (Modifier.isPublic(parent.getModifiers())) {
-				for (final Method method : parent.getMethods()) {
-					if (Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
-						method.setAccessible(true);
-						return new ClassMethodAccessor(method);
-					}
-				}
-			}
-
-			for (final Method method : Class.class.getMethods()) {
-				if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
-					method.setAccessible(true);
-					return new ClassMethodAccessor(method);
-				}
-			}
-
-			return null;
-		}
-
-		@Override
-		public Object get(final Object context) throws ReflectiveOperationException {
-			return method;
-		}
-
-		@Override
-		public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
-			return method.invoke(context, parameters);
-		}
-
-		@Override
-		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
-			return null;
-		}
 	}
 
 	/**
 	 * Accesses a field in a class
 	 */
 	private static final class FieldAccessor extends Accessor {
+
 		private final Field field;
 
 		private FieldAccessor(final Field field) {
 			this.field = field;
 		}
 
+		/**
+		 * Creates a new field accessor.
+		 *
+		 * @param parent the parent class for the field
+		 * @param fieldName the name of the field
+		 * @return the new accessor, or null if no field could be found
+		 */
 		public static FieldAccessor create(final Class<?> parent, final String fieldName) {
+			// Find first matching field
+			for (Class<?> ancestor = parent; ancestor != null; ancestor = ancestor.getSuperclass()) {
+				if (Modifier.isPublic(ancestor.getModifiers())) {
+					for (final Field field : ancestor.getFields()) {
+						if (!Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
+							field.setAccessible(true); // By-pass internal checks on access
+							return new FieldAccessor(field);
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
+		/**
+		 * Creates a new static field accessor.
+		 *
+		 * @param parent the parent class for the field
+		 * @param fieldName the name of the field
+		 * @return the new accessor, or null if no field could be found
+		 */
+		public static FieldAccessor createStatic(final Class<?> parent, final String fieldName) {
+			// Get public static fields only from the current class if it is public
 			if (Modifier.isPublic(parent.getModifiers())) {
 				for (final Field field : parent.getFields()) {
-					if (!Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
-						field.setAccessible(true);
+					if (Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
+						field.setAccessible(true); // By-pass internal checks on access
 						return new FieldAccessor(field);
 					}
 				}
@@ -248,17 +212,13 @@ public abstract class Accessor {
 			return field.get(context);
 		}
 
-		@Override
-		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
-			field.set(context, value);
-			return value;
-		}
 	}
 
 	/**
 	 * Accesses a value in a map using the specified key
 	 */
 	private static final class MapAccessor extends Accessor {
+
 		private final String key;
 
 		MapAccessor(final String key) {
@@ -275,18 +235,13 @@ public abstract class Accessor {
 			return ((Map<?, ?>)context).containsKey(key);
 		}
 
-		@SuppressWarnings({ "unchecked" })
-		@Override
-		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
-			((Map<String, Object>)context).put(key, value);
-			return value;
-		}
 	}
 
 	/**
 	 * Accesses a method in a class
 	 */
 	private static final class MethodAccessor extends Accessor {
+
 		private final Method method;
 
 		private MethodAccessor(final Method method) {
@@ -299,33 +254,68 @@ public abstract class Accessor {
 		 * @param parent the parent class for the method
 		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
-		 * @return the method accessor, or null if no method could be found
+		 * @return the new accessor, or null if no method could be found
 		 */
-		public static MethodAccessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
+		public static Accessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
+			final MethodSignature signature = new MethodSignature(methodSignature);
+			final List<Method> methods = new ArrayList<>(2);
+
+			// Find all matching methods in the first public ancestor class, including all interfaces along the way
+			for (Class<?> ancestor = parent; true; ancestor = ancestor.getSuperclass()) {
+				if (Modifier.isPublic(ancestor.getModifiers())) {
+					getPublicMethods(methods, ancestor, false, signature, parameterCount);
+					break;
+				}
+
+				for (final Class<?> iface : ancestor.getInterfaces()) {
+					if (Modifier.isPublic(iface.getModifiers())) {
+						getPublicMethods(methods, iface, false, signature, parameterCount);
+
+						if (parameterCount == 0 && !methods.isEmpty()) {
+							return new MethodAccessor(methods.get(0));
+						}
+					}
+				}
+			}
+
+			if (methods.size() > 1) {
+				return new MethodsAccessor(methods.toArray(new Method[0]));
+			} else if (!methods.isEmpty()) {
+				return new MethodAccessor(methods.get(0));
+			}
+
+			return null;
+		}
+
+		/**
+		 * Creates a new static or class method accessor.
+		 *
+		 * @param parent the parent class for the method
+		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
+		 * @param parameterCount the number of parameters that the method takes
+		 * @return the new accessor, or null if no method could be found
+		 */
+		public static Accessor createStaticOrClass(final Class<?> parent, final String methodSignature, final int parameterCount) {
 			final MethodSignature signature = new MethodSignature(methodSignature);
 
-			// Find the first public ancestor class, analyzing all interfaces along the way
-			for (Class<?> ancestor = parent; ancestor != null; ancestor = ancestor.getSuperclass()) {
-				if (Modifier.isPublic(ancestor.getModifiers())) {
-					for (final Method method : ancestor.getMethods()) {
-						if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
-							method.setAccessible(true);
-							return new MethodAccessor(method);
-						}
-					}
+			// Find all matching static methods
+			if (Modifier.isPublic(parent.getModifiers())) {
+				final List<Method> methods = new ArrayList<>(2);
 
-					break;
-				} else {
-					for (final Class<?> iface : ancestor.getInterfaces()) {
-						if (Modifier.isPublic(iface.getModifiers())) {
-							for (final Method method : iface.getMethods()) {
-								if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
-									method.setAccessible(true);
-									return new MethodAccessor(method);
-								}
-							}
-						}
-					}
+				getPublicMethods(methods, parent, true, signature, parameterCount);
+
+				if (methods.size() > 1) {
+					return new MethodsAccessor(methods.toArray(new Method[0]));
+				} else if (!methods.isEmpty()) {
+					return new MethodAccessor(methods.get(0));
+				}
+			}
+
+			// Find the Class<?> method
+			for (final Method method : Class.class.getMethods()) {
+				if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
+					method.setAccessible(true); // By-pass internal checks on access
+					return new MethodAccessor(method);
 				}
 			}
 
@@ -342,45 +332,74 @@ public abstract class Accessor {
 			return method.invoke(context, parameters);
 		}
 
-		@Override
-		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
-			return null;
-		}
-	}
+		/**
+		 * Gets the public methods of the specified parent class that match the given information.
+		 *
+		 * @param methods the list used to store the matching methods
+		 * @param parent the parent class
+		 * @param isStatic true to match only static methods, false to match only non-static methods
+		 * @param signature the method signature
+		 * @param parameterCount the parameter count of the method
+		 */
+		public static void getPublicMethods(final List<Method> methods, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) {
+			for (final Method method : parent.getMethods()) {
+				if (Modifier.isStatic(method.getModifiers()) == isStatic && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
+					try {
+						method.setAccessible(true); // By-pass internal checks on access
+						methods.add(method);
 
-	/**
-	 * Accesses a static field in a class
-	 */
-	private static final class StaticFieldAccessor extends Accessor {
-		private final Field field;
-
-		private StaticFieldAccessor(final Field field) {
-			this.field = field;
-		}
-
-		public static StaticFieldAccessor create(final Class<?> parent, final String fieldName) {
-			if (Modifier.isPublic(parent.getModifiers())) {
-				for (final Field field : parent.getFields()) {
-					if (Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
-						field.setAccessible(true);
-						return new StaticFieldAccessor(field);
+						if (parameterCount == 0) {
+							return;
+						}
+					} catch (final SecurityException e) {
+						// Probably a java 9+ module access error
 					}
 				}
 			}
+		}
 
-			return null;
+	}
+
+	/**
+	 * Accesses one of a number of methods in a class
+	 */
+	private static final class MethodsAccessor extends Accessor {
+
+		private final Method[] methods;
+		private int mruIndex = 0;
+
+		private MethodsAccessor(final Method[] methods) {
+			this.methods = methods;
 		}
 
 		@Override
 		public Object get(final Object context) throws ReflectiveOperationException {
-			return field.get(context);
+			return methods;
 		}
 
 		@Override
-		public Object set(final Object context, final Object value) throws ReflectiveOperationException {
-			field.set(context, value);
-			return value;
+		public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
+			// We could do something fancy and try to find the most correct method to call, but for now just try to call them all starting with the most recently used.
+			//  Note: this may invoke the wrong method for closely-related overloads.
+			try {
+				return methods[mruIndex].invoke(context, parameters);
+			} catch (final IllegalArgumentException e) {
+				for (int i = 0; i < methods.length; i++) {
+					if (i != mruIndex) {
+						try {
+							final Object result = methods[i].invoke(context, parameters);
+							mruIndex = i;
+							return result;
+						} catch (final IllegalArgumentException e1) {
+							// Ignore failures along the way
+						}
+					}
+				}
+
+				throw e;
+			}
 		}
+
 	}
 
 	static class Factory {
@@ -390,12 +409,12 @@ public abstract class Accessor {
 
 			if (identifier.isMethod()) { // Method
 				if (Class.class.equals(contextClass)) { // Class method
-					return ClassMethodAccessor.create((Class<?>)context, identifier.getName(), parameters);
+					return MethodAccessor.createStaticOrClass((Class<?>)context, identifier.getName(), parameters);
 				}
 
 				return MethodAccessor.create(contextClass, identifier.getName(), parameters);
 			} else if (Class.class.equals(contextClass)) { // Static field
-				return StaticFieldAccessor.create((Class<?>)context, identifier.getName());
+				return FieldAccessor.createStatic((Class<?>)context, identifier.getName());
 			} else if (Map.class.isAssignableFrom(contextClass)) {
 				return new MapAccessor(identifier.getName());
 			} else if (contextClass.isArray() && "length".equals(identifier.getName())) {

@@ -7,6 +7,8 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 import org.junit.Test;
@@ -17,27 +19,28 @@ import horseshoe.CommandLineOption.OptionSet;
 public class CommandLineOptionTests {
 
 	@Test (expected = Test.None.class) // No exception expected
-	public void testAllOptionTypes() {
-		final PrintStream stream = new PrintStream(new OutputStream() {
-			@Override
-			public void write(final int b) throws IOException {
+	public void testAllOptionTypes() throws UnsupportedEncodingException {
+		try (final PrintStream stream = new PrintStream(new OutputStream() {
+				@Override
+				public void write(final int b) throws IOException {
+				}
+			}, false, StandardCharsets.UTF_16.name())) {
+			final OptionSet options = new OptionSet(
+					CommandLineOption.ofName('a', "Test a"),
+					CommandLineOption.ofName("b-long", "Test b"),
+					CommandLineOption.ofName('c', "c-long", "Test c"),
+					CommandLineOption.ofNameWithArgument('d', "d-arg", "Test d"),
+					CommandLineOption.ofNameWithArgument("e-long", "e-arg", "Test e"),
+					CommandLineOption.ofNameWithArgument('f', "f-long", "f-arg", "Test f"),
+					CommandLineOption.ofNameWithOptionalArgument("g-long", "g-arg", "")
+			);
+
+			options.print(stream);
+
+			for (final CommandLineOption option : options) {
+				option.toOptionString(stream);
+				stream.println(option.toString());
 			}
-		});
-		final OptionSet options = new OptionSet(
-				CommandLineOption.ofName('a', "Test a"),
-				CommandLineOption.ofName("b-long", "Test b"),
-				CommandLineOption.ofName('c', "c-long", "Test c"),
-				CommandLineOption.ofNameWithArgument('d', "d-arg", "Test d"),
-				CommandLineOption.ofNameWithArgument("e-long", "e-arg", "Test e"),
-				CommandLineOption.ofNameWithArgument('f', "f-long", "f-arg", "Test f"),
-				CommandLineOption.ofNameWithOptionalArgument("g-long", "g-arg", "")
-		);
-
-		options.print(stream);
-
-		for (final CommandLineOption option : options) {
-			option.toOptionString(stream);
-			stream.println(option.toString());
 		}
 	}
 
