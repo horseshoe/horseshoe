@@ -1,6 +1,7 @@
 package horseshoe.internal;
 
 import static horseshoe.internal.MethodBuilder.*;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
@@ -11,14 +12,14 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Test;
-
 import horseshoe.internal.MethodBuilder.Label;
+
+import org.junit.Test;
 
 public class MethodBuilderTests {
 
 	private static final byte B0 = 0;
-	private static final AtomicInteger classCounter = new AtomicInteger(10);
+	private static final AtomicInteger CLASS_COUNTER = new AtomicInteger(10);
 
 	public static class SwitchClass {
 		public String run(final int a) {
@@ -28,7 +29,7 @@ public class MethodBuilderTests {
 
 	@Test
 	public void switchTest() throws ReflectiveOperationException {
-		final String name = getClass().getName() + "$" + classCounter.getAndIncrement();
+		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 		final SortedMap<Integer, Label> labels = new TreeMap<>();
 
@@ -59,7 +60,7 @@ public class MethodBuilderTests {
 
 	@Test
 	public void simpleTest() throws ReflectiveOperationException {
-		final String name = getClass().getName() + "$" + classCounter.getAndIncrement();
+		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 
 		// Hello, world!
@@ -74,7 +75,7 @@ public class MethodBuilderTests {
 
 	@Test
 	public void methodTest() throws ReflectiveOperationException {
-		final String name = getClass().getName() + "$" + classCounter.getAndIncrement();
+		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 
 		// Test method calls
@@ -85,13 +86,13 @@ public class MethodBuilderTests {
 		assertEquals(name, instance.run());
 	}
 
-	public static abstract class ComplexInterface {
+	public abstract static class ComplexInterface {
 		public abstract double calculate(final SimpleInterface getter, final int[] extras, final List<Double> more, final double last);
 	}
 
 	@Test
 	public void complexTest() throws ReflectiveOperationException {
-		final String name = getClass().getName() + "$" + classCounter.getAndIncrement();
+		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 
 		mb.addCode(ALOAD_1)
@@ -112,12 +113,13 @@ public class MethodBuilderTests {
 			@Override
 			public String run() {
 				return "3.14159";
-			} }, new int[] { 5, 6 }, Arrays.asList(15.4), 1.0), 0.0001);
+			}
+		}, new int[] { 5, 6 }, Arrays.asList(15.4), 1.0), 0.0001);
 	}
 
-	public static abstract class FieldClass {
-		public static int b = 5;
-		public double a = 10.5;
+	public abstract static class FieldClass {
+		public static int testB = 5;
+		public double testA = 10.5;
 
 		protected void doNothing() {
 		}
@@ -127,20 +129,20 @@ public class MethodBuilderTests {
 
 	@Test
 	public void fieldTest() throws ReflectiveOperationException {
-		final String name = getClass().getName() + "$" + classCounter.getAndIncrement();
+		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 
 		mb.pushConstant(-1).pushConstant(0).pushConstant(1).pushConstant(2).pushConstant(3).pushConstant(4).pushConstant(5).pushConstant(127).pushConstant(128).pushConstant(Short.MIN_VALUE).pushConstant(Short.MAX_VALUE).pushConstant(0x80000000).addCode(ISTORE, (byte)100, IINC, (byte)100, (byte)2)
 				.pushConstant(0L).pushConstant(1L).pushConstant(2L).pushConstant(0x80000000L).pushConstant(0x8000000000000000L)
 				.pushConstant(0.0f).pushConstant(1.0f).pushConstant(2.0f).pushConstant(5.0f)
 				.pushConstant(0.0).pushConstant(1.0).pushConstant(2.0).pushConstant(999.666)
-				.addCode(ALOAD_0).pushConstant(3.2).addFieldAccess(FieldClass.class.getDeclaredField("a"), false)
-				.addCode(ALOAD_0).addFieldAccess(FieldClass.class.getDeclaredField("a"), true)
+				.addCode(ALOAD_0).pushConstant(3.2).addFieldAccess(FieldClass.class.getDeclaredField("testA"), false)
+				.addCode(ALOAD_0).addFieldAccess(FieldClass.class.getDeclaredField("testA"), true)
 				.addCode(ALOAD_0).addInvoke(FieldClass.class.getDeclaredMethod("doNothing"), true)
 				.addCode(DUP2, DADD)
-				.addFieldAccess(FieldClass.class.getDeclaredField("b"), true)
+				.addFieldAccess(FieldClass.class.getDeclaredField("testB"), true)
 				.addCode(I2D, DADD, DUP2, D2I)
-				.addFieldAccess(FieldClass.class.getDeclaredField("b"), false)
+				.addFieldAccess(FieldClass.class.getDeclaredField("testB"), false)
 				.addCode(DRETURN);
 		assertNotNull(mb.toString());
 		System.out.println(mb);
@@ -148,7 +150,7 @@ public class MethodBuilderTests {
 		final FieldClass instance = mb.build(name, FieldClass.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
 
 		assertEquals(3.2 + 3.2 + 5, instance.calculate(), 0.0001);
-		assertEquals(11, FieldClass.b);
+		assertEquals(11, FieldClass.testB);
 	}
 
 	@Test
@@ -158,12 +160,14 @@ public class MethodBuilderTests {
 				final MethodBuilder mb = new MethodBuilder().addCode((byte)i, B0, B0, B0, B0, B0);
 				assertNotNull(mb.toString());
 			} catch (final RuntimeException e) {
+				// Many failures expected
 			}
 
 			try {
 				final MethodBuilder mb = new MethodBuilder().addCode((byte)i);
 				assertNotNull(mb.toString());
 			} catch (final RuntimeException e) {
+				// Many failures expected
 			}
 
 			try {
@@ -172,6 +176,7 @@ public class MethodBuilderTests {
 				mb.addCode(WIDE, (byte)i);
 				assertNotNull(mb.toString());
 			} catch (final RuntimeException e) {
+				// Many failures expected
 			}
 
 			try {
@@ -179,6 +184,7 @@ public class MethodBuilderTests {
 				final Label label = mb.newLabel();
 				assertNotNull(mb.addBranch((byte)i, label).updateLabel(label).toString());
 			} catch (final RuntimeException e) {
+				// Many failures expected
 			}
 		}
 	}
@@ -202,14 +208,14 @@ public class MethodBuilderTests {
 		for (final Class<?> to : allPrimitives) {
 			try {
 				final MethodBuilder mb = new MethodBuilder().addPrimitiveConversion(Object.class, to);
-				fail();
-				assertNotNull(mb.toString());
+				fail("Unexpected conversion from Object.class to " + to.getName() + ": " + mb.toString());
 			} catch (final RuntimeException e) {
+				// Failures expected
 			}
 		}
 
 		// Test Number.class to Boolean.class
-		final String name = getClass().getName() + "$" + classCounter.getAndIncrement();
+		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 		final Label fail = mb.newLabel();
 
@@ -226,39 +232,49 @@ public class MethodBuilderTests {
 		assertEquals("success", instance.run());
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testAppendSelf() {
 		final MethodBuilder mb = new MethodBuilder();
 		mb.append(mb);
 	}
 
 	public static interface MultipleMethodInterface {
-		public static void staticMethod() { /* Empty test method */ }
+		public static void staticMethod() {
+			/* Empty test method */
+		}
+
 		public void method1();
+
 		public void method2();
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase() throws ReflectiveOperationException {
 		new MethodBuilder().addCode(RETURN).build("BadBase", MultipleMethodInterface.class, MethodBuilderTests.class.getClassLoader());
 	}
 
-	public static abstract class MultipleAbstractMethodClass {
+	public abstract static class MultipleAbstractMethodClass {
 		public abstract void method1();
+
 		public abstract void method2();
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase2() throws ReflectiveOperationException {
 		new MethodBuilder().addCode(RETURN).build("BadBase2", MultipleAbstractMethodClass.class, MethodBuilderTests.class.getClassLoader());
 	}
 
 	public static class MultipleMethodClass {
-		public void method1() { /* Empty test method */ }
-		public void method2() { /* Empty test method */ }
+		public void method1() {
+			/* Empty test method */
+		}
+
+		public void method2() {
+			/* Empty test method */
+		}
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase3() throws ReflectiveOperationException {
 		new MethodBuilder().addCode(RETURN).build("BadBase3", MultipleMethodClass.class, MethodBuilderTests.class.getClassLoader());
 	}
@@ -266,36 +282,38 @@ public class MethodBuilderTests {
 	public static class NoMethodClass {
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase4() throws ReflectiveOperationException {
 		new MethodBuilder().addCode(RETURN).build("BadBase4", NoMethodClass.class, MethodBuilderTests.class.getClassLoader());
 	}
 
 	public static final class FinalClass {
-		public void method1() { /* Empty test method */ }
+		public void method1() {
+			/* Empty test method */
+		}
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase5() throws ReflectiveOperationException {
 		new MethodBuilder().addCode(RETURN).build("BadBase5", FinalClass.class, MethodBuilderTests.class.getClassLoader());
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testBadIndex() {
 		new MethodBuilder().addAccess(ALOAD, 65536);
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testBadIndex2() {
 		new MethodBuilder().addAccess(ALOAD, -1);
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testBadNewObject() {
 		new MethodBuilder().pushNewObject(Object.class, new int[256]);
 	}
 
-	@Test (expected = IllegalArgumentException.class)
+	@Test(expected = IllegalArgumentException.class)
 	public void testBadNewObject2() {
 		new MethodBuilder().pushNewObject(int.class);
 	}

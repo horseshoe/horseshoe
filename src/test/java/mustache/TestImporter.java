@@ -88,47 +88,53 @@ public class TestImporter {
 		return sb;
 	}
 
+	/**
+	 * Imports the Mustache tests into Horseshoe tests under the horseshoe.mustache package.
+	 *
+	 * @param args arguments specifying the source and destination directories for the tests
+	 * @throws IOException if an error occurs reading the Mustache tests or writing the Horseshoe tests
+	 */
 	@SuppressWarnings("unchecked")
 	public static void main(final String[] args) throws IOException {
 		final Path destination = Paths.get(args[1]);
 
-		Files.newDirectoryStream(Paths.get(args[0]), path -> !path.getFileName().toString().startsWith("~") && path.toString().endsWith(".yml")).
-			forEach(path -> {
-				final String filename = path.getFileName().toString();
-				final String className = capitalize((filename.startsWith("~") ? filename.substring(1) : filename).replace(".yml", ""));
-				final Yaml yaml = new Yaml();
+		Files.newDirectoryStream(Paths.get(args[0]), path -> !path.getFileName().toString().startsWith("~") && path.toString().endsWith(".yml"))
+				.forEach(path -> {
+					final String filename = path.getFileName().toString();
+					final String className = capitalize((filename.startsWith("~") ? filename.substring(1) : filename).replace(".yml", ""));
+					final Yaml yaml = new Yaml();
 
-				System.out.println("Loading " + path.toString() + "...");
+					System.out.println("Loading " + path.toString() + "...");
 
-				try (final InputStream in = new FileInputStream(path.toString());
-						final PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(destination.resolve(className + ".java").toString()), StandardCharsets.UTF_8))) {
-					out.print("package horseshoe.mustache;" + System.lineSeparator() +
-							System.lineSeparator() +
-							"import org.junit.Test;" + System.lineSeparator() +
-							System.lineSeparator() +
-							"import horseshoe.Helper;" + System.lineSeparator() +
-							System.lineSeparator() +
-							"public class " + className + " {" + System.lineSeparator() +
-							System.lineSeparator() +
-							"	@Test" + System.lineSeparator() +
-							"	public void test() throws horseshoe.LoadException, java.io.IOException {");
+					try (final InputStream in = new FileInputStream(path.toString());
+							final PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(destination.resolve(className + ".java").toString()), StandardCharsets.UTF_8))) {
+						out.print("package horseshoe.mustache;" + System.lineSeparator() +
+								System.lineSeparator() +
+								"import horseshoe.Helper;" + System.lineSeparator() +
+								System.lineSeparator() +
+								"import org.junit.Test;" + System.lineSeparator() +
+								System.lineSeparator() +
+								"public class " + className + " {" + System.lineSeparator() +
+								System.lineSeparator() +
+								"	@Test" + System.lineSeparator() +
+								"	public void test() throws horseshoe.LoadException, java.io.IOException {");
 
-					for (final Object obj : (List<Object>)((Map<String, Object>)yaml.load(in)).get("tests")) {
-						final Map<String, Object> test = (Map<String, Object>)obj;
+						for (final Object obj : (List<Object>)((Map<String, Object>)yaml.load(in)).get("tests")) {
+							final Map<String, Object> test = (Map<String, Object>)obj;
 
-						out.println(System.lineSeparator() + "\t\t/* " + test.get("name").toString() + " - " + test.get("desc").toString() + " */");
-						out.println("\t\tHelper.executeMustacheTest(\"" + escapeCodeString(test.get("template").toString()) + "\", Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("data")) + "), Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("partials")) + "), \"" + escapeCodeString(test.get("expected").toString()) + "\");");
+							out.println(System.lineSeparator() + "\t\t/* " + test.get("name").toString() + " - " + test.get("desc").toString() + " */");
+							out.println("\t\tHelper.executeMustacheTest(\"" + escapeCodeString(test.get("template").toString()) + "\", Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("data")) + "), Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("partials")) + "), \"" + escapeCodeString(test.get("expected").toString()) + "\");");
+						}
+
+						out.println("	}" + System.lineSeparator() +
+								System.lineSeparator() +
+								"}");
+					} catch (final IOException e) {
+						System.err.println("Failed to load " + path.toString() + ": " + e.getMessage());
 					}
 
-					out.println("	}" + System.lineSeparator() +
-							System.lineSeparator() +
-							"}");
-				} catch (final IOException e) {
-					System.err.println("Failed to load " + path.toString() + ": " + e.getMessage());
-				}
-
-				System.out.println(" Done.");
-			});
+					System.out.println(" Done.");
+				});
 	}
 
 }

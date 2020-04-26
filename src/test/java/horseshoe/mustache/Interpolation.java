@@ -1,8 +1,8 @@
 package horseshoe.mustache;
 
-import org.junit.Test;
-
 import horseshoe.Helper;
+
+import org.junit.Test;
 
 public class Interpolation {
 

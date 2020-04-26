@@ -7,10 +7,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 
+import horseshoe.Settings.ContextAccess;
+
 import org.junit.Assert;
 import org.junit.Test;
-
-import horseshoe.Settings.ContextAccess;
 
 public class SettingsTests {
 
@@ -25,8 +25,7 @@ public class SettingsTests {
 
 	@Test
 	public void testMapWithContextAccessFull() throws LoadException, IOException {
-		final Settings settings = new Settings()
-				.setContextAccess(ContextAccess.FULL);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.FULL);
 		final Template template = new TemplateLoader().load("Context Access Full", "{{Objects.toString(\"123\")}}" +
 				"{{#map.entrySet()}}{{Objects.toString(getValue())}}{{/}}{{#789}}{{#toString()}}{{#charAt(0)}}{{nonExistantMethod()}}{{longValue()}}{{get(\"field\")}}{{#field}}{{nonExistantField}}{{testField}}{{/}}{{/}}{{/}}{{/}}");
 		final Map<String, Object> data = new LinkedHashMap<>();
@@ -42,8 +41,7 @@ public class SettingsTests {
 
 	@Test
 	public void testMapWithContextAccessRoot() throws LoadException, IOException {
-		final Settings settings = new Settings()
-				.setContextAccess(ContextAccess.CURRENT_AND_ROOT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT_AND_ROOT);
 		final Template template = new TemplateLoader().load("Context Access Root", "{{Objects.toString(\"123\")}}" +
 				"{{#map.entrySet()}}{{Objects.toString(getValue())}}{{/}}{{#789}}{{#toString()}}{{#charAt(0)}}{{longValue()}}{{entrySet()}}{{get(\"field\")}}{{#field}}{{nonExistantField}}{{testField}}{{/}}{{/}}{{/}}{{/}}");
 		final Map<String, Object> data = new LinkedHashMap<>();

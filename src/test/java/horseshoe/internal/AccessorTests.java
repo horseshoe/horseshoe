@@ -7,12 +7,12 @@ import java.lang.management.ManagementFactory;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.junit.Test;
-
 import horseshoe.Helper;
 import horseshoe.LoadException;
 import horseshoe.Settings;
 import horseshoe.TemplateLoader;
+
+import org.junit.Test;
 
 public class AccessorTests {
 
@@ -31,11 +31,13 @@ public class AccessorTests {
 
 	private interface PrivateInterface {
 		String testBad(final int i);
+
 		String testBad();
 	}
 
 	public interface PublicInterface {
 		String test(final int i);
+
 		String test();
 	}
 

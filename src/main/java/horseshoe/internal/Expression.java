@@ -362,34 +362,48 @@ public final class Expression {
 			start = backslash + 2;
 
 			switch (string.charAt(backslash + 1)) {
-			case '\\': sb.append('\\'); break;
-			case '"':  sb.append('\"'); break;
-			case '\'': sb.append('\''); break;
-			case 'b':  sb.append('\b'); break;
-			case 't':  sb.append('\t'); break;
-			case 'n':  sb.append('\n'); break;
-			case 'f':  sb.append('\f'); break;
-			case 'r':  sb.append('\r'); break;
-			case '0':  sb.appendCodePoint(0); break; // Only allow zero, not the octal escape of C, C++, Java, etc.
-
-			case 'x':
-				start = parseStringLiteralHex(sb, string, start);
-				break;
-
-			case 'u':
-				assert backslash + 5 < string.length() : "Invalid string literal accepted with trailing \"\\u\""; // According to the pattern, \\u must be followed by 4 digits
-				sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 6), 16));
-				start = backslash + 6;
-				break;
-
-			case 'U':
-				assert backslash + 9 < string.length() : "Invalid string literal accepted with trailing \"\\U\""; // According to the pattern, \\U must be followed by 8 digits
-				sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 10), 16));
-				start = backslash + 10;
-				break;
-
-			default:
-				assert false : "Invalid string literal accepted with \"\\" + string.charAt(backslash + 1) + "\" escape sequence"; // According to the pattern, only the above cases are allowed
+				case '\\':
+					sb.append('\\');
+					break;
+				case '"':
+					sb.append('\"');
+					break;
+				case '\'':
+					sb.append('\'');
+					break;
+				case 'b':
+					sb.append('\b');
+					break;
+				case 't':
+					sb.append('\t');
+					break;
+				case 'n':
+					sb.append('\n');
+					break;
+				case 'f':
+					sb.append('\f');
+					break;
+				case 'r':
+					sb.append('\r');
+					break;
+				case '0': // Only allow zero, not the octal escape of C, C++, Java, etc.
+					sb.appendCodePoint(0);
+					break;
+				case 'x':
+					start = parseStringLiteralHex(sb, string, start);
+					break;
+				case 'u':
+					assert backslash + 5 < string.length() : "Invalid string literal accepted with trailing \"\\u\""; // According to the pattern, \\u must be followed by 4 digits
+					sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 6), 16));
+					start = backslash + 6;
+					break;
+				case 'U':
+					assert backslash + 9 < string.length() : "Invalid string literal accepted with trailing \"\\U\""; // According to the pattern, \\U must be followed by 8 digits
+					sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 10), 16));
+					start = backslash + 10;
+					break;
+				default:
+					assert false : "Invalid string literal accepted with \"\\" + string.charAt(backslash + 1) + "\" escape sequence"; // According to the pattern, only the above cases are allowed
 			}
 		} while ((backslash = string.indexOf('\\', start)) >= 0);
 
@@ -496,265 +510,265 @@ public final class Expression {
 		final Operand left = operator.has(Operator.LEFT_EXPRESSION) ? operands.pop() : null;
 
 		switch (operator.getString()) {
-		// Array / Map Operations
-		case "[":
-		case "?[?":
-			if (left != null) {
-				if (!Object.class.equals(left.type)) {
-					throw new IllegalArgumentException("Unexpected \"" + operator.getString() + "\" operator applied to " + (left.type == null ? "numeric" : left.type.getName()) + " value, expecting map or array type value");
-				}
+			// Array / Map Operations
+			case "[":
+			case "?[?":
+				if (left != null) {
+					if (!Object.class.equals(left.type)) {
+						throw new IllegalArgumentException("Unexpected \"" + operator.getString() + "\" operator applied to " + (left.type == null ? "numeric" : left.type.getName()) + " value, expecting map or array type value");
+					}
 
-				final Label end = left.builder.newLabel();
+					final Label end = left.builder.newLabel();
 
-				if (operator.has(Operator.SAFE)) {
-					left.builder.addCode(DUP).addBranch(IFNULL, end);
-				}
+					if (operator.has(Operator.SAFE)) {
+						left.builder.addCode(DUP).addBranch(IFNULL, end);
+					}
 
-				operands.push(new Operand(Object.class, left.builder.append(right.toObject(false)).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
-				break;
-			} // Intentional fall-through if left is null
-		case "{": {
-			int pairs = 0;
+					operands.push(new Operand(Object.class, left.builder.append(right.toObject(false)).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
+					break;
+				} // Intentional fall-through if left is null
+			case "{": {
+				int pairs = 0;
 
-			// Find the number of pairs
-			for (int i = 0; i < operator.getRightExpressions(); i++) {
-				if (Entry.class.equals(operands.peek(i + pairs).type)) {
-					pairs++;
-					assert Entry.class.equals(operands.peek(i + pairs).type) : Entry.class + " must occur in pairs on the operand stack";
-				}
-			}
-
-			if (pairs > 0) { // Create a map
-				final int totalPairs = pairs;
-				final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_MAP_CTOR_INT);
-
-				for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
-					final Operand first = operands.peek(i + pairs);
-
-					if (Entry.class.equals(first.type)) {
-						builder.addCode(DUP).append(first.toObject(false)).append(operands.peek(i + --pairs).toObject(false)).addInvoke(MAP_PUT).addCode(POP);
-					} else {
-						builder.addCode(DUP).append(first.toObject(false)).addCode(DUP).addInvoke(MAP_PUT).addCode(POP);
+				// Find the number of pairs
+				for (int i = 0; i < operator.getRightExpressions(); i++) {
+					if (Entry.class.equals(operands.peek(i + pairs).type)) {
+						pairs++;
+						assert Entry.class.equals(operands.peek(i + pairs).type) : Entry.class + " must occur in pairs on the operand stack";
 					}
 				}
 
-				operands.pop(operator.getRightExpressions() + totalPairs).push(new Operand(Object.class, builder));
-			} else if ("[".equals(operator.getString())) { // Create a list
-				final MethodBuilder builder = new MethodBuilder().pushNewObject(ArrayList.class).addCode(DUP).pushConstant(operator.getRightExpressions()).addInvoke(ARRAY_LIST_CTOR_INT);
+				if (pairs > 0) { // Create a map
+					final int totalPairs = pairs;
+					final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_MAP_CTOR_INT);
 
-				for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
-					builder.addCode(DUP).append(operands.peek(i).toObject(false)).addInvoke(LIST_ADD).addCode(POP);
+					for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
+						final Operand first = operands.peek(i + pairs);
+
+						if (Entry.class.equals(first.type)) {
+							builder.addCode(DUP).append(first.toObject(false)).append(operands.peek(i + --pairs).toObject(false)).addInvoke(MAP_PUT).addCode(POP);
+						} else {
+							builder.addCode(DUP).append(first.toObject(false)).addCode(DUP).addInvoke(MAP_PUT).addCode(POP);
+						}
+					}
+
+					operands.pop(operator.getRightExpressions() + totalPairs).push(new Operand(Object.class, builder));
+				} else if ("[".equals(operator.getString())) { // Create a list
+					final MethodBuilder builder = new MethodBuilder().pushNewObject(ArrayList.class).addCode(DUP).pushConstant(operator.getRightExpressions()).addInvoke(ARRAY_LIST_CTOR_INT);
+
+					for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
+						builder.addCode(DUP).append(operands.peek(i).toObject(false)).addInvoke(LIST_ADD).addCode(POP);
+					}
+
+					operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
+				} else { // Create a set
+					final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashSet.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_SET_CTOR_INT);
+
+					for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
+						builder.addCode(DUP).append(operands.peek(i).toObject(false)).addInvoke(SET_ADD).addCode(POP);
+					}
+
+					operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
 				}
 
-				operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
-			} else { // Create a set
-				final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashSet.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_SET_CTOR_INT);
-
-				for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
-					builder.addCode(DUP).append(operands.peek(i).toObject(false)).addInvoke(SET_ADD).addCode(POP);
-				}
-
-				operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
+				break;
 			}
-
-			break;
-		}
-		case "[:]":
-			operands.push(new Operand(Object.class, new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant(8).addInvoke(LINKED_HASH_MAP_CTOR_INT)));
-			break;
-		case "..": {
-			final Label decreasing = left.builder.newLabel();
-			final Label increasingLoop = left.builder.newLabel();
-			final Label decreasingLoop = left.builder.newLabel();
-			final Label end = left.builder.newLabel();
-
-			operands.push(new Operand(Object.class, left.toNumeric(false).addCode(POP, POP2, L2I, DUP).addAccess(ISTORE, Evaluable.FIRST_LOCAL_INDEX).append(right.toNumeric(false)).addCode(POP, POP2, L2I, DUP2).addBranch(IF_ICMPGT, decreasing)
-					.addCode(SWAP, ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(increasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(IADD, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, increasingLoop).addBranch(GOTO, end)
-					.updateLabel(decreasing).addCode(ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(decreasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(SWAP, ISUB, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, decreasingLoop)
-					.updateLabel(end).addCode(POP)));
-			break;
-		}
-
-		// Math Operations
-		case "+":
-			if (left == null) { // Unary +, basically do nothing except require a number
-				operands.push(new Operand(null, right.toNumeric(true)));
-			} else if (StringBuilder.class.equals(left.type)) { // Check for string concatenation
-				operands.push().peek().builder.append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT);
-			} else if (String.class.equals(left.type) || String.class.equals(right.type) || StringBuilder.class.equals(right.type)) {
-				operands.push(new Operand(StringBuilder.class, left.toObject(false).pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
-			} else if ((left.type == null || (left.type.isPrimitive() && !boolean.class.equals(left.type))) && (right.type == null || (right.type.isPrimitive() && !boolean.class.equals(right.type)))) { // Mathematical addition
-				operands.push(left.execMathOp(right, IADD, LADD, DADD, Evaluable.FIRST_LOCAL_INDEX));
-			} else { // String concatenation, mathematical addition, or invalid
-				final Label notStringBuilder = left.builder.newLabel();
-				final Label isString = left.builder.newLabel();
-				final Label notString = left.builder.newLabel();
+			case "[:]":
+				operands.push(new Operand(Object.class, new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant(8).addInvoke(LINKED_HASH_MAP_CTOR_INT)));
+				break;
+			case "..": {
+				final Label decreasing = left.builder.newLabel();
+				final Label increasingLoop = left.builder.newLabel();
+				final Label decreasingLoop = left.builder.newLabel();
 				final Label end = left.builder.newLabel();
 
-				operands.push(new Operand(Object.class, left.toObject(false).append(right.toObject(false)).addCode(SWAP, DUP_X1).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notStringBuilder).addCode(SWAP).addCast(StringBuilder.class).addCode(SWAP).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
-						.updateLabel(notStringBuilder).addCode(SWAP, DUP_X1).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notString)
-						.updateLabel(isString).addCode(SWAP).pushNewObject(StringBuilder.class).addCode(DUP_X2, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
-						.updateLabel(notString).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX)))
-					.peek().execMathOp(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX)), IADD, LADD, DADD, Evaluable.FIRST_LOCAL_INDEX).toObject(false).updateLabel(end);
+				operands.push(new Operand(Object.class, left.toNumeric(false).addCode(POP, POP2, L2I, DUP).addAccess(ISTORE, Evaluable.FIRST_LOCAL_INDEX).append(right.toNumeric(false)).addCode(POP, POP2, L2I, DUP2).addBranch(IF_ICMPGT, decreasing)
+						.addCode(SWAP, ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(increasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(IADD, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, increasingLoop).addBranch(GOTO, end)
+						.updateLabel(decreasing).addCode(ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(decreasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(SWAP, ISUB, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, decreasingLoop)
+						.updateLabel(end).addCode(POP)));
+				break;
 			}
 
-			break;
-		case "-":
-			if (left == null) {
-				operands.push(right.execIntegralOp(INEG, LNEG));
-			} else {
-				operands.push(left.execMathOp(right, ISUB, LSUB, DSUB, Evaluable.FIRST_LOCAL_INDEX));
+			// Math Operations
+			case "+":
+				if (left == null) { // Unary +, basically do nothing except require a number
+					operands.push(new Operand(null, right.toNumeric(true)));
+				} else if (StringBuilder.class.equals(left.type)) { // Check for string concatenation
+					operands.push().peek().builder.append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT);
+				} else if (String.class.equals(left.type) || String.class.equals(right.type) || StringBuilder.class.equals(right.type)) {
+					operands.push(new Operand(StringBuilder.class, left.toObject(false).pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
+				} else if ((left.type == null || (left.type.isPrimitive() && !boolean.class.equals(left.type))) && (right.type == null || (right.type.isPrimitive() && !boolean.class.equals(right.type)))) { // Mathematical addition
+					operands.push(left.execMathOp(right, IADD, LADD, DADD, Evaluable.FIRST_LOCAL_INDEX));
+				} else { // String concatenation, mathematical addition, or invalid
+					final Label notStringBuilder = left.builder.newLabel();
+					final Label isString = left.builder.newLabel();
+					final Label notString = left.builder.newLabel();
+					final Label end = left.builder.newLabel();
+
+					operands.push(new Operand(Object.class, left.toObject(false).append(right.toObject(false)).addCode(SWAP, DUP_X1).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notStringBuilder).addCode(SWAP).addCast(StringBuilder.class).addCode(SWAP).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
+							.updateLabel(notStringBuilder).addCode(SWAP, DUP_X1).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notString)
+							.updateLabel(isString).addCode(SWAP).pushNewObject(StringBuilder.class).addCode(DUP_X2, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
+							.updateLabel(notString).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX)))
+						.peek().execMathOp(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX)), IADD, LADD, DADD, Evaluable.FIRST_LOCAL_INDEX).toObject(false).updateLabel(end);
+				}
+
+				break;
+			case "-":
+				if (left == null) {
+					operands.push(right.execIntegralOp(INEG, LNEG));
+				} else {
+					operands.push(left.execMathOp(right, ISUB, LSUB, DSUB, Evaluable.FIRST_LOCAL_INDEX));
+				}
+
+				break;
+			case "*":
+				operands.push(left.execMathOp(right, IMUL, LMUL, DMUL, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case "/":
+				operands.push(left.execMathOp(right, IDIV, LDIV, DDIV, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case "%":
+				operands.push(left.execMathOp(right, IREM, LREM, DREM, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+
+			// Integral Operations
+			case "~": // Treat as x ^ -1
+				operands.push(right.execIntegralOp(new Operand(int.class, new MethodBuilder().pushConstant(-1)), IXOR, LXOR, false, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case "<<":
+				operands.push(left.execIntegralOp(right, ISHL, LSHL, true, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case ">>":
+				operands.push(left.execIntegralOp(right, ISHR, LSHR, true, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case ">>>":
+				operands.push(left.execIntegralOp(right, IUSHR, LUSHR, true, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case "&":
+				operands.push(left.execIntegralOp(right, IAND, LAND, false, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case "^":
+				operands.push(left.execIntegralOp(right, IXOR, LXOR, false, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case "|":
+				operands.push(left.execIntegralOp(right, IOR, LOR, false, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+
+			// Logical Operators
+			case "!": {
+				final Label notZero = right.builder.newLabel();
+				final Label end = right.builder.newLabel();
+
+				operands.push(new Operand(boolean.class, right.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(notZero).addCode(ICONST_0).updateLabel(end)));
+				break;
+			}
+			case "&&": {
+				final Label notZero = left.builder.newLabel();
+				final Label end = left.builder.newLabel();
+
+				operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_0).addBranch(GOTO, end).updateLabel(notZero).append(right.toBoolean()).updateLabel(end)));
+				break;
+			}
+			case "||": {
+				final Label zero = left.builder.newLabel();
+				final Label end = left.builder.newLabel();
+
+				operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFEQ, zero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(zero).append(right.toBoolean()).updateLabel(end)));
+				break;
 			}
 
-			break;
-		case "*":
-			operands.push(left.execMathOp(right, IMUL, LMUL, DMUL, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case "/":
-			operands.push(left.execMathOp(right, IDIV, LDIV, DDIV, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case "%":
-			operands.push(left.execMathOp(right, IREM, LREM, DREM, Evaluable.FIRST_LOCAL_INDEX));
-			break;
+			// Comparison Operators
+			case "<=":
+				operands.push(left.execCompareOp(right, IFLE, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case ">=":
+				operands.push(left.execCompareOp(right, IFGE, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case "<":
+				operands.push(left.execCompareOp(right, IFLT, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case ">":
+				operands.push(left.execCompareOp(right, IFGT, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case "==":
+				operands.push(left.execCompareOp(right, IFEQ, Evaluable.FIRST_LOCAL_INDEX));
+				break;
+			case "!=":
+				operands.push(left.execCompareOp(right, IFNE, Evaluable.FIRST_LOCAL_INDEX));
+				break;
 
-		// Integral Operations
-		case "~": // Treat as x ^ -1
-			operands.push(right.execIntegralOp(new Operand(int.class, new MethodBuilder().pushConstant(-1)), IXOR, LXOR, false, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case "<<":
-			operands.push(left.execIntegralOp(right, ISHL, LSHL, true, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case ">>":
-			operands.push(left.execIntegralOp(right, ISHR, LSHR, true, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case ">>>":
-			operands.push(left.execIntegralOp(right, IUSHR, LUSHR, true, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case "&":
-			operands.push(left.execIntegralOp(right, IAND, LAND, false, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case "^":
-			operands.push(left.execIntegralOp(right, IXOR, LXOR, false, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case "|":
-			operands.push(left.execIntegralOp(right, IOR, LOR, false, Evaluable.FIRST_LOCAL_INDEX));
-			break;
+			// Ternary Operations
+			case "??":
+			case "?:": {
+				final Label end = left.builder.newLabel();
 
-		// Logical Operators
-		case "!": {
-			final Label notZero = right.builder.newLabel();
-			final Label end = right.builder.newLabel();
+				operands.push(new Operand(Object.class, left.toObject(false).addCode(DUP).addBranch(IFNONNULL, end).addCode(POP).append(right.toObject(false)).updateLabel(end)));
+				break;
+			}
+			case "?": {
+				if (!Entry.class.equals(right.type)) {
+					throw new IllegalArgumentException("Incomplete ternary operator, missing \":\"");
+				}
 
-			operands.push(new Operand(boolean.class, right.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(notZero).addCode(ICONST_0).updateLabel(end)));
-			break;
-		}
-		case "&&": {
-			final Label notZero = left.builder.newLabel();
-			final Label end = left.builder.newLabel();
+				assert Entry.class.equals(left.type);
+				assert !operands.isEmpty();
 
-			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_0).addBranch(GOTO, end).updateLabel(notZero).append(right.toBoolean()).updateLabel(end)));
-			break;
-		}
-		case "||": {
-			final Label zero = left.builder.newLabel();
-			final Label end = left.builder.newLabel();
+				final Label isFalse = left.builder.newLabel();
+				final Label end = left.builder.newLabel();
 
-			operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFEQ, zero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(zero).append(right.toBoolean()).updateLabel(end)));
-			break;
-		}
-
-		// Comparison Operators
-		case "<=":
-			operands.push(left.execCompareOp(right, IFLE, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case ">=":
-			operands.push(left.execCompareOp(right, IFGE, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case "<":
-			operands.push(left.execCompareOp(right, IFLT, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case ">":
-			operands.push(left.execCompareOp(right, IFGT, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case "==":
-			operands.push(left.execCompareOp(right, IFEQ, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-		case "!=":
-			operands.push(left.execCompareOp(right, IFNE, Evaluable.FIRST_LOCAL_INDEX));
-			break;
-
-		// Ternary Operations
-		case "??":
-		case "?:": {
-			final Label end = left.builder.newLabel();
-
-			operands.push(new Operand(Object.class, left.toObject(false).addCode(DUP).addBranch(IFNONNULL, end).addCode(POP).append(right.toObject(false)).updateLabel(end)));
-			break;
-		}
-		case "?": {
-			if (!Entry.class.equals(right.type)) {
-				throw new IllegalArgumentException("Incomplete ternary operator, missing \":\"");
+				operands.push(new Operand(Object.class, operands.pop().toBoolean().addBranch(IFEQ, isFalse).append(left.builder).addBranch(GOTO, end).updateLabel(isFalse).append(right.builder).updateLabel(end)));
+				break;
 			}
 
-			assert Entry.class.equals(left.type);
-			assert !operands.isEmpty();
+			case ":":
+				operands.push(new Operand(Entry.class, left.toObject(false))).push(new Operand(Entry.class, right.toObject(false)));
 
-			final Label isFalse = left.builder.newLabel();
-			final Label end = left.builder.newLabel();
+				if (operators.isEmpty() || !operators.peek().has(Operator.ALLOW_PAIRS)) {
+					operators.push(Operator.get(",", true).withRightExpressions(-1));
+				}
 
-			operands.push(new Operand(Object.class, operands.pop().toBoolean().addBranch(IFEQ, isFalse).append(left.builder).addBranch(GOTO, end).updateLabel(isFalse).append(right.builder).updateLabel(end)));
-			break;
-		}
+				break;
 
-		case ":":
-			operands.push(new Operand(Entry.class, left.toObject(false))).push(new Operand(Entry.class, right.toObject(false)));
+			case ";":
+				if (left.type == null) {
+					left.builder.addCode(POP, POP2, POP2);
+				} else {
+					left.builder.addCode(long.class.equals(left.type) || double.class.equals(left.type) ? POP2 : POP);
+				}
 
-			if (operators.isEmpty() || !operators.peek().has(Operator.ALLOW_PAIRS)) {
-				operators.push(Operator.get(",", true).withRightExpressions(-1));
+				operands.push(new Operand(right.type, left.builder.append(right.builder)));
+				break;
+
+			case ",":
+				processOperation(namedExpressions, expressions, identifiers, operands.push(), operators.push(Operator.get("[", false).withRightExpressions(operator.getRightExpressions() + 1)));
+				break;
+
+			case "(":
+				operands.push();
+				break;
+
+			case "=":
+				operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).append(left.builder)));
+				break;
+
+			case "\u2620": case "~:<": // Die
+				operands.push(new Operand(Object.class, right.toObject(false).addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addCode(ATHROW)));
+				break;
+
+			case "~@": { // Get class
+				final Label isNull = right.builder.newLabel();
+
+				operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(EXPRESSION_GET_VALUE).updateLabel(isNull)));
+				break;
 			}
 
-			break;
-
-		case ";":
-			if (left.type == null) {
-				left.builder.addCode(POP, POP2, POP2);
-			} else {
-				left.builder.addCode(long.class.equals(left.type) || double.class.equals(left.type) ? POP2 : POP);
-			}
-
-			operands.push(new Operand(right.type, left.builder.append(right.builder)));
-			break;
-
-		case ",":
-			processOperation(namedExpressions, expressions, identifiers, operands.push(), operators.push(Operator.get("[", false).withRightExpressions(operator.getRightExpressions() + 1)));
-			break;
-
-		case "(":
-			operands.push();
-			break;
-
-		case "=":
-			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).append(left.builder)));
-			break;
-
-		case "\u2620": case "~:<": // Die
-			operands.push(new Operand(Object.class, right.toObject(false).addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addCode(ATHROW)));
-			break;
-
-		case "~@": { // Get class
-			final Label isNull = right.builder.newLabel();
-
-			operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(EXPRESSION_GET_VALUE).updateLabel(isNull)));
-			break;
-		}
-
-		default:
-			assert false : "Unrecognized operator \"" + operator.getString() + "\" while parsing expression";
+			default:
+				assert false : "Unrecognized operator \"" + operator.getString() + "\" while parsing expression";
 		}
 	}
 
 	/**
-	 * Unescapes a quoted identifier name
+	 * Unescape a quoted identifier name.
 	 *
 	 * @param rawIdentifier the escaped name of the identifier
 	 * @return the unescaped name of the identifier
@@ -844,9 +858,12 @@ public final class Expression {
 
 							if (prefixString != null) {
 								switch (prefixString) {
-								case "/":
-								case "\\": isRoot = true; break;
-								default: assert false : "Unrecognized prefix: " + prefixString;
+									case "/":
+									case "\\":
+										isRoot = true;
+										break;
+									default:
+										assert false : "Unrecognized prefix: " + prefixString;
 								}
 
 								if (isInternal || identifier.endsWith("(") || (identifier.startsWith(".") && (!".".equals(identifier) || !isRoot))) {
@@ -860,10 +877,18 @@ public final class Expression {
 								} else if (matcher.group("current") == null) {
 									// Check for literals
 									switch (identifier) {
-									case "true":  operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(1))); break processIdentifier;
-									case "false": operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(0))); break processIdentifier;
-									case "null":  operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL))); break processIdentifier;
-									default: unstatedBackreach = true; break;
+										case "true":
+											operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(1)));
+											break processIdentifier;
+										case "false":
+											operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(0)));
+											break processIdentifier;
+										case "null":
+											operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
+											break processIdentifier;
+										default:
+											unstatedBackreach = true;
+											break;
 									}
 								}
 							}
@@ -880,15 +905,19 @@ public final class Expression {
 							operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).addInvoke(PERSISTENT_STACK_PEEK)));
 						} else if (isInternal) { // Everything that starts with "." is considered internal
 							switch (identifier) {
-							case "index":   operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX))); break;
-							case "hasNext": operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_HAS_NEXT))); break;
-
-							case "isFirst":
-								operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
-								processOperation(namedExpressions, expressionMap, identifierMap, operands, operators.push(Operator.get("!", false)));
-								break;
-
-							default: operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL))); break;
+								case "index":
+									operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
+									break;
+								case "hasNext":
+									operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_HAS_NEXT)));
+									break;
+								case "isFirst":
+									operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(PERSISTENT_STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
+									processOperation(namedExpressions, expressionMap, identifierMap, operands, operators.push(Operator.get("!", false)));
+									break;
+								default:
+									operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
+									break;
 							}
 						} else if (identifier.endsWith("(")) { // Process the method call
 							final String name = identifier.startsWith("`") ? unescapeQuotedIdentifier(identifier.substring(1, identifier.length() - 2)) : identifier.substring(0, identifier.length() - 1);

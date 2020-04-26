@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suppressions PUBLIC "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN" "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+
+	<!-- Allow star imports for MethodBuilder, due to the number of constants. -->
+	<suppress checks="AvoidStarImport" message="[.]MethodBuilder[.][*]"/>
+
+	<!-- Allow names for classes that are run when on Java 8+ ("*_8"). -->
+	<suppress checks="TypeName" message="'[a-zA-Z0-9]+_8'"/>
+
+</suppressions>

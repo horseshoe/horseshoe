@@ -15,7 +15,7 @@ final class Operator {
 	/**
 	 * This represents all allowed ASCII characters that can be used as unary operators.
 	 *
-	 * Notes:
+	 * <p>Notes:
 	 *  - ! probably shouldn't be allowed as it conflicts with Mustache comments ({@code {{! Mustache comment }}}), but it is the most logical "not" operator.
 	 *  - ", ', and ` aren't allowed because they are used in string and identifier literals.
 	 *  - #, &amp;, /, &lt;, &gt;, @, ^ aren't allowed because they conflict with Mustache or Horseshoe tags.
@@ -30,7 +30,7 @@ final class Operator {
 	/**
 	 * This represents all allowed ASCII characters that can be used as binary operators.
 	 *
-	 * Notes:
+	 * <p>Notes:
 	 *  - ", ', and ` aren't allowed because they are used in string and identifier literals.
 	 *  - $, _ aren't allowed because they are allowed in identifier literals.
 	 *  - ), ], } aren't allowed because they close other operators.
@@ -42,10 +42,10 @@ final class Operator {
 	private static final String OPERATOR_GE_128_PATTERN = "[\\u0080-\\uFFFF&&[\\p{P}\\p{S}]&&" + Identifier.NEGATED_CHARACTER_CLASS + "]";
 	private static final String REMAINING_OPERATOR_CHARACTERS = ")]}" + BINARY_OPERATOR_CHARACTERS.replaceAll("[" + Pattern.quote(UNARY_OPERATOR_CHARACTERS) + "]+", "");
 
-	private static final Pattern UNARY_OPERATOR_CHARACTER_PATTERN =  Pattern.compile(OPERATOR_GE_128_PATTERN // Allow a single character >= 128...
-			+ "|[" + Pattern.quote(UNARY_OPERATOR_CHARACTERS) + "][" + Pattern.quote(REMAINING_OPERATOR_CHARACTERS) + "]*"); // ...or allow additional non-unary operator characters after initial unary operator character
-	private static final Pattern BINARY_OPERATOR_CHARACTER_PATTERN = Pattern.compile(OPERATOR_GE_128_PATTERN // Allow a single character >= 128...
-			+ "|[" + Pattern.quote(BINARY_OPERATOR_CHARACTERS) + "][" + Pattern.quote(REMAINING_OPERATOR_CHARACTERS) + "]*"); // ...or allow additional non-unary operator characters after initial binary operator character
+	private static final Pattern UNARY_OPERATOR_CHARACTER_PATTERN =  Pattern.compile(OPERATOR_GE_128_PATTERN + // Allow a single character >= 128...
+			"|[" + Pattern.quote(UNARY_OPERATOR_CHARACTERS) + "][" + Pattern.quote(REMAINING_OPERATOR_CHARACTERS) + "]*"); // ...or allow additional non-unary operator characters after initial unary operator character
+	private static final Pattern BINARY_OPERATOR_CHARACTER_PATTERN = Pattern.compile(OPERATOR_GE_128_PATTERN + // Allow a single character >= 128...
+			"|[" + Pattern.quote(BINARY_OPERATOR_CHARACTERS) + "][" + Pattern.quote(REMAINING_OPERATOR_CHARACTERS) + "]*"); // ...or allow additional non-unary operator characters after initial binary operator character
 
 	// Operator Properties
 	public static final int LEFT_EXPRESSION     = 0x00000001; // Has an expression on the left
@@ -116,7 +116,7 @@ final class Operator {
 		operators.add(new Operator("?",      14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
 		operators.add(new Operator(":",      14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair"));
 		operators.add(new Operator("=",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind"));
-		operators.add(new Operator("\u2620", 16, RIGHT_EXPRESSION, "Die"));
+		operators.add(new Operator("\u2620", 16, RIGHT_EXPRESSION, "Die")); // Skull and crossbones
 		operators.add(new Operator("~:<",    16, RIGHT_EXPRESSION, "Die - Alternate"));
 		operators.add(new Operator(",",      17, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
 		operators.add(new Operator(";",      17, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
@@ -124,7 +124,7 @@ final class Operator {
 		// These operators have known assertion failures and may contain ambiguities with other operators or Horseshoe features. These ambiguities have been thoroughly analyzed and deemed acceptable.
 		final Set<String> ignoreFailuresIn = new HashSet<>(Arrays.asList("?[?" /* pseudo-ambiguous '[' */,
 				"?.?" /* ambiguous '.' */,
-				".." /* pseudo-ambiguous '.' */ ));
+				".." /* pseudo-ambiguous '.' */));
 
 		for (final Operator operator : operators) {
 			final String string = operator.string;

@@ -11,9 +11,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
 
-import org.junit.Test;
-
 import horseshoe.internal.ParsedLine;
+
+import org.junit.Test;
 
 public class LoaderTests {
 
@@ -23,7 +23,7 @@ public class LoaderTests {
 	private static class StringPartReader extends Reader {
 
 		public static final String DELIMITER = LS;
-		public static final char TO_LOAD[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzrrrrssstttlllnnnaaaaeeeeeeeeoooiiuu    .?!".toCharArray();
+		public static final char[] TO_LOAD = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzrrrrssstttlllnnnaaaaeeeeeeeeoooiiuu    .?!".toCharArray();
 
 		public boolean isClosed = false;
 		public int toRead = DELIMITER.length();

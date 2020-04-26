@@ -47,7 +47,7 @@ public final class PartialsTests {
 		Assert.assertEquals("324", writer.toString());
 	}
 
-	@Test (expected = StackOverflowError.class)
+	@Test(expected = StackOverflowError.class)
 	public void testBadRecursivePartial() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
@@ -87,7 +87,7 @@ public final class PartialsTests {
 		Assert.assertEquals("3" + LS + "2" + LS + "4" + LS, writer.toString());
 	}
 
-	@Test (expected = StackOverflowError.class)
+	@Test(expected = StackOverflowError.class)
 	public void testInlineBadRecursivePartial() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
@@ -96,7 +96,7 @@ public final class PartialsTests {
 		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
 	}
 
-	@Test (expected = LoadException.class)
+	@Test(expected = LoadException.class)
 	public void testInlineBadPartial() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()

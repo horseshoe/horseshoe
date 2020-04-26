@@ -68,7 +68,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Creates a new template loader that is mustache-compatible
+	 * Creates a new template loader that is mustache-compatible.
 	 *
 	 * @return the new mustache loader
 	 */
@@ -365,7 +365,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Loads the list of actions to be performed when rendering the template
+	 * Loads the list of actions to be performed when rendering the template.
 	 *
 	 * @param template the template to load
 	 * @param loaders the stack of items being loaded
@@ -435,134 +435,134 @@ public class TemplateLoader {
 			while (tag.length() != 0) {
 				try {
 					switch (tag.charAt(0)) {
-					case '!': // Comments are completely ignored
-						break processTag;
+						case '!': // Comments are completely ignored
+							break processTag;
 
-					case '<': // Local partial
-						if (extensions.contains(Extension.INLINE_PARTIALS)) {
+						case '<': // Local partial
+							if (extensions.contains(Extension.INLINE_PARTIALS)) {
+								final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
+								final Template partial = new Template(name);
+
+								sections.peek().getLocalPartials().put(name, partial);
+								sections.push(partial.getSection());
+								actionStack.push(partial.getActions());
+								break processTag;
+							}
+
+							break;
+
+						case '>': { // Load partial
 							final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
-							final Template partial = new Template(name);
+							final Template localPartial = sections.peek().getLocalPartials().get(name);
+							final Template partial = (localPartial != null ? localPartial : load(name, loaders));
 
-							sections.peek().getLocalPartials().put(name, partial);
-							sections.push(partial.getSection());
-							actionStack.push(partial.getActions());
+							sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
+							actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag != null ? textBeforeStandaloneTag : EMPTY_STATIC_CONTENT_RENDERER));
 							break processTag;
 						}
 
-						break;
+						case '#': { // Start a new section, or repeat the previous section
+							final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
-					case '>': { // Load partial
-						final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
-						final Template localPartial = sections.peek().getLocalPartials().get(name);
-						final Template partial = (localPartial != null ? localPartial : load(name, loaders));
+							if (expression.length() == 0 && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
+								sections.push(Section.repeat(sections.peek(), loader.toLocationString()));
+							} else if (expression.length() != 0 && expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
+								final Matcher annotation = ANNOTATION_PATTERN.matcher(expression);
 
-						sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
-						actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag != null ? textBeforeStandaloneTag : EMPTY_STATIC_CONTENT_RENDERER));
-						break processTag;
-					}
+								if (!annotation.matches()) {
+									throw new LoadException(loaders, "Invalid annotation format");
+								}
 
-					case '#': { // Start a new section, or repeat the previous section
-						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
+								final String sectionName = annotation.group("name");
+								final String parameters = annotation.group("parameters");
+								final String location = loader.toLocationString();
 
-						if (expression.length() == 0 && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
-							sections.push(Section.repeat(sections.peek(), loader.toLocationString()));
-						} else if (expression.length() != 0 && expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
-							final Matcher annotation = ANNOTATION_PATTERN.matcher(expression);
+								// Load the annotation arguments
+								sections.push(new Section(sections.peek(), sectionName, location, parameters == null ? null : new Expression(location, null, parameters, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
+							} else { // Start a new section
+								final String location = loader.toLocationString();
 
-							if (!annotation.matches()) {
-								throw new LoadException(loaders, "Invalid annotation format");
+								sections.push(new Section(sections.peek(), location, new Expression(location, null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
 							}
 
-							final String sectionName = annotation.group("name");
-							final String parameters = annotation.group("parameters");
-							final String location = loader.toLocationString();
-
-							// Load the annotation arguments
-							sections.push(new Section(sections.peek(), sectionName, location, parameters == null ? null : new Expression(location, null, parameters, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
-						} else { // Start a new section
-							final String location = loader.toLocationString();
-
-							sections.push(new Section(sections.peek(), location, new Expression(location, null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
-						}
-
-						// Add a new render section action
-						actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
-						actionStack.push(sections.peek().getActions());
-						break processTag;
-					}
-
-					case '^': { // Start a new inverted section, or else block for the current section
-						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
-
-						if (expression.length() == 0 && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
-							if (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null) {
-								throw new LoadException(loaders, "Section else tag outside section start tag");
-							}
-
-							actionStack.pop();
-						} else { // Start a new inverted section
-							final String location = loader.toLocationString();
-
-							sections.push(new Section(sections.peek(), location, new Expression(location, null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+							// Add a new render section action
 							actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
+							actionStack.push(sections.peek().getActions());
+							break processTag;
 						}
 
-						// Grab the inverted action list from the section
-						final List<Action> actions = actionStack.peek();
+						case '^': { // Start a new inverted section, or else block for the current section
+							final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
 
-						actionStack.push(((SectionRenderer)actions.get(actions.size() - 1)).getSection().getInvertedActions());
-						break processTag;
-					}
+							if (expression.length() == 0 && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
+								if (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null) {
+									throw new LoadException(loaders, "Section else tag outside section start tag");
+								}
 
-					case '/': { // Close the current section
-						final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
-						final Section section = sections.peek();
+								actionStack.pop();
+							} else { // Start a new inverted section
+								final String location = loader.toLocationString();
 
-						if (sections.size() <= 1) { // There should always be at least one section on the stack (the template root section)
-							throw new LoadException(loaders, "Section close tag without matching section start tag");
-						} else if ((expression.length() > 0 || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression)) {
-							if (expression.length() > 0 && extensions.contains(Extension.SMART_END_TAGS)) {
-								break;
+								sections.push(new Section(sections.peek(), location, new Expression(location, null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+								actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
 							}
 
-							throw new LoadException(loaders, "Unmatched section start tag, expecting \"" + section.getName() + "\"");
+							// Grab the inverted action list from the section
+							final List<Action> actions = actionStack.peek();
+
+							actionStack.push(((SectionRenderer)actions.get(actions.size() - 1)).getSection().getInvertedActions());
+							break processTag;
 						}
 
-						sections.pop();
-						actionStack.pop();
-						break processTag;
-					}
+						case '/': { // Close the current section
+							final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
+							final Section section = sections.peek();
 
-					case '=': { // Set delimiter
-						final Matcher matcher = SET_DELIMITER_PATTERN.matcher(tag);
+							if (sections.size() <= 1) { // There should always be at least one section on the stack (the template root section)
+								throw new LoadException(loaders, "Section close tag without matching section start tag");
+							} else if ((expression.length() > 0 || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression)) {
+								if (expression.length() > 0 && extensions.contains(Extension.SMART_END_TAGS)) {
+									break;
+								}
 
-						if (!matcher.matches()) {
-							throw new LoadException(loaders, "Invalid set delimiter tag");
-						}
-
-						delimiter = new Delimiter(matcher.group("start"), matcher.group("end"));
-						break processTag;
-					}
-
-					case '{': // Unescaped content tag
-					case '&':
-						textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-						actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), null, CharSequenceUtils.trim(tag, 1, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
-						break processTag;
-
-					default:
-						// Check for a named expression
-						if (extensions.containsAll(EnumSet.of(Extension.EXPRESSIONS, Extension.NAMED_EXPRESSIONS))) {
-							final CharSequence expression = CharSequenceUtils.trim(tag, 0, tag.length());
-							final Matcher namedExpression = NAMED_EXPRESSION_PATTERN.matcher(expression);
-
-							if (namedExpression.lookingAt()) {
-								new Expression(loader.toLocationString(), namedExpression.group("name"), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), true);
-								break processTag;
+								throw new LoadException(loaders, "Unmatched section start tag, expecting \"" + section.getName() + "\"");
 							}
+
+							sections.pop();
+							actionStack.pop();
+							break processTag;
 						}
 
-						break;
+						case '=': { // Set delimiter
+							final Matcher matcher = SET_DELIMITER_PATTERN.matcher(tag);
+
+							if (!matcher.matches()) {
+								throw new LoadException(loaders, "Invalid set delimiter tag");
+							}
+
+							delimiter = new Delimiter(matcher.group("start"), matcher.group("end"));
+							break processTag;
+						}
+
+						case '{': // Unescaped content tag
+						case '&':
+							textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
+							actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), null, CharSequenceUtils.trim(tag, 1, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
+							break processTag;
+
+						default:
+							// Check for a named expression
+							if (extensions.containsAll(EnumSet.of(Extension.EXPRESSIONS, Extension.NAMED_EXPRESSIONS))) {
+								final CharSequence expression = CharSequenceUtils.trim(tag, 0, tag.length());
+								final Matcher namedExpression = NAMED_EXPRESSION_PATTERN.matcher(expression);
+
+								if (namedExpression.lookingAt()) {
+									new Expression(loader.toLocationString(), namedExpression.group("name"), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), true);
+									break processTag;
+								}
+							}
+
+							break;
 					}
 
 					// Default to parsing as a dynamic content tag
@@ -593,7 +593,7 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Sets the character set used for loading additional templates
+	 * Sets the character set used for loading additional templates.
 	 *
 	 * @param charset the character set used for loading additional templates
 	 * @return this object

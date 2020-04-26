@@ -143,7 +143,7 @@ public abstract class Accessor {
 	}
 
 	/**
-	 * Accesses the length of an array
+	 * An array length accessor provides access to the length of an array.
 	 */
 	private static final class ArrayLengthAccessor extends Accessor {
 		@Override
@@ -153,7 +153,7 @@ public abstract class Accessor {
 	}
 
 	/**
-	 * Accesses a field in a class
+	 * A field accessor provides access to a field in a class.
 	 */
 	private static final class FieldAccessor extends Accessor {
 
@@ -215,7 +215,7 @@ public abstract class Accessor {
 	}
 
 	/**
-	 * Accesses a value in a map using the specified key
+	 * A map accessor provides access to a value in a map using the specified key.
 	 */
 	private static final class MapAccessor extends Accessor {
 
@@ -238,7 +238,7 @@ public abstract class Accessor {
 	}
 
 	/**
-	 * Accesses a method in a class
+	 * A method accessor provides access to a method.
 	 */
 	private static final class MethodAccessor extends Accessor {
 
@@ -361,7 +361,7 @@ public abstract class Accessor {
 	}
 
 	/**
-	 * Accesses one of a number of methods in a class
+	 * A methods accessor allows access to one of a number of methods in a class.
 	 */
 	private static final class MethodsAccessor extends Accessor {
 

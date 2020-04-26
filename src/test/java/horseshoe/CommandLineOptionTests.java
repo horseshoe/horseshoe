@@ -11,10 +11,10 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
-import org.junit.Test;
-
 import horseshoe.CommandLineOption.ArgumentPair;
 import horseshoe.CommandLineOption.OptionSet;
+
+import org.junit.Test;
 
 public class CommandLineOptionTests {
 

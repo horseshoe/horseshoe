@@ -328,25 +328,25 @@ public final class MethodBuilder {
 	};
 
 	private static class Opcode {
-		/** The mask for the bytes following the opcode */
+		/** This value is the opcode mask for the meaning of the bytes following the opcode. */
 		private static final int PROP_EXTRA_BYTES_MASK = 0x03;
-		/** A 1 byte local variable index follows */
+		/** This value indicates the opcode has a 1 byte local variable index that follows. */
 		private static final int PROP_LOCAL_INDEX = 0x01;
-		/** A 2 byte constant pool index follows */
+		/** This value indicates the opcode has a 2 byte constant pool index that follows. */
 		private static final int PROP_CONST_POOL_INDEX = 0x02;
-		/** A 2 byte branch offset follows */
+		/** This value indicates the opcode has a 2 byte branch offset that follows. */
 		private static final int PROP_BRANCH_OFFSET = 0x03;
 
-		/** The opcode has a custom set of bytes that follow */
+		/** This value indicates the opcode has a custom set of bytes that follow. */
 		private static final int PROP_HAS_CUSTOM_EXTRA_BYTES = 0x04;
-		/** The opcode has a variable length */
+		/** This value indicates the opcode has a variable length. */
 		private static final int PROP_HAS_VARIABLE_LENGTH = 0x08;
-		/** The opcode has a variable stack offset */
+		/** This value indicates the opcode has a variable stack offset. */
 		private static final int PROP_HAS_VARIABLE_STACK_OFFSET = 0x10;
-		/** The opcode is valid to use as a stand-alone instruction */
+		/** This value indicates the opcode is valid to use as a stand-alone instruction. */
 		private static final int PROP_IS_STANDALONE_VALID = 0x80;
 
-		/** A 4 byte branch offset follows */
+		/** This value indicates the opcode has a 4 byte branch offset. */
 		private static final int PROP_BRANCH_OFFSET_4 = PROP_BRANCH_OFFSET | PROP_HAS_CUSTOM_EXTRA_BYTES;
 
 		private final String mnemonic;
@@ -1184,7 +1184,7 @@ public final class MethodBuilder {
 
 			if (method == null) {
 				for (final Method check : base.getDeclaredMethods()) {
-					if ((check.getModifiers() & (Modifier.FINAL | Modifier.NATIVE | Modifier.PRIVATE | Modifier.PROTECTED | Modifier.STATIC)) == 0 && !check.isSynthetic() ) {
+					if ((check.getModifiers() & (Modifier.FINAL | Modifier.NATIVE | Modifier.PRIVATE | Modifier.PROTECTED | Modifier.STATIC)) == 0 && !check.isSynthetic()) {
 						if (method != null) {
 							throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method (contains none) or 1 public declared non-static, non-final, non-native method (contains multiple)");
 						}
@@ -1536,7 +1536,7 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder pushConstant(final boolean value) {
-		return addCode(value ? ICONST_1 :ICONST_0);
+		return addCode(value ? ICONST_1 : ICONST_0);
 	}
 
 	/**
@@ -1547,21 +1547,21 @@ public final class MethodBuilder {
 	 */
 	public MethodBuilder pushConstant(final int value) {
 		switch (value) {
-		case -1: return addCode(ICONST_M1);
-		case 0:  return addCode(ICONST_0);
-		case 1:  return addCode(ICONST_1);
-		case 2:  return addCode(ICONST_2);
-		case 3:  return addCode(ICONST_3);
-		case 4:  return addCode(ICONST_4);
-		case 5:  return addCode(ICONST_5);
-		default:
-			if (value == (byte)value) {
-				return addCode(BIPUSH, (byte)value);
-			} else if (value == (short)value) {
-				return addCode(SIPUSH, (byte)(value >>> 8), (byte)value);
-			}
+			case -1: return addCode(ICONST_M1);
+			case 0:  return addCode(ICONST_0);
+			case 1:  return addCode(ICONST_1);
+			case 2:  return addCode(ICONST_2);
+			case 3:  return addCode(ICONST_3);
+			case 4:  return addCode(ICONST_4);
+			case 5:  return addCode(ICONST_5);
+			default:
+				if (value == (byte)value) {
+					return addCode(BIPUSH, (byte)value);
+				} else if (value == (short)value) {
+					return addCode(SIPUSH, (byte)(value >>> 8), (byte)value);
+				}
 
-			break;
+				break;
 		}
 
 		getConstant(value).locations.add(new Location(this, length + 1));
@@ -1757,10 +1757,18 @@ public final class MethodBuilder {
 
 		if (!opcode.has(Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_LENGTH)) {
 			switch (opcode.properties & Opcode.PROP_EXTRA_BYTES_MASK) {
-			case Opcode.PROP_LOCAL_INDEX:      sb.append(' ').append(code[start + 1] & 0xFF).append("; "); break; // 2-byte opcode with index
-			case Opcode.PROP_CONST_POOL_INDEX: toStringConstant(sb, constantPoolArray[((code[start + 1] & 0xFF) << 8) + (code[start + 2] & 0xFF)], ""); break; // 3-byte opcode with constant pool index;
-			case Opcode.PROP_BRANCH_OFFSET:    sb.append(' ').append(start + ((code[start + 1] & 0xFF) << 8) + (code[start + 2] & 0xFF)).append("; "); break; // 3-byte opcode with branch offset
-			default:                           sb.append("; "); break; // 1-byte opcode
+				case Opcode.PROP_LOCAL_INDEX: // 2-byte opcode with index
+					sb.append(' ').append(code[start + 1] & 0xFF).append("; ");
+					break;
+				case Opcode.PROP_CONST_POOL_INDEX: // 3-byte opcode with constant pool index
+					toStringConstant(sb, constantPoolArray[((code[start + 1] & 0xFF) << 8) + (code[start + 2] & 0xFF)], "");
+					break;
+				case Opcode.PROP_BRANCH_OFFSET: // 3-byte opcode with branch offset
+					sb.append(' ').append(start + ((code[start + 1] & 0xFF) << 8) + (code[start + 2] & 0xFF)).append("; ");
+					break;
+				default: // 1-byte opcode
+					sb.append("; ");
+					break;
 			}
 		} else if (code[start] == INVOKEINTERFACE || code[start] == INVOKEDYNAMIC) {
 			toStringConstant(sb, constantPoolArray[((code[start + 1] & 0xFF) << 8) + (code[start + 2] & 0xFF)], "");
@@ -1799,7 +1807,7 @@ public final class MethodBuilder {
 			throw new IllegalStateException("Variable length opcode missing to string conversion: " + opcode.mnemonic);
 		}
 
-		assert opcode.length > 0: "Invalid opcode length (" + opcode.length + "): " + opcode.mnemonic;
+		assert opcode.length > 0 : "Invalid opcode length (" + opcode.length + "): " + opcode.mnemonic;
 		return opcode.length;
 	}
 

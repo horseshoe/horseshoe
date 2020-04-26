@@ -15,8 +15,7 @@ public class NamedExprTests {
 	@Test
 	public void testNamedExprMethodCall() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
-		final Template template = new TemplateLoader()
-				.load("Test", "{{returnArg -> .}}{{(returnArg(\"123\") + \"4\").`replace:CharSequence`(\"1\", \"2\")}}");
+		final Template template = new TemplateLoader().load("Test", "{{returnArg -> .}}{{(returnArg(\"123\") + \"4\").`replace:CharSequence`(\"1\", \"2\")}}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, Collections.emptyMap(), writer);
 		assertEquals("2234", writer.toString());

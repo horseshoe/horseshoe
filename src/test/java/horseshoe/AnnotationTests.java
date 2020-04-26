@@ -43,6 +43,7 @@ public class AnnotationTests {
 
 	private static final class MapAnnotation implements AnnotationHandler {
 		final Map<String, String> map = new LinkedHashMap<>();
+
 		@Override
 		public Writer getWriter(final Writer writer, final Object value) throws IOException {
 			return new StringWriter() {
@@ -58,12 +59,13 @@ public class AnnotationTests {
 					try {
 						writer.write(cbuf, off, len);
 					} catch (final IOException e) {
+						// Ignore exceptions (should never occur)
 					}
 				}
 
 				@Override
 				public void write(final int c) {
-					final char chars[] = Character.toChars(c);
+					final char[] chars = Character.toChars(c);
 					write(chars, 0, chars.length);
 				}
 
@@ -73,6 +75,7 @@ public class AnnotationTests {
 					try {
 						writer.write(str, off, len);
 					} catch (final IOException e) {
+						// Ignore exceptions (should never occur)
 					}
 				}
 

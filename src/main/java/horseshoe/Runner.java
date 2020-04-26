@@ -174,23 +174,47 @@ public class Runner {
 			final ArgumentPair pair = it.next();
 
 			if (pair.option != null) {
-				assert pair.option.longName != null: "Option " + pair.option + " does not have a long name.";
+				assert pair.option.longName != null : "Option " + pair.option + " does not have a long name.";
 
 				switch (pair.option.longName) {
-				case "help": showHelp(System.out); return;
-				case "version": System.out.println("Horseshoe (java) version " + Template.VERSION); return;
-				case "log-level": Template.LOGGER.setLevel(Level.parse(pair.argument)); break;
-				case "disable-extensions": loader.setExtensions(EnumSet.noneOf(Extension.class)); break;
-				case "html": settings.setEscapeFunction(Settings.HTML_ESCAPE_FUNCTION); break;
-				case "add-class": settings.getLoadableClasses().add(pair.argument); break;
-				case "access": settings.setContextAccess(ContextAccess.valueOf(pair.argument)); break;
-				case "data": parseDataDefine(globalData, pair.argument); break;
-				case "include": loader.getIncludeDirectories().add(Paths.get(pair.argument)); break;
-				case "input-charset": stdInCharset = loader.setCharset(Charset.forName(pair.argument)).getCharset(); break;
-				case "output": outputFile = pair.argument; break;
-				case "output-charset": stdOutCharset = outputCharset = Charset.forName(pair.argument); break;
-
-				default: throw new IllegalArgumentException("Unrecognized option detected: " + pair.option);
+					case "help":
+						showHelp(System.out);
+						return;
+					case "version":
+						System.out.println("Horseshoe (java) version " + Template.VERSION);
+						return;
+					case "log-level":
+						Template.LOGGER.setLevel(Level.parse(pair.argument));
+						break;
+					case "disable-extensions":
+						loader.setExtensions(EnumSet.noneOf(Extension.class));
+						break;
+					case "html":
+						settings.setEscapeFunction(Settings.HTML_ESCAPE_FUNCTION);
+						break;
+					case "add-class":
+						settings.getLoadableClasses().add(pair.argument);
+						break;
+					case "access":
+						settings.setContextAccess(ContextAccess.valueOf(pair.argument));
+						break;
+					case "data":
+						parseDataDefine(globalData, pair.argument);
+						break;
+					case "include":
+						loader.getIncludeDirectories().add(Paths.get(pair.argument));
+						break;
+					case "input-charset":
+						stdInCharset = loader.setCharset(Charset.forName(pair.argument)).getCharset();
+						break;
+					case "output":
+						outputFile = pair.argument;
+						break;
+					case "output-charset":
+						stdOutCharset = outputCharset = Charset.forName(pair.argument);
+						break;
+					default:
+						throw new IllegalArgumentException("Unrecognized option detected: " + pair.option);
 				}
 			} else {
 				inputFile = parseArgument(pair.argument, inputFile == null);

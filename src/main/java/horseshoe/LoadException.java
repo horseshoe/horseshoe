@@ -38,7 +38,7 @@ public class LoadException extends Exception {
 	}
 
 	/**
-	 * Creates a new load exception
+	 * Creates a new load exception.
 	 *
 	 * @param loaders the items being loaded with the exception occurred
 	 * @param error the error associated with the exception
@@ -52,7 +52,7 @@ public class LoadException extends Exception {
 	}
 
 	/**
-	 * Creates a new load exception
+	 * Creates a new load exception.
 	 *
 	 * @param loaders the items being loaded with the exception occurred
 	 * @param error the error associated with the exception

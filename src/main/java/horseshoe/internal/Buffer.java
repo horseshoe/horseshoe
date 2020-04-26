@@ -71,7 +71,7 @@ public final class Buffer implements CharSequence {
 	}
 
 	/**
-	 * Gets the capacity of the buffer
+	 * Gets the capacity of the buffer.
 	 *
 	 * @return the capacity of the buffer
 	 */
@@ -85,7 +85,7 @@ public final class Buffer implements CharSequence {
 	}
 
 	/**
-	 * Gets the underlying character data used as the buffer
+	 * Gets the underlying character data used as the buffer.
 	 *
 	 * @return the underlying character data used as the buffer
 	 */
@@ -99,7 +99,7 @@ public final class Buffer implements CharSequence {
 	}
 
 	/**
-	 * Sets the length of useful data in the buffer
+	 * Sets the length of useful data in the buffer.
 	 *
 	 * @param length the length of useful data in the buffer
 	 * @return this buffer

@@ -25,7 +25,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 		 * @param section the section to be rendered
 		 * @return the created section renderer
 		 */
-		SectionRenderer create(final Section section){
+		SectionRenderer create(final Section section) {
 			return new SectionRenderer(section);
 		}
 	}

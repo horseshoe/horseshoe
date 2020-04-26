@@ -250,10 +250,10 @@ final class CommandLineOption {
 		this.argumentName = argumentName;
 		this.description = description;
 
-		assert Character.isAlphabetic(shortName) || Character.isDigit(shortName) || longName != null: "Option must have a name";
-		assert description != null: "Option " + this + " must have a description";
-		assert (hasArgument || hasLongOptionalArgument) == (argumentName != null): "Option " + this + " has conflicting argument name " + argumentName;
-		assert !hasArgument || !hasLongOptionalArgument: "Option " + this + " cannot have an argument that is required and optional";
+		assert Character.isAlphabetic(shortName) || Character.isDigit(shortName) || longName != null : "Option must have a name";
+		assert description != null : "Option " + this + " must have a description";
+		assert (hasArgument || hasLongOptionalArgument) == (argumentName != null) : "Option " + this + " has conflicting argument name " + argumentName;
+		assert !hasArgument || !hasLongOptionalArgument : "Option " + this + " cannot have an argument that is required and optional";
 	}
 
 	/**
@@ -340,7 +340,7 @@ final class CommandLineOption {
 	}
 
 	/**
-	 * Prints the option to the print stream. The option is printed using the following format: "-o, --option=<argument>".
+	 * Prints the option to the print stream. The option is printed using the following format: "-o, --option=&lt;argument&gt;".
 	 *
 	 * @param stream the stream used to print the option
 	 * @return the original stream parameter

@@ -14,11 +14,11 @@ public final class PersistentStack<T> implements Iterable<T> {
 	private int size = 0;
 
 	private class LIFOIterator implements java.util.Iterator<T> {
-		int i = size;
+		int index = size;
 
 		@Override
 		public boolean hasNext() {
-			return i != 0;
+			return index != 0;
 		}
 
 		@Override
@@ -27,7 +27,7 @@ public final class PersistentStack<T> implements Iterable<T> {
 				throw new NoSuchElementException();
 			}
 
-			return array[--i];
+			return array[--index];
 		}
 
 		@Override

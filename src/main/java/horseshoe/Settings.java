@@ -68,12 +68,28 @@ public class Settings {
 
 			for (int i = 0; i < raw.length(); i++) {
 				switch (raw.charAt(i)) {
-				case '&':  sb.append(raw, start, i).append("&amp;");  start = i + 1; break;
-				case '<':  sb.append(raw, start, i).append("&lt;");   start = i + 1; break;
-				case '>':  sb.append(raw, start, i).append("&gt;");   start = i + 1; break;
-				case '"':  sb.append(raw, start, i).append("&quot;"); start = i + 1; break;
-				case '\'': sb.append(raw, start, i).append("&#39;");  start = i + 1; break;
-				default: break;
+					case '&':
+						sb.append(raw, start, i).append("&amp;");
+						start = i + 1;
+						break;
+					case '<':
+						sb.append(raw, start, i).append("&lt;");
+						start = i + 1;
+						break;
+					case '>':
+						sb.append(raw, start, i).append("&gt;");
+						start = i + 1;
+						break;
+					case '"':
+						sb.append(raw, start, i).append("&quot;");
+						start = i + 1;
+						break;
+					case '\'':
+						sb.append(raw, start, i).append("&#39;");
+						start = i + 1;
+						break;
+					default:
+						break;
 				}
 			}
 

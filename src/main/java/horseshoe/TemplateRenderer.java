@@ -11,7 +11,7 @@ final class TemplateRenderer implements Action {
 	private final StaticContentRenderer priorStaticContent;
 
 	/**
-	 * Creates a new render template action
+	 * Creates a new render template action.
 	 *
 	 * @param template the template to render
 	 * @param priorStaticContent the static content just prior to the template (for partial indentation)
