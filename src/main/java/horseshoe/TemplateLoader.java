@@ -428,7 +428,7 @@ public class TemplateLoader {
 			final CharSequence tag = loader.setDelimiter(loader.checkNext("{") ? delimiter.unescapedEnd : delimiter.end).next();
 
 			if (!loader.hasNext()) {
-				throw new LoadException(loaders, "Unclosed tag, unexpected end of stream");
+				throw new LoadException(loaders, "Incomplete tag at end of input");
 			}
 
 			processTag:
@@ -493,24 +493,24 @@ public class TemplateLoader {
 
 						case '^': { // Start a new inverted section, or else block for the current section
 							final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
+							final SectionRenderer renderer;
 
 							if (expression.length() == 0 && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
-								if (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null) {
+								if (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null || sections.peek().getActions() != actionStack.pop()) {
 									throw new LoadException(loaders, "Section else tag outside section start tag");
 								}
 
-								actionStack.pop();
+								renderer = (SectionRenderer)actionStack.peek().get(actionStack.peek().size() - 1);
 							} else { // Start a new inverted section
 								final String location = loader.toLocationString();
 
 								sections.push(new Section(sections.peek(), location, new Expression(location, null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
-								actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
+								renderer = SectionRenderer.FACTORY.create(sections.peek());
+								actionStack.peek().add(renderer);
 							}
 
 							// Grab the inverted action list from the section
-							final List<Action> actions = actionStack.peek();
-
-							actionStack.push(((SectionRenderer)actions.get(actions.size() - 1)).getSection().getInvertedActions());
+							actionStack.push(renderer.getSection().getInvertedActions());
 							break processTag;
 						}
 
@@ -525,7 +525,7 @@ public class TemplateLoader {
 									break;
 								}
 
-								throw new LoadException(loaders, "Unmatched section start tag, expecting \"" + section.getName() + "\"");
+								throw new LoadException(loaders, "Unclosed section, expecting close tag for section \"" + section.getName() + "\" (" + section.getLocation() + ")");
 							}
 
 							sections.pop();
@@ -572,7 +572,7 @@ public class TemplateLoader {
 				} catch (final LoadException e) {
 					throw e;
 				} catch (final Exception e) {
-					throw new LoadException(loaders, "Invalid tag \"" + tag + "\"", e);
+					throw new LoadException(loaders, "Invalid tag \"" + tag + "\": " + e.getMessage(), e);
 				}
 			}
 		}
@@ -581,7 +581,7 @@ public class TemplateLoader {
 		final Section topSection = sections.pop();
 
 		if (!sections.isEmpty()) {
-			throw new LoadException(loaders, "Unmatched section tag \"" + topSection.toString() + "\", unexpected end of stream");
+			throw new LoadException(loaders, "Unmatched section tag \"" + topSection + "\" (" + topSection.getLocation() + ") at end of input");
 		}
 
 		// Check for empty last line of template, so that indentation is not applied

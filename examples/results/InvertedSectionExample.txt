@@ -1,0 +1,15 @@
+true evaluates to true. Same value (for true, parent of iteration list): {}
+false evaluates to false. Parent value is parent of iteration list: {}
+0 evaluates to false. Parent value is parent of iteration list: {}
+1 evaluates to true. Same value (for true, parent of iteration list): 1
+1099511627775 evaluates to true. Same value (for true, parent of iteration list): 1099511627775
+0 evaluates to false. Parent value is parent of iteration list: {}
+0.0 evaluates to false. Parent value is parent of iteration list: {}
+-1.0 evaluates to true. Same value (for true, parent of iteration list): -1.0
+ evaluates to false. Parent value is parent of iteration list: {}
+String evaluates to true. Same value (for true, parent of iteration list): String
+1 evaluates to true. Same value (for true, parent of iteration list): [1, 2, 3]
+2 evaluates to true. Same value (for true, parent of iteration list): [1, 2, 3]
+3 evaluates to true. Same value (for true, parent of iteration list): [1, 2, 3]
+[] evaluates to false. Parent value is parent of iteration list: {}
+Inversion of false renders.

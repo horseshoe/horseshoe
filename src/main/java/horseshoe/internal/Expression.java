@@ -1120,9 +1120,9 @@ public final class Expression {
 			throw e;
 		} catch (final Exception | LinkageError e) { // Don't let any exceptions escape
 			if (e.getMessage() == null) {
-				context.getSettings().getLogger().log(Level.WARNING, "Encountered {0} while evaluating expression \"{1}\" ({2})", e.getClass().getName(), originalString, location);
+				context.getSettings().getLogger().log(Level.WARNING, e, "Failed to evaluate expression \"{0}\" ({1})", originalString, location);
 			} else {
-				context.getSettings().getLogger().log(Level.WARNING, "Encountered {0} while evaluating expression \"{1}\" ({2}): {3}", e.getClass().getName(), originalString, location, e.getMessage());
+				context.getSettings().getLogger().log(Level.WARNING, e, "Failed to evaluate expression \"{0}\" ({1}): {2}", originalString, location, e.getMessage());
 			}
 		}
 

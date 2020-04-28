@@ -1,0 +1,9 @@
+{{<a}}
+  {{lower->toLowerCase()}}
+{{/}}
+{{lower->toString()}}
+{{upper->toUpperCase()}}
+{{#"Original String"}}
+  {{>a}}
+  {{upper() + "-" + lower()}}
+{{/}}

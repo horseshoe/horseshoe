@@ -2,8 +2,9 @@ package horseshoe;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Iterator;
-import java.util.List;
 import java.util.logging.Level;
 
 import horseshoe.internal.Expression;
@@ -89,20 +90,20 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * Dispatches an object array for rendering.
 	 *
 	 * @param context the render context
-	 * @param data the array to render
+	 * @param array the array to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private void dispatchArray(final RenderContext context, final Object[] array, final Writer writer) throws IOException {
 		if (array.length == 0) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			renderInvertedActions(context, writer);
 		} else {
 			context.getIndexedData().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
 				hasNext = i + 1 < array.length;
-				renderActions(context, array[index], writer, section.getActions());
+				renderActions(context, array[index], writer);
 			}
 
 			context.getIndexedData().pop();
@@ -113,20 +114,20 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * Dispatches an int array for rendering.
 	 *
 	 * @param context the render context
-	 * @param data the array to render
+	 * @param array the array to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	private void dispatchArray(final RenderContext context, final int[] data, final Writer writer) throws IOException {
-		if (data.length == 0) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+	private void dispatchArray(final RenderContext context, final int[] array, final Writer writer) throws IOException {
+		if (array.length == 0) {
+			renderInvertedActions(context, writer);
 		} else {
 			context.getIndexedData().push(this);
 
-			for (int i = 0; i < data.length; i++) {
+			for (int i = 0; i < array.length; i++) {
 				index = i;
-				hasNext = i + 1 < data.length;
-				renderActions(context, data[index], writer, section.getActions());
+				hasNext = i + 1 < array.length;
+				renderActions(context, array[index], writer);
 			}
 
 			context.getIndexedData().pop();
@@ -137,20 +138,20 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * Dispatches a byte array for rendering.
 	 *
 	 * @param context the render context
-	 * @param data the array to render
+	 * @param array the array to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	private void dispatchArray(final RenderContext context, final byte[] data, final Writer writer) throws IOException {
-		if (data.length == 0) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+	private void dispatchArray(final RenderContext context, final byte[] array, final Writer writer) throws IOException {
+		if (array.length == 0) {
+			renderInvertedActions(context, writer);
 		} else {
 			context.getIndexedData().push(this);
 
-			for (int i = 0; i < data.length; i++) {
+			for (int i = 0; i < array.length; i++) {
 				index = i;
-				hasNext = i + 1 < data.length;
-				renderActions(context, data[index], writer, section.getActions());
+				hasNext = i + 1 < array.length;
+				renderActions(context, array[index], writer);
 			}
 
 			context.getIndexedData().pop();
@@ -161,20 +162,20 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * Dispatches a double array for rendering.
 	 *
 	 * @param context the render context
-	 * @param data the array to render
+	 * @param array the array to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	private void dispatchArray(final RenderContext context, final double[] data, final Writer writer) throws IOException {
-		if (data.length == 0) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+	private void dispatchArray(final RenderContext context, final double[] array, final Writer writer) throws IOException {
+		if (array.length == 0) {
+			renderInvertedActions(context, writer);
 		} else {
 			context.getIndexedData().push(this);
 
-			for (int i = 0; i < data.length; i++) {
+			for (int i = 0; i < array.length; i++) {
 				index = i;
-				hasNext = i + 1 < data.length;
-				renderActions(context, data[index], writer, section.getActions());
+				hasNext = i + 1 < array.length;
+				renderActions(context, array[index], writer);
 			}
 
 			context.getIndexedData().pop();
@@ -185,20 +186,20 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * Dispatches a float array for rendering.
 	 *
 	 * @param context the render context
-	 * @param data the array to render
+	 * @param array the array to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private void dispatchArray(final RenderContext context, final float[] array, final Writer writer) throws IOException {
 		if (array.length == 0) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			renderInvertedActions(context, writer);
 		} else {
 			context.getIndexedData().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
 				hasNext = i + 1 < array.length;
-				renderActions(context, array[index], writer, section.getActions());
+				renderActions(context, array[index], writer);
 			}
 
 			context.getIndexedData().pop();
@@ -209,20 +210,20 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * Dispatches a char array for rendering.
 	 *
 	 * @param context the render context
-	 * @param data the array to render
+	 * @param array the array to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private void dispatchArray(final RenderContext context, final char[] array, final Writer writer) throws IOException {
 		if (array.length == 0) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			renderInvertedActions(context, writer);
 		} else {
 			context.getIndexedData().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
 				hasNext = i + 1 < array.length;
-				renderActions(context, array[index], writer, section.getActions());
+				renderActions(context, array[index], writer);
 			}
 
 			context.getIndexedData().pop();
@@ -233,20 +234,20 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * Dispatches a long array for rendering.
 	 *
 	 * @param context the render context
-	 * @param data the array to render
+	 * @param array the array to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private void dispatchArray(final RenderContext context, final long[] array, final Writer writer) throws IOException {
 		if (array.length == 0) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			renderInvertedActions(context, writer);
 		} else {
 			context.getIndexedData().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
 				hasNext = i + 1 < array.length;
-				renderActions(context, array[index], writer, section.getActions());
+				renderActions(context, array[index], writer);
 			}
 
 			context.getIndexedData().pop();
@@ -257,20 +258,20 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * Dispatches a boolean array for rendering.
 	 *
 	 * @param context the render context
-	 * @param data the array to render
+	 * @param array the array to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private void dispatchArray(final RenderContext context, final boolean[] array, final Writer writer) throws IOException {
 		if (array.length == 0) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			renderInvertedActions(context, writer);
 		} else {
 			context.getIndexedData().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
 				hasNext = i + 1 < array.length;
-				renderActions(context, array[index], writer, section.getActions());
+				renderActions(context, array[index], writer);
 			}
 
 			context.getIndexedData().pop();
@@ -281,20 +282,20 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * Dispatches a short array for rendering.
 	 *
 	 * @param context the render context
-	 * @param data the array to render
+	 * @param array the array to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private void dispatchArray(final RenderContext context, final short[] array, final Writer writer) throws IOException {
 		if (array.length == 0) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			renderInvertedActions(context, writer);
 		} else {
 			context.getIndexedData().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
 				hasNext = i + 1 < array.length;
-				renderActions(context, array[index], writer, section.getActions());
+				renderActions(context, array[index], writer);
 			}
 
 			context.getIndexedData().pop();
@@ -311,19 +312,13 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 */
 	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
 		if (data == null) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			renderInvertedActions(context, writer);
 		} else if (data instanceof Iterable<?>) {
 			dispatchIteratorData(context, ((Iterable<?>)data).iterator(), writer);
 		} else if (data.getClass().isArray()) {
 			dispatchArray(context, data, writer);
-		} else if (data instanceof Boolean) {
-			if ((Boolean)data) {
-				renderActions(context, context.getSectionData().peek(), writer, section.getActions());
-			} else {
-				renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
-			}
-		} else {
-			renderActions(context, data, writer, section.getActions());
+		} else if (!dispatchPrimitiveData(context, data, writer)) {
+			renderActions(context, data, writer);
 		}
 
 		if (section.cacheResult()) {
@@ -370,7 +365,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 */
 	protected final void dispatchIteratorData(final RenderContext context, final Iterator<?> it, final Writer writer) throws IOException {
 		if (!it.hasNext()) {
-			renderActions(context, context.getSectionData().peek(), writer, section.getInvertedActions());
+			renderInvertedActions(context, writer);
 			return;
 		}
 
@@ -381,14 +376,61 @@ class SectionRenderer implements Action, Expression.Indexed {
 
 			if (!it.hasNext()) {
 				hasNext = false;
-				renderActions(context, object, writer, section.getActions());
+				renderActions(context, object, writer);
 				break;
 			}
 
-			renderActions(context, object, writer, section.getActions());
+			renderActions(context, object, writer);
 		}
 
 		context.getIndexedData().pop();
+	}
+
+	/**
+	 * Attempts to dispatch primitive data for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the data to render
+	 * @param writer the writer used for rendering
+	 * @return true if the data was dispatched as a primitive data type, otherwise false
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private boolean dispatchPrimitiveData(final RenderContext context, final Object data, final Writer writer) throws IOException {
+		if (data instanceof Boolean) {
+			if (((Boolean)data).booleanValue()) {
+				renderActionsWithoutData(context, writer);
+			} else {
+				renderInvertedActions(context, writer);
+			}
+
+			return true;
+		}
+
+		final boolean isZero;
+
+		if (data instanceof Number) {
+			if (data instanceof Double || data instanceof Float) {
+				isZero = ((Number)data).doubleValue() == 0.0;
+			} else if (data instanceof BigDecimal) {
+				isZero = BigDecimal.ZERO.compareTo((BigDecimal)data) == 0;
+			} else if (data instanceof BigInteger) {
+				isZero = BigInteger.ZERO.equals(data);
+			} else {
+				isZero = ((Number)data).longValue() == 0;
+			}
+		} else if (data instanceof Character) {
+			isZero = (((Character)data).charValue() == 0);
+		} else {
+			return false;
+		}
+
+		if (isZero) {
+			renderInvertedActions(context, writer);
+		} else {
+			renderActions(context, data, writer);
+		}
+
+		return true;
 	}
 
 	@Override
@@ -444,27 +486,46 @@ class SectionRenderer implements Action, Expression.Indexed {
 	}
 
 	/**
-	 * Renders the actions using the specified context, data, and writer.
+	 * Renders the section's actions using the specified context, data, and writer.
 	 *
 	 * @param context the render context
 	 * @param data the data to render
 	 * @param writer the writer used for rendering
-	 * @param actions the actions to render
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	protected final void renderActions(final RenderContext context, final Object data, final Writer writer, final List<Action> actions) throws IOException {
+	private void renderActions(final RenderContext context, final Object data, final Writer writer) throws IOException {
 		if (section.isInvisible()) {
-			for (final Action action : actions) {
-				action.perform(context, writer);
-			}
+			renderActionsWithoutData(context, writer);
 		} else {
 			context.getSectionData().push(data);
-
-			for (final Action action : actions) {
-				action.perform(context, writer);
-			}
-
+			renderActionsWithoutData(context, writer);
 			context.getSectionData().pop();
+		}
+	}
+
+	/**
+	 * Renders the section's actions using the specified context and writer.
+	 *
+	 * @param context the render context
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void renderActionsWithoutData(final RenderContext context, final Writer writer) throws IOException {
+		for (final Action action : section.getActions()) {
+			action.perform(context, writer);
+		}
+	}
+
+	/**
+	 * Renders the section's inverted actions using the specified context and writer.
+	 *
+	 * @param context the render context
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void renderInvertedActions(final RenderContext context, final Writer writer) throws IOException {
+		for (final Action action : section.getInvertedActions()) {
+			action.perform(context, writer);
 		}
 	}
 

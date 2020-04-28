@@ -79,18 +79,19 @@ public final class Identifier {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
 		Object object = context.getSectionData().peek(Math.max(backreach, 0));
-		Class<?> objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
-		Accessor accessor = accessorDatabase.get(objectClass);
+		Class<?> objectClass = object.getClass();
+		Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
+		Accessor accessor = accessorDatabase.get(lookupClass);
 
 		if (accessor == null) {
 			accessor = Accessor.FACTORY.create(object, this, 0);
-			accessorDatabase.put(objectClass, accessor);
+			accessorDatabase.put(lookupClass, accessor);
 		}
 
 		if (accessor != null) {
-			final Object result = accessor.get(object);
+			final Object result = accessor.tryGet(object);
 
-			if (result != null || accessor.has(object)) {
+			if (Accessor.isValid(result)) {
 				return result;
 			}
 
@@ -102,19 +103,20 @@ public final class Identifier {
 			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
 				for (int i = 1; i < context.getSectionData().size(); i++) {
 					object = context.getSectionData().peek(i);
-					objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
-					accessor = accessorDatabase.get(objectClass);
+					objectClass = object.getClass();
+					lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
+					accessor = accessorDatabase.get(lookupClass);
 
 					// Try to create the accessor and add it to the database
 					if (accessor == null) {
 						accessor = Accessor.FACTORY.create(object, this, 0);
-						accessorDatabase.put(objectClass, accessor);
+						accessorDatabase.put(lookupClass, accessor);
 					}
 
 					if (accessor != null) {
-						final Object result = accessor.get(object);
+						final Object result = accessor.tryGet(object);
 
-						if (result != null || accessor.has(object)) {
+						if (Accessor.isValid(result)) {
 							return result;
 						}
 
@@ -130,7 +132,7 @@ public final class Identifier {
 			return null;
 		}
 
-		throw new NoSuchFieldException("Field \"" + name + "\" not found in class " + objectClass.getName());
+		throw new NoSuchFieldException("Field \"" + name + "\" not found");
 	}
 
 	/**
@@ -146,18 +148,19 @@ public final class Identifier {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
 		Object object = context.getSectionData().peek(Math.max(backreach, 0));
-		Class<?> objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
-		Accessor accessor = accessorDatabase.get(objectClass);
+		Class<?> objectClass = object.getClass();
+		Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
+		Accessor accessor = accessorDatabase.get(lookupClass);
 
 		if (accessor == null) {
 			accessor = Accessor.FACTORY.create(object, this, parameterCount);
-			accessorDatabase.put(objectClass, accessor);
+			accessorDatabase.put(lookupClass, accessor);
 		}
 
 		if (accessor != null) {
-			final Object result = accessor.get(object, parameters);
+			final Object result = accessor.tryGet(object, parameters);
 
-			if (result != null || accessor.has(object)) {
+			if (Accessor.isValid(result)) {
 				return result;
 			}
 
@@ -169,19 +172,20 @@ public final class Identifier {
 			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
 				for (int i = 1; i < context.getSectionData().size(); i++) {
 					object = context.getSectionData().peek(i);
-					objectClass = Class.class.equals(object.getClass()) ? (Class<?>)object : object.getClass();
-					accessor = accessorDatabase.get(objectClass);
+					objectClass = object.getClass();
+					lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
+					accessor = accessorDatabase.get(lookupClass);
 
 					// Try to create the accessor and add it to the database
 					if (accessor == null) {
 						accessor = Accessor.FACTORY.create(object, this, parameterCount);
-						accessorDatabase.put(objectClass, accessor);
+						accessorDatabase.put(lookupClass, accessor);
 					}
 
 					if (accessor != null) {
-						final Object result = accessor.get(object, parameters);
+						final Object result = accessor.tryGet(object, parameters);
 
-						if (result != null || accessor.has(object)) {
+						if (Accessor.isValid(result)) {
 							return result;
 						}
 
@@ -197,7 +201,7 @@ public final class Identifier {
 			return null;
 		}
 
-		throw new NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());
+		throw new NoSuchMethodError("Method \"" + name + "\" not found");
 	}
 
 	/**
@@ -223,17 +227,18 @@ public final class Identifier {
 	 * @throws ReflectiveOperationException if an error occurs while evaluating the value of the identifier
 	 */
 	public Object getValue(final Object context) throws ReflectiveOperationException {
-		final Class<?> objectClass = Class.class.equals(context.getClass()) ? (Class<?>)context : context.getClass();
-		Accessor accessor = accessorDatabase.get(objectClass);
+		final Class<?> objectClass = context.getClass();
+		final Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)context : objectClass;
+		Accessor accessor = accessorDatabase.get(lookupClass);
 
 		if (accessor == null) {
 			accessor = Accessor.FACTORY.create(context, this, 0);
 
 			if (accessor == null) {
-				throw new NoSuchFieldException("Field \"" + name + "\" not found in class " + objectClass.getName());
+				throw new NoSuchFieldException("Field \"" + name + "\" not found");
 			}
 
-			accessorDatabase.put(objectClass, accessor);
+			accessorDatabase.put(lookupClass, accessor);
 		}
 
 		return accessor.get(context);
@@ -248,17 +253,18 @@ public final class Identifier {
 	 * @throws ReflectiveOperationException if an error occurs while evaluating the value of the identifier
 	 */
 	public Object getValue(final Object context, final Object... parameters) throws ReflectiveOperationException {
-		final Class<?> objectClass = Class.class.equals(context.getClass()) ? (Class<?>)context : context.getClass();
-		Accessor accessor = accessorDatabase.get(objectClass);
+		final Class<?> objectClass = context.getClass();
+		final Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)context : objectClass;
+		Accessor accessor = accessorDatabase.get(lookupClass);
 
 		if (accessor == null) {
 			accessor = Accessor.FACTORY.create(context, this, parameterCount);
 
 			if (accessor == null) {
-				throw new NoSuchMethodError("Method \"" + name + "\" not found in class " + objectClass.getName());
+				throw new NoSuchMethodError("Method \"" + name + "\" not found");
 			}
 
-			accessorDatabase.put(objectClass, accessor);
+			accessorDatabase.put(lookupClass, accessor);
 		}
 
 		return accessor.get(context, parameters);

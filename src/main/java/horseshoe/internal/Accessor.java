@@ -11,6 +11,7 @@ import java.util.Map;
 public abstract class Accessor {
 
 	static final Factory FACTORY = new Factory();
+	private static final Object INVALID = new Object();
 
 	private static final class MethodSignature {
 
@@ -22,7 +23,7 @@ public abstract class Accessor {
 		 *
 		 * @param signature the signature of the method in the form [name]:[parameterType0],...
 		 */
-		MethodSignature(final String signature) {
+		private MethodSignature(final String signature) {
 			final int endOfName = signature.indexOf(':');
 
 			if (endOfName < 0) {
@@ -53,7 +54,7 @@ public abstract class Accessor {
 		 * @param method the method to compare with this signature
 		 * @return true if the method matches this signature, otherwise false
 		 */
-		public boolean matches(final Method method) {
+		private boolean matches(final Method method) {
 			if (!name.equals(method.getName())) {
 				return false;
 			}
@@ -75,10 +76,20 @@ public abstract class Accessor {
 	}
 
 	/**
+	 * Checks if the result is valid.
+	 *
+	 * @param result the result to check
+	 * @return true if the result is valid, otherwise false
+	 */
+	public static boolean isValid(final Object result) {
+		return result != INVALID;
+	}
+
+	/**
 	 * Gets the value of an identifier given the specified context as part of an expression.
 	 *
 	 * @param context the context object to resolve
-	 * @return the value
+	 * @return the value of the identifier
 	 * @throws ReflectiveOperationException if the value cannot be retrieved due to an invalid reflection call
 	 */
 	public abstract Object get(final Object context) throws ReflectiveOperationException;
@@ -93,16 +104,6 @@ public abstract class Accessor {
 	 */
 	public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
 		return get(context);
-	}
-
-	/**
-	 * Checks if the accessor has the ability to resolve given the specified context when get returns null.
-	 *
-	 * @param context the context object to resolve
-	 * @return true if the context is resolvable, otherwise false
-	 */
-	public boolean has(final Object context) {
-		return false;
 	}
 
 	/**
@@ -140,6 +141,29 @@ public abstract class Accessor {
 		}
 
 		return ((short[])context)[((Number)lookup).intValue()];
+	}
+
+	/**
+	 * Gets the value of an identifier given the specified context as part of an expression. This method may return an invalid object. All return values should be checked with the {@link #isValid()} method.
+	 *
+	 * @param context the context object to resolve
+	 * @return the value of the identifier or an invalid value
+	 * @throws ReflectiveOperationException if the value cannot be retrieved due to an invalid reflection call
+	 */
+	public Object tryGet(final Object context) throws ReflectiveOperationException {
+		return get(context);
+	}
+
+	/**
+	 * Gets the value of a method identifier given the specified context and parameters as part of an expression. This method may return an invalid object. All return values should be checked with the {@link #isValid()} method.
+	 *
+	 * @param context the context object to resolve
+	 * @param parameters the parameters to the method
+	 * @return the result of invoking the method or an invalid value
+	 * @throws ReflectiveOperationException if the value cannot be retrieved due to an invalid reflection call
+	 */
+	public Object tryGet(final Object context, final Object... parameters) throws ReflectiveOperationException {
+		return get(context, parameters);
 	}
 
 	/**
@@ -231,8 +255,11 @@ public abstract class Accessor {
 		}
 
 		@Override
-		public boolean has(final Object context) {
-			return ((Map<?, ?>)context).containsKey(key);
+		public Object tryGet(final Object context) {
+			final Map<?, ?> map = (Map<?, ?>)context;
+			final Object result = map.get(key);
+
+			return result != null || map.containsKey(key) ? result : INVALID;
 		}
 
 	}
@@ -379,13 +406,24 @@ public abstract class Accessor {
 
 		@Override
 		public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
+			return getWithDefault(null, context, parameters);
+		}
+
+		@Override
+		public Object tryGet(final Object context, final Object... parameters) throws ReflectiveOperationException {
+			return getWithDefault(INVALID, context, parameters);
+		}
+
+		private Object getWithDefault(final Object defaultValue, final Object context, final Object... parameters) throws ReflectiveOperationException {
+			final int mru = mruIndex;
+
 			// We could do something fancy and try to find the most correct method to call, but for now just try to call them all starting with the most recently used.
 			//  Note: this may invoke the wrong method for closely-related overloads.
 			try {
-				return methods[mruIndex].invoke(context, parameters);
+				return methods[mru].invoke(context, parameters);
 			} catch (final IllegalArgumentException e) {
 				for (int i = 0; i < methods.length; i++) {
-					if (i != mruIndex) {
+					if (i != mru) {
 						try {
 							final Object result = methods[i].invoke(context, parameters);
 							mruIndex = i;
@@ -396,7 +434,7 @@ public abstract class Accessor {
 					}
 				}
 
-				throw e;
+				return defaultValue;
 			}
 		}
 

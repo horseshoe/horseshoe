@@ -1,0 +1,9 @@
+{{#['content':'Content that should be rendered','literal','Literal that should not be rendered']}}
+{{= << >> =}}
+{{ Literal template text. }}
+<<! This is a comment and the line below is an unescaped content tag. >>
+<<{ content }>>
+More {{literal}} template text.
+<<! Return to using `{{` and `}}`. >>
+<<={{ }}=>>
+{{/}}

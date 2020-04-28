@@ -217,4 +217,9 @@ final class Section {
 		return useCache;
 	}
 
+	@Override
+	public String toString() {
+		return name;
+	}
+
 }

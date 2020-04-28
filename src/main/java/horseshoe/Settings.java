@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 
 /**
  * The Settings class allows configuring different properties that are used when rendering a {@link Template}.
@@ -15,18 +16,12 @@ public class Settings {
 	 */
 	public static final Logger DEFAULT_LOGGER = new Logger() {
 		@Override
-		public void log(final Level level, final String message) {
-			Template.LOGGER.log(level, message);
-		}
+		public void log(final Level level, final Throwable error, final String message, final Object... params) {
+			final LogRecord record = new LogRecord(level, message);
 
-		@Override
-		public void log(final Level level, final String message, final Object... params) {
-			Template.LOGGER.log(level, message, params);
-		}
-
-		@Override
-		public void log(final Level level, final String message, final Throwable error) {
-			Template.LOGGER.log(level, message, error);
+			record.setThrown(error);
+			record.setParameters(params);
+			Template.LOGGER.log(record);
 		}
 	};
 
@@ -35,15 +30,8 @@ public class Settings {
 	 */
 	public static final Logger EMPTY_LOGGER = new Logger() {
 		@Override
-		public void log(final Level level, final String message) { // Intentionally left empty
-		}
-
-		@Override
-		public void log(final Level level, final String message, final Object... params) { // Intentionally left empty
-		}
-
-		@Override
-		public void log(final Level level, final String message, final Throwable error) { // Intentionally left empty
+		public void log(final Level level, final Throwable error, final String message, final Object... params) {
+			// Intentionally left empty
 		}
 	};
 

@@ -346,27 +346,27 @@ final class CommandLineOption {
 	 * @return the original stream parameter
 	 */
 	public PrintStream toOptionString(final PrintStream stream) {
-		if (shortName != 0) {
-			stream.append('-').append(shortName);
-
-			if (hasArgument) {
-				stream.append(" <").append(argumentName).append('>');
-			}
-
-			if (longName != null) {
-				stream.append(", --").append(longName);
-
-				if (hasArgument) {
-					stream.append("=<").append(argumentName).append('>');
-				}
-			}
-		} else {
+		if (longName != null) {
 			stream.append("--").append(longName);
 
 			if (hasArgument) {
 				stream.append("=<").append(argumentName).append('>');
 			} else if (hasLongOptionalArgument) {
 				stream.append("[=<").append(argumentName).append(">]");
+			}
+
+			if (shortName != 0) {
+				stream.append(", -").append(shortName);
+
+				if (hasArgument) {
+					stream.append(" <").append(argumentName).append('>');
+				}
+			}
+		} else if (shortName != 0) {
+			stream.append('-').append(shortName);
+
+			if (hasArgument) {
+				stream.append(" <").append(argumentName).append('>');
 			}
 		}
 

@@ -25,6 +25,12 @@ public class RunnerTests {
 	@Rule
 	public final SystemOutRule systemOutRule = new SystemOutRule().enableLog();
 
+	@Test (expected = Test.None.class) // No exception expected
+	public void generateExampleResults() throws IOException {
+		Files.walk(Paths.get("examples"), 1).filter(file -> file.toFile().isFile())
+				.forEach(file -> Runner.main(new String[] { "--output", file.resolveSibling(Paths.get("results", file.getFileName().toString().replace(".U", ".txt"))).toString(), file.toString() }));
+	}
+
 	@Test
 	public void testBadArgument() {
 		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);

@@ -73,7 +73,7 @@ public final class RenderContext {
 		}
 
 		if (!loadableClasses.containsKey(name)) {
-			throw new IllegalArgumentException("Attempt to load invalid class: " + name);
+			throw new IllegalArgumentException("Failed to load class \"" + name + "\", not in loadable classes");
 		}
 
 		final Class<?> newClass = Class.forName(name.indexOf('.') >= 0 ? name : "java.lang." + name);
