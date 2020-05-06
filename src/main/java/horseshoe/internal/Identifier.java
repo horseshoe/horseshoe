@@ -25,7 +25,7 @@ public final class Identifier {
 	public static final String PATTERN = "[" + LETTER_CHARACTERS + "\\p{Nl}\\p{Sc}\\p{Pc}" + "]" + // Derived from Character.isJavaIdentifierStart()
 			CHARACTER_CLASS + "*"; // Derived from Character.isJavaIdentifierPart()
 
-	private final HashMap<Class<?>, Accessor> accessorDatabase = new LinkedHashMap<>();
+	private final HashMap<Class<?>, Accessor> accessorDatabase = new LinkedHashMap<>(4);
 	private final String name;
 	private final int parameterCount;
 
@@ -79,14 +79,7 @@ public final class Identifier {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
 		Object object = context.getSectionData().peek(Math.max(backreach, 0));
-		Class<?> objectClass = object.getClass();
-		Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
-		Accessor accessor = accessorDatabase.get(lookupClass);
-
-		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(object, this, 0);
-			accessorDatabase.put(lookupClass, accessor);
-		}
+		Accessor accessor = getOrAddAccessor(object);
 
 		if (accessor != null) {
 			final Object result = accessor.tryGet(object);
@@ -103,15 +96,7 @@ public final class Identifier {
 			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
 				for (int i = 1; i < context.getSectionData().size(); i++) {
 					object = context.getSectionData().peek(i);
-					objectClass = object.getClass();
-					lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
-					accessor = accessorDatabase.get(lookupClass);
-
-					// Try to create the accessor and add it to the database
-					if (accessor == null) {
-						accessor = Accessor.FACTORY.create(object, this, 0);
-						accessorDatabase.put(lookupClass, accessor);
-					}
+					accessor = getOrAddAccessor(object);
 
 					if (accessor != null) {
 						final Object result = accessor.tryGet(object);
@@ -148,14 +133,7 @@ public final class Identifier {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
 		Object object = context.getSectionData().peek(Math.max(backreach, 0));
-		Class<?> objectClass = object.getClass();
-		Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
-		Accessor accessor = accessorDatabase.get(lookupClass);
-
-		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(object, this, parameterCount);
-			accessorDatabase.put(lookupClass, accessor);
-		}
+		Accessor accessor = getOrAddAccessor(object);
 
 		if (accessor != null) {
 			final Object result = accessor.tryGet(object, parameters);
@@ -172,15 +150,7 @@ public final class Identifier {
 			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
 				for (int i = 1; i < context.getSectionData().size(); i++) {
 					object = context.getSectionData().peek(i);
-					objectClass = object.getClass();
-					lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
-					accessor = accessorDatabase.get(lookupClass);
-
-					// Try to create the accessor and add it to the database
-					if (accessor == null) {
-						accessor = Accessor.FACTORY.create(object, this, parameterCount);
-						accessorDatabase.put(lookupClass, accessor);
-					}
+					accessor = getOrAddAccessor(object);
 
 					if (accessor != null) {
 						final Object result = accessor.tryGet(object, parameters);
@@ -202,6 +172,35 @@ public final class Identifier {
 		}
 
 		throw new NoSuchMethodError("Method \"" + name + "\" not found");
+	}
+
+	/**
+	 * Gets the accessor for the specified object, or creates and adds an accessor for the object if one does not exist.
+	 *
+	 * @param object the object used to get the accessor
+	 * @return the accessor for the specified object
+	 */
+	private Accessor getOrAddAccessor(final Object object) {
+		final Class<?> objectClass = object.getClass();
+		final Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
+		final Accessor accessor = accessorDatabase.get(lookupClass);
+
+		if (accessor != null) {
+			return accessor;
+		}
+
+		final Accessor newAccessor = Accessor.FACTORY.create(object, this);
+		accessorDatabase.put(lookupClass, newAccessor);
+		return newAccessor;
+	}
+
+	/**
+	 * Gets the number of parameters for a method identifier.
+	 *
+	 * @return the number of parameters for a method identifier, or -1 if the identifier is not a method
+	 */
+	public int getParameterCount() {
+		return parameterCount;
 	}
 
 	/**
@@ -232,7 +231,7 @@ public final class Identifier {
 		Accessor accessor = accessorDatabase.get(lookupClass);
 
 		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(context, this, 0);
+			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
 				throw new NoSuchFieldException("Field \"" + name + "\" not found");
@@ -258,7 +257,7 @@ public final class Identifier {
 		Accessor accessor = accessorDatabase.get(lookupClass);
 
 		if (accessor == null) {
-			accessor = Accessor.FACTORY.create(context, this, parameterCount);
+			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
 				throw new NoSuchMethodError("Method \"" + name + "\" not found");

@@ -116,7 +116,7 @@ A partial tag in Horseshoe is similar to a partial tag in Mustache. It functions
 If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template.
 
 #### Set Delimiter (`{{=<% %>=}}`)
-The set delimiter tag is structured the same as it is for Mustache. It is used to change the delimiters from `{{` and `}}` to other sequences in templates that contain many double braces that are part of the literal text. The new sequences are applicable for all tags. Here is a brief example:
+The set delimiter tag is structured the same as it is for Mustache. It is used to change the delimiters from `{{` and `}}` to other sequences in templates that contain many double braces that are part of the literal text. The new sequences are applicable for all tags. Here is a brief example,
 ```horseshoe
 {{= << >> =}}
 {{ Literal template text. }}
@@ -130,14 +130,14 @@ More {{literal}} template text.
 #### Section (`{{# map}}`)
 Section tags in Horseshoe are similar to Mustache section tags. A section tag can either function as a conditional section or as a for each section. The contents of a conditional section are only rendered if the value evaluates to a non-null, non-zero value. The contents of a for each section are iterated once for every child.
 
-Internal objects that are treated as for each sections include arrays, iterables, and streams (if using Java 8+). All other objects are treated as conditional sections. For booleans, the conditional section will only be rendered for `true` values. For numeric or character primitives, the conditional section will only be rendered for non-zero values. For optionals (if using Java 8+), the conditional section will only be rendered for values that are present. The conditional section is never rendered for a null value.
+Internal objects that are treated as for each sections include arrays, iterables, and streams (if using Java 8 and up). All other objects are treated as conditional sections. For booleans, the conditional section will only be rendered for `true` values. For numeric or character primitives, the conditional section will only be rendered for non-zero values. For optionals (if using Java 8 and up), the conditional section will only be rendered for values that are present. The conditional section is never rendered for a null value.
 
 All sections except for booleans push the value onto the context stack. For each sections push each child item onto the stack as it iterates over the value.
 
 #### Inverted Section (`{{^ exists}}`)
 Inverted section tags are used to negate a conditional or for each section. Inverted sections are only rendered when the negated section would not be rendered. Null objects, numeric zero values, `false`, as well as empty lists or arrays are several examples of values that will cause an inverted section to be rendered.
 
-An inverted section tag can be left empty (`{{^}}`) to indicate that the inverted section will be rendered when the conditional associated with the current section is false. For example:
+An inverted section tag can be left empty (`{{^}}`) to indicate that the inverted section will be rendered when the conditional associated with the current section is false. For example,
 ```horseshoe
 {{#a}}
   a evaluates to true
@@ -148,6 +148,8 @@ An inverted section tag can be left empty (`{{^}}`) to indicate that the inverte
 
 #### Inline Partial (`{{< partial}}`)
 Inline partial tags define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a string or template file.
+
+Inline partials can only be included (using a partial tag) in the scope of the template in which they are declared. They cannot be included in any other template. This prevents naming collisions of inline partials in multiple templates and allows inline partials to be overridden later in a template or in a nested scope.
 
 ### Expressions
 Horseshoe expressions look a lot like expressions in modern programming languages. Expressions can contain named values, literals, method calls, and operator symbols. Expressions can also contain comments using C, C++, and Java style comments using either `/*...*/` or `//...`. Multiple lines are allowed inside a single expression.
@@ -200,8 +202,9 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 | 13 | a<code>&#124;&#124;</code>b \(Logical Or\) | Left&nbsp;to&nbsp;right |
 | 14 | a<code>?:</code>b \(Null Coalesce\), <br>a<code>??</code>b \(Null Coalesce \- Alternate\), <br>a<code>?</code>b \(Ternary\), <br>a<code>:</code>b \(Pair\) | Right&nbsp;to&nbsp;left |
 | 15 | a<code>=</code>b \(Bind\) | Right&nbsp;to&nbsp;left |
-| 16 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\) | Left&nbsp;to&nbsp;right |
-| 17 | a<code>,</code>b\* \(Item Separator\), <br>a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
+| 16 | a<code>,</code>b\* \(Item Separator\) | Left&nbsp;to&nbsp;right |
+| 17 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\), <br><code>\#&lt;</code>a \(Return\) | Left&nbsp;to&nbsp;right |
+| 18 | a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
 
 #### Named Expressions
 Named expressions are tags with the form `{{name->expression}}` or `{{name()->expression}}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags). Referencing a named expression using a function-like syntax with an optional argument (`name()` to evaluate the currently scoped object, `name(..)` to evaluate the parent object) evaluates the expression on the given argument. Named expressions are scoped to the context in which they are declared and can be overridden at lower level scopes. They always take precedence over equivalently named methods. If a method is preferred over a named expression, it can be prefixed (using `./` or `../`), since named expressions can not be invoked using prefixes.
@@ -219,3 +222,13 @@ Root-level named expressions in each partial template are inherited when a parti
 {{/}}
 ```
 results in "  ORIGINAL STRING-original string", because the `lower` named expression is overridden when the partial `a` is included on line 7. This allows partials to contain either content to render or named expressions as a payload.
+
+However, named expressions are not exposed to included partial templates. This is done so that all templates including partials are self-contained. For example,
+```horseshoe
+{{func()->"Hello!"}}
+{{<a}}
+  {{func()}}
+{{/a}}
+{{>a}}
+```
+results in a whitespace-only string, since `func()` is not defined within the partial `a`.

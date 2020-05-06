@@ -116,15 +116,17 @@ final class Operator {
 		operators.add(new Operator("?",      14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
 		operators.add(new Operator(":",      14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair"));
 		operators.add(new Operator("=",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind"));
-		operators.add(new Operator("\u2620", 16, RIGHT_EXPRESSION, "Die")); // Skull and crossbones
-		operators.add(new Operator("~:<",    16, RIGHT_EXPRESSION, "Die - Alternate"));
-		operators.add(new Operator(",",      17, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
-		operators.add(new Operator(";",      17, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
+		operators.add(new Operator(",",      16, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
+		operators.add(new Operator("\u2620", 17, RIGHT_EXPRESSION, "Die")); // Skull and crossbones
+		operators.add(new Operator("~:<",    17, RIGHT_EXPRESSION, "Die - Alternate"));
+		operators.add(new Operator("#<",     17, RIGHT_EXPRESSION, "Return"));
+		operators.add(new Operator(";",      18, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
 
 		// These operators have known assertion failures and may contain ambiguities with other operators or Horseshoe features. These ambiguities have been thoroughly analyzed and deemed acceptable.
-		final Set<String> ignoreFailuresIn = new HashSet<>(Arrays.asList("?[?" /* pseudo-ambiguous '[' */,
-				"?.?" /* ambiguous '.' */,
-				".." /* pseudo-ambiguous '.' */));
+		final Set<String> ignoreFailuresIn = new HashSet<>(Arrays.asList("?[?" /* ambiguous with "?" and "[" operators; allowed, because there is no unary "?" operator or binary "[?" operator */,
+				"?.?" /* ambiguous with "?" and "." operators; allowed, so must be separated with spaces or use parentheses if using as nested ternary (e.g. "a ? . ? b : c : d") */,
+				".." /* ambiguous with "." unary operator; allowed, because the "\" separator must be used when applying "." to the current object (".") */,
+				"#<" /* ambiguous with section tag; allowed, because the operator would never be used at start of content tag */));
 
 		for (final Operator operator : operators) {
 			final String string = operator.string;

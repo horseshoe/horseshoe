@@ -28,22 +28,20 @@ class SectionRenderer_8 extends SectionRenderer {
 
 	@Override
 	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
-		if (data instanceof Optional<?>) {
-			final Optional<?> optional = (Optional<?>)data;
+		final Object unwrappedData;
 
-			if (optional.isPresent()) {
-				dispatchData(context, optional.get(), writer);
-			} else {
-				super.dispatchData(context, null, writer);
-			}
-		} else if (data instanceof Stream<?>) {
-			if (section.cacheResult()) { // Only collect to a list if we are required to cache the results
-				super.dispatchData(context, ((Stream<?>)data).collect(Collectors.toList()), writer);
-			} else {
-				super.dispatchIteratorData(context, ((Stream<?>)data).iterator(), writer);
-			}
+		if (data instanceof Optional<?>) {
+			unwrappedData = ((Optional<?>)data).orElse(null);
 		} else {
-			super.dispatchData(context, data, writer);
+			unwrappedData = data;
+		}
+
+		if (!(unwrappedData instanceof Stream<?>)) {
+			super.dispatchData(context, unwrappedData, writer);
+		} else if (section.cacheResult()) { // Only collect to a list if we are required to cache the results
+			super.dispatchData(context, ((Stream<?>)unwrappedData).collect(Collectors.toList()), writer);
+		} else {
+			super.dispatchIteratorData(context, ((Stream<?>)unwrappedData).iterator(), writer);
 		}
 	}
 

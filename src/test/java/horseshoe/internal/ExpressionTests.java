@@ -488,6 +488,11 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testReturn() throws ReflectiveOperationException {
+		assertEquals("BlueGreen", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "#<'Blue' + 'Green'; 'Yellow'", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+	}
+
+	@Test
 	public void testSafeOperators() throws ReflectiveOperationException {
 		assertEquals("good", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "null ?? \"good\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
 		assertEquals("good", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), null, "\"good\" ?: \"bad\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());

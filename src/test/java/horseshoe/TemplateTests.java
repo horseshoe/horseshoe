@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -129,6 +131,7 @@ public class TemplateTests {
 		assertEquals("nil", new TemplateLoader().load("Empty Stream Test", "{{#stream}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}}").render(new Settings(), Collections.singletonMap("stream", Arrays.asList().stream()), new java.io.StringWriter()).toString());
 		assertEquals("String, 1.6, 1234 -> String, 1.6, 1234", new TemplateLoader().load("Repeat Stream Test", "{{#stream}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}} -> {{#}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}}").render(new Settings(), Collections.singletonMap("stream", Arrays.asList("String", 1.6, 1234).stream()), new java.io.StringWriter()).toString());
 		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}} -> {{#}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
+		assertEquals("X, X, 1, X, 1, X, 2.0, X, -1.0, X, 1, X, 10, X, 1, X, 1, X", new TemplateLoader().load("Section Test", "{{#values}}{{#.index}}, {{/}}{{#'X'}}{{#..}}{{.}}{{^}}{{.}}{{/}}{{/}}{{/}}").render(new Settings(), Collections.singletonMap("values", new Object[] { true, false, 1, 0, 1L, 0L, 2.0, 0.0, -1.0f, 0.0f, BigDecimal.ONE, BigDecimal.ZERO, BigInteger.TEN, BigInteger.ZERO, '1', '\0', "1", null }), new java.io.StringWriter()).toString());
 	}
 
 	@Test (expected = LoadException.class)

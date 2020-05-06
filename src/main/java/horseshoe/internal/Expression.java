@@ -743,6 +743,10 @@ public final class Expression {
 				processOperation(namedExpressions, expressions, identifiers, operands.push(), operators.push(Operator.get("[", false).withRightExpressions(operator.getRightExpressions() + 1)));
 				break;
 
+			case "#<": // Return
+				operands.push(new Operand(Object.class, right.toObject(true)));
+				break;
+
 			case "(":
 				operands.push();
 				break;
@@ -1077,18 +1081,30 @@ public final class Expression {
 			throw new IllegalArgumentException("Unexpected empty expression");
 		}
 
-		// Populate all the identifiers and create the evaluator
-		this.expressions = new Expression[expressionMap.size()];
-		this.identifiers = new Identifier[identifierMap.size()];
+		// Populate all the expressions
+		if (expressionMap.isEmpty()) {
+			this.expressions = null;
+		} else {
+			this.expressions = new Expression[expressionMap.size()];
+
+			for (final Entry<Expression, Integer> entry : expressionMap.entrySet()) {
+				this.expressions[entry.getValue()] = entry.getKey();
+			}
+		}
+
+		// Populate all the identifiers
+		if (identifierMap.isEmpty()) {
+			this.identifiers = null;
+		} else {
+			this.identifiers = new Identifier[identifierMap.size()];
+
+			for (final Entry<Identifier, Integer> entry : identifierMap.entrySet()) {
+				this.identifiers[entry.getValue()] = entry.getKey();
+			}
+		}
+
+		// Create the evaluator
 		final MethodBuilder initializeLocalBindings = new MethodBuilder();
-
-		for (final Entry<Expression, Integer> entry : expressionMap.entrySet()) {
-			this.expressions[entry.getValue()] = entry.getKey();
-		}
-
-		for (final Entry<Identifier, Integer> entry : identifierMap.entrySet()) {
-			this.identifiers[entry.getValue()] = entry.getKey();
-		}
 
 		for (int i = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS; i < nextLocalBindingIndex; i++) {
 			initializeLocalBindings.addCode(ACONST_NULL).addAccess(ASTORE, i);

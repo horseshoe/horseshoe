@@ -11,7 +11,7 @@ import java.util.Map;
 public abstract class Accessor {
 
 	static final Factory FACTORY = new Factory();
-	private static final Object INVALID = new Object();
+	static final Object INVALID = new Object();
 
 	private static final class MethodSignature {
 
@@ -239,11 +239,44 @@ public abstract class Accessor {
 	}
 
 	/**
+	 * A map accessor factory allows a new map accessor to be created.
+	 */
+	static class MapAccessorFactory {
+
+		/**
+		 * Creates a new map accessor.
+		 *
+		 * @param key the key used to get the value from the map
+		 * @return the map accessor
+		 */
+		Accessor create(final String key) {
+			return new MapAccessor(key);
+		}
+
+	}
+
+	/**
 	 * A map accessor provides access to a value in a map using the specified key.
 	 */
 	private static final class MapAccessor extends Accessor {
 
+		private static final MapAccessorFactory FACTORY;
+
 		private final String key;
+
+		static {
+			MapAccessorFactory factory = new MapAccessorFactory();
+
+			if (Properties.JAVA_VERSION >= 8.0) {
+				try {
+					factory = (MapAccessorFactory)Accessor.class.getClassLoader().loadClass(Accessor.class.getName() + "_8$" + MapAccessorFactory.class.getSimpleName()).getConstructor().newInstance();
+				} catch (final ReflectiveOperationException e) {
+					throw new ExceptionInInitializerError("Failed to load Java 8 specialization: " + e.getMessage());
+				}
+			}
+
+			FACTORY = factory;
+		}
 
 		MapAccessor(final String key) {
 			this.key = key;
@@ -442,19 +475,19 @@ public abstract class Accessor {
 
 	static class Factory {
 
-		public Accessor create(final Object context, final Identifier identifier, final int parameters) {
+		public Accessor create(final Object context, final Identifier identifier) {
 			final Class<?> contextClass = context.getClass();
 
 			if (identifier.isMethod()) { // Method
 				if (Class.class.equals(contextClass)) { // Class method
-					return MethodAccessor.createStaticOrClass((Class<?>)context, identifier.getName(), parameters);
+					return MethodAccessor.createStaticOrClass((Class<?>)context, identifier.getName(), identifier.getParameterCount());
 				}
 
-				return MethodAccessor.create(contextClass, identifier.getName(), parameters);
+				return MethodAccessor.create(contextClass, identifier.getName(), identifier.getParameterCount());
 			} else if (Class.class.equals(contextClass)) { // Static field
 				return FieldAccessor.createStatic((Class<?>)context, identifier.getName());
 			} else if (Map.class.isAssignableFrom(contextClass)) {
-				return new MapAccessor(identifier.getName());
+				return MapAccessor.FACTORY.create(identifier.getName());
 			} else if (contextClass.isArray() && "length".equals(identifier.getName())) {
 				return new ArrayLengthAccessor();
 			}
