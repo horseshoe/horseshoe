@@ -65,7 +65,7 @@ public final class Expression {
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[-+]Infinity|[-+]?(?:[0-9]+[fFdD]|(?:[0-9]+[.]?[eE][-+]?[0-9]+|[0-9]+[.][0-9]+(?:[eE][-+]?[0-9]+)?|0[xX](?:[0-9A-Fa-f]+[.]?|[0-9A-Fa-f]+[.][0-9A-Fa-f]+)[pP][-+]?[0-9]+)[fFdD]?))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern LONG_PATTERN = Pattern.compile("(?:(?<hexsign>[-+]?)0[xX](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[-+]?[0-9]+))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern REGEX_PATTERN = Pattern.compile("~/(?<regex>(?:[^/\\\\]|\\\\.)*)/\\s*", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr]|\\\\0|\\\\x[0-9A-Fa-f]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>[^']*)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr{}]|\\\\0|\\\\x[0-9A-Fa-f]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>[^']*)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern OPERATOR_PATTERN;
 
 	private static final byte[] CHAR_VALUE = new byte[] {
@@ -352,7 +352,7 @@ public final class Expression {
 			return string == null ? matcher.group("unescapedString") : string;
 		}
 
-		// Find escape sequences and replace them with the proper character sequences
+		// Find escape sequences and replace them with the proper character
 		final StringBuilder sb = new StringBuilder(string.length());
 		int start = 0;
 
@@ -362,15 +362,6 @@ public final class Expression {
 			start = backslash + 2;
 
 			switch (string.charAt(backslash + 1)) {
-				case '\\':
-					sb.append('\\');
-					break;
-				case '"':
-					sb.append('\"');
-					break;
-				case '\'':
-					sb.append('\'');
-					break;
 				case 'b':
 					sb.append('\b');
 					break;
@@ -403,7 +394,8 @@ public final class Expression {
 					start = backslash + 10;
 					break;
 				default:
-					assert false : "Invalid string literal accepted with \"\\" + string.charAt(backslash + 1) + "\" escape sequence"; // According to the pattern, only the above cases are allowed
+					sb.append(string.charAt(backslash + 1));
+					break;
 			}
 		} while ((backslash = string.indexOf('\\', start)) >= 0);
 
@@ -767,7 +759,7 @@ public final class Expression {
 			}
 
 			default:
-				assert false : "Unrecognized operator \"" + operator.getString() + "\" while parsing expression";
+				throw new IllegalStateException("Unrecognized operator \"" + operator.getString() + "\" while parsing expression");
 		}
 	}
 
@@ -867,7 +859,7 @@ public final class Expression {
 										isRoot = true;
 										break;
 									default:
-										assert false : "Unrecognized prefix: " + prefixString;
+										throw new IllegalStateException("Unrecognized prefix: " + prefixString);
 								}
 
 								if (isInternal || identifier.endsWith("(") || (identifier.startsWith(".") && (!".".equals(identifier) || !isRoot))) {
@@ -999,7 +991,7 @@ public final class Expression {
 					final String decimal = matcher.group("decimal");
 					final long value = decimal == null ? Long.parseLong(matcher.group("hexsign") + matcher.group("hexadecimal"), 16) : Long.parseLong(decimal);
 
-					if (matcher.group("isLong") != null || value > Integer.MAX_VALUE || value < Integer.MIN_VALUE) {
+					if (matcher.group("isLong") != null || (int)value != value) {
 						operands.push(new Operand(long.class, new MethodBuilder().pushConstant(value)));
 					} else {
 						operands.push(new Operand(int.class, new MethodBuilder().pushConstant((int)value)));

@@ -12,7 +12,6 @@ import horseshoe.internal.OverlayMap;
 final class Section {
 
 	private static final int INITIAL_CHILDREN_CAPACITY = 4; // Likely not many nested sections, so don't initialize the full capacity
-	private static final int INITIAL_INVERTED_ACTIONS_CAPACITY = 4; // Likely doesn't exist, or used for error reporting, so don't initialize the full capacity
 
 	private final Section parent;
 	private final List<Section> children = new ArrayList<>(INITIAL_CHILDREN_CAPACITY);
@@ -26,7 +25,7 @@ final class Section {
 	private final Map<String, Expression> namedExpressions;
 	private final Map<String, Template> localPartials;
 	private final List<Action> actions = new ArrayList<>();
-	private final List<Action> invertedActions = new ArrayList<>(INITIAL_INVERTED_ACTIONS_CAPACITY);
+	private final List<Action> invertedActions = new ArrayList<>();
 
 	/**
 	 * Creates a new repeated section with the specified parent.

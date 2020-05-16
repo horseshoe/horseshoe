@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -27,14 +29,39 @@ public class RunnerTests {
 
 	@Test (expected = Test.None.class) // No exception expected
 	public void generateExampleResults() throws IOException {
-		Files.walk(Paths.get("examples"), 1).filter(file -> file.toFile().isFile())
-				.forEach(file -> Runner.main(new String[] { "--output", file.resolveSibling(Paths.get("results", file.getFileName().toString().replace(".U", ".txt"))).toString(), file.toString() }));
+		Files.walk(Paths.get("samples"), 1)
+				.filter(path -> path.toString().endsWith(".U"))
+				.forEach(path -> {
+					final Path dataFile = path.resolveSibling(path.getFileName().toString().replace(".U", ".data"));
+					final List<String> args = new ArrayList<>();
+
+					args.add("--output");
+					args.add(path.resolveSibling(Paths.get("results", path.getFileName().toString().replace(".U", ".txt"))).toString());
+					args.add(path.toString());
+
+					if (dataFile.toFile().exists()) {
+						args.add("--data-file");
+						args.add(dataFile.toString());
+					}
+
+					Runner.main(args.toArray(new String[0]));
+				});
 	}
 
 	@Test
 	public void testBadArgument() {
 		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);
 		Runner.main(new String[] { "arg1", "arg2", "arg3", "arg4", "arg5", "arg6", "arg7", "arg8", "arg9" });
+	}
+
+	@Test (expected = RuntimeException.class)
+	public void testBadDataMap1() {
+		new Runner.DataParser("    ").parseAsMap();
+	}
+
+	@Test (expected = RuntimeException.class)
+	public void testBadDataMap2() {
+		new Runner.DataParser(" ] ").parseAsMap();
 	}
 
 	@Test
@@ -113,6 +140,36 @@ public class RunnerTests {
 	@Test (expected = Test.None.class) // No exception expected
 	public void testHelp() throws IOException {
 		Runner.main(new String[] { "--help" });
+	}
+
+	@Test (expected = Test.None.class) // No exception expected
+	public void testJson() throws IOException {
+		assertEquals(0L, Files.walk(Paths.get("samples/json"))
+				.filter(path -> path.toString().endsWith(".json"))
+				.filter(path -> {
+					final String fileName = path.getFileName().toString();
+
+					try {
+						final String data = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+						new Runner.DataParser(data, 0, false).parseAsValue();
+
+						if (fileName.startsWith("y_") || fileName.startsWith("i_")) {
+							return false;
+						}
+
+						System.out.println(fileName + " - accepted");
+					} catch (final RuntimeException | StackOverflowError e) {
+						if (fileName.startsWith("n_") || fileName.startsWith("i_")) {
+							return false;
+						}
+
+						System.out.println(fileName + " - rejected: " + e.getMessage());
+					} catch (final IOException e) {
+						throw new RuntimeException(e);
+					}
+
+					return true;
+				}).count());
 	}
 
 	@Test

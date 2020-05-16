@@ -209,7 +209,7 @@ final class CommandLineOption {
 		 */
 		public void print(final PrintStream stream) {
 			final String indent = new String(new char[2]).replace('\0', ' ');
-			final String descriptionIndent = new String(new char[8]).replace('\0', ' ');
+			final String descriptionIndent = new String(new char[6]).replace('\0', ' ');
 			final int maxDescriptionLength = 80 - descriptionIndent.length();
 			final Pattern linePattern = Pattern.compile("\\s*(?<line>\\S.{1," + (maxDescriptionLength - 1) + "}(?=\\s|$)|\\S{" + maxDescriptionLength + "})\\s*", Pattern.UNICODE_CHARACTER_CLASS | Pattern.DOTALL);
 
@@ -346,7 +346,19 @@ final class CommandLineOption {
 	 * @return the original stream parameter
 	 */
 	public PrintStream toOptionString(final PrintStream stream) {
-		if (longName != null) {
+		if (shortName != 0) {
+			stream.append('-').append(shortName);
+
+			if (longName != null) {
+				stream.append(", --").append(longName);
+
+				if (hasArgument) {
+					stream.append("=<").append(argumentName).append('>');
+				}
+			} else if (hasArgument) {
+				stream.append(" <").append(argumentName).append('>');
+			}
+		} else if (longName != null) {
 			stream.append("--").append(longName);
 
 			if (hasArgument) {
@@ -355,19 +367,6 @@ final class CommandLineOption {
 				stream.append("[=<").append(argumentName).append(">]");
 			}
 
-			if (shortName != 0) {
-				stream.append(", -").append(shortName);
-
-				if (hasArgument) {
-					stream.append(" <").append(argumentName).append('>');
-				}
-			}
-		} else if (shortName != 0) {
-			stream.append('-').append(shortName);
-
-			if (hasArgument) {
-				stream.append(" <").append(argumentName).append('>');
-			}
 		}
 
 		return stream;

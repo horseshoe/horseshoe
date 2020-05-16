@@ -1,0 +1,20 @@
+
+{{#schema.types}}
+class {{name}}
+{
+	{{#fields}}
+	{{type.name}} {{name}};
+	{{/}}
+
+public:
+	...
+};
+
+{{/}}
+{{#schema.fields}}
+static {{type.name}} {{name}};
+{{/}}
+
+{{#schema.extras}}
+// {{.}}
+{{/}}

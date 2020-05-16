@@ -1,0 +1,54 @@
+{
+	schema: {
+		types: [
+			&Type_Type1 &GlobalType_Type1 {
+				name: Type1,
+				fields: [
+					{
+						name: Field1,
+						type: *Type_Type2,
+						minOccurs: 1,
+						maxOccurs: unbounded
+					},
+					{
+						name: Field2,
+						type: *Type_Type1
+					}
+				]
+			},
+			&Type_Type2 &GlobalType_Type2 {
+				name: Type2,
+				fields: [
+					{
+						name: StringField,
+						type: "std::string",
+						patterns: [
+							&Pattern_0_Type2 ".*Foo.*",
+							&Pattern_1_Type2 ".*Bar.*"
+						]
+					}
+				]
+			}
+		],
+		fields: [
+			{
+				name: Field1,
+				type: *Type_Type1
+			},
+			{
+				name: Field2,
+				type: *Type_Type2
+			}
+		],
+		nullValue: &null null,
+		extras: [
+			*null,
+			*Pattern_0_Type2,
+			*Pattern_1_Type2,
+			*Metadata,
+			*NonexistantData,
+			*NonexistantData
+		]
+	},
+	metadata: &Metadata "Extra, useful information"
+}
