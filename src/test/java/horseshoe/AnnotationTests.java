@@ -1,10 +1,12 @@
 package horseshoe;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -221,16 +223,72 @@ public class AnnotationTests {
 
 	@Test
 	public void testOutputRemapping() throws IOException, LoadException {
-		final String filename = "DELETE_ME.test";
-		final Template template = new TemplateLoader().load("Output Remapping", "{{#@File(\"" + filename + "\")}}Test 1{{/}}\n{{#@File({\"name\":\"" + filename + "\", \"encoding\": \"UTF-8\"})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n{{#@StdErr}}\nThis should print to stderr\n{{/}}\n");
-		final Settings settings = new Settings();
-		final Writer writer = new StringWriter();
+		final Path path = Paths.get("DELETE_ME.test");
 
 		try {
-			template.render(settings, Collections.emptyMap(), writer);
+			final Template template = new TemplateLoader().load("Output Remapping", "{{#@File(\"" + path + "\")}}\nTest 1\n{{/}}\n{{#@File({\"name\":\"" + path + "\", \"encoding\": \"ASCII\", 'append': true})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n{{#@StdErr}}\nThis should print to stderr\n{{/}}\n");
+			template.render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS + "Good things are happening!" + LS + "More good things!" + LS, new String(Files.readAllBytes(path), StandardCharsets.US_ASCII));
 		} finally {
-			Assert.assertEquals("Good things are happening!" + LS + "More good things!" + LS, String.join(LS, new String(Files.readAllBytes(Paths.get(filename)), StandardCharsets.UTF_8)));
-			Files.delete(Paths.get(filename));
+			Files.delete(path);
+		}
+	}
+
+	@Test
+	public void testFileUpdate() throws IOException, LoadException {
+		final Path path = Paths.get("DELETE_ME.test");
+
+		try {
+			Files.write(path, ("Test 1" + LS + "Test 3" + LS).getBytes(StandardCharsets.UTF_8));
+
+			try (final OutputStream os = new AnnotationHandlers.FileUpdateOutputStream(path.toFile(), false)) {
+				os.write(("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
+				os.flush();
+				os.write("Test".getBytes(StandardCharsets.UTF_8));
+				os.write(' ');
+				os.write('2');
+			}
+
+			Assert.assertEquals("Test 1" + LS + "Test 2", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+
+			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
+
+			try (final OutputStream os = new AnnotationHandlers.FileUpdateOutputStream(path.toFile(), true)) {
+				os.write(("Test 2").getBytes(StandardCharsets.UTF_8));
+			}
+
+			Assert.assertEquals("Test 1" + LS + "Test 2", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+		} finally {
+			Files.delete(path);
+		}
+	}
+
+	@Test
+	public void testFileUpdateAnnotation() throws IOException, LoadException {
+		final Path path = Paths.get("DELETE_ME.test");
+
+		try {
+			Files.write(path, " ".getBytes(StandardCharsets.UTF_8));
+			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+
+			Files.write(path, "Test".getBytes(StandardCharsets.UTF_8));
+			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+
+			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
+			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+
+			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
+			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'overwrite': true})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+
+			Files.write(path, ("Test 1" + LS + "Test 2").getBytes(StandardCharsets.UTF_8));
+			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+		} finally {
+			Files.delete(path);
 		}
 	}
 

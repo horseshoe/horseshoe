@@ -85,9 +85,9 @@ System.out.println(writer.toString()); // Prints "Hello, world!"
 ```
 
 ## Template Examples
-Examples of Horseshoe templates can be found in the `examples` directory. The `examples/results` directory contains the results of running these templates through the Horseshoe engine runner with default settings and an empty data map. (Line endings may vary, as they are operating system dependent by default.)
+Examples of Horseshoe templates can be found in the `samples` directory. The `samples/results` directory contains the results of running these templates through the Horseshoe engine runner with default settings and an empty data map. (Line endings may vary, as they are operating system dependent by default.)
 
-The Horseshoe engine runner can be used to render templates from the command line. The runner can be invoked using Java's `-jar` argument: `java -jar horseshoe.jar`. It provides a small set of the rendering options available in the Horseshoe library. A list of all available options for the runner can be listed using the `--help` argument.
+The Horseshoe engine runner can be used to render templates from the command line. The runner can be invoked using Java's `-jar` argument: `java -jar horseshoe.jar`. It provides a subset of the rendering options available in the Horseshoe library. A list of all available options for the runner can be listed using the `--help` argument.
 
 ## Description
 Horseshoe is a Mustache-like templating system focused on fast source code generation. The templates consist of mixed tags and content that are ingested and rendered in accordance with a data model. Horseshoe uses an advanced expression syntax to allow data-driven rendering.
@@ -97,21 +97,21 @@ Horseshoe uses tags to specify dynamic parts of a template. The tags typically s
 
 All tags except for content tags may qualify as stand-alone tags. A stand-alone tag is a tag that contains only whitespace before the opening braces on the beginning line and only whitespace after the closing braces on the ending line. This holds true for multiline tags and when using custom delimiters.
 
-#### Comment (`{{! ignore this}}`)
-A Horseshoe comment is structured the same as a Mustache comment. A comment tag beings with `!`.
+#### Comments
+Comment tags (`{{! ignore this}}`) are structured the same as Mustache comments. A comment tag beings with `!`.
 
-#### Content (`{{content}}`)
-A Horseshoe content tag is similar to a Mustache interpolation tag. The current context is used to look up the value specified inside the tag. The value is then rendered in place of the tag.
+#### Content
+Content tags (`{{content}}`) are similar to Mustache interpolation tags. The current context is used to look up the value specified inside the tag. The value is then rendered in place of the tag.
 
 There are a couple major differences from Mustache interpolation tags:
 1. The printed values are not HTML-escaped by default, since Horseshoe is designed for generating source code rather than HTML. Horseshoe can be configured to escape HTML if desired.
 2. The value specified inside the content tag represents a [Horseshoe expression](#expressions). Values such as `some-content` will be interpreted as the value `some` minus the value `content` rather than the value of `some-content`. This can be changed via a setting to match the Mustache interpolation tag if desired.
 
-#### Unescaped Content (`{{{content}}}`, `{{& content}}`)
-Unescaped content is the same as normal content in Horseshoe, since content is not escaped by default. It only differs from normal content if content escaping is enabled. The tag can either start with a `{` and end with a `}` or simply start with a `&`.
+#### Unescaped Content
+Unescaped content (`{{{content}}}`, `{{& content}}`) is the same as normal content in Horseshoe, since content is not escaped by default. It only differs from normal content if content escaping is enabled. The tag can either start with a `{` and end with a `}` or simply start with a `&`.
 
-#### Partial (`{{> partial}}`)
-A partial tag in Horseshoe is similar to a partial tag in Mustache. It functions similarly to a `#include` directive in C++. The partial template is loaded (either from the specified filename or the corresponding template from the template loader) and placed into the current template.
+#### Partials
+Partial tags (`{{> partial}}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++. The partial template is loaded (either from the specified filename or the corresponding template from the template loader) and placed into the current template.
 
 If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template.
 
@@ -127,15 +127,23 @@ More {{literal}} template text.
 <<={{ }}=>>
 ```
 
-#### Section (`{{# map}}`)
-Section tags in Horseshoe are similar to Mustache section tags. A section tag can either function as a conditional section or as a for each section. The contents of a conditional section are only rendered if the value evaluates to a non-null, non-zero value. The contents of a for each section are iterated once for every child.
+#### Sections
+Section tags (`{{# map}}`) in Horseshoe are similar to Mustache section tags. A section tag can either function as a conditional section or as a foreach section. The contents of a conditional section are only rendered if the value evaluates to a non-null, non-zero value. The contents of a foreach section are iterated once for every child.
 
-Internal objects that are treated as for each sections include arrays, iterables, and streams (if using Java 8 and up). All other objects are treated as conditional sections. For booleans, the conditional section will only be rendered for `true` values. For numeric or character primitives, the conditional section will only be rendered for non-zero values. For optionals (if using Java 8 and up), the conditional section will only be rendered for values that are present. The conditional section is never rendered for a null value.
+Internal objects that are treated as foreach sections include arrays, iterables, and streams (if using Java 8 and up). All other objects are treated as conditional sections. For booleans, the conditional section will only be rendered for `true` values. For numeric or character primitives, the conditional section will only be rendered for non-zero values. For optionals (if using Java 8 and up), the conditional section will only be rendered for values that are present. The conditional section is never rendered for a null value.
 
-All sections except for booleans push the value onto the context stack. For each sections push each child item onto the stack as it iterates over the value.
+All sections except for booleans and [annotations](#annotations) push the value onto the context stack. Foreach sections push each child item onto the stack as it iterates over the collection.
 
-#### Inverted Section (`{{^ exists}}`)
-Inverted section tags are used to negate a conditional or for each section. Inverted sections are only rendered when the negated section would not be rendered. Null objects, numeric zero values, `false`, as well as empty lists or arrays are several examples of values that will cause an inverted section to be rendered.
+##### Annotations
+Annotations (`{{# @Annotation("Param1": false, "Param2")}}`) are section tags that begin with an at sign (`@`). The parameters are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler. Annotations do not affect the context stack.
+
+Built-in annotations include the following:
+- @StdErr - Sends output to stderr.
+- @StdOut - Sends output to stdout.
+- @File('name': 'filename', 'encoding': 'UTF-16', 'overwrite': false, 'append') - Sends output to the file with the specified name, using the specified encoding. The file is only written if the contents of the file are different than the rendered contents, unless overwrite is specified as true. If append is specified as true the rendered contents are appended to the file.
+
+#### Inverted Sections
+Inverted section tags (`{{^ exists}}`) are used to negate a conditional or foreach section. Inverted sections are only rendered when the negated section would not be rendered. Null objects, numeric zero values, `false`, as well as empty lists or arrays are several examples of values that will cause an inverted section to be rendered.
 
 An inverted section tag can be left empty (`{{^}}`) to indicate that the inverted section will be rendered when the conditional associated with the current section is false. For example,
 ```horseshoe
@@ -146,8 +154,8 @@ An inverted section tag can be left empty (`{{^}}`) to indicate that the inverte
 {{/a}}
 ```
 
-#### Inline Partial (`{{< partial}}`)
-Inline partial tags define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a string or template file.
+#### Inline Partials
+Inline partial tags (`{{< partial}}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a string or template file.
 
 Inline partials can only be included (using a partial tag) in the scope of the template in which they are declared. They cannot be included in any other template. This prevents naming collisions of inline partials in multiple templates and allows inline partials to be overridden later in a template or in a nested scope.
 

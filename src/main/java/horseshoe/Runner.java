@@ -30,7 +30,7 @@ import horseshoe.CommandLineOption.OptionSet;
 import horseshoe.Settings.ContextAccess;
 
 /**
- * The runner enables rendering a Horseshoe template via the command line. While not as full-featured as the software library, several options can be changed using command line arguments.
+ * The runner enables rendering Horseshoe templates via the command line. While not as full-featured as the software library, several options can be changed using command line arguments.
  */
 public class Runner {
 
@@ -482,20 +482,15 @@ public class Runner {
 	}
 
 	/**
-	 * Parses a command line argument not part of any option.
+	 * Loads a template from stdin.
 	 *
-	 * @param argument the argument to parse
-	 * @param expectingArgument true if an argument is expected, otherwise false
-	 * @return null if the argument should not be used, otherwise the parsed argument
+	 * @param loader the loader used to load the template
+	 * @param charset the character set used to read stdin
+	 * @return the loaded template
+	 * @throws LoadException if an error occurs while loading the template
 	 */
-	private static String parseArgument(final String argument, final boolean expectingArgument) {
-		if ("--".equals(argument)) {
-			return null;
-		} else if (!expectingArgument) {
-			throw new IllegalArgumentException("Unexpected argument detected: " + argument);
-		}
-
-		return argument;
+	private static Template loadTemplateFromStdIn(final TemplateLoader loader, final Charset charset) throws LoadException {
+		return loader.load("<stdin>", new BufferedReader(new InputStreamReader(System.in, charset)));
 	}
 
 	/**
@@ -525,7 +520,7 @@ public class Runner {
 		final TemplateLoader loader = new TemplateLoader();
 		final Map<String, Object> globalData = new LinkedHashMap<>();
 		final Settings settings = new Settings();
-		String inputFile = null;
+		final List<Template> templates = new ArrayList<>();
 		String outputFile = null;
 		Charset stdInCharset = Charset.defaultCharset();
 		Charset stdOutCharset = Charset.defaultCharset();
@@ -581,23 +576,22 @@ public class Runner {
 					default:
 						throw new IllegalArgumentException("Unrecognized option detected: " + pair.option);
 				}
-			} else {
-				inputFile = parseArgument(pair.argument, inputFile == null);
+			} else if ("-".equals(pair.argument)) {
+				templates.add(loadTemplateFromStdIn(loader, stdInCharset));
+			} else if (!"--".equals(pair.argument)) {
+				templates.add(loader.load(pair.argument, Paths.get(pair.argument), loader.getCharset()));
 			}
 		}
 
-		final Template template;
-
-		// Load template (readers are automatically closed by Horseshoe, so no need to use try-with-resources)
-		if (inputFile == null || "-".equals(inputFile)) {
-			template = loader.load("<stdin>", new BufferedReader(new InputStreamReader(System.in, stdInCharset)));
-		} else {
-			template = loader.load(inputFile, Paths.get(inputFile), loader.getCharset());
+		if (templates.isEmpty()) {
+			templates.add(loadTemplateFromStdIn(loader, stdInCharset));
 		}
 
-		// Render the template
+		// Render the templates
 		try (final Writer writer = new BufferedWriter(outputFile == null ? new OutputStreamWriter(System.out, stdOutCharset) : new OutputStreamWriter(new FileOutputStream(outputFile), outputCharset))) {
-			template.render(settings, globalData, writer);
+			for (final Template template : templates) {
+				template.render(settings, globalData, writer);
+			}
 		}
 	}
 
@@ -607,8 +601,8 @@ public class Runner {
 	 * @param stream the stream used to print the help information
 	 */
 	private static void showHelp(final PrintStream stream) {
-		stream.println("Usage: " + Runner.class.getName() + " [options] [file]");
-		stream.println("  Renders a Horseshoe template from file or <stdin>.");
+		stream.println("Usage: " + Runner.class.getName() + " [[options] <input-file>]...");
+		stream.println("  Renders Horseshoe templates from input files or <stdin>.");
 		stream.println();
 		stream.println("Options:");
 		OPTIONS.print(stream);

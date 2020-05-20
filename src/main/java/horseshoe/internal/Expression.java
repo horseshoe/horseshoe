@@ -289,7 +289,9 @@ public final class Expression {
 	 * @return the result of converting the object to a boolean
 	 */
 	public static boolean convertToBoolean(final Object object) {
-		if (object instanceof Number) {
+		if (object == null) {
+			return false;
+		} else if (object instanceof Number) {
 			if (object instanceof Double || object instanceof Float) {
 				return ((Number)object).doubleValue() != 0.0;
 			} else if (object instanceof BigDecimal) {
@@ -305,7 +307,7 @@ public final class Expression {
 			return ((Character)object).charValue() != 0;
 		}
 
-		return object != null;
+		return true;
 	}
 
 	/**

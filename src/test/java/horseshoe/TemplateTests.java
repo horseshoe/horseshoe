@@ -58,22 +58,6 @@ public class TemplateTests {
 		assertEquals("String 1" + LS + "String 2" + LS, new TemplateLoader().load("Die", "{{#'String 1', 'String 2', \"String 3\"}}\n{{^.hasNext}}\n{{☠\"Should print out as a severe log statement\"; 'Did not die'}}\n{{/}}\n{{.}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
-	@Test
-	public void testDuplicateSection() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Duplicate Section", "Names:\n{{#people}}\n - {{lastName}}, {{firstName}}\n{{/}}\n\nMailing Labels:\n{{#}}\n{{firstName}} {{lastName}}\n{{address}}\n{{city}}, {{state}} {{zip}}\n{{#.hasNext}}\n\n{{/}}\n{{/}}\n");
-
-		final Settings settings = new Settings();
-		final java.io.StringWriter writer = new java.io.StringWriter();
-		template.render(settings, Helper.loadMap("people", Helper.loadList(Helper.loadMap("firstName", "John", "lastName", "Doe", "address", "101 1st St", "city", "Seattle", "state", "WA", "zip", 98101), Helper.loadMap("firstName", "Jane", "lastName", "Doey", "address", "202 2nd St", "city", "Miami", "state", "FL", "zip", 33255))), writer);
-
-		assertEquals("Names:" + LS + " - Doe, John" + LS + " - Doey, Jane" + LS + LS + "Mailing Labels:" + LS + "John Doe" + LS + "101 1st St" + LS + "Seattle, WA 98101" + LS + LS + "Jane Doey" + LS + "202 2nd St" + LS + "Miami, FL 33255" + LS, writer.toString());
-	}
-
-	@Test
-	public void testDuplicateSection2() throws IOException, LoadException {
-		assertEquals("Names:" + LS + " - John Doe" + LS + " - Jane Doey" + LS + LS + "All:" + LS + " - John Doe, Jane Doey" + LS, new TemplateLoader().load("Duplicate Section", "Names:\n{{#people}}\n{{#['first':firstName, 'last':lastname, 'full':firstName + ' ' + lastName]}}\n - {{full}}\n{{/}}\n{{/}}\n\nAll:\n - {{#}}{{#}}{{full}}{{/}}{{#.hasNext}}, {{/}}{{/}}\n").render(new Settings(), Helper.loadMap("people", Helper.loadList(Helper.loadMap("firstName", "John", "lastName", "Doe"), Helper.loadMap("firstName", "Jane", "lastName", "Doey"))), new java.io.StringWriter()).toString());
-	}
-
 	/**
 	 * This test evaluates the example code given in the {@link Template} javadoc and the README markdown file. Any changes to this code should be updated in those locations as well.
 	 */
@@ -117,6 +101,22 @@ public class TemplateTests {
 				throw new IOException();
 			}
 		});
+	}
+
+	@Test
+	public void testRepeatedSection() throws IOException, LoadException {
+		final Template template = new TemplateLoader().load("Repeated Section", "Names:\n{{#people}}\n - {{lastName}}, {{firstName}}{{#deceased}} (deceased){{/}}\n{{/}}\n\nMailing Labels:\n{{#}}\n{{#}}Family of {{/}}{{firstName}} {{lastName}}\n{{address}}\n{{city}}, {{state}} {{zip}}\n{{#.hasNext}}\n\n{{/}}\n{{/}}\n");
+
+		final Settings settings = new Settings();
+		final java.io.StringWriter writer = new java.io.StringWriter();
+		template.render(settings, Helper.loadMap("people", Helper.loadList(Helper.loadMap("firstName", "John", "lastName", "Doe", "address", "101 1st St", "city", "Seattle", "state", "WA", "zip", 98101, "deceased", true), Helper.loadMap("firstName", "Jane", "lastName", "Doey", "address", "202 2nd St", "city", "Miami", "state", "FL", "zip", 33255, "deceased", false))), writer);
+
+		assertEquals("Names:" + LS + " - Doe, John (deceased)" + LS + " - Doey, Jane" + LS + LS + "Mailing Labels:" + LS + "Family of John Doe" + LS + "101 1st St" + LS + "Seattle, WA 98101" + LS + LS + "Jane Doey" + LS + "202 2nd St" + LS + "Miami, FL 33255" + LS, writer.toString());
+	}
+
+	@Test
+	public void testRepeatedSection2() throws IOException, LoadException {
+		assertEquals("Names:" + LS + " - John Doe" + LS + " - Jane Doey" + LS + LS + "All:" + LS + " - John Doe, Jane Doey" + LS, new TemplateLoader().load("Repeated Section", "Names:\n{{#people}}\n{{#['first':firstName, 'last':lastname, 'full':firstName + ' ' + lastName]}}\n - {{full}}\n{{/}}\n{{/}}\n\nAll:\n - {{#}}{{#}}{{full}}{{/}}{{#.hasNext}}, {{/}}{{/}}\n").render(new Settings(), Helper.loadMap("people", Helper.loadList(Helper.loadMap("firstName", "John", "lastName", "Doe"), Helper.loadMap("firstName", "Jane", "lastName", "Doey"))), new java.io.StringWriter()).toString());
 	}
 
 	@Test

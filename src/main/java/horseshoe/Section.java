@@ -11,10 +11,8 @@ import horseshoe.internal.OverlayMap;
 
 final class Section {
 
-	private static final int INITIAL_CHILDREN_CAPACITY = 4; // Likely not many nested sections, so don't initialize the full capacity
-
 	private final Section parent;
-	private final List<Section> children = new ArrayList<>(INITIAL_CHILDREN_CAPACITY);
+	private final List<Section> children = new ArrayList<>();
 	private final String name;
 	private final String location;
 	private final Expression expression;
