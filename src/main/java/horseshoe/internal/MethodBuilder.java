@@ -1441,28 +1441,28 @@ public final class MethodBuilder {
 			getConstant(new UTF8String(((Class<?>)value).getName().replace('.', '/'))).locations.add(new Location(constantPool, constantPool.getLength() + 1));
 
 			return constantPool.add(value, CLASS_CONSTANT, B0, B0);
-		} else if (value instanceof Member) {
-			// Build the signature
-			final Member member = (Member)value;
-			final ConstantPoolEntry name = getConstant(new UTF8String(member instanceof Constructor ? "<init>" : member.getName()));
-			final ConstantPoolEntry signature = getConstant(new UTF8String(getSignature(member)));
-			final ConstantPoolEntry declaringClass = getConstant(member.getDeclaringClass());
-
-			name.locations.add(new Location(constantPool, constantPool.getLength() + 1));
-			signature.locations.add(new Location(constantPool, constantPool.getLength() + 3));
-			constantPool.add(new Object(), NAME_AND_TYPE_CONSTANT, B0, B0, B0, B0).locations.add(new Location(constantPool, constantPool.getLength() + 3));
-			declaringClass.locations.add(new Location(constantPool, constantPool.getLength() + 1));
-
-			if (member instanceof Field) { // Field
-				return constantPool.add(member, FIELD_CONSTANT, B0, B0, B0, B0);
-			} else if ((member.getDeclaringClass().getModifiers() & Modifier.INTERFACE) != 0) { // Interface method
-				return constantPool.add(member, IMETHOD_CONSTANT, B0, B0, B0, B0);
-			}
-
-			return constantPool.add(member, METHOD_CONSTANT, B0, B0, B0, B0);
+		} else if (!(value instanceof Member)) {
+			throw new IllegalArgumentException("Cannot add a constant of type " + value.getClass().toString());
 		}
 
-		throw new IllegalArgumentException("Cannot add a constant of type " + value.getClass().toString());
+		// Build the signature
+		final Member member = (Member)value;
+		final ConstantPoolEntry name = getConstant(new UTF8String(member instanceof Constructor ? "<init>" : member.getName()));
+		final ConstantPoolEntry signature = getConstant(new UTF8String(getSignature(member)));
+		final ConstantPoolEntry declaringClass = getConstant(member.getDeclaringClass());
+
+		name.locations.add(new Location(constantPool, constantPool.getLength() + 1));
+		signature.locations.add(new Location(constantPool, constantPool.getLength() + 3));
+		constantPool.add(new Object(), NAME_AND_TYPE_CONSTANT, B0, B0, B0, B0).locations.add(new Location(constantPool, constantPool.getLength() + 3));
+		declaringClass.locations.add(new Location(constantPool, constantPool.getLength() + 1));
+
+		if (member instanceof Field) { // Field
+			return constantPool.add(member, FIELD_CONSTANT, B0, B0, B0, B0);
+		} else if ((member.getDeclaringClass().getModifiers() & Modifier.INTERFACE) != 0) { // Interface method
+			return constantPool.add(member, IMETHOD_CONSTANT, B0, B0, B0, B0);
+		}
+
+		return constantPool.add(member, METHOD_CONSTANT, B0, B0, B0, B0);
 	}
 
 	/**

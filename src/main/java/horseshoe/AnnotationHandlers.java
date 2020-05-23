@@ -46,7 +46,7 @@ public final class AnnotationHandlers {
 		private class CompareOutputStream extends OutputStream {
 			private final File file;
 			private final InputStream inputStream;
-			private long truncateSize = 0;
+			private long truncateSize = 0; // -1 indicates append to end
 			private byte[] buffer = { };
 
 			/**
@@ -60,11 +60,18 @@ public final class AnnotationHandlers {
 				this.file = file;
 
 				if (append) {
-					final FileInputStream fileStream = new FileInputStream(file);
+					inputStream = new InputStream() {
+						@Override
+						public int read() {
+							return -1;
+						}
 
-					inputStream = new BufferedInputStream(fileStream);
-					truncateSize = fileStream.getChannel().size();
-					fileStream.getChannel().position(truncateSize);
+						@Override
+						public int read(final byte[] b, final int off, final int len) {
+							return -1;
+						}
+					};
+					truncateSize = -1;
 				} else {
 					inputStream = new BufferedInputStream(new FileInputStream(file));
 				}
@@ -92,13 +99,13 @@ public final class AnnotationHandlers {
 			private OutputStream updateOutputStream(final long atOffset) throws IOException {
 				inputStream.close();
 
-				if (atOffset == 0) {
-					outputStream = new FileOutputStream(file);
-				} else {
+				if (atOffset > 0) {
 					final FileOutputStream newOutputStream = new FileOutputStream(file, true);
 
 					newOutputStream.getChannel().truncate(atOffset);
 					outputStream = newOutputStream;
+				} else {
+					outputStream = new FileOutputStream(file, atOffset < 0);
 				}
 
 				return outputStream;

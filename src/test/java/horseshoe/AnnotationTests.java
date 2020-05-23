@@ -264,7 +264,7 @@ public class AnnotationTests {
 	}
 
 	@Test
-	public void testFileUpdateAnnotation() throws IOException, LoadException {
+	public void testFileUpdateAnnotation() throws IOException, LoadException, InterruptedException {
 		final Path path = Paths.get("DELETE_ME.test");
 
 		try {
@@ -277,12 +277,18 @@ public class AnnotationTests {
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
+			final long unmodifiedTime = path.toFile().lastModified();
+			Thread.sleep(1600);
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			Assert.assertEquals(unmodifiedTime, path.toFile().lastModified());
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
+			final long modifiedTime = path.toFile().lastModified();
+			Thread.sleep(1600);
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'overwrite': true})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			Assert.assertNotEquals(modifiedTime, path.toFile().lastModified());
 
 			Files.write(path, ("Test 1" + LS + "Test 2").getBytes(StandardCharsets.UTF_8));
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());

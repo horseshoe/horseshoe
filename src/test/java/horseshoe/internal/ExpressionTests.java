@@ -271,7 +271,7 @@ public class ExpressionTests {
 		for (int i = 0; i < notEqual.length; i++) {
 			for (int j = 0; j < notEqual.length; j++) {
 				if (i == j) {
-					assertTrue(Expression.compare(true, notEqual[i], notEqual[j]) == 0);
+					assertEquals(0, Expression.compare(true, notEqual[i], notEqual[j]));
 				} else if (i < j) {
 					assertTrue(Expression.compare(true, notEqual[i], notEqual[j]) < 0);
 				} else {
@@ -279,25 +279,25 @@ public class ExpressionTests {
 				}
 			}
 
-			assertTrue(Expression.compare(true, notEqual[i], new Date(0)) != 0);
-			assertTrue(Expression.compare(true, notEqual[i], null) != 0);
-			assertTrue(Expression.compare(true, null, notEqual[i]) != 0);
+			assertNotEquals(0, Expression.compare(true, notEqual[i], new Date(0)));
+			assertNotEquals(0, Expression.compare(true, notEqual[i], null));
+			assertNotEquals(0, Expression.compare(true, null, notEqual[i]));
 		}
 
 		final Object[] equal = { (byte)32, (short)32, 32, 32L, 32.0f, 32.0, BigDecimal.valueOf(32.0), BigInteger.valueOf(32), ' ', new AtomicInteger(32), new AtomicLong(32L) };
 
 		for (int i = 0; i < equal.length; i++) {
 			for (int j = 0; j < equal.length; j++) {
-				assertTrue(Expression.compare(true, equal[i], equal[j]) == 0);
+				assertEquals(0, Expression.compare(true, equal[i], equal[j]));
 			}
 		}
 
-		assertFalse(Expression.compare(true, 5, "5") == 0);
-		assertFalse(Expression.compare(true, "5", 5) == 0);
+		assertNotEquals(0, Expression.compare(true, 5, "5"));
+		assertNotEquals(0, Expression.compare(true, "5", 5));
 		assertTrue(Expression.compare(false, "a", "b") < 0);
 		assertTrue(Expression.compare(false, "2", "1") > 0);
-		assertTrue(Expression.compare(true, new Date(0), new Date(0)) == 0);
-		assertTrue(Expression.compare(true, new Date(0), new Date(1)) != 0);
+		assertEquals(0, Expression.compare(true, new Date(0), new Date(0)));
+		assertNotEquals(0, Expression.compare(true, new Date(0), new Date(1)));
 		assertTrue(Expression.compare(false, new Date(0), new Date(1)) < 0);
 		assertTrue(Expression.compare(false, new Date(1), new Date(0)) > 0);
 
@@ -305,7 +305,7 @@ public class ExpressionTests {
 
 		for (int i = 0; i < stringEquivalents.length; i++) {
 			for (int j = 0; j < stringEquivalents.length; j++) {
-				assertTrue(Expression.compare(true, stringEquivalents[i], stringEquivalents[j]) == 0);
+				assertEquals(0, Expression.compare(true, stringEquivalents[i], stringEquivalents[j]));
 			}
 		}
 	}
