@@ -5,9 +5,13 @@ import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -258,6 +262,14 @@ public class AnnotationTests {
 			}
 
 			Assert.assertEquals("Test 1" + LS + "Test 2", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+
+			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
+
+			try (final OutputStream os = new AnnotationHandlers.FileUpdateOutputStream(path.toFile(), true)) {
+				os.write('2');
+			}
+
+			Assert.assertEquals("Test 1" + LS + "2", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 		} finally {
 			Files.delete(path);
 		}
@@ -267,7 +279,7 @@ public class AnnotationTests {
 	public void testFileUpdateAnnotation() throws IOException, LoadException, InterruptedException {
 		final Path path = Paths.get("DELETE_ME.test");
 
-		try {
+		try (final WatchService watcher = FileSystems.getDefault().newWatchService()) {
 			Files.write(path, " ".getBytes(StandardCharsets.UTF_8));
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
@@ -277,18 +289,16 @@ public class AnnotationTests {
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
-			final long unmodifiedTime = path.toFile().lastModified();
-			Thread.sleep(1600);
+			final WatchKey watchKey1 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
-			Assert.assertEquals(unmodifiedTime, path.toFile().lastModified());
+			Assert.assertFalse(watchKey1.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
-			final long modifiedTime = path.toFile().lastModified();
-			Thread.sleep(1600);
+			final WatchKey watchKey2 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'overwrite': true})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
-			Assert.assertNotEquals(modifiedTime, path.toFile().lastModified());
+			Assert.assertTrue(watchKey2.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
 
 			Files.write(path, ("Test 1" + LS + "Test 2").getBytes(StandardCharsets.UTF_8));
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
