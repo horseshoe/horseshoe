@@ -169,76 +169,6 @@ public class AnnotationTests {
 	}
 
 	@Test
-	public void testMissingAnnotation() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Missing Annotation", "{{#@Missing(\"blah\")}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@Test}}\nEngine does not support @missing.\n{{/}}\n{{/@Missing}}\n");
-		final Settings settings = new Settings();
-		final StringWriter writer = new StringWriter();
-		final MapAnnotation mapAnnotation = new MapAnnotation();
-
-		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
-		Assert.assertEquals("Engine does not support @missing." + LS, mapAnnotation.map.get(null));
-		Assert.assertEquals("Engine does not support @missing." + LS, writer.toString());
-	}
-
-	@Test
-	public void testNestedAnnotations() throws LoadException, IOException {
-		final Settings settings = new Settings();
-		final StringWriter writer = new StringWriter();
-		final TemplateLoader loader = new TemplateLoader();
-		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}{{#@Inner}}789{{/}}456{{/}}cd");
-		final MapAnnotation testMapAnnotation = new MapAnnotation();
-		final MapAnnotation innerMapAnnotation = new MapAnnotation();
-		final Map<String, AnnotationHandler> annotations = new LinkedHashMap<>();
-		annotations.put("Test", testMapAnnotation);
-		annotations.put("Inner", innerMapAnnotation);
-		template.render(settings, Collections.emptyMap(), writer, annotations);
-		Assert.assertEquals("789", innerMapAnnotation.map.get(null));
-		Assert.assertEquals("789456", testMapAnnotation.map.get("value123"));
-		Assert.assertEquals("ab789456cd", writer.toString());
-	}
-
-	@Test
-	public void testNullWriter() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Null Writer", "a{{#@Test}}b{{^}}d{{/}}c");
-		final Settings settings = new Settings();
-		final StringWriter writer = new StringWriter();
-
-		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", new AnnotationHandler() {
-			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
-				return null;
-			}
-		}));
-		Assert.assertEquals("abc", writer.toString());
-	}
-
-	@Test
-	public void testOutputMapping() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Output Mapping", "Good things are happening!\n{{#@Test}}\nThis should output to map annotation.\n{{/}}\nGood things are happening again!\n");
-		final Settings settings = new Settings();
-		final StringWriter writer = new StringWriter();
-		final MapAnnotation mapAnnotation = new MapAnnotation();
-
-		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
-
-		Assert.assertEquals("This should output to map annotation." + LS, mapAnnotation.map.get(null));
-		Assert.assertEquals("Good things are happening!" + LS + "This should output to map annotation." + LS + "Good things are happening again!" + LS, writer.toString());
-	}
-
-	@Test
-	public void testOutputRemapping() throws IOException, LoadException {
-		final Path path = Paths.get("DELETE_ME.test");
-
-		try {
-			final Template template = new TemplateLoader().load("Output Remapping", "{{#@File(\"" + path + "\")}}\nTest 1\n{{/}}\n{{#@File({\"name\":\"" + path + "\", \"encoding\": \"ASCII\", 'append': true})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n{{#@StdErr}}\nThis should print to stderr\n{{/}}\n");
-			template.render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS + "Good things are happening!" + LS + "More good things!" + LS, new String(Files.readAllBytes(path), StandardCharsets.US_ASCII));
-		} finally {
-			Files.delete(path);
-		}
-	}
-
-	@Test
 	public void testFileUpdate() throws IOException, LoadException {
 		final Path path = Paths.get("DELETE_ME.test");
 
@@ -303,6 +233,76 @@ public class AnnotationTests {
 			Files.write(path, ("Test 1" + LS + "Test 2").getBytes(StandardCharsets.UTF_8));
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+		} finally {
+			Files.delete(path);
+		}
+	}
+
+	@Test
+	public void testMissingAnnotation() throws IOException, LoadException {
+		final Template template = new TemplateLoader().load("Missing Annotation", "{{#@Missing(\"blah\")}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@Test}}\nEngine does not support @missing.\n{{/}}\n{{/@Missing}}\n");
+		final Settings settings = new Settings();
+		final StringWriter writer = new StringWriter();
+		final MapAnnotation mapAnnotation = new MapAnnotation();
+
+		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
+		Assert.assertEquals("Engine does not support @missing." + LS, mapAnnotation.map.get(null));
+		Assert.assertEquals("Engine does not support @missing." + LS, writer.toString());
+	}
+
+	@Test
+	public void testNestedAnnotations() throws LoadException, IOException {
+		final Settings settings = new Settings();
+		final StringWriter writer = new StringWriter();
+		final TemplateLoader loader = new TemplateLoader();
+		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}{{#@Inner}}789{{/}}456{{/}}cd");
+		final MapAnnotation testMapAnnotation = new MapAnnotation();
+		final MapAnnotation innerMapAnnotation = new MapAnnotation();
+		final Map<String, AnnotationHandler> annotations = new LinkedHashMap<>();
+		annotations.put("Test", testMapAnnotation);
+		annotations.put("Inner", innerMapAnnotation);
+		template.render(settings, Collections.emptyMap(), writer, annotations);
+		Assert.assertEquals("789", innerMapAnnotation.map.get(null));
+		Assert.assertEquals("789456", testMapAnnotation.map.get("value123"));
+		Assert.assertEquals("ab789456cd", writer.toString());
+	}
+
+	@Test
+	public void testNullWriter() throws IOException, LoadException {
+		final Template template = new TemplateLoader().load("Null Writer", "a{{#@Test}}b{{^}}d{{/}}c");
+		final Settings settings = new Settings();
+		final StringWriter writer = new StringWriter();
+
+		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", new AnnotationHandler() {
+			@Override
+			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+				return null;
+			}
+		}));
+		Assert.assertEquals("abc", writer.toString());
+	}
+
+	@Test
+	public void testOutputMapping() throws IOException, LoadException {
+		final Template template = new TemplateLoader().load("Output Mapping", "Good things are happening!\n{{#@Test}}\nThis should output to map annotation.\n{{/}}\nGood things are happening again!\n");
+		final Settings settings = new Settings();
+		final StringWriter writer = new StringWriter();
+		final MapAnnotation mapAnnotation = new MapAnnotation();
+
+		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
+
+		Assert.assertEquals("This should output to map annotation." + LS, mapAnnotation.map.get(null));
+		Assert.assertEquals("Good things are happening!" + LS + "This should output to map annotation." + LS + "Good things are happening again!" + LS, writer.toString());
+	}
+
+	@Test
+	public void testOutputRemapping() throws IOException, LoadException {
+		final Path path = Paths.get("DELETE_ME.test");
+
+		try {
+			final Template template = new TemplateLoader().load("Output Remapping", "{{#@File(\"" + path + "\")}}\nTest 1\n{{/}}\n{{#@File({\"name\":\"" + path + "\", \"encoding\": \"ASCII\", 'append': true})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n{{#@StdErr}}\nThis should print to stderr\n{{/}}\n");
+			template.render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS + "Good things are happening!" + LS + "More good things!" + LS, new String(Files.readAllBytes(path), StandardCharsets.US_ASCII));
 		} finally {
 			Files.delete(path);
 		}

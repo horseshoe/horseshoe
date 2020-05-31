@@ -9,6 +9,7 @@ import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
@@ -164,23 +165,38 @@ public class TemplateTests {
 		final TemplateLoader tl1 = new TemplateLoader().add("Dup", new StringReader("1")).add("Dup", "2");
 		tl1.load("Dup", new StringReader("3"));
 		tl1.load("Dup", "55");
-		tl1.load("Dup", Paths.get("fakeFile"), StandardCharsets.UTF_16BE);
 		assertEquals("3", tl1.load("Dup", new StringReader("4")).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 		new TemplateLoader().add("Dup", new StringReader("1")).close();
 
 		assertEquals("a", new TemplateLoader().add(new TemplateLoader().add("a", "a").load("a")).load("b", "{{>a}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 
 		new TemplateLoader().getIncludeDirectories().add(Paths.get("."));
+
+		final Template reloadTemplate = new TemplateLoader().load("Test 1", "It works!" + LS);
+		final Path fakePath = Paths.get("fakePath").toAbsolutePath();
+
+		assertEquals("It works!" + LS, new TemplateLoader().put("Test 2", reloadTemplate).load("Test 3", "{{>Test 2}}" + LS).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("It works!" + LS, new TemplateLoader().put(fakePath, reloadTemplate).load("Test 3", "{{>" + fakePath + "}}" + LS).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 	@Test (expected = LoadException.class)
-	public void testTemplateLoaderException() throws IOException, LoadException {
+	public void testTemplateLoaderException1() throws LoadException {
 		new TemplateLoader().load("Exception Test", new StringReader(" ") {
 			@Override
 			public int read(final char[] cbuf, final int off, final int len) throws IOException {
 				throw new IOException();
 			}
-		}).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+		});
+	}
+
+	@Test (expected = LoadException.class)
+	public void testTemplateLoaderException2() throws LoadException {
+		new TemplateLoader().load("Exception Test", new StringReader("{{>" + Paths.get("non-existant-file").toAbsolutePath() + "}}"));
+	}
+
+	@Test (expected = LoadException.class)
+	public void testTemplateLoaderException3() throws LoadException {
+		new TemplateLoader().load("Non-existant Test");
 	}
 
 }

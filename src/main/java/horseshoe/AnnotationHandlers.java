@@ -98,14 +98,11 @@ public final class AnnotationHandlers {
 			 */
 			private OutputStream updateOutputStream(final long atOffset) throws IOException {
 				inputStream.close();
+				final FileOutputStream newOutputStream = new FileOutputStream(file, atOffset != 0);
+				outputStream = newOutputStream;
 
 				if (atOffset > 0) {
-					final FileOutputStream newOutputStream = new FileOutputStream(file, true);
-
 					newOutputStream.getChannel().truncate(atOffset);
-					outputStream = newOutputStream;
-				} else {
-					outputStream = new FileOutputStream(file, atOffset < 0);
 				}
 
 				return outputStream;

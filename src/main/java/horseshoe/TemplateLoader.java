@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -36,8 +35,8 @@ public class TemplateLoader {
 	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL | Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?[-=]>\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 
-	private final Map<String, Template> templates = new HashMap<>();
-	private final Map<String, Loader> loaderMap = new HashMap<>();
+	private final Map<Object, Template> templates = new HashMap<>();
+	private final Map<Object, Loader> loaderMap = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
 	private Charset charset = StandardCharsets.UTF_8;
 	private boolean preventPartialPathTraversal = true;
@@ -77,6 +76,12 @@ public class TemplateLoader {
 	}
 
 	/**
+	 * Creates a default template loader.
+	 */
+	public TemplateLoader() {
+	}
+
+	/**
 	 * Creates a template loader using the specified include directories.
 	 *
 	 * @param includeDirectories the list of directories used to locate template (partial) files included from another template
@@ -85,13 +90,6 @@ public class TemplateLoader {
 		for (final Path path : includeDirectories) {
 			this.includeDirectories.add(path);
 		}
-	}
-
-	/**
-	 * Creates a default template loader. The default list of include directories contains only the current directory.
-	 */
-	public TemplateLoader() {
-		this(Collections.singletonList(Paths.get(".")));
 	}
 
 	/**
@@ -128,31 +126,32 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds a template to the loader. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
+	 * Adds a template to the loader. If the template already exists in the template loader, then this has no effect.
 	 *
 	 * @param template the template to add to the loader
 	 * @return this loader
 	 */
 	public TemplateLoader add(final Template template) {
-		if (!templates.containsKey(template.getName())) {
-			templates.put(template.getName(), template);
+		if (!templates.containsKey(template.getIdentifier())) {
+			return put(template);
 		}
 
 		return this;
 	}
 
 	/**
-	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
+	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(Path)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
-	 * @param name the name of the template
 	 * @param file the file to load as a template
 	 * @param charset the character set to use when loading the file
 	 * @return this loader
 	 * @throws FileNotFoundException if the file does not exist
 	 */
-	public TemplateLoader add(final String name, final Path file, final Charset charset) throws FileNotFoundException {
-		if (!templates.containsKey(name)) {
-			final Loader loader = loaderMap.put(name, new Loader(name, file, charset));
+	public TemplateLoader add(final Path file, final Charset charset) throws FileNotFoundException {
+		final Path absoluteFile = file.toAbsolutePath().normalize();
+
+		if (!templates.containsKey(absoluteFile)) {
+			final Loader loader = loaderMap.put(absoluteFile, new Loader(absoluteFile, charset));
 
 			if (loader != null) {
 				loader.close();
@@ -165,13 +164,12 @@ public class TemplateLoader {
 	/**
 	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
 	 *
-	 * @param name the name of the template
 	 * @param file the file to load as a template
 	 * @return this loader
 	 * @throws FileNotFoundException if the file does not exist
 	 */
-	public TemplateLoader add(final String name, final Path file) throws FileNotFoundException {
-		return add(name, file, charset);
+	public TemplateLoader add(final Path file) throws FileNotFoundException {
+		return add(file, charset);
 	}
 
 	/**
@@ -261,15 +259,43 @@ public class TemplateLoader {
 	/**
 	 * Loads a template from a file. If the template is already loaded, this has no effect.
 	 *
-	 * @param name the name of the template
 	 * @param file the file to load as a template
 	 * @param charset the character encoding to use when loading the template from the file
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
-	 * @throws FileNotFoundException if the file does not exist
+	 * @throws IOException if the file failed to load
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	public Template load(final String name, final Path file, final Charset charset) throws FileNotFoundException, LoadException {
-		return add(name, file, charset).load(name);
+	public Template load(final Path file, final Charset charset) throws IOException, LoadException {
+		final Path absoluteFile = file.toAbsolutePath().normalize();
+
+		// Try to load via a cached template
+		final Template cachedTemplate = templates.get(absoluteFile);
+
+		if (cachedTemplate != null) {
+			return cachedTemplate;
+		}
+
+		// Load via a cached loader
+		add(absoluteFile, charset);
+
+		try (final Loader loader = loaderMap.remove(absoluteFile)) {
+			final Template newTemplate = new Template(file.toString(), absoluteFile);
+
+			templates.put(absoluteFile, newTemplate);
+			return loadTemplate(newTemplate, new PersistentStack<Loader>(), loader);
+		}
+	}
+
+	/**
+	 * Loads a template from a file. If the template is already loaded, this has no effect.
+	 *
+	 * @param file the file to load as a template
+	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
+	 * @throws IOException if the file failed to load
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public Template load(final Path file) throws IOException, LoadException {
+		return load(file, charset);
 	}
 
 	/**
@@ -296,72 +322,126 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Loads the specified template using the specified settings. If the template is already loaded the settings are ignored.
+	 * Loads the specified template using the specified settings. If the template is already loaded, the previously loaded instance is returned and all settings are ignored.
 	 *
 	 * @param name the name of the template to load
 	 * @param loaders the stack of items being loaded
-	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
+	 * @return the loaded template
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
 	private Template load(final String name, final PersistentStack<Loader> loaders) throws LoadException {
-		Template template = templates.get(name);
+		try {
+			// Try to load the template by name
+			final Template cachedTemplate = templates.get(name);
 
-		if (template == null) {
-			template = new Template(name);
-			templates.put(name, template);
+			if (cachedTemplate != null) {
+				return cachedTemplate;
+			}
 
-			Loader loader = loaderMap.remove(name);
-
-			try {
-				if (loader == null) {
-					// Try to load the template from the current template directory
-					final Path baseDirectory = loaders.isEmpty() || loaders.peek().getFile() == null ? Paths.get(".") : loaders.peek().getFile().getParent();
-					final Path toLoadFromBase = baseDirectory == null ? null : baseDirectory.resolve(name).normalize();
-
-					if (toLoadFromBase != null && toLoadFromBase.toFile().isFile()) {
-						if (!getPreventPartialPathTraversal() || toLoadFromBase.startsWith(baseDirectory)) {
-							loader = new Loader(name, toLoadFromBase, charset);
-						} else {
-							for (final Path directory : includeDirectories) {
-								if (toLoadFromBase.startsWith(directory.normalize())) {
-									loader = new Loader(name, toLoadFromBase, charset);
-									break;
-								}
-							}
-						}
-					}
-
-					if (loader == null) { // Try to load the template from the list of include directories
-						for (final Path directory : includeDirectories) {
-							final Path toLoad = directory.resolve(name).normalize();
-
-							if ((!getPreventPartialPathTraversal() || toLoad.startsWith(directory.normalize())) && toLoad.toFile().isFile()) {
-								loader = new Loader(name, toLoad, charset);
-								break;
-							}
-						}
-					}
-
-					if (loader == null) {
-						if (extensions.contains(Extension.THROW_ON_PARTIAL_NOT_FOUND)) {
-							throw new LoadException(loaders, "Template \"" + name + "\" could not be found");
-						} else {
-							return template; // Return empty template, per mustache spec
-						}
-					}
-				}
-
-				loadTemplate(template, loaders, loader);
-			} catch (final IOException | RuntimeException e) {
-				throw new LoadException(loaders, "Template \"" + name + "\" could not be loaded: " + e.getMessage(), e);
-			} finally {
+			try (final Loader loader = loaderMap.remove(name)) {
 				if (loader != null) {
-					loader.close();
+					final Template newTemplate = new Template(name, name);
+
+					templates.put(name, newTemplate);
+					return loadTemplate(newTemplate, loaders, loader);
 				}
+			}
+
+			// Try to load the template by file
+			final Path file = Paths.get(name);
+
+			if (file.isAbsolute()) {
+				final Template absoluteTemplate = loadTemplate(name, file, loaders);
+
+				if (absoluteTemplate != null) {
+					return absoluteTemplate;
+				}
+			} else {
+				// Try to load the template relative to the current template
+				if (!loaders.isEmpty() && loaders.peek().getFile() != null) {
+					final Template relativeTemplate = loadTemplate(name, loaders.peek().getFile().resolveSibling(file).toAbsolutePath().normalize(), loaders);
+
+					if (relativeTemplate != null) {
+						return relativeTemplate;
+					}
+				}
+
+				// Try to load the template from the list of include directories
+				for (final Path directory : includeDirectories) {
+					final Template includeTemplate = loadTemplate(name, directory.resolve(file).toAbsolutePath().normalize(), loaders);
+
+					if (includeTemplate != null) {
+						return includeTemplate;
+					}
+				}
+			}
+		} catch (final IOException | RuntimeException e) {
+			// This probably indicates a file access error, so re-throw as a load exception
+			throw new LoadException(loaders, "Template \"" + name + "\" could not be loaded: " + e.getMessage(), e);
+		}
+
+		// Throw an exception or warn if the template could not be found
+		if (extensions.contains(Extension.THROW_ON_PARTIAL_NOT_FOUND)) {
+			throw new LoadException(loaders, "Template \"" + name + "\" could not be found");
+		}
+
+		Template.LOGGER.log(Level.WARNING, "Template \"{0}\" could not be found", name);
+
+		// Return empty template, per mustache spec
+		return new Template(name, null);
+	}
+
+	/**
+	 * Tries to load the specified template by file. If the template is already loaded, the previously loaded instance is returned and all settings are ignored.
+	 *
+	 * @param name the name of the template to load
+	 * @param absoluteFile the absolute, normalized template file to load
+	 * @param loaders the stack of items being loaded
+	 * @return the loader if the file can be loaded, otherwise null
+	 * @throws IOException if there is an IOException when loading from a file
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	private Template loadTemplate(final String name, final Path absoluteFile, final PersistentStack<Loader> loaders) throws IOException, LoadException {
+		final Template cachedTemplate = templates.get(absoluteFile);
+
+		if (cachedTemplate != null) {
+			return cachedTemplate;
+		}
+
+		try (final Loader loader = loaderMap.remove(absoluteFile)) {
+			if (loader != null) {
+				final Template newTemplate = new Template(name, absoluteFile);
+
+				templates.put(absoluteFile, newTemplate);
+				return loadTemplate(newTemplate, loaders, loader);
 			}
 		}
 
-		return template;
+		// Ensure the file exists and access is not prevented via partial path traversal before loading from file
+		if (!absoluteFile.toFile().isFile()) {
+			return null;
+		} else if (getPreventPartialPathTraversal() && (loaders.isEmpty() || loaders.peekBase().getFile() == null || !absoluteFile.startsWith(loaders.peekBase().getFile().getParent()))) {
+			boolean matches = false;
+
+			// Check if the file begins with the directory of one of the include directories
+			for (final Path directory : includeDirectories) {
+				if (absoluteFile.startsWith(directory.toAbsolutePath().normalize())) {
+					matches = true;
+					break;
+				}
+			}
+
+			if (!matches) {
+				return null;
+			}
+		}
+
+		try (Loader loader = new Loader(absoluteFile, charset)) {
+			final Template newTemplate = new Template(name, absoluteFile);
+
+			templates.put(absoluteFile, newTemplate);
+			return loadTemplate(newTemplate, loaders, loader);
+		}
 	}
 
 	/**
@@ -370,10 +450,13 @@ public class TemplateLoader {
 	 * @param template the template to load
 	 * @param loaders the stack of items being loaded
 	 * @param loader the item being loaded
+	 * @return the loaded template
 	 * @throws LoadException if an error is encountered while loading the template
 	 * @throws IOException if an error is encountered while reading from a file or stream
 	 */
-	private void loadTemplate(final Template template, final PersistentStack<Loader> loaders, final Loader loader) throws LoadException, IOException {
+	private Template loadTemplate(final Template template, final PersistentStack<Loader> loaders, final Loader loader) throws LoadException, IOException {
+		Template.LOGGER.log(Level.FINE, "Loading template {0}", template.getSection());
+
 		final PersistentStack<Section> sections = new PersistentStack<>();
 		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
 
@@ -441,8 +524,9 @@ public class TemplateLoader {
 						case '<': // Local partial
 							if (extensions.contains(Extension.INLINE_PARTIALS)) {
 								final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
-								final Template partial = new Template(name);
+								final Template partial = new Template(name, loader.toLocationString());
 
+								partial.getSection().getLocalPartials().put(name, partial);
 								sections.peek().getLocalPartials().put(name, partial);
 								sections.push(partial.getSection());
 								actionStack.push(partial.getActions());
@@ -525,7 +609,7 @@ public class TemplateLoader {
 									break;
 								}
 
-								throw new LoadException(loaders, "Unclosed section, expecting close tag for section \"" + section.getName() + "\" (" + section.getLocation() + ")");
+								throw new LoadException(loaders, "Unclosed section, expecting close tag for section " + section);
 							}
 
 							sections.pop();
@@ -581,7 +665,7 @@ public class TemplateLoader {
 		final Section topSection = sections.pop();
 
 		if (!sections.isEmpty()) {
-			throw new LoadException(loaders, "Unmatched section tag \"" + topSection + "\" (" + topSection.getLocation() + ") at end of input");
+			throw new LoadException(loaders, "Unmatched section tag " + topSection + " at end of input");
 		}
 
 		// Check for empty last line of template, so that indentation is not applied
@@ -590,6 +674,42 @@ public class TemplateLoader {
 		}
 
 		loaders.pop();
+		return template;
+	}
+
+	/**
+	 * Puts a template into the loader.
+	 *
+	 * @param template the template to put into the loader
+	 * @return this loader
+	 */
+	public TemplateLoader put(final Template template) {
+		templates.put(template.getIdentifier(), template);
+		return this;
+	}
+
+	/**
+	 * Puts a template by name into the loader. All future references to the specified name will use the specified template.
+	 *
+	 * @param name the name identifying the template
+	 * @param template the template to put into the loader
+	 * @return this loader
+	 */
+	public TemplateLoader put(final String name, final Template template) {
+		templates.put(name, template);
+		return this;
+	}
+
+	/**
+	 * Puts a template by file into the loader. All future references to the specified file will use the specified template.
+	 *
+	 * @param file the file identifying the template
+	 * @param template the template to put into the loader
+	 * @return this loader
+	 */
+	public TemplateLoader put(final Path file, final Template template) {
+		templates.put(file.toAbsolutePath().normalize(), template);
+		return this;
 	}
 
 	/**

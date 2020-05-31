@@ -1,12 +1,10 @@
 package horseshoe;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
@@ -86,9 +84,7 @@ public class PartialsDirectoryTests {
 	}
 
 	private File writeFileContents(final File file, final String contents) throws IOException {
-		try (final Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8.newEncoder())) {
-			writer.write(contents);
-		}
+		Files.write(file.toPath(), contents.getBytes(StandardCharsets.UTF_8));
 		return file;
 	}
 
@@ -96,20 +92,30 @@ public class PartialsDirectoryTests {
 	public void testPartialFromOtherDirectory() throws IOException, LoadException {
 		for (final PartialFile partial : partials) {
 			if (partial.file.getParentFile() != null && !temporaryFolder.getRoot().toPath().resolve(partial.file.getParentFile().toPath()).toFile().isDirectory()) {
-				temporaryFolder.newFolder(partial.file.getParentFile().toString().split("/"));
+				try {
+					temporaryFolder.newFolder(partial.file.getParentFile().toString());
+				} catch (final IOException e) {
+					// Failures to create new directories are fine for duplicates
+				}
 			}
-			final File tempFile = temporaryFolder.newFile(partial.file.toString());
-			writeFileContents(tempFile, partial.contents);
+			writeFileContents(temporaryFolder.newFile(partial.file.toString()), partial.contents);
 		}
 
-		final File rootIncludeDir = new File(temporaryFolder.getRoot(), this.rootIncludeDir);
+		try {
+			temporaryFolder.newFolder(rootIncludeDir);
+		} catch (final IOException e) {
+			// Failures to create new directories are fine for duplicates
+		}
+
+		final Path testFile = temporaryFolder.getRoot().toPath().resolve(rootIncludeDir).resolve("Test");
 		final Settings settings = new Settings();
-		final TemplateLoader loader = new TemplateLoader(Arrays.asList(rootIncludeDir.toPath()))
+		final TemplateLoader loader = new TemplateLoader()
 				.setPreventPartialPathTraversal(preventPartialPathTraversal);
 		Template template = null;
 
 		try {
-			template = loader.load("Test", "{{>" + partialNavigationPath + "}}");
+			Files.write(testFile, ("{{>" + partialNavigationPath + "}}").getBytes(StandardCharsets.UTF_8));
+			template = loader.load(testFile);
 		} catch (final LoadException e) {
 			if (expectedException == null || !expectedException.isInstance(e)) {
 				throw e;
@@ -126,7 +132,7 @@ public class PartialsDirectoryTests {
 		Assert.assertEquals(partials[partials.length - 1].contents, writer.toString());
 
 		final Path unrelatedFile = writeFileContents(temporaryFolder.newFile(), "DummyContents").toPath();
-		loader.add("Unused", unrelatedFile).load("Unused", unrelatedFile, StandardCharsets.US_ASCII);
+		loader.add(unrelatedFile).load(unrelatedFile, StandardCharsets.US_ASCII);
 	}
 
 }

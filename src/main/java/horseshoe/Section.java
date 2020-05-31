@@ -14,7 +14,7 @@ final class Section {
 	private final Section parent;
 	private final List<Section> children = new ArrayList<>();
 	private final String name;
-	private final String location;
+	private final Object location;
 	private final Expression expression;
 	private final String annotation;
 	private final boolean isInvisible;
@@ -53,7 +53,7 @@ final class Section {
 
 		for (int skippedChildren = nested; repeatedSection.isInvisible() || skippedChildren-- > 0; repeatedSection = repeatedSection.children.get(0)) {
 			if (repeatedSection.children.size() != 1) {
-				throw new IllegalStateException("Cannot repeat child of section \"" + repeatedSection.getName() + "\", expecting exactly 1 child section");
+				throw new IllegalStateException("Cannot repeat child of section " + repeatedSection + ", expecting exactly 1 child section");
 			}
 		}
 
@@ -77,10 +77,10 @@ final class Section {
 	 * @param annotation the name of the annotation for the section, or null if no annotation exists
 	 * @param isInvisible true if the section is not visible to backreach, otherwise false
 	 */
-	public Section(final Section parent, final String name, final String location, final Expression expression, final String annotation, final boolean isInvisible) {
+	public Section(final Section parent, final String name, final Object location, final Expression expression, final String annotation, final boolean isInvisible) {
 		this.parent = parent;
 		this.name = Objects.requireNonNull(name, "Encountered null section name");
-		this.location = Objects.requireNonNull(location, "Encountered null location");
+		this.location = location;
 		this.expression = expression;
 		this.annotation = annotation;
 		this.isInvisible = isInvisible;
@@ -161,15 +161,6 @@ final class Section {
 	}
 
 	/**
-	 * Gets the location where the section begins.
-	 *
-	 * @return the location where the section begins
-	 */
-	public String getLocation() {
-		return location;
-	}
-
-	/**
 	 * Gets the name of the section.
 	 *
 	 * @return the name of the section
@@ -216,7 +207,13 @@ final class Section {
 
 	@Override
 	public String toString() {
-		return name;
+		if (location == null || location.toString().equals(name)) {
+			return "\"" + name + "\"";
+		} else if (name.isEmpty()) {
+			return location.toString();
+		}
+
+		return "\"" + name + "\" (" + location + ")";
 	}
 
 }

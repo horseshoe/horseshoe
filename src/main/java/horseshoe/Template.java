@@ -34,7 +34,7 @@ public final class Template {
 	static final Logger LOGGER = Logger.getLogger(Template.class.getName());
 	static final String VERSION = IMPLEMENTATION_VERSION == null ? "unspecified" : IMPLEMENTATION_VERSION;
 
-	private final String name;
+	private final Object identifier;
 	private final Section section;
 	private final List<Action> actions = new ArrayList<>();
 
@@ -42,12 +42,11 @@ public final class Template {
 	 * Creates an empty template with the specified name.
 	 *
 	 * @param name the name of the template
+	 * @param identifier the identifier of the template
 	 */
-	Template(final String name) {
-		this.name = name;
-		this.section = new Section(null, name, name, null, null, true);
-
-		section.getLocalPartials().put(name, this);
+	Template(final String name, final Object identifier) {
+		this.identifier = identifier;
+		this.section = new Section(null, name, identifier, null, null, true);
 	}
 
 	/**
@@ -60,12 +59,12 @@ public final class Template {
 	}
 
 	/**
-	 * Gets the name of the template.
+	 * Gets the identifier associated with the template.
 	 *
-	 * @return the name of the template
+	 * @return the identifier associated with the template
 	 */
-	public String getName() {
-		return name;
+	public Object getIdentifier() {
+		return identifier;
 	}
 
 	/**

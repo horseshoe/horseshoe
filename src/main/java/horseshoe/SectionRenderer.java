@@ -346,7 +346,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 				writer.close();
 			} catch (final IOException e) {
 				if (renderException == null) { // Log only when there is no causing exception to prevent confusion
-					context.getSettings().getLogger().log(Level.WARNING, "Failed to close writer for section \"" + section.getName() + "\" (" + section.getLocation() + ")", e);
+					context.getSettings().getLogger().log(Level.WARNING, "Failed to close writer for section " + section, e);
 				} else { // If there is a causing exception, add this one as a suppressed exception
 					renderException.addSuppressed(e);
 				}
@@ -477,7 +477,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 			}
 		} catch (final IOException e) { // Bubble up the exception, only logging at the lowest level
 			if (contextSize + (section.isInvisible() ? 0 : 1) == context.getSectionData().size()) {
-				context.getSettings().getLogger().log(Level.SEVERE, "Encountered exception while rendering section \"" + section.getName() + "\" (" + section.getLocation() + ")", e);
+				context.getSettings().getLogger().log(Level.SEVERE, "Encountered exception while rendering section " + section, e);
 			}
 
 			throw e;

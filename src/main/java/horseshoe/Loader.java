@@ -98,13 +98,12 @@ public final class Loader implements AutoCloseable {
 	/**
 	 * Creates a new loader from a file.
 	 *
-	 * @param name the name of the loader
 	 * @param file the file to load
 	 * @param charset the character set to use while loading the file
 	 * @throws FileNotFoundException if the file does not exist
 	 */
-	Loader(final String name, final Path file, final Charset charset) throws FileNotFoundException {
-		this(name, file, new InputStreamReader(new FileInputStream(file.toFile()), charset));
+	Loader(final Path file, final Charset charset) throws FileNotFoundException {
+		this(file.toString(), file, new InputStreamReader(new FileInputStream(file.toFile()), charset));
 	}
 
 	/**

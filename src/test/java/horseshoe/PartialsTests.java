@@ -4,6 +4,12 @@ import static horseshoe.Helper.loadMap;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -22,6 +28,74 @@ public final class PartialsTests {
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("b", 2, "x", false)), writer);
 		Assert.assertEquals("\tA simple test!" + LS + "\tWith a new line!" + LS + "And another." + LS + LS + "\t\tA simple test!" + LS + "\t\t\tWith a new line!" + LS + "\t\tAnd another." + LS, writer.toString());
+	}
+
+	@Test
+	public void testFilePartial() throws IOException, LoadException {
+		final Path path = Paths.get("DELETE_ME.test");
+		final Path path2 = Paths.get("DELETE_ME2.test");
+
+		try {
+			Files.write(path, ("{{>" + path2.toAbsolutePath() + "}}" + LS).getBytes(StandardCharsets.UTF_16BE));
+			Files.write(path2, ("It Works!" + LS).getBytes(StandardCharsets.UTF_8));
+			final TemplateLoader loader = new TemplateLoader();
+			loader.add(loader.load(path.toAbsolutePath().normalize(), StandardCharsets.UTF_16BE));
+			Assert.assertEquals("It Works!" + LS, loader.load(path).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		} finally {
+			Files.delete(path);
+			Files.delete(path2);
+		}
+	}
+
+	@Test
+	public void testFilePartial2() throws IOException, LoadException {
+		Files.createDirectories(Paths.get("DELETE_ME"));
+		final Path path = Paths.get("DELETE_ME/DELETE_ME.test");
+		final Path path2 = Paths.get("DELETE_ME2.test");
+		final Path pathReload = Paths.get("DELETE_ME/DELETE_ME_RELOAD.test");
+
+		try {
+			Files.write(path, ("{{>DELETE_ME2.test}}" + LS).getBytes(StandardCharsets.UTF_16LE));
+			Files.write(path2, ("It Works!" + LS).getBytes(StandardCharsets.UTF_8));
+			Files.write(pathReload, ("{{>DELETE_ME2.test}}" + LS).getBytes(StandardCharsets.UTF_16LE));
+
+			final TemplateLoader loader = new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get(".")));
+
+			Assert.assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+			Assert.assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+			Assert.assertEquals("It Works!" + LS, loader.load(pathReload, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+
+			final TemplateLoader loader2 = new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get(".")))
+					.add(path2);
+
+			Assert.assertEquals("It Works!" + LS, loader2.load(path, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+
+			Assert.assertEquals("It Works!" + LS, new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get("."))).load("Inline Test", "{{>DELETE_ME2.test}}" + LS).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+
+			Assert.assertEquals("It Works!" + LS, new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get("."))).load("DELETE_ME2.test").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		} finally {
+			Files.delete(path);
+			Files.delete(path2);
+			Files.delete(pathReload);
+			Files.delete(Paths.get("DELETE_ME"));
+		}
+	}
+
+	@Test (expected = LoadException.class)
+	public void testFilePartialBad() throws IOException, LoadException {
+		Files.createDirectories(Paths.get("DELETE_ME"));
+		final Path path = Paths.get("DELETE_ME/DELETE_ME.test");
+		final Path path2 = Paths.get("DELETE_ME2.test");
+
+		try {
+			Files.write(path, ("{{>../DELETE_ME2.test}}" + LS).getBytes(StandardCharsets.UTF_16LE));
+			Files.write(path2, ("It Doesn't Work" + LS).getBytes(StandardCharsets.UTF_8));
+			Assert.assertEquals("It Works!" + LS, new TemplateLoader().load(path, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		} finally {
+			Files.delete(path);
+			Files.delete(path2);
+			Files.delete(Paths.get("DELETE_ME"));
+		}
 	}
 
 	@Test
