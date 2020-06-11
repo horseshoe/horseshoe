@@ -6,7 +6,7 @@ import java.io.Writer;
 import horseshoe.internal.Expression;
 import horseshoe.internal.RenderContext;
 
-final class DynamicContentRenderer implements Action {
+final class DynamicContentRenderer implements Renderer {
 
 	private final Expression expression;
 	private final boolean escaped;
@@ -23,7 +23,7 @@ final class DynamicContentRenderer implements Action {
 	}
 
 	@Override
-	public void perform(final RenderContext context, final Writer writer) throws IOException {
+	public void render(final RenderContext context, final Writer writer) throws IOException {
 		final Object value = expression.evaluate(context);
 
 		if (value != null) {

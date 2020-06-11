@@ -22,8 +22,8 @@ final class Section {
 	private boolean useCache = false;
 	private final Map<String, Expression> namedExpressions;
 	private final Map<String, Template> localPartials;
-	private final List<Action> actions = new ArrayList<>();
-	private final List<Action> invertedActions = new ArrayList<>();
+	private final List<Renderer> renderList = new ArrayList<>();
+	private final List<Renderer> invertedRenderList = new ArrayList<>();
 
 	/**
 	 * Creates a new repeated section with the specified parent.
@@ -32,7 +32,7 @@ final class Section {
 	 * @param location the location of the section
 	 * @return the repeated section
 	 */
-	public static Section repeat(final Section parent, final String location) {
+	public static Section repeat(final Section parent, final Object location) {
 		Section repeatContainer = parent;
 		int nested = 0;
 		int skipChildrenSize = 0;
@@ -102,7 +102,7 @@ final class Section {
 	 * @param location the location of the section
 	 * @param expression the expression for the section
 	 */
-	public Section(final Section parent, final String location, final Expression expression) {
+	public Section(final Section parent, final Object location, final Expression expression) {
 		this(parent, expression.toString(), location, expression, null, false);
 	}
 
@@ -116,12 +116,12 @@ final class Section {
 	}
 
 	/**
-	 * Gets the actions associated with the section.
+	 * Gets the list of renderers associated with the section.
 	 *
-	 * @return the actions associated with the section
+	 * @return the list of renderers associated with the section
 	 */
-	public List<Action> getActions() {
-		return actions;
+	public List<Renderer> getRenderList() {
+		return renderList;
 	}
 
 	/**
@@ -143,12 +143,12 @@ final class Section {
 	}
 
 	/**
-	 * Gets the inverted actions associated with the section.
+	 * Gets the list of inverted renderers associated with the section.
 	 *
-	 * @return the inverted actions associated with the section
+	 * @return the the list of inverted renderers associated with the section
 	 */
-	public List<Action> getInvertedActions() {
-		return invertedActions;
+	public List<Renderer> getInvertedRenderList() {
+		return invertedRenderList;
 	}
 
 	/**

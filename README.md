@@ -113,7 +113,7 @@ Unescaped content (`{{{content}}}`, `{{& content}}`) is the same as normal conte
 #### Partials
 Partial tags (`{{> partial}}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++. The partial template is loaded (either from the specified filename or the corresponding template from the template loader) and placed into the current template.
 
-If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template.
+If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. The double indirection operator can be used on partial tags (`{{>> partial}}`) to avoid applying the indentation to every line yet still ignore trailing whitespace and newline. This is a Horseshoe feature.
 
 #### Set Delimiter (`{{=<% %>=}}`)
 The set delimiter tag is structured the same as it is for Mustache. It is used to change the delimiters from `{{` and `}}` to other sequences in templates that contain many double braces that are part of the literal text. The new sequences are applicable for all tags. Here is a brief example,

@@ -7,106 +7,210 @@ import java.util.List;
 import horseshoe.internal.ParsedLine;
 import horseshoe.internal.RenderContext;
 
-final class StaticContentRenderer implements Action {
+final class StaticContentRenderer implements Renderer {
 
-	private static final ParsedLine[] EMPTY_LINES = new ParsedLine[0];
-
-	private final ParsedLine[] lines;
+	private final List<Renderer> container;
+	private final int containerIndex;
+	private final List<ParsedLine> lines;
+	private final boolean followsStandaloneTag;
 	private final boolean indentFirstLine;
-	private boolean ignoreFirstLine = false;
-	private boolean ignoreLastLine = false;
+
+	private static final class EmptyRenderer implements Renderer {
+
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			// No content is rendered
+		}
+
+	}
+
+	private static class SingleLineNoIndentRenderer implements Renderer {
+
+		private final String line;
+
+		public SingleLineNoIndentRenderer(final String line) {
+			this.line = line;
+		}
+
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			writer.write(line);
+		}
+
+	}
+
+	private static final class SingleLineRenderer extends SingleLineNoIndentRenderer {
+
+		public SingleLineRenderer(final String line) {
+			super(line);
+		}
+
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			writer.write(context.getIndentation().peek());
+			super.render(context, writer);
+		}
+
+	}
+
+	private static class MultiLineNoIndentNoLastRenderer implements Renderer {
+
+		protected final ParsedLine[] lines;
+
+		public MultiLineNoIndentNoLastRenderer(final ParsedLine[] lines) {
+			this.lines = lines;
+		}
+
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			final String indentation = context.getIndentation().peek();
+			final String lineEnding = context.getSettings().getLineEndings();
+
+			writer.write(lines[0].getLine());
+			writer.write(lineEnding == null ? lines[0].getEnding() : lineEnding);
+
+			// Write all lines (with indentation)
+			for (int i = 1; i < lines.length - 1; i++) {
+				final ParsedLine line = lines[i];
+
+				if (!line.getLine().isEmpty()) {
+					writer.write(indentation);
+					writer.write(line.getLine());
+				}
+
+				writer.write(lineEnding == null ? line.getEnding() : lineEnding);
+			}
+		}
+
+	}
+
+	private static final class MultiLineNoIndentRenderer extends MultiLineNoIndentNoLastRenderer {
+
+		public MultiLineNoIndentRenderer(final ParsedLine[] lines) {
+			super(lines);
+		}
+
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			super.render(context, writer);
+
+			// Skip line ending on the last line
+			writer.write(context.getIndentation().peek());
+			writer.write(lines[lines.length - 1].getLine());
+		}
+
+	}
+
+	private static class MultiLineNoLastRenderer implements Renderer {
+
+		protected final ParsedLine[] lines;
+
+		public MultiLineNoLastRenderer(final ParsedLine[] lines) {
+			this.lines = lines;
+		}
+
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			final String indentation = context.getIndentation().peek();
+			final String lineEnding = context.getSettings().getLineEndings();
+
+			// Write all lines (with indentation)
+			for (int i = 0; i < lines.length - 1; i++) {
+				final ParsedLine line = lines[i];
+
+				if (!line.getLine().isEmpty()) {
+					writer.write(indentation);
+					writer.write(line.getLine());
+				}
+
+				writer.write(lineEnding == null ? line.getEnding() : lineEnding);
+			}
+		}
+
+	}
+
+	private static final class MultiLineRenderer extends MultiLineNoLastRenderer {
+
+		public MultiLineRenderer(final ParsedLine[] lines) {
+			super(lines);
+		}
+
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			super.render(context, writer);
+
+			// Skip line ending on the last line
+			writer.write(context.getIndentation().peek());
+			writer.write(lines[lines.length - 1].getLine());
+		}
+
+	}
 
 	/**
 	 * Creates a new render static content action using the specified lines. The list of lines must contain at least one line.
 	 *
 	 * @param lines the list of lines
-	 * @param indentFirstLine true to indent the first line, otherwise false
+	 * @param startingLine the starting index in the list
 	 */
-	StaticContentRenderer(final List<ParsedLine> lines, final boolean indentFirstLine) {
-		this.lines = lines.toArray(EMPTY_LINES);
+	StaticContentRenderer(final List<Renderer> container, final List<ParsedLine> lines, final boolean followsStandaloneTag, final boolean indentFirstLine) {
+		this.container = container;
+		this.containerIndex = container.size();
+		this.lines = lines;
+		this.followsStandaloneTag = followsStandaloneTag;
 		this.indentFirstLine = indentFirstLine;
+
+		container.add(this);
 	}
 
-	String getFirstLine() {
-		return lines[0].getLine();
-	}
-
-	String getLastLine() {
-		return lines[lines.length - 1].getLine();
-	}
-
-	StaticContentRenderer ignoreFirstLine() {
-		ignoreFirstLine = true;
-		return this;
-	}
-
-	StaticContentRenderer ignoreLastLine() {
-		ignoreLastLine = true;
-		return this;
-	}
-
-	boolean isLastLineIgnored() {
-		return ignoreLastLine;
-	}
-
-	boolean isMultiline() {
-		return lines.length > 1;
+	boolean followsStandaloneTag() {
+		return followsStandaloneTag;
 	}
 
 	@Override
-	public void perform(final RenderContext context, final Writer writer) throws IOException {
-		if (lines.length == 1) {
-			renderSingleLine(context, writer);
-			return;
+	public void render(final RenderContext context, final Writer writer) throws IOException {
+		final Renderer replacementAction;
+		final int size = lines.size();
+		final int offset;
+		final boolean indent;
+
+		if (followsStandaloneTag) {
+			offset = 1;
+			indent = true;
+		} else {
+			offset = 0;
+			indent = indentFirstLine;
 		}
 
-		final String indentation = context.getIndentation().peek();
-		final String lineEnding = context.getSettings().getLineEndings();
+		if (size > offset + 1) {
+			final ParsedLine[] lineArray = new ParsedLine[size - offset];
 
-		// Only write the first line if it is not ignored
-		if (!ignoreFirstLine) {
-			if (indentFirstLine) {
-				writer.write(indentation);
+			for (int i = 0; i < lineArray.length; i++) {
+				lineArray[i] = lines.get(i + offset);
 			}
 
-			writer.write(lines[0].getLine());
-			writer.write(lineEnding == null ? lines[0].getEnding() : lineEnding);
-		}
+			final String line = lineArray[lineArray.length - 1].getLine();
 
-		// Write all remaining lines (with indentation)
-		for (int i = 1; i < lines.length - 1; i++) {
-			final ParsedLine line = lines[i];
-
-			if (!line.getLine().isEmpty()) {
-				writer.write(indentation);
-				writer.write(line.getLine());
+			if (line == null || (line.isEmpty() && containerIndex == container.size() - 1)) {
+				if (indent) {
+					replacementAction = new MultiLineNoLastRenderer(lineArray);
+				} else {
+					replacementAction = new MultiLineNoIndentNoLastRenderer(lineArray);
+				}
+			} else if (indent) {
+				replacementAction = new MultiLineRenderer(lineArray);
+			} else {
+				replacementAction = new MultiLineNoIndentRenderer(lineArray);
 			}
-
-			writer.write(lineEnding == null ? line.getEnding() : lineEnding);
+		} else if (size <= offset || lines.get(offset).getLine() == null) {
+			replacementAction = new EmptyRenderer();
+		} else if (indent) {
+			replacementAction = new SingleLineRenderer(lines.get(offset).getLine());
+		} else {
+			replacementAction = new SingleLineNoIndentRenderer(lines.get(offset).getLine());
 		}
 
-		// Skip line ending on the last line
-		if (!ignoreLastLine) {
-			writer.write(indentation);
-			writer.write(lines[lines.length - 1].getLine());
-		}
+		container.set(containerIndex, replacementAction);
+		replacementAction.render(context, writer);
 	}
 
-	/**
-	 * Renders the single line content.
-	 *
-	 * @param context the current render context
-	 * @param writer the writer used to render the content
-	 * @throws IOException if an error occurs while writing to the writer
-	 */
-	private void renderSingleLine(final RenderContext context, final Writer writer) throws IOException {
-		// Only write the line if it is not ignored
-		if (!(ignoreFirstLine || ignoreLastLine)) {
-			if (indentFirstLine) {
-				writer.write(context.getIndentation().peek());
-			}
-
-			writer.write(lines[0].getLine());
-		}
-	}
 }

@@ -31,6 +31,18 @@ public final class PartialsTests {
 	}
 
 	@Test
+	public void testIndentation2() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Template template = new TemplateLoader()
+				.add("f", "With a new line!\n")
+				.add("g", "A{{!}} simp\n\nle\n {{!}}\ntest!\n{{! Should not show up even as empty line. }}\n\t{{>f}}\nAnd another.\n")
+				.load("Test", "{{#a}}\t{{>g}}{{/a}}\n{{#a}}\n\t\t{{>g}}\n{{/a}} ");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("a", loadMap("b", 2, "x", false)), writer);
+		Assert.assertEquals("\tA simp" + LS + LS + "le" + LS + "test!" + LS + "\tWith a new line!" + LS + "And another." + LS + LS + "\t\tA simp" + LS + LS + "\t\tle" + LS + "\t\ttest!" + LS + "\t\t\tWith a new line!" + LS + "\t\tAnd another." + LS, writer.toString());
+	}
+
+	@Test
 	public void testFilePartial() throws IOException, LoadException {
 		final Path path = Paths.get("DELETE_ME.test");
 		final Path path2 = Paths.get("DELETE_ME2.test");
@@ -149,6 +161,16 @@ public final class PartialsTests {
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("a", loadMap("x", 3), "x", 2), "x", 1), writer);
 		Assert.assertEquals("\t1:" + LS + "\t\t2:" + LS + "\t\t\t3:" + LS, writer.toString());
+	}
+
+	@Test
+	public void testInlineRecursivePartialIndentation2() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Template template = new TemplateLoader()
+				.load("Test", "{{<g}}\n{{x}}:\n{{#a}}\n\t{{>>g}} a\n{{/a}}\n{{/g}}\n\t{{>g}} a\n");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("a", loadMap("a", loadMap("x", 3), "x", 2), "x", 1), writer);
+		Assert.assertEquals("\t1:" + LS + "\t2:" + LS + "\t3:" + LS + " a" + LS + " a" + LS + " a" + LS, writer.toString());
 	}
 
 	@Test

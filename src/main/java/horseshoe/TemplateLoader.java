@@ -8,7 +8,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -18,19 +17,17 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import horseshoe.internal.CharSequenceUtils;
 import horseshoe.internal.Expression;
 import horseshoe.internal.Identifier;
 import horseshoe.internal.ParsedLine;
 import horseshoe.internal.PersistentStack;
+import horseshoe.internal.StringUtils;
 
 /**
  * The TemplateLoader class is used to load any number of {@link Template}s before rendering. Various properties can be configured to load templates with different settings.
  */
 public class TemplateLoader {
 
-	private static final StaticContentRenderer EMPTY_STATIC_CONTENT_RENDERER = new StaticContentRenderer(Arrays.asList(new ParsedLine("", null)), true);
-	private static final Pattern WHITESPACE_ONLY_PATTERN = Pattern.compile("\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL | Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?[-=]>\\s*", Pattern.UNICODE_CHARACTER_CLASS);
@@ -44,24 +41,68 @@ public class TemplateLoader {
 
 	private static final class Delimiter {
 
-		private static final Pattern DEFAULT_START_PATTERN = Pattern.compile(Pattern.quote("{{"));
-		private static final Pattern DEFAULT_END_PATTERN = Pattern.compile(Pattern.quote("}}"));
-		private static final Pattern DEFAULT_END_UNESCAPED_PATTERN = Pattern.compile(Pattern.quote("}}}"));
-
-		private final Pattern start;
-		private final Pattern end;
-		private final Pattern unescapedEnd;
-
-		public Delimiter() {
-			this.start = DEFAULT_START_PATTERN;
-			this.end = DEFAULT_END_PATTERN;
-			this.unescapedEnd = DEFAULT_END_UNESCAPED_PATTERN;
-		}
+		private final String start;
+		private final String end;
+		private final String unescapedEnd;
 
 		public Delimiter(final String start, final String end) {
-			this.start = Pattern.compile(Pattern.quote(start));
-			this.end = Pattern.compile(Pattern.quote(end));
-			this.unescapedEnd = Pattern.compile(Pattern.quote("}" + end));
+			this.start = start;
+			this.end = end;
+			this.unescapedEnd = "}" + end;
+		}
+
+	}
+
+	private static final class LoadState {
+
+		public static final int TAG_CAN_BE_STANDALONE = 0;
+		public static final int TAG_CANT_BE_STANDALONE = 1;
+		public static final int TAG_CHECK_TAIL_STANDALONE = 2;
+
+		private final Loader loader;
+		private final PersistentStack<Section> sections = new PersistentStack<>();
+		private final PersistentStack<List<Renderer>> renderLists = new PersistentStack<>();
+		private Delimiter delimiter = new Delimiter("{{", "}}");
+		private List<ParsedLine> priorStaticText = new ArrayList<>();
+		private int standaloneStatus = TAG_CANT_BE_STANDALONE;
+		private int tagCount = 0;
+
+		public LoadState(final Loader loader) {
+			this.loader = loader;
+			this.priorStaticText.add(new ParsedLine("", ""));
+		}
+
+		/**
+		 * Checks if the given lines could be the tail end of a standalone tag.
+		 *
+		 * @param lines the lines of the static text
+		 * @return true if the lines could be the tail end of a standalone tag, otherwise false
+		 */
+		private boolean isStandaloneTagTail(final List<ParsedLine> lines) {
+			final int size = lines.size();
+
+			if (size > 1) {
+				return StringUtils.isWhitespace(lines.get(0).getLine());
+			}
+
+			return !loader.hasNext() && StringUtils.isWhitespace(lines.get(0).getLine());
+		}
+
+		/**
+		 * Removes the leading whitespace from the beginning of a potential standalone tag.
+		 *
+		 * @return the leading whitespace
+		 */
+		private String removeStandaloneTagHead() {
+			final int size = priorStaticText.size();
+			final String removedWhitespace;
+
+			if ((size > 1 || tagCount == 1) && StringUtils.isWhitespace(removedWhitespace = priorStaticText.get(size - 1).getLine())) {
+				priorStaticText.set(size - 1, new ParsedLine(null, ""));
+				return removedWhitespace;
+			}
+
+			return null;
 		}
 
 	}
@@ -98,8 +139,8 @@ public class TemplateLoader {
 	 * @param templates a map of template names to template strings
 	 * @return this loader
 	 */
-	public TemplateLoader add(final Map<? extends String, ? extends CharSequence> templates) {
-		for (final Entry<? extends String, ? extends CharSequence> entry : templates.entrySet()) {
+	public TemplateLoader add(final Map<String, String> templates) {
+		for (final Entry<String, String> entry : templates.entrySet()) {
 			add(entry.getKey(), entry.getValue());
 		}
 
@@ -113,7 +154,7 @@ public class TemplateLoader {
 	 * @param value the string value to load as a template
 	 * @return this loader
 	 */
-	public TemplateLoader add(final String name, final CharSequence value) {
+	public TemplateLoader add(final String name, final String value) {
 		if (!templates.containsKey(name)) {
 			final Loader loader = loaderMap.put(name, new Loader(name, value));
 
@@ -252,7 +293,7 @@ public class TemplateLoader {
 	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	public Template load(final String name, final CharSequence value) throws LoadException {
+	public Template load(final String name, final String value) throws LoadException {
 		return add(name, value).load(name);
 	}
 
@@ -457,224 +498,227 @@ public class TemplateLoader {
 	private Template loadTemplate(final Template template, final PersistentStack<Loader> loaders, final Loader loader) throws LoadException, IOException {
 		Template.LOGGER.log(Level.FINE, "Loading template {0}", template.getSection());
 
-		final PersistentStack<Section> sections = new PersistentStack<>();
-		final PersistentStack<List<Action>> actionStack = new PersistentStack<>();
-
-		Delimiter delimiter = new Delimiter();
-		StaticContentRenderer textBeforeStandaloneTag = null;
+		final LoadState state = new LoadState(loader);
 
 		loaders.push(loader);
-		sections.push(template.getSection());
-		actionStack.push(template.getActions());
+		state.sections.push(template.getSection());
+		state.renderLists.push(template.getActions());
 
 		// Parse all tags
-		for (int tags = 0; true; tags++) {
+		while (true) {
 			// Get text before this tag
-			final List<ParsedLine> lines = new ArrayList<>();
-			final CharSequence freeText = loader.setDelimiter(delimiter.start).next(lines);
+			final List<ParsedLine> lines = loader.nextLines(state.delimiter.start);
 
-			if (freeText.length() > 0) {
-				final StaticContentRenderer currentText = new StaticContentRenderer(lines, actionStack.peek().isEmpty());
-				actionStack.peek().add(currentText);
-
-				// Check for stand-alone tags
-				if (textBeforeStandaloneTag != null && currentText.isMultiline() &&
-						WHITESPACE_ONLY_PATTERN.matcher(textBeforeStandaloneTag.getLastLine()).matches() &&
-						WHITESPACE_ONLY_PATTERN.matcher(currentText.getFirstLine()).matches()) {
-					textBeforeStandaloneTag.ignoreLastLine();
-					currentText.ignoreFirstLine();
-				}
-
-				// Use the current text as the basis for future stand-alone tag detection if the currentText is multiline or it is the first line in the template
-				if (currentText.isMultiline() || tags == 0) {
-					textBeforeStandaloneTag = currentText;
-				} else {
-					textBeforeStandaloneTag = null;
-				}
-			} else if (tags > 0) { // length == 0
-				// The text can only be following a stand-alone tag if it is at the very end of the template
-				if (!loader.hasNext() && textBeforeStandaloneTag != null && WHITESPACE_ONLY_PATTERN.matcher(textBeforeStandaloneTag.getLastLine()).matches()) {
-					textBeforeStandaloneTag.ignoreLastLine();
-				}
-
-				// Empty text can never be just before a stand-alone tag, unless it is the first content in the template
-				textBeforeStandaloneTag = null;
+			if ((state.standaloneStatus == LoadState.TAG_CAN_BE_STANDALONE && state.isStandaloneTagTail(lines) && state.removeStandaloneTagHead() != null) ||
+					(state.standaloneStatus == LoadState.TAG_CHECK_TAIL_STANDALONE && state.isStandaloneTagTail(lines))) {
+				new StaticContentRenderer(state.renderLists.peek(), lines, true, false);
 			} else {
-				textBeforeStandaloneTag = EMPTY_STATIC_CONTENT_RENDERER;
+				new StaticContentRenderer(state.renderLists.peek(), lines, false, state.renderLists.peek().isEmpty());
 			}
 
 			if (!loader.hasNext()) {
 				break;
 			}
 
-			// Parse the expression
-			final CharSequence tag = loader.setDelimiter(loader.checkNext("{") ? delimiter.unescapedEnd : delimiter.end).next();
+			// Parse the tag
+			final String tag = loader.next(loader.checkNext("{") ? state.delimiter.unescapedEnd : state.delimiter.end);
 
 			if (!loader.hasNext()) {
 				throw new LoadException(loaders, "Incomplete tag at end of input");
 			}
 
-			processTag:
-			while (tag.length() != 0) {
-				try {
-					switch (tag.charAt(0)) {
-						case '!': // Comments are completely ignored
-							break processTag;
+			state.tagCount++;
+			state.standaloneStatus = LoadState.TAG_CAN_BE_STANDALONE;
+			state.priorStaticText = lines;
 
-						case '<': // Local partial
-							if (extensions.contains(Extension.INLINE_PARTIALS)) {
-								final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
-								final Template partial = new Template(name, loader.toLocationString());
-
-								partial.getSection().getLocalPartials().put(name, partial);
-								sections.peek().getLocalPartials().put(name, partial);
-								sections.push(partial.getSection());
-								actionStack.push(partial.getActions());
-								break processTag;
-							}
-
-							break;
-
-						case '>': { // Load partial
-							final String name = CharSequenceUtils.trim(tag, 1, tag.length()).toString();
-							final Template localPartial = sections.peek().getLocalPartials().get(name);
-							final Template partial = (localPartial != null ? localPartial : load(name, loaders));
-
-							sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
-							actionStack.peek().add(new TemplateRenderer(partial, textBeforeStandaloneTag != null ? textBeforeStandaloneTag : EMPTY_STATIC_CONTENT_RENDERER));
-							break processTag;
-						}
-
-						case '#': { // Start a new section, or repeat the previous section
-							final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
-
-							if (expression.length() == 0 && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
-								sections.push(Section.repeat(sections.peek(), loader.toLocationString()));
-							} else if (expression.length() != 0 && expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
-								final Matcher annotation = ANNOTATION_PATTERN.matcher(expression);
-
-								if (!annotation.matches()) {
-									throw new LoadException(loaders, "Invalid annotation format");
-								}
-
-								final String sectionName = annotation.group("name");
-								final String parameters = annotation.group("parameters");
-								final String location = loader.toLocationString();
-
-								// Load the annotation arguments
-								sections.push(new Section(sections.peek(), sectionName, location, parameters == null ? null : new Expression(location, null, parameters, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
-							} else { // Start a new section
-								final String location = loader.toLocationString();
-
-								sections.push(new Section(sections.peek(), location, new Expression(location, null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
-							}
-
-							// Add a new render section action
-							actionStack.peek().add(SectionRenderer.FACTORY.create(sections.peek()));
-							actionStack.push(sections.peek().getActions());
-							break processTag;
-						}
-
-						case '^': { // Start a new inverted section, or else block for the current section
-							final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
-							final SectionRenderer renderer;
-
-							if (expression.length() == 0 && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
-								if (sections.peek().getExpression() == null && sections.peek().getAnnotation() == null || sections.peek().getActions() != actionStack.pop()) {
-									throw new LoadException(loaders, "Section else tag outside section start tag");
-								}
-
-								renderer = (SectionRenderer)actionStack.peek().get(actionStack.peek().size() - 1);
-							} else { // Start a new inverted section
-								final String location = loader.toLocationString();
-
-								sections.push(new Section(sections.peek(), location, new Expression(location, null, expression, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
-								renderer = SectionRenderer.FACTORY.create(sections.peek());
-								actionStack.peek().add(renderer);
-							}
-
-							// Grab the inverted action list from the section
-							actionStack.push(renderer.getSection().getInvertedActions());
-							break processTag;
-						}
-
-						case '/': { // Close the current section
-							final CharSequence expression = CharSequenceUtils.trim(tag, 1, tag.length());
-							final Section section = sections.peek();
-
-							if (sections.size() <= 1) { // There should always be at least one section on the stack (the template root section)
-								throw new LoadException(loaders, "Section close tag without matching section start tag");
-							} else if ((expression.length() > 0 || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression)) {
-								if (expression.length() > 0 && extensions.contains(Extension.SMART_END_TAGS)) {
-									break;
-								}
-
-								throw new LoadException(loaders, "Unclosed section, expecting close tag for section " + section);
-							}
-
-							sections.pop();
-							actionStack.pop();
-							break processTag;
-						}
-
-						case '=': { // Set delimiter
-							final Matcher matcher = SET_DELIMITER_PATTERN.matcher(tag);
-
-							if (!matcher.matches()) {
-								throw new LoadException(loaders, "Invalid set delimiter tag");
-							}
-
-							delimiter = new Delimiter(matcher.group("start"), matcher.group("end"));
-							break processTag;
-						}
-
-						case '{': // Unescaped content tag
-						case '&':
-							textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-							actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), null, CharSequenceUtils.trim(tag, 1, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
-							break processTag;
-
-						default:
-							// Check for a named expression
-							if (extensions.containsAll(EnumSet.of(Extension.EXPRESSIONS, Extension.NAMED_EXPRESSIONS))) {
-								final CharSequence expression = CharSequenceUtils.trim(tag, 0, tag.length());
-								final Matcher namedExpression = NAMED_EXPRESSION_PATTERN.matcher(expression);
-
-								if (namedExpression.lookingAt()) {
-									new Expression(loader.toLocationString(), namedExpression.group("name"), expression.subSequence(namedExpression.end(), expression.length()), sections.peek().getNamedExpressions(), true);
-									break processTag;
-								}
-							}
-
-							break;
-					}
-
-					// Default to parsing as a dynamic content tag
-					textBeforeStandaloneTag = null; // Content tags cannot be stand-alone tags
-					actionStack.peek().add(new DynamicContentRenderer(new Expression(loader.toLocationString(), null, CharSequenceUtils.trim(tag, 0, tag.length()), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), true));
-					break;
-				} catch (final LoadException e) {
-					throw e;
-				} catch (final Exception e) {
-					throw new LoadException(loaders, "Invalid tag \"" + tag + "\": " + e.getMessage(), e);
-				}
+			try {
+				processTag(loaders, state, tag);
+			} catch (final LoadException e) {
+				throw e;
+			} catch (final Exception e) {
+				throw new LoadException(loaders, "Invalid tag \"" + tag + "\": " + e.getMessage(), e);
 			}
 		}
 
 		// Pop off the top section (should be the template root section) and verify that the section stack is empty
-		final Section topSection = sections.pop();
+		final Section topSection = state.sections.pop();
 
-		if (!sections.isEmpty()) {
+		if (!state.sections.isEmpty()) {
 			throw new LoadException(loaders, "Unmatched section tag " + topSection + " at end of input");
 		}
 
-		// Check for empty last line of template, so that indentation is not applied
-		if (textBeforeStandaloneTag != null && textBeforeStandaloneTag.getLastLine().isEmpty()) {
-			textBeforeStandaloneTag.ignoreLastLine();
-		}
-
+		Template.LOGGER.log(Level.FINE, "Loaded template {0} containing {1} tags", new Object[] { template.getSection(), state.tagCount });
 		loaders.pop();
 		return template;
+	}
+
+	/**
+	 * Processes the given tag.
+	 *
+	 * @param loaders the current stack of loaders
+	 * @param state the load state of the template
+	 * @param tag the string representation of the tag
+	 * @throws LoadException if an error is encountered while loading the template
+	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading an expression
+	 */
+	private void processTag(final PersistentStack<Loader> loaders, final LoadState state, final String tag) throws LoadException, ReflectiveOperationException {
+		if (tag.length() == 0) {
+			return;
+		}
+
+		switch (tag.charAt(0)) {
+			case '!': // Comments are completely ignored
+				return;
+
+			case '<': // Local partial
+				if (extensions.contains(Extension.INLINE_PARTIALS)) {
+					final String name = StringUtils.trim(tag, 1, tag.length());
+					final Template partial = new Template(name, state.loader.toLocation());
+
+					partial.getSection().getLocalPartials().put(name, partial);
+					state.sections.peek().getLocalPartials().put(name, partial);
+					state.sections.push(partial.getSection());
+					state.renderLists.push(partial.getActions());
+					return;
+				}
+
+				break;
+
+			case '>': { // Load partial
+				final String name;
+				String indentation = null;
+
+				if (tag.length() > 1 && tag.charAt(1) == '>') { // >> uses indentation on first line, no trailing new line
+					state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
+					name = StringUtils.trim(tag, 2, tag.length());
+				} else {
+					name = StringUtils.trim(tag, 1, tag.length());
+					indentation = state.removeStandaloneTagHead();
+
+					// 1) Standalone tag uses indentation for each line, no trailing new line
+					// 2) Non-standalone tag uses indentation on first line, with trailing new line
+					if (indentation == null) {
+						state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE;
+					} else {
+						state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
+					}
+				}
+
+				final Template localPartial = state.sections.peek().getLocalPartials().get(name);
+				final Template partial = (localPartial != null ? localPartial : load(name, loaders));
+
+				state.sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
+				new TemplateRenderer(state.renderLists.peek(), partial, indentation);
+				return;
+			}
+
+			case '#': { // Start a new section, or repeat the previous section
+				final String expression = StringUtils.trim(tag, 1, tag.length());
+
+				if (expression.length() == 0 && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
+					state.sections.push(Section.repeat(state.sections.peek(), state.loader.toLocation()));
+				} else if (expression.length() != 0 && expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
+					final Matcher annotation = ANNOTATION_PATTERN.matcher(expression);
+
+					if (!annotation.matches()) {
+						throw new LoadException(loaders, "Invalid annotation format");
+					}
+
+					final String sectionName = annotation.group("name");
+					final String parameters = annotation.group("parameters");
+					final Object location = state.loader.toLocation();
+
+					// Load the annotation arguments
+					state.sections.push(new Section(state.sections.peek(), sectionName, location, parameters == null ? null : new Expression(location, null, parameters, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
+				} else { // Start a new section
+					final Object location = state.loader.toLocation();
+
+					state.sections.push(new Section(state.sections.peek(), location, new Expression(location, null, expression, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+				}
+
+				// Add a new render section action
+				state.renderLists.peek().add(SectionRenderer.FACTORY.create(state.sections.peek()));
+				state.renderLists.push(state.sections.peek().getRenderList());
+				return;
+			}
+
+			case '^': { // Start a new inverted section, or else block for the current section
+				final String expression = StringUtils.trim(tag, 1, tag.length());
+				final SectionRenderer renderer;
+
+				if (expression.length() == 0 && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
+					if (state.sections.peek().getExpression() == null && state.sections.peek().getAnnotation() == null || state.sections.peek().getRenderList() != state.renderLists.pop()) {
+						throw new LoadException(loaders, "Section else tag outside section start tag");
+					}
+
+					renderer = (SectionRenderer)state.renderLists.peek().get(state.renderLists.peek().size() - 1);
+				} else { // Start a new inverted section
+					final Object location = state.loader.toLocation();
+
+					state.sections.push(new Section(state.sections.peek(), location, new Expression(location, null, expression, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+					renderer = SectionRenderer.FACTORY.create(state.sections.peek());
+					state.renderLists.peek().add(renderer);
+				}
+
+				// Grab the inverted action list from the section
+				state.renderLists.push(renderer.getSection().getInvertedRenderList());
+				return;
+			}
+
+			case '/': { // Close the current section
+				final String expression = StringUtils.trim(tag, 1, tag.length());
+				final Section section = state.sections.peek();
+
+				if (state.sections.size() <= 1) { // There should always be at least one section on the stack (the template root section)
+					throw new LoadException(loaders, "Section close tag without matching section start tag");
+				} else if ((expression.length() > 0 || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression)) {
+					if (expression.length() > 0 && extensions.contains(Extension.SMART_END_TAGS)) {
+						break;
+					}
+
+					throw new LoadException(loaders, "Unclosed section, expecting close tag for section " + section);
+				}
+
+				state.sections.pop();
+				state.renderLists.pop();
+				return;
+			}
+
+			case '=': { // Set delimiter
+				final Matcher matcher = SET_DELIMITER_PATTERN.matcher(tag);
+
+				if (!matcher.matches()) {
+					throw new LoadException(loaders, "Invalid set delimiter tag");
+				}
+
+				state.delimiter = new Delimiter(matcher.group("start"), matcher.group("end"));
+				return;
+			}
+
+			case '{': // Unescaped content tag
+			case '&':
+				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
+				state.renderLists.peek().add(new DynamicContentRenderer(new Expression(state.loader.toLocation(), null, StringUtils.trim(tag, 1, tag.length()), state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
+				return;
+
+			default:
+				// Check for a named expression
+				if (extensions.containsAll(EnumSet.of(Extension.EXPRESSIONS, Extension.NAMED_EXPRESSIONS))) {
+					final String expression = StringUtils.trim(tag, 0, tag.length());
+					final Matcher namedExpression = NAMED_EXPRESSION_PATTERN.matcher(expression);
+
+					if (namedExpression.lookingAt()) {
+						new Expression(state.loader.toLocation(), namedExpression.group("name"), expression.substring(namedExpression.end(), expression.length()), state.sections.peek().getNamedExpressions(), true);
+						return;
+					}
+				}
+
+				break;
+		}
+
+		// Default to parsing as a dynamic content tag
+		state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
+		state.renderLists.peek().add(new DynamicContentRenderer(new Expression(state.loader.toLocation(), null, StringUtils.trim(tag, 0, tag.length()), state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), true));
 	}
 
 	/**

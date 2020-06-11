@@ -59,6 +59,11 @@ public class TemplateTests {
 		assertEquals("String 1" + LS + "String 2" + LS, new TemplateLoader().load("Die", "{{#'String 1', 'String 2', \"String 3\"}}\n{{^.hasNext}}\n{{☠\"Should print out as a severe log statement\"; 'Did not die'}}\n{{/}}\n{{.}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
+	@Test
+	public void testEmpty() throws IOException, LoadException {
+		assertEquals("", new TemplateLoader().load("Empty", "{{}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+	}
+
 	/**
 	 * This test evaluates the example code given in the {@link Template} javadoc and the README markdown file. Any changes to this code should be updated in those locations as well.
 	 */

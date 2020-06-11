@@ -11,7 +11,7 @@ import horseshoe.internal.Expression;
 import horseshoe.internal.Properties;
 import horseshoe.internal.RenderContext;
 
-class SectionRenderer implements Action, Expression.Indexed {
+class SectionRenderer implements Renderer, Expression.Indexed {
 
 	static final Factory FACTORY;
 
@@ -452,7 +452,7 @@ class SectionRenderer implements Action, Expression.Indexed {
 	}
 
 	@Override
-	public final void perform(final RenderContext context, final Writer writer) throws IOException {
+	public final void render(final RenderContext context, final Writer writer) throws IOException {
 		final int contextSize = context.getSectionData().size();
 
 		try {
@@ -506,8 +506,8 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private void renderWithoutData(final RenderContext context, final Writer writer) throws IOException {
-		for (final Action action : section.getActions()) {
-			action.perform(context, writer);
+		for (final Renderer action : section.getRenderList()) {
+			action.render(context, writer);
 		}
 	}
 
@@ -519,8 +519,8 @@ class SectionRenderer implements Action, Expression.Indexed {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private void renderInverted(final RenderContext context, final Writer writer) throws IOException {
-		for (final Action action : section.getInvertedActions()) {
-			action.perform(context, writer);
+		for (final Renderer action : section.getInvertedRenderList()) {
+			action.render(context, writer);
 		}
 	}
 

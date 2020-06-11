@@ -7,40 +7,37 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import horseshoe.internal.Buffer;
-import horseshoe.internal.CharSequenceUtils;
 import horseshoe.internal.ParsedLine;
+import horseshoe.internal.StringUtils;
+import horseshoe.internal.StringUtils.Range;
 
 /**
  * Loaders are used to parse {@link Template}s. It keeps track of the current state of the internal reader used to load the template text.
  */
 public final class Loader implements AutoCloseable {
 
-	private static final Pattern NEW_LINE = Pattern.compile("\\r\\n|[\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]");
-
 	private final String name;
 	private final Path file;
 	private final Reader reader;
 	private Buffer streamBuffer;
-	private CharSequence buffer;
+	private final String stringToLoad;
 	private int bufferOffset = 0;
 	private boolean isFullyLoaded = false;
-	private final Matcher matcher;
+	private boolean hasNext = true;
 
-	private final Matcher newLineMatcher;
-	private Location location = new Location();
-	private Location nextLocation = location;
+	private final Location location = new Location();
+	private final Location nextLocation = new Location();
 
 	private static class Location {
 		public static final int FIRST_COLUMN = 1;
 
-		public final int line;
-		public final int column;
+		private int line;
+		private int column;
 
 		public Location(final int line, final int column) {
 			this.line = line;
@@ -50,22 +47,40 @@ public final class Loader implements AutoCloseable {
 		public Location() {
 			this(1, FIRST_COLUMN);
 		}
+
+		public void set(final Location other) {
+			line = other.line;
+			column = other.column;
+		}
+	}
+
+	private static class LineLocation {
+		private final Object location;
+		private final int line;
+
+		private LineLocation(final Object location, final int line) {
+			this.location = location;
+			this.line = line;
+		}
+
+		@Override
+		public String toString() {
+			return location + ":" + line;
+		}
 	}
 
 	/**
-	 * Creates a new loader from a character sequence.
+	 * Creates a new loader from a string.
 	 *
 	 * @param name the name of the loader
-	 * @param value the character sequence to load
+	 * @param value the string to load
 	 */
-	Loader(final String name, final CharSequence value) {
+	Loader(final String name, final String value) {
 		this.name = name;
 		this.file = null;
 		this.reader = null;
-		this.buffer = value;
+		this.stringToLoad = value;
 		this.isFullyLoaded = true;
-		this.matcher = NEW_LINE.matcher(value);
-		this.newLineMatcher = NEW_LINE.matcher(value);
 	}
 
 	/**
@@ -80,9 +95,7 @@ public final class Loader implements AutoCloseable {
 		this.file = file;
 		this.reader = reader;
 		this.streamBuffer = new Buffer(4096);
-		this.buffer = this.streamBuffer;
-		this.matcher = NEW_LINE.matcher(streamBuffer);
-		this.newLineMatcher = NEW_LINE.matcher(streamBuffer);
+		this.stringToLoad = null;
 	}
 
 	/**
@@ -107,14 +120,18 @@ public final class Loader implements AutoCloseable {
 	}
 
 	/**
-	 * Checks if the expected character sequence matches the upcoming sequence in the buffer. Any previous results are invalidated through the use of this function.
+	 * Checks if the expected string matches the upcoming sequence in the buffer. Any previous results are invalidated through the use of this function.
 	 *
-	 * @param expected the expected character sequence
-	 * @return true if the expected character sequence matches the upcoming sequence in the buffer
+	 * @param expected the expected string
+	 * @return true if the expected string matches the upcoming sequence in the buffer
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	boolean checkNext(final CharSequence expected) throws IOException {
-		while (expected.length() > buffer.length() - bufferOffset) {
+	boolean checkNext(final String expected) throws IOException {
+		if (stringToLoad != null) {
+			return stringToLoad.regionMatches(bufferOffset, expected, 0, expected.length());
+		}
+
+		while (expected.length() > streamBuffer.length() - bufferOffset) {
 			if (isFullyLoaded) { // Check if we've reached the end
 				return false;
 			} else { // If we haven't reached the end, then attempt to pull in more data
@@ -122,7 +139,7 @@ public final class Loader implements AutoCloseable {
 			}
 		}
 
-		return CharSequenceUtils.matches(buffer, bufferOffset, expected);
+		return expected.equals(new String(streamBuffer.getData(), bufferOffset, expected.length()));
 	}
 
 	@Override
@@ -137,7 +154,7 @@ public final class Loader implements AutoCloseable {
 	}
 
 	/**
-	 * Gets the column within the current line being loaded. This is only up-to-date if advanceInternalPointer() has been called after every next() call
+	 * Gets the column within the current line being loaded.
 	 *
 	 * @return the column within the current line being loaded
 	 */
@@ -146,7 +163,7 @@ public final class Loader implements AutoCloseable {
 	}
 
 	/**
-	 * Gets the current line being loaded. This is only up-to-date if advanceInternalPointer() has been called after every next() call
+	 * Gets the current line being loaded.
 	 *
 	 * @return the current line being loaded
 	 */
@@ -178,7 +195,7 @@ public final class Loader implements AutoCloseable {
 	 * @return true if more input is available from the loader, otherwise false
 	 */
 	boolean hasNext() {
-		return !isFullyLoaded || !matcher.hitEnd();
+		return hasNext;
 	}
 
 	/**
@@ -195,7 +212,7 @@ public final class Loader implements AutoCloseable {
 
 			// If the current data is using more than 50% of the buffer, then double the size of the buffer
 			if (length >= oldBuffer.capacity() / 2) {
-				buffer = streamBuffer = new Buffer(oldBuffer.capacity() * 2);
+				streamBuffer = new Buffer(oldBuffer.capacity() * 2);
 			}
 
 			// Copy the data to the beginning of the buffer and try to read more data
@@ -212,95 +229,141 @@ public final class Loader implements AutoCloseable {
 		}
 
 		bufferOffset = 0;
-		matcher.reset(streamBuffer);
 		return read;
 	}
 
 	/**
-	 * Gets the next character sequence up to the next matching delimiter or end-of-stream. On construction, the delimiter is initialized as a new line. Any previous results are invalidated through the use of this function.
+	 * Gets the next string up to the next matching delimiter or end-of-stream.
 	 *
-	 * @param lines the list of lines to be updated as part of the call (may be null)
-	 * @return the next character sequence up to the next matching delimiter or end-of-stream
+	 * @param delimiter the delimiter used to end the next string
+	 * @return the next string up to the next matching delimiter or end-of-stream
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	CharSequence next(final List<ParsedLine> lines) throws IOException {
-		boolean foundMatch;
+	String next(final String delimiter) throws IOException {
+		final Range range = nextMatch(delimiter);
+		final String value;
 
+		location.set(nextLocation);
+		nextLocation.column += bufferOffset - range.start;
+
+		if (stringToLoad != null) {
+			for (Range eolRange = StringUtils.findNewLine(stringToLoad, range.start, bufferOffset);
+					eolRange != null;
+					nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = StringUtils.findNewLine(stringToLoad, eolRange.end, bufferOffset));
+
+			value = stringToLoad.substring(range.start, range.end);
+		} else {
+			for (Range eolRange = StringUtils.findNewLine(streamBuffer.getData(), range.start, bufferOffset);
+					eolRange != null;
+					nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = StringUtils.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset));
+
+			value = streamBuffer.substring(range.start, range.end);
+		}
+
+		return value;
+	}
+
+	/**
+	 * Gets the next list of lines up to the next matching delimiter or end-of-stream. At least one line will always be present.
+	 *
+	 * @param delimiter the delimiter used to end the next string
+	 * @return the list of lines up to the next matching delimiter or end-of-stream
+	 * @throws IOException if an error was encountered while trying to read more data into the buffer
+	 */
+	List<ParsedLine> nextLines(final String delimiter) throws IOException {
+		final List<ParsedLine> lines = new ArrayList<>();
+		final StringUtils.Range range = nextMatch(delimiter);
+		int startOfLine = range.start;
+
+		location.set(nextLocation);
+		nextLocation.column += bufferOffset - range.start;
+
+		if (stringToLoad != null) {
+			for (Range eolRange = StringUtils.findNewLine(stringToLoad, range.start, bufferOffset);
+					eolRange != null;
+					startOfLine = eolRange.end, nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = StringUtils.findNewLine(stringToLoad, eolRange.end, bufferOffset)) {
+				if (startOfLine <= range.end) {
+					final int newLineStart = Math.min(eolRange.start, range.end);
+					final int newLineEnd = Math.min(eolRange.end, range.end);
+
+					lines.add(new ParsedLine(stringToLoad.substring(startOfLine, newLineStart), stringToLoad.substring(newLineStart, newLineEnd)));
+				}
+			}
+
+			if (startOfLine <= range.end) {
+				lines.add(new ParsedLine(stringToLoad.substring(startOfLine, range.end), ""));
+			}
+
+			return lines;
+		}
+
+		for (Range eolRange = StringUtils.findNewLine(streamBuffer.getData(), range.start, bufferOffset);
+				eolRange != null;
+				startOfLine = eolRange.end, nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = StringUtils.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset)) {
+			if (startOfLine <= range.end) {
+				final int newLineStart = Math.min(eolRange.start, range.end);
+				final int newLineEnd = Math.min(eolRange.end, range.end);
+
+				lines.add(new ParsedLine(streamBuffer.substring(startOfLine, newLineStart), streamBuffer.substring(newLineStart, newLineEnd)));
+			}
+		}
+
+		if (startOfLine <= range.end) {
+			lines.add(new ParsedLine(streamBuffer.substring(startOfLine, range.end), ""));
+		}
+
+		return lines;
+	}
+
+	/**
+	 * Gets the next range up to the next matching delimiter or end-of-stream. The bufferOffset is updated as part of this search.
+	 *
+	 * @param delimiter the delimiter used to end the next string
+	 * @return the range up to the next matching delimiter or end-of-stream
+	 * @throws IOException if an error was encountered while trying to read more data into the buffer
+	 */
+	private StringUtils.Range nextMatch(final String delimiter) throws IOException {
 		// Find the next match and increment the buffer offset
-		for (foundMatch = matcher.find(); !foundMatch && !isFullyLoaded; foundMatch = matcher.find()) {
+		if (stringToLoad != null) {
+			final int start = bufferOffset;
+			final int foundMatch = stringToLoad.indexOf(delimiter, bufferOffset);
+
+			if (foundMatch >= 0) {
+				bufferOffset = foundMatch + delimiter.length();
+				return new StringUtils.Range(start, foundMatch);
+			}
+
+			bufferOffset = stringToLoad.length();
+			hasNext = false;
+			return new StringUtils.Range(start, bufferOffset);
+		}
+
+		int foundMatch;
+
+		for (foundMatch = streamBuffer.indexOf(delimiter, bufferOffset); foundMatch < 0 && !isFullyLoaded; foundMatch = streamBuffer.indexOf(delimiter, foundMatch + bufferOffset)) {
+			foundMatch = Math.max(0, streamBuffer.length() - (delimiter.length() - 1) - bufferOffset);
 			loadMoreData();
 		}
 
 		final int start = bufferOffset;
-		final int end;
 
-		if (foundMatch) {
-			end = matcher.start();
-			bufferOffset = matcher.end();
-		} else { // Fully loaded
-			end = bufferOffset = buffer.length();
+		if (foundMatch >= 0) {
+			bufferOffset = foundMatch + delimiter.length();
+			return new StringUtils.Range(start, foundMatch);
 		}
 
-		// Find the new lines
-		int startOfLine = start;
-		int line = nextLocation.line;
-		int column = nextLocation.column;
-		location = nextLocation;
-		newLineMatcher.reset(buffer).region(start, bufferOffset);
-
-		if (lines != null) {
-			for (; newLineMatcher.find(); line++, column = Location.FIRST_COLUMN) {
-				if (startOfLine <= end) {
-					final int newLineStart = Math.min(newLineMatcher.start(), end);
-					final int newLineEnd = Math.min(newLineMatcher.end(), end);
-
-					lines.add(new ParsedLine(buffer.subSequence(startOfLine, newLineStart).toString(), buffer.subSequence(newLineStart, newLineEnd).toString()));
-				}
-
-				startOfLine = newLineMatcher.end();
-			}
-
-			if (startOfLine <= end) {
-				lines.add(new ParsedLine(buffer.subSequence(startOfLine, end).toString(), ""));
-			}
-		} else {
-			for (; newLineMatcher.find(); line++, column = Location.FIRST_COLUMN) {
-				startOfLine = newLineMatcher.end();
-			}
-		}
-
-		nextLocation = new Location(line, column + bufferOffset - startOfLine);
-		return buffer.subSequence(start, end);
+		bufferOffset = streamBuffer.length();
+		hasNext = false;
+		return new StringUtils.Range(start, bufferOffset);
 	}
 
 	/**
-	 * Gets the next character sequence up to the next matching delimiter or end-of-stream. On construction, the delimiter is initialized as a new line. Any previous results are invalidated through the use of this function.
+	 * Gets the appropriate location object.
 	 *
-	 * @return the next character sequence up to the next matching delimiter or end-of-stream
-	 * @throws IOException if an error was encountered while trying to read more data into the buffer
+	 * @return the location
 	 */
-	CharSequence next() throws IOException {
-		return next(null);
-	}
-
-	/**
-	 * Replaces the delimiter. The delimiter will be used in subsequent calls to next(). Any previous results are invalidated through the use of this function.
-	 *
-	 * @param delimiter the replacement delimiter used for subsequent calls to next()
-	 * @return this loader
-	 */
-	Loader setDelimiter(final Pattern delimiter) {
-		matcher.usePattern(delimiter);
-		return this;
-	}
-
-	/**
-	 * Gets the appropriate location string of the form file:line.
-	 *
-	 * @return the location string
-	 */
-	public String toLocationString() {
-		return (file == null ? name : file.toString()) + ":" + location.line;
+	public Object toLocation() {
+		return new LineLocation(file == null ? name : file.toString(), location.line);
 	}
 
 	@Override

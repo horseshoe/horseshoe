@@ -75,7 +75,7 @@ public final class Expression {
 			127,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35, 127, 127, 127, 127, 127
 	};
 
-	private final String location;
+	private final Object location;
 	private final String originalString;
 	private final Expression[] expressions;
 	private final Identifier[] identifiers;
@@ -790,9 +790,9 @@ public final class Expression {
 	 * @param expressionString the trimmed, advanced expression string
 	 * @param namedExpressions the map used to lookup named expressions
 	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
-	 * @throws ReflectiveOperationException if an error occurs while resolving the reflective parts of the expression
+	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	public Expression(final String location, final String expressionName, final CharSequence expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
+	public Expression(final Object location, final String expressionName, final String expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final HashMap<Expression, Integer> expressionMap = new HashMap<>();
 		final HashMap<Identifier, Integer> identifierMap = new HashMap<>();
 		final PersistentStack<Operand> operands = new PersistentStack<>();
@@ -803,7 +803,7 @@ public final class Expression {
 		}
 
 		this.location = location;
-		this.originalString = expressionString.toString();
+		this.originalString = expressionString;
 
 		if (".".equals(this.originalString)) {
 			operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(PERSISTENT_STACK_PEEK)));

@@ -19,6 +19,7 @@ jobs:
       run: ./gradlew build
 
     - name: Upload Code Coverage
+      continue-on-error: true
       run: bash <(curl -Ls https://coverage.codacy.com/get.sh)
       env:
         CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_TOKEN }}
