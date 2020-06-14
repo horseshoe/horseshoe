@@ -10,11 +10,11 @@ import java.util.NoSuchElementException;
 
 import org.junit.Test;
 
-public class PersistentStackTests {
+public class StackTests {
 
 	@Test
 	public void testClear() {
-		final PersistentStack<Object> objects = new PersistentStack<>();
+		final Stack<Object> objects = new Stack<>();
 
 		objects.push("Test");
 		objects.clear();
@@ -23,7 +23,7 @@ public class PersistentStackTests {
 
 	@Test
 	public void testIsEmpty() {
-		final PersistentStack<Object> objects = new PersistentStack<>();
+		final Stack<Object> objects = new Stack<>();
 
 		assertTrue(objects.isEmpty());
 		objects.push("Test");
@@ -32,7 +32,7 @@ public class PersistentStackTests {
 
 	@Test (expected = NoSuchElementException.class)
 	public void testIteratorNext() {
-		final PersistentStack<Object> objects = new PersistentStack<>();
+		final Stack<Object> objects = new Stack<>();
 
 		objects.push("Test");
 
@@ -47,7 +47,7 @@ public class PersistentStackTests {
 
 	@Test (expected = UnsupportedOperationException.class)
 	public void testIteratorRemove() {
-		final PersistentStack<Object> objects = new PersistentStack<>();
+		final Stack<Object> objects = new Stack<>();
 
 		objects.push("Test");
 
@@ -59,12 +59,12 @@ public class PersistentStackTests {
 
 	@Test
 	public void testPeek() {
-		final PersistentStack<Object> objects = new PersistentStack<>();
+		final Stack<Object> objects = new Stack<>();
 
 		assertNotNull(objects.toString());
 		objects.push("Test");
 		objects.pop();
-		objects.push();
+		objects.push("Test");
 		objects.push("Test2");
 		assertEquals("Test2", objects.peek());
 		assertEquals("Test2", objects.peek(0));
@@ -75,7 +75,7 @@ public class PersistentStackTests {
 
 	@Test
 	public void testSize() {
-		final PersistentStack<Object> objects = new PersistentStack<>();
+		final Stack<Object> objects = new Stack<>();
 
 		assertEquals(0, objects.size());
 		assertTrue(objects.capacity() >= objects.size());

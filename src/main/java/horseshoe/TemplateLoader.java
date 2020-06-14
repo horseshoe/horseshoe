@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 import horseshoe.internal.Expression;
 import horseshoe.internal.Identifier;
 import horseshoe.internal.ParsedLine;
-import horseshoe.internal.PersistentStack;
+import horseshoe.internal.Stack;
 import horseshoe.internal.StringUtils;
 
 /**
@@ -30,7 +30,6 @@ public class TemplateLoader {
 
 	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL | Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*(?:\\(\\s*\\)\\s*)?[-=]>\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<Object, Template> templates = new HashMap<>();
 	private final Map<Object, Loader> loaderMap = new HashMap<>();
@@ -60,8 +59,8 @@ public class TemplateLoader {
 		public static final int TAG_CHECK_TAIL_STANDALONE = 2;
 
 		private final Loader loader;
-		private final PersistentStack<Section> sections = new PersistentStack<>();
-		private final PersistentStack<List<Renderer>> renderLists = new PersistentStack<>();
+		private final Stack<Section> sections = new Stack<>();
+		private final Stack<List<Renderer>> renderLists = new Stack<>();
 		private Delimiter delimiter = new Delimiter("{{", "}}");
 		private List<ParsedLine> priorStaticText = new ArrayList<>();
 		private int standaloneStatus = TAG_CANT_BE_STANDALONE;
@@ -323,7 +322,7 @@ public class TemplateLoader {
 			final Template newTemplate = new Template(file.toString(), absoluteFile);
 
 			templates.put(absoluteFile, newTemplate);
-			return loadTemplate(newTemplate, new PersistentStack<Loader>(), loader);
+			return loadTemplate(newTemplate, new Stack<Loader>(), loader);
 		}
 	}
 
@@ -359,7 +358,7 @@ public class TemplateLoader {
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
 	public Template load(final String name) throws LoadException {
-		return load(name, new PersistentStack<Loader>());
+		return load(name, new Stack<Loader>());
 	}
 
 	/**
@@ -370,7 +369,7 @@ public class TemplateLoader {
 	 * @return the loaded template
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	private Template load(final String name, final PersistentStack<Loader> loaders) throws LoadException {
+	private Template load(final String name, final Stack<Loader> loaders) throws LoadException {
 		try {
 			// Try to load the template by name
 			final Template cachedTemplate = templates.get(name);
@@ -442,7 +441,7 @@ public class TemplateLoader {
 	 * @throws IOException if there is an IOException when loading from a file
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	private Template loadTemplate(final String name, final Path absoluteFile, final PersistentStack<Loader> loaders) throws IOException, LoadException {
+	private Template loadTemplate(final String name, final Path absoluteFile, final Stack<Loader> loaders) throws IOException, LoadException {
 		final Template cachedTemplate = templates.get(absoluteFile);
 
 		if (cachedTemplate != null) {
@@ -495,7 +494,7 @@ public class TemplateLoader {
 	 * @throws LoadException if an error is encountered while loading the template
 	 * @throws IOException if an error is encountered while reading from a file or stream
 	 */
-	private Template loadTemplate(final Template template, final PersistentStack<Loader> loaders, final Loader loader) throws LoadException, IOException {
+	private Template loadTemplate(final Template template, final Stack<Loader> loaders, final Loader loader) throws LoadException, IOException {
 		Template.LOGGER.log(Level.FINE, "Loading template {0}", template.getSection());
 
 		final LoadState state = new LoadState(loader);
@@ -561,7 +560,7 @@ public class TemplateLoader {
 	 * @throws LoadException if an error is encountered while loading the template
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading an expression
 	 */
-	private void processTag(final PersistentStack<Loader> loaders, final LoadState state, final String tag) throws LoadException, ReflectiveOperationException {
+	private void processTag(final Stack<Loader> loaders, final LoadState state, final String tag) throws LoadException, ReflectiveOperationException {
 		if (tag.length() == 0) {
 			return;
 		}
@@ -629,11 +628,11 @@ public class TemplateLoader {
 					final Object location = state.loader.toLocation();
 
 					// Load the annotation arguments
-					state.sections.push(new Section(state.sections.peek(), sectionName, location, parameters == null ? null : new Expression(location, null, parameters, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
+					state.sections.push(new Section(state.sections.peek(), sectionName, location, parameters == null ? null : new Expression(location, parameters, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
 				} else { // Start a new section
 					final Object location = state.loader.toLocation();
 
-					state.sections.push(new Section(state.sections.peek(), location, new Expression(location, null, expression, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+					state.sections.push(new Section(state.sections.peek(), location, new Expression(location, expression, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
 				}
 
 				// Add a new render section action
@@ -655,7 +654,7 @@ public class TemplateLoader {
 				} else { // Start a new inverted section
 					final Object location = state.loader.toLocation();
 
-					state.sections.push(new Section(state.sections.peek(), location, new Expression(location, null, expression, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+					state.sections.push(new Section(state.sections.peek(), location, new Expression(location, expression, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
 					renderer = SectionRenderer.FACTORY.create(state.sections.peek());
 					state.renderLists.peek().add(renderer);
 				}
@@ -698,27 +697,21 @@ public class TemplateLoader {
 			case '{': // Unescaped content tag
 			case '&':
 				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
-				state.renderLists.peek().add(new DynamicContentRenderer(new Expression(state.loader.toLocation(), null, StringUtils.trim(tag, 1, tag.length()), state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
+				state.renderLists.peek().add(new DynamicContentRenderer(new Expression(state.loader.toLocation(), StringUtils.trim(tag, 1, tag.length()), state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
 				return;
 
 			default:
-				// Check for a named expression
-				if (extensions.containsAll(EnumSet.of(Extension.EXPRESSIONS, Extension.NAMED_EXPRESSIONS))) {
-					final String expression = StringUtils.trim(tag, 0, tag.length());
-					final Matcher namedExpression = NAMED_EXPRESSION_PATTERN.matcher(expression);
-
-					if (namedExpression.lookingAt()) {
-						new Expression(state.loader.toLocation(), namedExpression.group("name"), expression.substring(namedExpression.end(), expression.length()), state.sections.peek().getNamedExpressions(), true);
-						return;
-					}
-				}
-
 				break;
 		}
 
-		// Default to parsing as a dynamic content tag
-		state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
-		state.renderLists.peek().add(new DynamicContentRenderer(new Expression(state.loader.toLocation(), null, StringUtils.trim(tag, 0, tag.length()), state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), true));
+		// Load the expression
+		final Expression expression = new Expression(state.loader.toLocation(), StringUtils.trim(tag, 0, tag.length()), state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS));
+
+		if (!expression.isNamed()) {
+			// Default to parsing as a dynamic content tag
+			state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
+			state.renderLists.peek().add(new DynamicContentRenderer(expression, true));
+		}
 	}
 
 	/**

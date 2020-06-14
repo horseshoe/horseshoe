@@ -16,11 +16,6 @@ public enum Extension {
 	EXPRESSIONS,
 
 	/**
-	 * Named Horseshoe expression tags ({@code {{[NamedExpression]() -> [Expression]}}}) will be loaded and can be used later in a template. The {@link #EXPRESSIONS} extension must also be enabled for this extension to function properly.
-	 */
-	NAMED_EXPRESSIONS,
-
-	/**
 	 * End tags ({@code {{/}}}) can be empty rather than required to match the text in start tags.
 	 */
 	EMPTY_END_TAGS,

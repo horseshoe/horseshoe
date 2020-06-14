@@ -3,11 +3,11 @@ package horseshoe.internal;
 import java.util.NoSuchElementException;
 
 /**
- * A stack that persists items popped off the top, so that they can be repushed when needed.
+ * A simple, sane stack implementation.
  *
  * @param <T> the type of items contained in the stack
  */
-public final class PersistentStack<T> implements Iterable<T> {
+public final class Stack<T> implements Iterable<T> {
 
 	@SuppressWarnings("unchecked")
 	private T[] array = (T[])new Object[8];
@@ -50,7 +50,11 @@ public final class PersistentStack<T> implements Iterable<T> {
 	 *
 	 * @return this stack
 	 */
-	public PersistentStack<T> clear() {
+	public Stack<T> clear() {
+		for (int i = 0; i < size; i++) {
+			array[i] = null;
+		}
+
 		size = 0;
 		return this;
 	}
@@ -103,7 +107,10 @@ public final class PersistentStack<T> implements Iterable<T> {
 	 * @return the item popped off the top of the stack
 	 */
 	public T pop() {
-		return array[--size];
+		final T obj = array[--size];
+
+		array[size] = null;
+		return obj;
 	}
 
 	/**
@@ -112,8 +119,14 @@ public final class PersistentStack<T> implements Iterable<T> {
 	 * @param size the number of items to pop off the stack
 	 * @return this stack
 	 */
-	public PersistentStack<T> pop(final int size) {
+	public Stack<T> pop(final int size) {
+		final int oldSize = this.size;
 		this.size -= size;
+
+		for (int i = this.size; i < oldSize; i++) {
+			array[i] = null;
+		}
+
 		return this;
 	}
 
@@ -123,7 +136,7 @@ public final class PersistentStack<T> implements Iterable<T> {
 	 * @param obj the object to place onto the stack
 	 * @return this stack
 	 */
-	public PersistentStack<T> push(final T obj) {
+	public Stack<T> push(final T obj) {
 		// Check if the array needs to be resized
 		if (size == array.length) {
 			@SuppressWarnings("unchecked")
@@ -134,16 +147,6 @@ public final class PersistentStack<T> implements Iterable<T> {
 		}
 
 		array[size++] = obj;
-		return this;
-	}
-
-	/**
-	 * Pushes the previous item back onto the stack.
-	 *
-	 * @return this stack
-	 */
-	public PersistentStack<T> push() {
-		size++;
 		return this;
 	}
 

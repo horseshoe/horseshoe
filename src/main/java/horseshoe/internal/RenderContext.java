@@ -13,10 +13,10 @@ public final class RenderContext {
 	private final Settings settings;
 	private final Map<String, Object> globalData;
 	private final Map<String, AnnotationHandler> annotationMap;
-	private final PersistentStack<Object> sectionData = new PersistentStack<>();
+	private final Stack<Object> sectionData = new Stack<>();
 	private Object repeatedSectionData = null;
-	private final PersistentStack<Expression.Indexed> indexedData = new PersistentStack<>();
-	private final PersistentStack<String> indentation = new PersistentStack<>();
+	private final Stack<Expression.Indexed> indexedData = new Stack<>();
+	private final Stack<String> indentation = new Stack<>();
 	private final Map<String, Class<?>> loadableClasses;
 
 	/**
@@ -96,7 +96,7 @@ public final class RenderContext {
 	 *
 	 * @return the indentation used by the rendering process
 	 */
-	public PersistentStack<String> getIndentation() {
+	public Stack<String> getIndentation() {
 		return indentation;
 	}
 
@@ -105,7 +105,7 @@ public final class RenderContext {
 	 *
 	 * @return the indexed data used by the rendering process
 	 */
-	public PersistentStack<Expression.Indexed> getIndexedData() {
+	public Stack<Expression.Indexed> getIndexedData() {
 		return indexedData;
 	}
 
@@ -123,7 +123,7 @@ public final class RenderContext {
 	 *
 	 * @return the section data used by the rendering process
 	 */
-	public PersistentStack<Object> getSectionData() {
+	public Stack<Object> getSectionData() {
 		return sectionData;
 	}
 

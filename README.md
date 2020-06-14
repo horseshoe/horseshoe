@@ -215,9 +215,13 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 | 18 | a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
 
 #### Named Expressions
-Named expressions are tags with the form `{{name->expression}}` or `{{name()->expression}}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags). Referencing a named expression using a function-like syntax with an optional argument (`name()` to evaluate the currently scoped object, `name(..)` to evaluate the parent object) evaluates the expression on the given argument. Named expressions are scoped to the context in which they are declared and can be overridden at lower level scopes. They always take precedence over equivalently named methods. If a method is preferred over a named expression, it can be prefixed (using `./` or `../`), since named expressions can not be invoked using prefixes.
+Named expressions are tags with the form `{{name->expression}}` or `{{name(param1, param2)->expression}}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags).
 
-Root-level named expressions in each partial template are inherited when a partial template is included (`{{>f}}` includes all root-level expressions from the partial "f" at the current scope). For example,
+Referencing a named expression using a function-like syntax evaluates the expression. The first argument is always pushed onto the context stack (if no first argument is given, the current context is repushed onto the context stack). For this reason, the first parameter in a named expression can be unnamed or specified as a literal `.`. It is not an error to mismatch the number of arguments with the number of parameters of the named expression. Unspecified parameters receive the value `null` upon invocation.
+
+Named expressions are scoped to the context in which they are declared and can be overridden at lower level scopes. They always take precedence over equivalently named methods on the current context object. If a method is preferred over a named expression, it can be prefixed (using `./` or `../`), since named expressions can not be invoked using prefixes.
+
+Root-level named expressions in each partial template are made available to the calling template when a partial is included (`{{>f}}` includes all root-level expressions from the partial "f" at the current scope). For example,
 ```horseshoe
 {{<a}}
   {{lower->toLowerCase()}}
