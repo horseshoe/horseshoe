@@ -215,17 +215,17 @@ public class ExpressionTests {
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void testBadPrefix5() throws ReflectiveOperationException {
+	public void testBadPrefix() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "call(/..)", Collections.emptyMap(), true);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void testBadPrefix6() throws ReflectiveOperationException {
+	public void testBadPrefix2() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "call(/.a)", Collections.emptyMap(), true);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void testBadPrefix7() throws ReflectiveOperationException {
+	public void testBadPrefix3() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "call(/a())", Collections.emptyMap(), true);
 	}
 
@@ -355,7 +355,7 @@ public class ExpressionTests {
 	public void testIntegralOperators() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("r", 10, "i2", 2, "bigNum", 9999999999L);
 		assertEquals((((10 | 2) ^ 2) >> 2) << 10, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(((+r | i2) ^ 2) >> 2) << r", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
-		assertEquals((9999999999L >>> (9999999999L & -10)) + (9999999999L >>> 10), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(bigNum >>> (bigNum & -r)) + (bigNum >> r)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
+		assertEquals((9999999999L >>> (9999999999L & 10)) + -10 + (9999999999L >>> 10), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(bigNum >>> (bigNum & r)) + -r + (bigNum >> r)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
 		assertEquals(~(0 - +2) - -3, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~(0 - +2) - -3", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
 	}
 
@@ -485,6 +485,8 @@ public class ExpressionTests {
 	public void testRegularExpression() throws ReflectiveOperationException {
 		assertEquals("true, false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~/^abc.\\u0065/.matcher('abcde').matches() + ', ' + ~/^abc.\\u0065/.matcher('abcdef').matches()", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
 		assertEquals("true, true, true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~//.matcher('').matches() + ', ' + ~/\\//.matcher('/').matches() + ', ' + ~/\\\\/.matcher('\\').matches()", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~/\\d/.matcher(\"\\u0660\").matches()", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~/(?-U)\\d/.matcher(\"\\u0660\").matches()", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
 	}
 
 	@Test

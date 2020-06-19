@@ -51,11 +51,9 @@ public final class Identifier {
 
 	@Override
 	public boolean equals(final Object object) {
-		if (object instanceof Identifier) {
-			return name.equals(((Identifier)object).name) && parameterCount == ((Identifier)object).parameterCount;
-		}
-
-		return false;
+		return object instanceof Identifier &&
+				name.equals(((Identifier)object).name) &&
+				parameterCount == ((Identifier)object).parameterCount;
 	}
 
 	/**
@@ -226,6 +224,10 @@ public final class Identifier {
 	 * @throws ReflectiveOperationException if an error occurs while evaluating the value of the identifier
 	 */
 	public Object getValue(final Object context) throws ReflectiveOperationException {
+		if (context == null) {
+			throw new NoSuchFieldException("Field \"" + name + "\" not found in null object");
+		}
+
 		final Class<?> objectClass = context.getClass();
 		final Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)context : objectClass;
 		Accessor accessor = accessorDatabase.get(lookupClass);
@@ -252,6 +254,10 @@ public final class Identifier {
 	 * @throws ReflectiveOperationException if an error occurs while evaluating the value of the identifier
 	 */
 	public Object getValue(final Object context, final Object... parameters) throws ReflectiveOperationException {
+		if (context == null) {
+			throw new NoSuchMethodError("Method \"" + name + "\" not found in null object");
+		}
+
 		final Class<?> objectClass = context.getClass();
 		final Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)context : objectClass;
 		Accessor accessor = accessorDatabase.get(lookupClass);

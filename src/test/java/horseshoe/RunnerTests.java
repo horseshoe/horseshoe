@@ -36,7 +36,7 @@ public class RunnerTests {
 					final List<String> args = new ArrayList<>();
 
 					args.add("--output");
-					args.add(path.resolveSibling(Paths.get("results", path.getFileName().toString().replace(".U", ".txt"))).toString());
+					args.add(path.resolveSibling(Paths.get("results", path.getFileName().toString().replaceFirst("([.].*)[.]U$", "$1").replace(".U", ".txt"))).toString());
 					args.add(path.toString());
 
 					if (dataFile.toFile().exists()) {

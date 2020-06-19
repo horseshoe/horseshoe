@@ -156,6 +156,15 @@ public class TemplateTests {
 	}
 
 	@Test
+	public void testStreamingSections() throws IOException, LoadException {
+		assertEquals("3, 4, 5", new TemplateLoader().load("Remap Test", "{{#[1,2,3] #| i -> i + 2}}{{.}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("-1", new TemplateLoader().load("Min Test", "{{ min = ~@'Integer'.MAX_VALUE; [1,-1,1000] #> i -> min=i<min?i:min}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("2", new TemplateLoader().load("Filter Test", "{{min = ~@'Integer'.MAX_VALUE;[1,-1,1000] #. v-> v+1 #? j-> j>0 #> j => min=j<min?j:min}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("1", new TemplateLoader().load("First Test", "{{[1,-1,1000] #> v-> #< v}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("1000", new TemplateLoader().load("Last Test", "{{[1,-1,1000] #> i=>i}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+	}
+
+	@Test
 	public void testTemplateLoader() throws IOException, LoadException {
 		assertEquals(StandardCharsets.UTF_8, new TemplateLoader().setCharset(StandardCharsets.UTF_8).getCharset());
 		assertEquals(StandardCharsets.UTF_16, new TemplateLoader().setCharset(StandardCharsets.UTF_16).getCharset());

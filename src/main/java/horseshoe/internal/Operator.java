@@ -60,8 +60,9 @@ final class Operator {
 	public static final int SAFE                = 0x00000200; // Is a safe operator
 	public static final int IGNORE_TRAILING     = 0x00000400; // Trailing operators should be ignored
 	public static final int ASSIGNMENT          = 0x00000800; // Is an assignment operator
+	public static final int TRAILING_IDENTIFIER = 0x00001000; // Requires a trailing identifier
 
-	private static final int CONTAINER          = 0x00001000; // Is a container (has an ending match or comma separator)
+	private static final int CONTAINER          = 0x00002000; // Is a container (has an ending match or comma separator)
 
 	private static final List<Operator> OPERATORS;
 	private static final Map<String, Operator> OPERATOR_LOOKUP = new LinkedHashMap<>();
@@ -71,19 +72,20 @@ final class Operator {
 	private final int properties;
 	private final String description;
 	private final String closingString;
+	private final int localBindingIndex;
 	private final int rightExpressions;
 	private Operator next = null;
 
 	static {
 		final List<Operator> operators = new ArrayList<>();
 
-		operators.add(new Operator("{",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Set / Map Literal", "}", 0));
-		operators.add(new Operator("[",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "List / Map Literal", "]", 0));
+		operators.add(new Operator("{",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Set / Map Literal", "}", 0, 0));
+		operators.add(new Operator("[",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "List / Map Literal", "]", 0, 0));
 		operators.add(new Operator("[:]",    0,  0, "Empty Map"));
-		operators.add(new Operator("[",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Lookup", "]", 1));
-		operators.add(new Operator("?[?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | SAFE, "Safe Lookup", "]", 1));
+		operators.add(new Operator("[",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Lookup", "]", 0, 1));
+		operators.add(new Operator("?[?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | SAFE, "Safe Lookup", "]", 0, 1));
 		operators.add(createMethod("(", true));
-		operators.add(new Operator("(",      0,  RIGHT_EXPRESSION, "Parentheses", ")", 1));
+		operators.add(new Operator("(",      0,  RIGHT_EXPRESSION, "Parentheses", ")", 0, 1));
 		operators.add(new Operator("~@",     0,  RIGHT_EXPRESSION, "Get Class"));
 		operators.add(new Operator(".",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION, "Navigate"));
 		operators.add(new Operator("?.?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | SAFE, "Safe Navigate"));
@@ -121,12 +123,17 @@ final class Operator {
 		operators.add(new Operator("~:<",    17, RIGHT_EXPRESSION, "Die - Alternate"));
 		operators.add(new Operator("#<",     17, RIGHT_EXPRESSION, "Return"));
 		operators.add(new Operator(";",      18, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
+		operators.add(new Operator("#|",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap"));
+		operators.add(new Operator("#.",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap - Alternate"));
+		operators.add(new Operator("#?",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Filter"));
+		operators.add(new Operator("#>",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Reduction"));
 
 		// These operators have known assertion failures and may contain ambiguities with other operators or Horseshoe features. These ambiguities have been thoroughly analyzed and deemed acceptable.
 		final Set<String> ignoreFailuresIn = new HashSet<>(Arrays.asList("?[?" /* ambiguous with "?" and "[" operators; allowed, because there is no unary "?" operator or binary "[?" operator */,
 				"?.?" /* ambiguous with "?" and "." operators; allowed, so must be separated with spaces or use parentheses if using as nested ternary (e.g. "a ? . ? b : c : d") */,
 				".." /* ambiguous with "." unary operator; allowed, because the "\" separator must be used when applying "." to the current object (".") */,
-				"#<" /* ambiguous with section tag; allowed, because the operator would never be used at start of content tag */));
+				"#<" /* ambiguous with section tag; allowed, because the operator would never be used at start of content tag */,
+				"#." /* ambiguous with "." unary operator; allowed, because there is no binary operator ending with "#" */));
 
 		for (final Operator operator : operators) {
 			final String string = operator.string;
@@ -155,7 +162,7 @@ final class Operator {
 	 * @return the operator for the specified method name
 	 */
 	public static Operator createMethod(final String name, final boolean hasObject) {
-		return new Operator(name, 0, METHOD_CALL | X_RIGHT_EXPRESSIONS | (hasObject ? KNOWN_OBJECT : 0), "Call Method", ")", 0);
+		return new Operator(name, 0, METHOD_CALL | X_RIGHT_EXPRESSIONS | (hasObject ? KNOWN_OBJECT : 0), "Call Method", ")", 0, 0);
 	}
 
 	/**
@@ -184,17 +191,18 @@ final class Operator {
 		return OPERATORS;
 	}
 
-	private Operator(final String string, final int precedence, final int properties, final String description, final String closingString, final int rightExpressions) {
+	private Operator(final String string, final int precedence, final int properties, final String description, final String closingString, final int localBindingIndex, final int rightExpressions) {
 		this.string = string;
 		this.precedence = precedence;
 		this.properties = properties;
 		this.description = description;
 		this.closingString = closingString;
+		this.localBindingIndex = localBindingIndex;
 		this.rightExpressions = rightExpressions;
 	}
 
 	private Operator(final String string, final int precedence, final int properties, final String description) {
-		this(string, precedence, properties, description, null, (properties & RIGHT_EXPRESSION) != 0 ? 1 : 0);
+		this(string, precedence, properties, description, null, 0, (properties & RIGHT_EXPRESSION) != 0 ? 1 : 0);
 	}
 
 	/**
@@ -217,7 +225,21 @@ final class Operator {
 			throw new UnsupportedOperationException();
 		}
 
-		return new Operator(string, precedence, properties, description, closingString, expressions);
+		return new Operator(string, precedence, properties, description, closingString, 0, expressions);
+	}
+
+	/**
+	 * Gets the operator with the specified localBindingIndex.
+	 *
+	 * @param localBindingIndex the local binding index
+	 * @return the operator for the specified identifier
+	 */
+	public Operator withLocalBindingIndex(final int localBindingIndex) {
+		if (!has(TRAILING_IDENTIFIER)) {
+			throw new UnsupportedOperationException();
+		}
+
+		return new Operator(string, precedence, properties, description, closingString, localBindingIndex, 0);
 	}
 
 	/**
@@ -245,6 +267,15 @@ final class Operator {
 	 */
 	public String getDescription() {
 		return description;
+	}
+
+	/**
+	 * Gets the local binding index associated with the operator.
+	 *
+	 * @return the local binding index associated with the operator
+	 */
+	public int getLocalBindingIndex() {
+		return localBindingIndex;
 	}
 
 	/**

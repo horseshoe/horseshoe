@@ -1,0 +1,24 @@
+<html><body>
+
+<h1>Contents</h1>
+{{# ['Feature 1', 'Feature 2', 'Feature 3'] }}
+	<ul><li><a href="#{{ replace(' ', '') }}">{{.}}</a><ul>
+	{{# ['x86', 'x86-64', 'ArmHf', 'Aarch64'] }}
+		<li><a href="#{{ ../replace(' ', '') }}_{{ replace(' ', '') }}">{{.}}</a></li>
+	{{/}}
+	</ul></li></ul>
+{{/}}
+
+<p>Description goes here</p>
+{{#}}
+
+<h1 id="{{ replace(' ', '') }}">{{.}}</h1>
+	<p>Description of {{.}}</p>
+	{{#}}
+
+	<h2 id="{{ ../replace(' ', '') }}_{{ replace(' ', '') }}">{{.}}</h2>
+		<p>Description of {{..}}/{{.}}</p>
+	{{/}}
+{{/}}
+
+</body></html>

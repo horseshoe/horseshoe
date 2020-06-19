@@ -63,8 +63,8 @@ The following example demonstrates how to use the Horseshoe library from within 
 
 First, a template is loaded using the template loader class. Templates can be loaded from a string, a file, or a reader.
 ```java
-final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{salutation}}, {{audience}}!");
-// final horseshoe.Template mustacheTemplate = horseshoe.TemplateLoader.newMustacheLoader().load("Hello World", "{{salutation}}, {{audience}}!");
+final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{ salutation }}, {{ audience }}!");
+// final horseshoe.Template mustacheTemplate = horseshoe.TemplateLoader.newMustacheLoader().load("Hello World", "{{ salutation }}, {{ audience }}!");
 ```
 
 Next, a data map is created that contains all the data used to render the template.
@@ -98,22 +98,22 @@ Horseshoe uses tags to specify dynamic parts of a template. The tags typically s
 All tags except for content tags may qualify as stand-alone tags. A stand-alone tag is a tag that contains only whitespace before the opening braces on the beginning line and only whitespace after the closing braces on the ending line. This holds true for multiline tags and when using custom delimiters.
 
 #### Comments
-Comment tags (`{{! ignore this}}`) are structured the same as Mustache comments. A comment tag beings with `!`.
+Comment tags (`{{! ignore this }}`) are structured the same as Mustache comments. A comment tag beings with `!`.
 
 #### Content
-Content tags (`{{content}}`) are similar to Mustache interpolation tags. The current context is used to look up the value specified inside the tag. The value is then rendered in place of the tag.
+Content tags (`{{ content }}`) are similar to Mustache interpolation tags. The current context is used to look up the value specified inside the tag. The value is then rendered in place of the tag.
 
 There are a couple major differences from Mustache interpolation tags:
 1. The printed values are not HTML-escaped by default, since Horseshoe is designed for generating source code rather than HTML. Horseshoe can be configured to escape HTML if desired.
 2. The value specified inside the content tag represents a [Horseshoe expression](#expressions). Values such as `some-content` will be interpreted as the value `some` minus the value `content` rather than the value of `some-content`. This can be changed via a setting to match the Mustache interpolation tag if desired.
 
 #### Unescaped Content
-Unescaped content (`{{{content}}}`, `{{& content}}`) is the same as normal content in Horseshoe, since content is not escaped by default. It only differs from normal content if content escaping is enabled. The tag can either start with a `{` and end with a `}` or simply start with a `&`.
+Unescaped content (`{{{ content }}}`, `{{& content }}`) is the same as normal content in Horseshoe, since content is not escaped by default. It only differs from normal content if content escaping is enabled. The tag can either start with a `{` and end with a `}` or simply start with a `&`.
 
 #### Partials
-Partial tags (`{{> partial}}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++. The partial template is loaded (either from the specified filename or the corresponding template from the template loader) and placed into the current template.
+Partial tags (`{{> partial }}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++. The partial template is loaded (either from the specified filename or the corresponding template from the template loader) and placed into the current template.
 
-If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. The double indirection operator can be used on partial tags (`{{>> partial}}`) to avoid applying the indentation to every line yet still ignore trailing whitespace and newline. This is a Horseshoe feature.
+If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. The double indirection operator can be used on partial tags (`{{>> partial }}`) to avoid applying the indentation to every line yet still ignore trailing whitespace and newline. This is a Horseshoe feature.
 
 #### Set Delimiter (`{{=<% %>=}}`)
 The set delimiter tag is structured the same as it is for Mustache. It is used to change the delimiters from `{{` and `}}` to other sequences in templates that contain many double braces that are part of the literal text. The new sequences are applicable for all tags. Here is a brief example,
@@ -122,20 +122,39 @@ The set delimiter tag is structured the same as it is for Mustache. It is used t
 {{ Literal template text. }}
 <<! This is a comment and the line below is an unescaped content tag. >>
 <<{ content }>>
-More {{literal}} template text.
+More {{ literal }} template text.
 <<! Return to using `{{` and `}}`. >>
 <<={{ }}=>>
 ```
 
 #### Sections
-Section tags (`{{# map}}`) in Horseshoe are similar to Mustache section tags. A section tag can either function as a conditional section or as a foreach section. The contents of a conditional section are only rendered if the value evaluates to a non-null, non-zero value. The contents of a foreach section are iterated once for every child.
+Section tags (`{{# map }}`) in Horseshoe are similar to Mustache section tags. A section tag can either function as a conditional section or as a foreach section. The contents of a conditional section are only rendered if the value evaluates to a non-null, non-zero value. The contents of a foreach section are iterated once for every child.
 
 Internal objects that are treated as foreach sections include arrays, iterables, and streams (if using Java 8 and up). All other objects are treated as conditional sections. For booleans, the conditional section will only be rendered for `true` values. For numeric or character primitives, the conditional section will only be rendered for non-zero values. For optionals (if using Java 8 and up), the conditional section will only be rendered for values that are present. The conditional section is never rendered for a null value.
 
 All sections except for booleans and [annotations](#annotations) push the value onto the context stack. Foreach sections push each child item onto the stack as it iterates over the collection.
 
-##### Annotations
-Annotations (`{{# @Annotation("Param1": false, "Param2")}}`) are section tags that begin with an at sign (`@`). The parameters are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler. Annotations do not affect the context stack.
+#### Repeated Sections
+Repeated section tags (`{{#}}`) are used to duplicate the previous section at the same scope. Nested scopes within a repeated section can also be repeated, allowing a hierarchical repeating of sections. For example,
+```horseshoe
+<h1>Contents</h1>
+{{# ['Feature 1', 'Feature 2', 'Feature 3'] }}
+	<ul><li><a href="#{{ replace(' ', '') }}">{{.}}</a><ul>
+	{{# ['x86', 'x86-64', 'ArmHf', 'Aarch64'] }}
+		<li><a href="#{{ ../replace(' ', '') }}_{{ replace(' ', '') }}">{{.}}</a></li>
+	{{/}}
+	</ul></li></ul>
+{{/}}
+{{#}}
+<h1 id="{{ replace(' ', '') }}">{{.}}</h1>
+	{{#}}
+	<h2 id="{{ ../replace(' ', '') }}_{{ replace(' ', '') }}">{{.}}</h2>
+	{{/}}
+{{/}}
+```
+
+#### Annotations
+Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are section tags that begin with an at sign (`@`). The parameters are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler. Annotations do not affect the context stack and are not considered in scope for repeated sections.
 
 Built-in annotations include the following:
 - @StdErr - Sends output to stderr.
@@ -143,19 +162,19 @@ Built-in annotations include the following:
 - @File('name': 'filename', 'encoding': 'UTF-16', 'overwrite': false, 'append') - Sends output to the file with the specified name, using the specified encoding. The file is only written if the contents of the file are different than the rendered contents, unless overwrite is specified as true. If append is specified as true the rendered contents are appended to the file.
 
 #### Inverted Sections
-Inverted section tags (`{{^ exists}}`) are used to negate a conditional or foreach section. Inverted sections are only rendered when the negated section would not be rendered. Null objects, numeric zero values, `false`, as well as empty lists or arrays are several examples of values that will cause an inverted section to be rendered.
+Inverted section tags (`{{^ exists }}`) are used to negate a conditional or foreach section. Inverted sections are only rendered when the negated section would not be rendered. Null objects, numeric zero values, `false`, as well as empty lists or arrays are several examples of values that will cause an inverted section to be rendered.
 
 An inverted section tag can be left empty (`{{^}}`) to indicate that the inverted section will be rendered when the conditional associated with the current section is false. For example,
 ```horseshoe
-{{#a}}
+{{# a }}
   a evaluates to true
 {{^}}
   a evaluates to false
-{{/a}}
+{{/ a }}
 ```
 
 #### Inline Partials
-Inline partial tags (`{{< partial}}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a string or template file.
+Inline partial tags (`{{< partial }}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a string or template file.
 
 Inline partials can only be included (using a partial tag) in the scope of the template in which they are declared. They cannot be included in any other template. This prevents naming collisions of inline partials in multiple templates and allows inline partials to be overridden later in a template or in a nested scope.
 
@@ -166,7 +185,7 @@ Multiple statements can be chained together inside an expression, using a semico
 
 Horseshoe expressions use `[]` or `{}` for both list and map literals. Any list that contains a colon (`:`) separator is treated as a map. Entries in a map literal without a colon are treated as if the given item is used as both the key and the value. The `{}` is used for creating iterable maps, whereas the `[]` maps can be used to lookup values. The `[]` should be used anywhere iteration is not desired.
 
-Commas can be used anywhere within an expression. If a comma is used in a context where it would otherwise not be allowed (e.g. `{{4, 5}}`), the result is interpreted as if it were wrapped in `{}` to form a list or iterable map. These are considered auto-converted lists and maps.
+Commas can be used anywhere within an expression. If a comma is used in a context where it would otherwise not be allowed (`{{ 4, 5 }}`), the result is interpreted as if it were wrapped in `{}` to form a list or iterable map. These are considered auto-converted lists and maps.
 
 #### Integer Literals
 Integer literals are sequences of digits or `0x` followed by hexadecimal digits. The value can be prefixed with `-` or `+` to indicate sign and is parsed as a 32-bit signed integer. If the value does not fit into a 32-bit signed integer, or the literal is suffixed with `L` or `l`, then the value is parsed as a 64-bit signed integer. Octal and binary integer literals as well as underscores within integer literals are not supported.
@@ -190,7 +209,7 @@ String literals are sequences of characters wrapped in either single quotes or d
 - `\Uhhhhhhhh` - Unicode character with hex code point `hhhhhhhh`
 
 #### Regular Expression Literals
-Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a valid `java.util.regex.Pattern`. Literal forward slashes can be escaped using a preceding backslash (`~/."\/'\./` matches `a"/'.`).
+Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a valid `java.util.regex.Pattern`. Unicode character classes are enabled by default, but may be disabled by beginning the pattern with `(?-U)`. Literal forward slashes can be escaped using a preceding backslash (`~/."\/'\./` matches `a"/'.`).
 
 #### Supported Operators
 | Precedence | Operators | Associativity |
@@ -213,34 +232,45 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 | 16 | a<code>,</code>b\* \(Item Separator\) | Left&nbsp;to&nbsp;right |
 | 17 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\), <br><code>\#&lt;</code>a \(Return\) | Left&nbsp;to&nbsp;right |
 | 18 | a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
+| 19 | a<code>\#&#124;</code>b \(Streaming Remap\), <br>a<code>\#\.</code>b \(Streaming Remap \- Alternate\), <br>a<code>\#?</code>b \(Streaming Filter\), <br>a<code>\#&gt;</code>b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
 
 #### Named Expressions
-Named expressions are tags with the form `{{name->expression}}` or `{{name(param1, param2)->expression}}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags).
+Named expressions are tags with the form `{{ name -> expression }}` or `{{ name(param1, param2) -> expression }}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags).
 
 Referencing a named expression using a function-like syntax evaluates the expression. The first argument is always pushed onto the context stack (if no first argument is given, the current context is repushed onto the context stack). For this reason, the first parameter in a named expression can be unnamed or specified as a literal `.`. It is not an error to mismatch the number of arguments with the number of parameters of the named expression. Unspecified parameters receive the value `null` upon invocation.
 
 Named expressions are scoped to the context in which they are declared and can be overridden at lower level scopes. They always take precedence over equivalently named methods on the current context object. If a method is preferred over a named expression, it can be prefixed (using `./` or `../`), since named expressions can not be invoked using prefixes.
 
-Root-level named expressions in each partial template are made available to the calling template when a partial is included (`{{>f}}` includes all root-level expressions from the partial "f" at the current scope). For example,
+Root-level named expressions in each partial template are made available to the calling template when a partial is included (`{{> f }}` includes all root-level expressions from the partial "f" at the current scope). For example,
 ```horseshoe
-{{<a}}
-  {{lower->toLowerCase()}}
+{{< a }}
+  {{ lower->toLowerCase() }}
 {{/}}
-{{lower->toString()}}
-{{upper->toUpperCase()}}
-{{#"Original String"}}
-  {{>a}}
-  {{upper() + "-" + lower()}}
+{{ lower->toString() }}
+{{ upper->toUpperCase() }}
+{{# "Original String" }}
+  {{> a }}
+  {{ upper() + "-" + lower() }}
 {{/}}
 ```
 results in "  ORIGINAL STRING-original string", because the `lower` named expression is overridden when the partial `a` is included on line 7. This allows partials to contain either content to render or named expressions as a payload.
 
 However, named expressions are not exposed to included partial templates. This is done so that all templates including partials are self-contained. For example,
 ```horseshoe
-{{func()->"Hello!"}}
-{{<a}}
-  {{func()}}
-{{/a}}
-{{>a}}
+{{ func() -> "Hello!" }}
+{{< a }}
+  {{ func() }}
+{{/ a }}
+{{> a }}
 ```
 results in a whitespace-only string, since `func()` is not defined within the partial `a`.
+
+#### Streaming
+
+Streaming operations can be used in expressions to transform, filter, or reduce data within a single expression. They can be used on iterables, arrays, or individual objects. Individual objects with `null` values are treated as absent.
+
+Streaming transformations (`{{ a #| i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator.
+
+Streaming filters (`{{# names #? name -> /* Find names with initials. */ ~/\b.[.]/.matcher(name).find() }}`) are used to filter out unneeded items. The new list is the result of the operator.
+
+Streaming reductions (`{{ sum = 0; values #> value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.
