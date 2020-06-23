@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.Writer;
 
 import horseshoe.internal.Expression;
-import horseshoe.internal.RenderContext;
 
 final class DynamicContentRenderer implements Renderer {
 

@@ -9,7 +9,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import horseshoe.internal.HaltRenderingException;
-import horseshoe.internal.RenderContext;
 
 /**
  * Templates represent parsed and resolved Horseshoe template files. They are loaded using the {@link TemplateLoader} class. An example of how to load and render a template is given below:
@@ -27,7 +26,7 @@ import horseshoe.internal.RenderContext;
  * return writer.toString(); // returns "Hello, world!"}
  * </pre>
  */
-public final class Template {
+public class Template {
 
 	private static final String IMPLEMENTATION_VERSION = Template.class.getPackage().getImplementationVersion();
 
@@ -44,7 +43,7 @@ public final class Template {
 	 * @param name the name of the template
 	 * @param identifier the identifier of the template
 	 */
-	Template(final String name, final Object identifier) {
+	protected Template(final String name, final Object identifier) {
 		this.identifier = identifier;
 		this.section = new Section(null, name, identifier, null, null, true);
 	}
@@ -54,7 +53,7 @@ public final class Template {
 	 *
 	 * @return the actions associated with the template
 	 */
-	List<Renderer> getActions() {
+	protected final List<Renderer> getActions() {
 		return actions;
 	}
 
@@ -63,7 +62,7 @@ public final class Template {
 	 *
 	 * @return the identifier associated with the template
 	 */
-	public Object getIdentifier() {
+	public final Object getIdentifier() {
 		return identifier;
 	}
 
@@ -72,7 +71,7 @@ public final class Template {
 	 *
 	 * @return the section associated with the template
 	 */
-	Section getSection() {
+	final Section getSection() {
 		return section;
 	}
 

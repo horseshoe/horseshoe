@@ -7,19 +7,17 @@ import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.logging.Level;
 
-import horseshoe.internal.Expression;
 import horseshoe.internal.Properties;
-import horseshoe.internal.RenderContext;
 
-class SectionRenderer implements Renderer, Expression.Indexed {
+public class SectionRenderer implements Renderer {
 
 	static final Factory FACTORY;
 
-	protected final Section section;
-	protected boolean hasNext;
-	protected int index;
+	private final Section section;
+	private boolean hasNext;
+	private int index;
 
-	public static class Factory {
+	static class Factory {
 		/**
 		 * Creates a new section renderer using the specified section.
 		 *
@@ -50,7 +48,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 	 *
 	 * @param section the section to be rendered
 	 */
-	protected SectionRenderer(final Section section) {
+	SectionRenderer(final Section section) {
 		this.section = section;
 	}
 
@@ -98,7 +96,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getIndexedData().push(this);
+			context.getSectionRenderers().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
@@ -106,7 +104,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 				render(context, array[index], writer);
 			}
 
-			context.getIndexedData().pop();
+			context.getSectionRenderers().pop();
 		}
 	}
 
@@ -122,7 +120,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getIndexedData().push(this);
+			context.getSectionRenderers().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
@@ -130,7 +128,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 				render(context, array[index], writer);
 			}
 
-			context.getIndexedData().pop();
+			context.getSectionRenderers().pop();
 		}
 	}
 
@@ -146,7 +144,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getIndexedData().push(this);
+			context.getSectionRenderers().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
@@ -154,7 +152,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 				render(context, array[index], writer);
 			}
 
-			context.getIndexedData().pop();
+			context.getSectionRenderers().pop();
 		}
 	}
 
@@ -170,7 +168,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getIndexedData().push(this);
+			context.getSectionRenderers().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
@@ -178,7 +176,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 				render(context, array[index], writer);
 			}
 
-			context.getIndexedData().pop();
+			context.getSectionRenderers().pop();
 		}
 	}
 
@@ -194,7 +192,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getIndexedData().push(this);
+			context.getSectionRenderers().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
@@ -202,7 +200,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 				render(context, array[index], writer);
 			}
 
-			context.getIndexedData().pop();
+			context.getSectionRenderers().pop();
 		}
 	}
 
@@ -218,7 +216,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getIndexedData().push(this);
+			context.getSectionRenderers().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
@@ -226,7 +224,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 				render(context, array[index], writer);
 			}
 
-			context.getIndexedData().pop();
+			context.getSectionRenderers().pop();
 		}
 	}
 
@@ -242,7 +240,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getIndexedData().push(this);
+			context.getSectionRenderers().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
@@ -250,7 +248,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 				render(context, array[index], writer);
 			}
 
-			context.getIndexedData().pop();
+			context.getSectionRenderers().pop();
 		}
 	}
 
@@ -266,7 +264,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getIndexedData().push(this);
+			context.getSectionRenderers().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
@@ -274,7 +272,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 				render(context, array[index], writer);
 			}
 
-			context.getIndexedData().pop();
+			context.getSectionRenderers().pop();
 		}
 	}
 
@@ -290,7 +288,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getIndexedData().push(this);
+			context.getSectionRenderers().push(this);
 
 			for (int i = 0; i < array.length; i++) {
 				index = i;
@@ -298,7 +296,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 				render(context, array[index], writer);
 			}
 
-			context.getIndexedData().pop();
+			context.getSectionRenderers().pop();
 		}
 	}
 
@@ -310,7 +308,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
+	void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
 		if (data == null) {
 			renderInverted(context, writer);
 		} else if (data instanceof Iterable<?>) {
@@ -327,34 +325,6 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 	}
 
 	/**
-	 * Renders the section using the specified writer and then closes it. The writer is guaranteed to be closed even if an exception is thrown. This method implements similar functionality to try-with-resources, but uses the exception to determine if we should log a failed close.
-	 *
-	 * @param context the render context
-	 * @param writer the writer used for rendering
-	 * @throws IOException if an error occurs while writing to the writer
-	 */
-	private void renderAndCloseWriter(final RenderContext context, final Writer writer) throws IOException {
-		Exception renderException = null;
-
-		try {
-			renderWithoutData(context, writer);
-		} catch (final IOException e) {
-			renderException = e;
-			throw e;
-		} finally {
-			try {
-				writer.close();
-			} catch (final IOException e) {
-				if (renderException == null) { // Log only when there is no causing exception to prevent confusion
-					context.getSettings().getLogger().log(Level.WARNING, "Failed to close writer for section " + section, e);
-				} else { // If there is a causing exception, add this one as a suppressed exception
-					renderException.addSuppressed(e);
-				}
-			}
-		}
-	}
-
-	/**
 	 * Dispatches iterator data for rendering.
 	 *
 	 * @param context the render context
@@ -362,13 +332,13 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	protected final void dispatchIteratorData(final RenderContext context, final Iterator<?> it, final Writer writer) throws IOException {
+	final void dispatchIteratorData(final RenderContext context, final Iterator<?> it, final Writer writer) throws IOException {
 		if (!it.hasNext()) {
 			renderInverted(context, writer);
 			return;
 		}
 
-		context.getIndexedData().push(this);
+		context.getSectionRenderers().push(this);
 
 		for (hasNext = true, index = 0; true; index++) {
 			final Object object = it.next();
@@ -382,7 +352,7 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 			render(context, object, writer);
 		}
 
-		context.getIndexedData().pop();
+		context.getSectionRenderers().pop();
 	}
 
 	/**
@@ -432,8 +402,12 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 		return true;
 	}
 
-	@Override
-	public int getIndex() {
+	/**
+	 * Gets the index being iterated over.
+	 *
+	 * @return The index being iterated over
+	 */
+	public final int getIndex() {
 		return index;
 	}
 
@@ -442,12 +416,16 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 	 *
 	 * @return the section that is rendered by this renderer
 	 */
-	Section getSection() {
+	final Section getSection() {
 		return section;
 	}
 
-	@Override
-	public boolean hasNext() {
+	/**
+	 * Gets whether or not another item exists after the current item being iterated over.
+	 *
+	 * @return true if another item exists after the current item being iterated over, otherwise false
+	 */
+	public final boolean hasNext() {
 		return hasNext;
 	}
 
@@ -499,15 +477,30 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 	}
 
 	/**
-	 * Renders the section using the specified context and writer.
+	 * Renders the section using the specified writer and then closes it. The writer is guaranteed to be closed even if an exception is thrown. This method implements similar functionality to try-with-resources, but uses the exception to determine if we should log a failed close.
 	 *
 	 * @param context the render context
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	private void renderWithoutData(final RenderContext context, final Writer writer) throws IOException {
-		for (final Renderer action : section.getRenderList()) {
-			action.render(context, writer);
+	private void renderAndCloseWriter(final RenderContext context, final Writer writer) throws IOException {
+		Exception renderException = null;
+
+		try {
+			renderWithoutData(context, writer);
+		} catch (final IOException e) {
+			renderException = e;
+			throw e;
+		} finally {
+			try {
+				writer.close();
+			} catch (final IOException e) {
+				if (renderException == null) { // Log only when there is no causing exception to prevent confusion
+					context.getSettings().getLogger().log(Level.WARNING, "Failed to close writer for section " + section, e);
+				} else { // If there is a causing exception, add this one as a suppressed exception
+					renderException.addSuppressed(e);
+				}
+			}
 		}
 	}
 
@@ -520,6 +513,19 @@ class SectionRenderer implements Renderer, Expression.Indexed {
 	 */
 	private void renderInverted(final RenderContext context, final Writer writer) throws IOException {
 		for (final Renderer action : section.getInvertedRenderList()) {
+			action.render(context, writer);
+		}
+	}
+
+	/**
+	 * Renders the section using the specified context and writer.
+	 *
+	 * @param context the render context
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void renderWithoutData(final RenderContext context, final Writer writer) throws IOException {
+		for (final Renderer action : section.getRenderList()) {
 			action.render(context, writer);
 		}
 	}

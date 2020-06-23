@@ -4,13 +4,48 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.junit.Test;
 
 public class NamedExprTests {
 
 	private static final String LS = System.lineSeparator();
+
+	/**
+	 * Splits the target string using the given pattern.
+	 *
+	 * @param pattern the pattern that will match a split of the string
+	 * @param target the target string to split
+	 * @return the list of strings from the target that match the pattern
+	 */
+	public static List<String> split(final Pattern pattern, final String target) {
+		final List<String> list = new ArrayList<>();
+
+		for (final Matcher matcher = pattern.matcher(target); matcher.find(); matcher.region(matcher.end(), target.length())) {
+			list.add(matcher.group());
+		}
+
+		return list;
+	}
+
+	@Test
+	public void testIndentation() throws IOException, LoadException {
+		assertEquals("	// This is a test comment that is super long, so the regular expression" + LS +
+				"	// splitter can be tested to determine whether or not it works." + LS +
+				"	// ThisIsAReallyLongSingleWordThatWillHelpTestIfSplittingASingleWordAcrossMult" + LS +
+				"	// ipleLinesWorks." + LS +
+				"	void myFunc()" + LS +
+				"	{" + LS +
+				"		printf(\"Hello, World!\\n\");" + LS +
+				"	}" + LS,
+				new TemplateLoader().load("Test", "{{< makeFunction }}\n{{ Comment -> '// ' + ~@'String'.join(\"" + LS + "\" + .indentation + '// ', ~@'" + NamedExprTests.class.getName() + "'.split(~/\\S(?:.{0,73}\\S)?(?=\\s|$)|\\S.{49}\\S{25}/, .)) }}\n" +
+					"{{ Comment('This is a test comment that is super long, so the regular expression splitter can be tested to determine whether or not it works. ThisIsAReallyLongSingleWordThatWillHelpTestIfSplittingASingleWordAcrossMultipleLinesWorks.') }}\nvoid myFunc()\n{\n\tprintf(\"Hello, World!\\n\");\n}\n{{/}}\n\t{{> makeFunction }}\n").render(new Settings().addLoadableClasses(NamedExprTests.class), Collections.emptyMap(), new StringWriter()).toString());
+	}
 
 	@Test
 	public void testNamedExprMethodCall() throws IOException, LoadException {

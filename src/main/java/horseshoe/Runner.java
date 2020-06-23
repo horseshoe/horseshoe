@@ -36,7 +36,7 @@ public class Runner {
 
 	static final int ERROR_EXIT_CODE = 1;
 
-	public static final OptionSet OPTIONS = new OptionSet(
+	private static final OptionSet OPTIONS = new OptionSet(
 			CommandLineOption.ofName('h', "help", "Displays usage and lists all options."),
 			CommandLineOption.ofName('v', "version", "Displays the Horseshoe version and exits."),
 			CommandLineOption.ofNameWithArgument('l', "log-level", "level", "Sets the logging <level> for the Horseshoe logger. Valid values are " + join(", ", Level.class.getFields()) + "."),
@@ -515,8 +515,9 @@ public class Runner {
 	 * @param args the arguments used when rendering the template
 	 * @throws LoadException if an exception is thrown while loading the template
 	 * @throws IOException if an exception is thrown while rendering to the writer
+	 * @throws ClassNotFoundException if an attempt is made to add a loadable class that could not be found
 	 */
-	private static void renderTemplate(final String[] args) throws LoadException, IOException {
+	private static void renderTemplate(final String[] args) throws LoadException, IOException, ClassNotFoundException {
 		final TemplateLoader loader = new TemplateLoader();
 		final Map<String, Object> globalData = new LinkedHashMap<>();
 		final Settings settings = new Settings();
@@ -550,7 +551,7 @@ public class Runner {
 						settings.setEscapeFunction(Settings.HTML_ESCAPE_FUNCTION);
 						break;
 					case "add-class":
-						settings.getLoadableClasses().add(pair.argument);
+						settings.getLoadableClasses().add(Class.forName(!pair.argument.contains(".") ? "java.lang." + pair.argument : pair.argument));
 						break;
 					case "access":
 						settings.setContextAccess(ContextAccess.valueOf(pair.argument));
@@ -606,6 +607,9 @@ public class Runner {
 		stream.println();
 		stream.println("Options:");
 		OPTIONS.print(stream);
+	}
+
+	private Runner() {
 	}
 
 }

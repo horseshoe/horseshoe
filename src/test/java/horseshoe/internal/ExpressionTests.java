@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import horseshoe.Helper;
+import horseshoe.RenderContext;
 import horseshoe.Settings;
 import horseshoe.Settings.ContextAccess;
 

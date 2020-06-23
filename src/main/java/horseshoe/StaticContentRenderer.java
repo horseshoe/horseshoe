@@ -5,7 +5,6 @@ import java.io.Writer;
 import java.util.List;
 
 import horseshoe.internal.ParsedLine;
-import horseshoe.internal.RenderContext;
 
 final class StaticContentRenderer implements Renderer {
 

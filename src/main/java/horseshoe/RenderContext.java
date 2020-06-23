@@ -1,23 +1,27 @@
-package horseshoe.internal;
+package horseshoe;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
-import horseshoe.AnnotationHandler;
-import horseshoe.AnnotationHandlers;
-import horseshoe.Settings;
+import horseshoe.internal.Stack;
 
 public final class RenderContext {
 
+	private static final Set<Package> UNQUALIFIED_PACKAGES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+			System.class.getPackage())));
+
 	private final Settings settings;
-	private final Map<String, Object> globalData;
 	private final Map<String, AnnotationHandler> annotationMap;
 	private final Stack<Object> sectionData = new Stack<>();
 	private Object repeatedSectionData = null;
-	private final Stack<Expression.Indexed> indexedData = new Stack<>();
+	private final Stack<SectionRenderer> sectionRenderers = new Stack<>();
 	private final Stack<String> indentation = new Stack<>();
-	private final Map<String, Class<?>> loadableClasses;
+	private final Map<String, Class<?>> loadableClasses = new HashMap<>();
 
 	/**
 	 * Creates a render context.
@@ -28,15 +32,9 @@ public final class RenderContext {
 	 */
 	public RenderContext(final Settings settings, final Map<String, Object> globalData, final Map<String, AnnotationHandler> annotationMap) {
 		this.settings = settings;
-		this.globalData = new LinkedHashMap<>(globalData);
 		this.annotationMap = annotationMap;
-		this.loadableClasses = new HashMap<>(Math.max(16, (settings.getLoadableClasses().size() * 4 + 2) / 3));
 
-		sectionData.push(this.globalData);
-
-		for (final String className : settings.getLoadableClasses()) {
-			loadableClasses.put(className, null);
-		}
+		sectionData.push(new LinkedHashMap<>(globalData));
 	}
 
 	/**
@@ -63,32 +61,19 @@ public final class RenderContext {
 	 *
 	 * @param name the name of the class to get
 	 * @return the class that corresponds to the specified name
-	 * @throws ClassNotFoundException if the class could not be found
 	 */
-	public Class<?> getClass(final String name) throws ClassNotFoundException {
-		final Class<?> theClass = loadableClasses.get(name);
+	public Class<?> getClass(final String name) {
+		if (loadableClasses.isEmpty()) {
+			for (final Class<?> loadableClass : settings.getLoadableClasses()) {
+				loadableClasses.put(loadableClass.getName(), loadableClass);
 
-		if (theClass != null) {
-			return theClass;
+				if (UNQUALIFIED_PACKAGES.contains(loadableClass.getPackage())) {
+					loadableClasses.put(loadableClass.getSimpleName(), loadableClass);
+				}
+			}
 		}
 
-		if (!loadableClasses.containsKey(name)) {
-			throw new IllegalArgumentException("Failed to load class \"" + name + "\", not in loadable classes");
-		}
-
-		final Class<?> newClass = Class.forName(name.indexOf('.') >= 0 ? name : "java.lang." + name);
-
-		loadableClasses.put(name, newClass);
-		return newClass;
-	}
-
-	/**
-	 * Gets the global data used by the rendering process.
-	 *
-	 * @return the global data used by the rendering process
-	 */
-	public Map<String, Object> getGlobalData() {
-		return globalData;
+		return loadableClasses.get(name);
 	}
 
 	/**
@@ -101,20 +86,11 @@ public final class RenderContext {
 	}
 
 	/**
-	 * Gets the indexed data used by the rendering process.
-	 *
-	 * @return the indexed data used by the rendering process
-	 */
-	public Stack<Expression.Indexed> getIndexedData() {
-		return indexedData;
-	}
-
-	/**
 	 * Gets the repeated section data used by the rendering process.
 	 *
 	 * @return the repeated section data used by the rendering process
 	 */
-	public Object getRepeatedSectionData() {
+	Object getRepeatedSectionData() {
 		return repeatedSectionData;
 	}
 
@@ -125,6 +101,15 @@ public final class RenderContext {
 	 */
 	public Stack<Object> getSectionData() {
 		return sectionData;
+	}
+
+	/**
+	 * Gets the section renderers used by the rendering process.
+	 *
+	 * @return the section renderers used by the rendering process
+	 */
+	public Stack<SectionRenderer> getSectionRenderers() {
+		return sectionRenderers;
 	}
 
 	/**
@@ -142,7 +127,7 @@ public final class RenderContext {
 	 * @param repeatedSectionData the repeated section data used by the rendering process
 	 * @return this context
 	 */
-	public RenderContext setRepeatedSectionData(final Object repeatedSectionData) {
+	RenderContext setRepeatedSectionData(final Object repeatedSectionData) {
 		this.repeatedSectionData = repeatedSectionData;
 		return this;
 	}

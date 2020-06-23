@@ -1,10 +1,24 @@
 package horseshoe;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Currency;
+import java.util.Date;
+import java.util.EnumSet;
+import java.util.GregorianCalendar;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import horseshoe.internal.Properties;
 
 /**
  * The Settings class allows configuring different properties that are used when rendering a {@link Template}.
@@ -95,53 +109,72 @@ public class Settings {
 	 */
 	public static final String TEMPLATE_LINE_ENDINGS = null;
 
+	/**
+	 * The default loadable classes.
+	 */
+	public static final Set<Class<?>> DEFAULT_LOADABLE_CLASSES;
+
 	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
 	private Logger logger = DEFAULT_LOGGER;
 	private EscapeFunction escapeFunction = EMPTY_ESCAPE_FUNCTION;
 	private String lineEndings = DEFAULT_LINE_ENDINGS;
-	private final Set<String> loadableClasses = new HashSet<>(Arrays.asList(
-			"java.lang.Integer", "Integer",
-			"java.lang.Byte", "Byte",
-			"java.lang.Short", "Short",
-			"java.lang.Long", "Long",
-			"java.math.BigInteger",
-			"java.lang.Float", "Float",
-			"java.lang.Double", "Double",
-			"java.math.BigDecimal",
-			"java.lang.Character", "Character",
-			"java.lang.Boolean", "Boolean",
+	private final Set<Class<?>> loadableClasses = new HashSet<>(DEFAULT_LOADABLE_CLASSES);
 
-			"java.lang.Math", "Math",
-			"java.lang.Enum", "Enum",
-			"java.lang.String", "String",
+	static {
+		final Set<Class<?>> defaultLoadableClasses = new HashSet<>(Arrays.asList(
+				Integer.class,
+				Byte.class,
+				Short.class,
+				Long.class,
+				BigInteger.class,
+				Float.class,
+				Double.class,
+				BigDecimal.class,
+				Character.class,
+				Boolean.class,
 
-			"java.util.Arrays",
-			"java.util.BitSet",
-			"java.util.Calendar",
-			"java.util.Collections",
-			"java.util.Currency",
-			"java.util.Date",
-			"java.util.EnumSet",
-			"java.util.GregorianCalendar",
-			"java.util.Objects",
-			"java.util.regex.Matcher",
-			"java.util.regex.Pattern",
+				Math.class,
+				StrictMath.class,
+				Enum.class,
+				String.class,
 
-			// Java 8 classes
-			"java.time.Duration",
-			"java.time.Instant",
-			"java.util.Optional",
-			"java.util.OptionalDouble",
-			"java.util.OptionalInt",
-			"java.util.OptionalLong",
-			"java.util.Spliterators",
-			"java.util.stream.StreamSupport",
-			"java.util.stream.Stream",
-			"java.util.stream.DoubleStream",
-			"java.util.stream.IntStream",
-			"java.util.stream.LongStream",
-			"java.util.stream.Collector",
-			"java.util.stream.Collectors"));
+				Arrays.class,
+				BitSet.class,
+				Calendar.class,
+				Collections.class,
+				Currency.class,
+				Date.class,
+				EnumSet.class,
+				GregorianCalendar.class,
+				Objects.class,
+				Matcher.class,
+				Pattern.class));
+
+		if (Properties.JAVA_VERSION >= 8) {
+			for (final String className : Arrays.asList("java.time.Duration",
+					"java.time.Instant",
+					"java.util.Optional",
+					"java.util.OptionalDouble",
+					"java.util.OptionalInt",
+					"java.util.OptionalLong",
+					"java.util.Spliterators",
+					"java.util.stream.StreamSupport",
+					"java.util.stream.Stream",
+					"java.util.stream.DoubleStream",
+					"java.util.stream.IntStream",
+					"java.util.stream.LongStream",
+					"java.util.stream.Collector",
+					"java.util.stream.Collectors")) {
+				try {
+					defaultLoadableClasses.add(Class.forName(className));
+				} catch (final ClassNotFoundException e) {
+					Template.LOGGER.log(Level.WARNING, "Failed to load class \"{0}\", even though Java 8 or later was detected.", className);
+				}
+			}
+		}
+
+		DEFAULT_LOADABLE_CLASSES = Collections.unmodifiableSet(defaultLoadableClasses);
+	}
 
 	/**
 	 * An enumeration used to control access when checking identifiers in expressions.
@@ -186,6 +219,34 @@ public class Settings {
 	}
 
 	/**
+	 * Adds classes that can be loaded by the template during the rendering process.
+	 *
+	 * @param classes the classes to add that can be loaded by the template during the rendering process
+	 * @return this object
+	 */
+	public Settings addLoadableClasses(final Class<?>... classes) {
+		for (final Class<?> loadableClass : classes) {
+			loadableClasses.add(loadableClass);
+		}
+
+		return this;
+	}
+
+	/**
+	 * Adds classes that can be loaded by the template during the rendering process.
+	 *
+	 * @param classes the classes to add that can be loaded by the template during the rendering process
+	 * @return this object
+	 */
+	public Settings addLoadableClasses(final Iterable<Class<?>> classes) {
+		for (final Class<?> loadableClass : classes) {
+			loadableClasses.add(loadableClass);
+		}
+
+		return this;
+	}
+
+	/**
 	 * Gets the type of access to the context stack allowed during rendering.
 	 *
 	 * @return true the type of access to the context stack allowed during rendering
@@ -226,7 +287,7 @@ public class Settings {
 	 *
 	 * @return the set of classes that can be loaded by the template during the rendering process
 	 */
-	public Set<String> getLoadableClasses() {
+	public Set<Class<?>> getLoadableClasses() {
 		return loadableClasses;
 	}
 

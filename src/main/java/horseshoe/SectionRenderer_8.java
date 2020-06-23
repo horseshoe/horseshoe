@@ -6,13 +6,11 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import horseshoe.internal.RenderContext;
-
 class SectionRenderer_8 extends SectionRenderer {
 
 	public static class Factory extends SectionRenderer.Factory {
 		@Override
-		public SectionRenderer_8 create(final Section section) {
+		SectionRenderer_8 create(final Section section) {
 			return new SectionRenderer_8(section);
 		}
 	}
@@ -22,12 +20,12 @@ class SectionRenderer_8 extends SectionRenderer {
 	 *
 	 * @param section the section to be rendered
 	 */
-	protected SectionRenderer_8(final Section section) {
+	SectionRenderer_8(final Section section) {
 		super(section);
 	}
 
 	@Override
-	protected void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
+	void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
 		final Object unwrappedData;
 
 		if (data instanceof Optional<?>) {
@@ -38,7 +36,7 @@ class SectionRenderer_8 extends SectionRenderer {
 
 		if (!(unwrappedData instanceof Stream<?>)) {
 			super.dispatchData(context, unwrappedData, writer);
-		} else if (section.cacheResult()) { // Only collect to a list if we are required to cache the results
+		} else if (getSection().cacheResult()) { // Only collect to a list if we are required to cache the results
 			super.dispatchData(context, ((Stream<?>)unwrappedData).collect(Collectors.toList()), writer);
 		} else {
 			super.dispatchIteratorData(context, ((Stream<?>)unwrappedData).iterator(), writer);

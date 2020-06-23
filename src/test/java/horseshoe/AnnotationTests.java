@@ -211,11 +211,11 @@ public class AnnotationTests {
 
 		try (final WatchService watcher = FileSystems.getDefault().newWatchService()) {
 			Files.write(path, " ".getBytes(StandardCharsets.UTF_8));
-			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File(\"" + path + "\", { })}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			Files.write(path, "Test".getBytes(StandardCharsets.UTF_8));
-			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File(\"" + path + "\", { 'append': false })}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));

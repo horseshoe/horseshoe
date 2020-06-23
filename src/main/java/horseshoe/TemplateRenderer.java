@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 
-import horseshoe.internal.RenderContext;
-
 final class TemplateRenderer implements Renderer {
 
 	private final List<Renderer> container;

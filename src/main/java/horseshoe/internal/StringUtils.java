@@ -37,12 +37,6 @@ public final class StringUtils {
 	}
 
 	/**
-	 * Disables creation of the character sequence utils class.
-	 */
-	private StringUtils() {
-	}
-
-	/**
 	 * Finds the next end of line sequence. An end of line sequence is equivalent to the following pattern: \r\n|[\n\x0B\x0C\r\u0085\u2028\u2029]
 	 *
 	 * @param value the character sequence to search for the next end of line sequence
@@ -134,6 +128,12 @@ public final class StringUtils {
 		}
 
 		return "";
+	}
+
+	/**
+	 * Disables creation of the character sequence utils class.
+	 */
+	private StringUtils() {
 	}
 
 }

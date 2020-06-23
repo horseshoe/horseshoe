@@ -23,6 +23,8 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import horseshoe.RenderContext;
+import horseshoe.SectionRenderer;
 import horseshoe.internal.MethodBuilder.Label;
 
 public final class Expression {
@@ -41,8 +43,6 @@ public final class Expression {
 	private static final Method IDENTIFIER_GET_ROOT_VALUE;
 	private static final Method IDENTIFIER_GET_VALUE;
 	private static final Method IDENTIFIER_GET_VALUE_METHOD;
-	private static final Method INDEXED_GET_INDEX;
-	private static final Method INDEXED_HAS_NEXT;
 	private static final Method ITERATOR_HAS_NEXT;
 	private static final Method ITERATOR_NEXT;
 	private static final Constructor<?> LINKED_HASH_MAP_CTOR_INT;
@@ -51,8 +51,11 @@ public final class Expression {
 	private static final Method MAP_PUT;
 	private static final Method OBJECT_TO_STRING;
 	private static final Method PATTERN_COMPILE;
-	private static final Method RENDER_CONTEXT_GET_INDEXED_DATA;
+	private static final Method RENDER_CONTEXT_GET_INDENTATION;
 	private static final Method RENDER_CONTEXT_GET_SECTION_DATA;
+	private static final Method RENDER_CONTEXT_GET_SECTION_RENDERERS;
+	private static final Method SECTION_RENDERER_GET_INDEX;
+	private static final Method SECTION_RENDERER_HAS_NEXT;
 	private static final Method SET_ADD;
 	private static final Method STACK_PEEK;
 	private static final Method STACK_PEEK_BASE;
@@ -161,22 +164,6 @@ public final class Expression {
 		}
 	}
 
-	public static interface Indexed {
-		/**
-		 * Gets the index of the current indexed object.
-		 *
-		 * @return The index of the current indexed object
-		 */
-		public int getIndex();
-
-		/**
-		 * Gets whether or not another item exists after the current item.
-		 *
-		 * @return true if another item exists after the current item, otherwise false
-		 */
-		public boolean hasNext();
-	}
-
 	public abstract static class Evaluable {
 		private static final byte LOAD_EXPRESSIONS = ALOAD_1;
 		private static final byte LOAD_IDENTIFIERS = ALOAD_2;
@@ -209,8 +196,6 @@ public final class Expression {
 			IDENTIFIER_GET_ROOT_VALUE = Identifier.class.getMethod("getRootValue", RenderContext.class);
 			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
-			INDEXED_GET_INDEX = Indexed.class.getMethod("getIndex");
-			INDEXED_HAS_NEXT = Indexed.class.getMethod("hasNext");
 			ITERATOR_HAS_NEXT = Iterator.class.getMethod("hasNext");
 			ITERATOR_NEXT = Iterator.class.getMethod("next");
 			LINKED_HASH_MAP_CTOR_INT = LinkedHashMap.class.getConstructor(int.class);
@@ -219,8 +204,11 @@ public final class Expression {
 			MAP_PUT = Map.class.getMethod("put", Object.class, Object.class);
 			OBJECT_TO_STRING = Object.class.getMethod("toString");
 			PATTERN_COMPILE = Pattern.class.getMethod("compile", String.class, int.class);
-			RENDER_CONTEXT_GET_INDEXED_DATA = RenderContext.class.getMethod("getIndexedData");
+			RENDER_CONTEXT_GET_INDENTATION = RenderContext.class.getMethod("getIndentation");
 			RENDER_CONTEXT_GET_SECTION_DATA = RenderContext.class.getMethod("getSectionData");
+			RENDER_CONTEXT_GET_SECTION_RENDERERS = RenderContext.class.getMethod("getSectionRenderers");
+			SECTION_RENDERER_GET_INDEX = SectionRenderer.class.getMethod("getIndex");
+			SECTION_RENDERER_HAS_NEXT = SectionRenderer.class.getMethod("hasNext");
 			SET_ADD = Set.class.getMethod("add", Object.class);
 			STACK_PEEK = Stack.class.getMethod("peek", int.class);
 			STACK_PEEK_BASE = Stack.class.getMethod("peekBase");
@@ -403,9 +391,8 @@ public final class Expression {
 	 * @param context the context used to get the class
 	 * @param name the name of the class to get
 	 * @return the class associated with the specified name
-	 * @throws ClassNotFoundException if the class could not be found
 	 */
-	public static Class<?> getClass(final RenderContext context, final String name) throws ClassNotFoundException {
+	public static Class<?> getClass(final RenderContext context, final String name) {
 		return context.getClass(name);
 	}
 
@@ -473,14 +460,17 @@ public final class Expression {
 			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).addInvoke(STACK_PEEK)));
 		} else if (isInternal) { // Everything that starts with "." is considered internal
 			switch (identifier) {
-				case "index":
-					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
-					break;
 				case "hasNext":
-					state.operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(STACK_PEEK).addInvoke(INDEXED_HAS_NEXT)));
+					state.operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).addInvoke(STACK_PEEK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_HAS_NEXT)));
+					break;
+				case "indentation":
+					state.operands.push(new Operand(String.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDENTATION).pushConstant(backreach).addInvoke(STACK_PEEK)));
+					break;
+				case "index":
+					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).addInvoke(STACK_PEEK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_GET_INDEX)));
 					break;
 				case "isFirst":
-					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDEXED_DATA).pushConstant(backreach).addInvoke(STACK_PEEK).addInvoke(INDEXED_GET_INDEX)));
+					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).addInvoke(STACK_PEEK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_GET_INDEX)));
 					state.operators.push(Operator.get("!", false));
 					processOperation(state);
 					break;

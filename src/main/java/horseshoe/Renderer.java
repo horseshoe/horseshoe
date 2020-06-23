@@ -3,9 +3,7 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
-import horseshoe.internal.RenderContext;
-
-interface Renderer {
+public interface Renderer {
 
 	/**
 	 * Renders text using the context and the writer.

@@ -13,8 +13,10 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import horseshoe.internal.Expression;
@@ -37,6 +39,57 @@ public final class AnnotationHandlers {
 		defaultAnnotations.put("File", fileWriter());
 
 		DEFAULT_ANNOTATIONS = Collections.unmodifiableMap(defaultAnnotations);
+	}
+
+	private static final class FileWriterHandler implements AnnotationHandler {
+
+		@Override
+		public Writer getWriter(final Writer writer, final Object value) throws IOException {
+			final Map<?, ?> properties;
+			final File file;
+
+			if (value instanceof Map) {
+				properties = (Map<?, ?>)value;
+				file = new File(String.valueOf(properties.get("name")));
+			} else if (value instanceof List) {
+				final List<?> list = (List<?>)value;
+				final int size = list.size();
+
+				properties = size > 1 && list.get(1) instanceof Map ? (Map<?, ?>)list.get(1) : Collections.emptyMap();
+				file = new File(String.valueOf(size == 0 ? null : list.get(0)));
+			} else {
+				properties = Collections.emptyMap();
+				file = new File(String.valueOf(value));
+			}
+
+			// Load properties
+			Charset charset = StandardCharsets.UTF_8;
+			boolean overwrite = false;
+			boolean append = false;
+
+			final Object encoding = properties.get("encoding");
+
+			if (encoding != null) {
+				charset = Charset.forName(encoding.toString());
+			}
+
+			overwrite = Expression.convertToBoolean(properties.get("overwrite"));
+			append = Expression.convertToBoolean(properties.get("append"));
+
+			// Create the directory if it doesn't exist, and then return the writer
+			final File directory = file.getParentFile();
+
+			if (directory != null && !directory.isDirectory() && !directory.mkdirs()) {
+				throw new IOException("Failed to create directory " + directory.toString());
+			}
+
+			if (overwrite) {
+				return new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, append), charset));
+			}
+
+			return new BufferedWriter(new OutputStreamWriter(new FileUpdateOutputStream(file, append), charset));
+		}
+
 	}
 
 	static class FileUpdateOutputStream extends OutputStream {
@@ -216,44 +269,7 @@ public final class AnnotationHandlers {
 	 * @return the new annotation handler
 	 */
 	public static AnnotationHandler fileWriter() {
-		return new AnnotationHandler() {
-			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
-				final File file;
-				Charset charset = Charset.defaultCharset();
-				boolean overwrite = false;
-				boolean append = false;
-
-				if (value instanceof Map) {
-					final Object name = ((Map<?, ?>)value).get("name");
-					final Object encoding = ((Map<?, ?>)value).get("encoding");
-
-					file = new File(String.valueOf(name));
-
-					if (encoding != null) {
-						charset = Charset.forName(encoding.toString());
-					}
-
-					overwrite = Expression.convertToBoolean(((Map<?, ?>)value).get("overwrite"));
-					append = Expression.convertToBoolean(((Map<?, ?>)value).get("append"));
-				} else {
-					file = new File(String.valueOf(value));
-				}
-
-				// Create the directory if it doesn't exist, and then return the writer
-				final File directory = file.getParentFile();
-
-				if (directory != null && !directory.isDirectory() && !directory.mkdirs()) {
-					throw new IOException("Failed to create directory " + directory.toString());
-				}
-
-				if (overwrite) {
-					return new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, append), charset));
-				}
-
-				return new BufferedWriter(new OutputStreamWriter(new FileUpdateOutputStream(file, append), charset));
-			}
-		};
+		return new FileWriterHandler();
 	}
 
 }
