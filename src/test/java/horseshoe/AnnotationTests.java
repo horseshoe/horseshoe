@@ -208,15 +208,26 @@ public class AnnotationTests {
 	@Test
 	public void testFileUpdateAnnotation() throws IOException, LoadException, InterruptedException {
 		final Path path = Paths.get("DELETE_ME.test");
+		final Path path2 = Paths.get("TEMP_DIR", "DELETE_ME.test");
+		final Path pathNull = Paths.get("null");
 
 		try (final WatchService watcher = FileSystems.getDefault().newWatchService()) {
-			Files.write(path, " ".getBytes(StandardCharsets.UTF_8));
+			Files.write(path, "T ".getBytes(StandardCharsets.UTF_8));
 			new TemplateLoader().load("File Update", "{{#@File(\"" + path + "\", { })}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			Files.write(path, "Test".getBytes(StandardCharsets.UTF_8));
 			new TemplateLoader().load("File Update", "{{#@File(\"" + path + "\", { 'append': false })}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+
+			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
+
+			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
+
+			new TemplateLoader().load("File Update", "{{#@File([])}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(pathNull), StandardCharsets.UTF_8));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 			final WatchKey watchKey1 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
@@ -234,7 +245,10 @@ public class AnnotationTests {
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
 			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 		} finally {
-			Files.delete(path);
+			Files.deleteIfExists(path);
+			Files.deleteIfExists(path2);
+			Files.deleteIfExists(path2.getParent());
+			Files.deleteIfExists(pathNull);
 		}
 	}
 

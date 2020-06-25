@@ -20,7 +20,6 @@ import java.util.regex.Pattern;
 import horseshoe.internal.Expression;
 import horseshoe.internal.Identifier;
 import horseshoe.internal.ParsedLine;
-import horseshoe.internal.Stack;
 import horseshoe.internal.StringUtils;
 
 /**
@@ -60,6 +59,7 @@ public class TemplateLoader {
 
 		private final Loader loader;
 		private final Stack<Section> sections = new Stack<>();
+		private final Map<String, Expression> expressionCache = new HashMap<>();
 		private final Stack<List<Renderer>> renderLists = new Stack<>();
 		private Delimiter delimiter = new Delimiter("{{", "}}");
 		private List<ParsedLine> priorStaticText = new ArrayList<>();
@@ -69,6 +69,23 @@ public class TemplateLoader {
 		public LoadState(final Loader loader) {
 			this.loader = loader;
 			this.priorStaticText.add(new ParsedLine("", ""));
+		}
+
+		/**
+		 * Create a new expression checking the cache to see if it already exists.
+		 *
+		 * @param location the location of the expression
+		 * @param expression the string representation of the expression
+		 * @param extensions the set of extensions currently in use
+		 * @return the new expression or a cached copy of the expression with updated location
+		 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
+		 */
+		private Expression createExpression(final Object location, final String expression, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
+			final Expression cachedExpression = expressionCache.get(expression);
+			final Expression newExpression = new Expression(cachedExpression, location, cachedExpression == null ? expression : cachedExpression.toString(), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS));
+
+			expressionCache.put(expression, newExpression);
+			return newExpression;
 		}
 
 		/**
@@ -598,11 +615,11 @@ public class TemplateLoader {
 					final Object location = state.loader.toLocation();
 
 					// Load the annotation arguments
-					state.sections.push(new Section(state.sections.peek(), sectionName, location, parameters == null ? null : new Expression(location, parameters, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), sectionName.substring(1), true));
+					state.sections.push(new Section(state.sections.peek(), sectionName, location, parameters == null ? null : state.createExpression(location, parameters, extensions), sectionName.substring(1), true));
 				} else { // Start a new section
 					final Object location = state.loader.toLocation();
 
-					state.sections.push(new Section(state.sections.peek(), location, new Expression(location, expression, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+					state.sections.push(new Section(state.sections.peek(), location, state.createExpression(location, expression, extensions)));
 				}
 
 				// Add a new render section action
@@ -624,7 +641,7 @@ public class TemplateLoader {
 				} else { // Start a new inverted section
 					final Object location = state.loader.toLocation();
 
-					state.sections.push(new Section(state.sections.peek(), location, new Expression(location, expression, state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS))));
+					state.sections.push(new Section(state.sections.peek(), location, state.createExpression(location, expression, extensions)));
 					renderer = SectionRenderer.FACTORY.create(state.sections.peek());
 					state.renderLists.peek().add(renderer);
 				}
@@ -667,7 +684,7 @@ public class TemplateLoader {
 			case '{': // Unescaped content tag
 			case '&':
 				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
-				state.renderLists.peek().add(new DynamicContentRenderer(new Expression(state.loader.toLocation(), StringUtils.trim(tag, 1, tag.length()), state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS)), false));
+				state.renderLists.peek().add(new DynamicContentRenderer(state.createExpression(state.loader.toLocation(), StringUtils.trim(tag, 1, tag.length()), extensions), false));
 				return;
 
 			default:
@@ -675,7 +692,7 @@ public class TemplateLoader {
 		}
 
 		// Load the expression
-		final Expression expression = new Expression(state.loader.toLocation(), StringUtils.trim(tag, 0, tag.length()), state.sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS));
+		final Expression expression = state.createExpression(state.loader.toLocation(), StringUtils.trim(tag, 0, tag.length()), extensions);
 
 		if (!expression.isNamed()) {
 			// Default to parsing as a dynamic content tag

@@ -8,8 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import horseshoe.internal.Stack;
-
 public final class RenderContext {
 
 	private static final Set<Package> UNQUALIFIED_PACKAGES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(

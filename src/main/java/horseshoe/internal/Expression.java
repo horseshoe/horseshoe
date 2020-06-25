@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import horseshoe.RenderContext;
 import horseshoe.SectionRenderer;
+import horseshoe.Stack;
 import horseshoe.internal.MethodBuilder.Label;
 
 public final class Expression {
@@ -1181,6 +1182,20 @@ public final class Expression {
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
 	public Expression(final Object location, final String expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
+		this(null, location, expressionString, namedExpressions, horseshoeExpressions);
+	}
+
+	/**
+	 * Creates a new expression, using the cached expression if applicable.
+	 *
+	 * @param cachedExpression a cached copy of the expression that can be leverage to improve performance if applicable.
+	 * @param location the location of the expression
+	 * @param expressionString the trimmed, advanced expression string
+	 * @param namedExpressions the map used to lookup named expressions
+	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
+	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
+	 */
+	public Expression(final Expression cachedExpression, final Object location, final String expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final ParseState state = new ParseState(namedExpressions);
 		final MethodBuilder mb = new MethodBuilder();
 		boolean named = false;
@@ -1188,7 +1203,7 @@ public final class Expression {
 		this.location = location;
 		this.originalString = expressionString;
 
-		if (".".equals(this.originalString)) {
+		if (".".equals(originalString)) {
 			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK)));
 		} else if (!horseshoeExpressions) {
 			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(originalString, -1);
@@ -1202,8 +1217,8 @@ public final class Expression {
 			}
 		} else { // Tokenize the entire expression, using the shunting yard algorithm
 			int initializeBindingsStart = 0;
-			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(expressionString);
-			final int length = expressionString.length();
+			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(originalString);
+			final int length = originalString.length();
 
 			if (matcher.lookingAt()) {
 				namedExpressions.put(matcher.group("name"), this);
@@ -1246,6 +1261,27 @@ public final class Expression {
 
 		if (state.operands.isEmpty()) {
 			throw new IllegalArgumentException("Unexpected empty expression");
+		}
+
+		// Check for match to the cached expression
+		if (cachedExpression != null && state.expressions.isEmpty() == (cachedExpression.expressions == null)) {
+			boolean matchesCache = true;
+
+			for (final Entry<Expression, Integer> entry : state.expressions.entrySet()) {
+				if (!cachedExpression.expressions[entry.getValue()].equals(entry.getKey())) {
+					matchesCache = false;
+					break;
+				}
+			}
+
+			if (matchesCache) {
+				assert cachedExpression.originalString.equals(originalString) : "Invalid cached expression \"" + cachedExpression + "\" does not match parsed expression \"" + originalString + "\"";
+				this.expressions = cachedExpression.expressions;
+				this.identifiers = cachedExpression.identifiers;
+				this.evaluable = cachedExpression.evaluable;
+				this.isNamed = named;
+				return;
+			}
 		}
 
 		// Populate all the expressions

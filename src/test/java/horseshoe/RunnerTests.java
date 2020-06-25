@@ -129,12 +129,12 @@ public class RunnerTests {
 	@Test
 	public void testFullContext() throws IOException {
 		systemInMock.provideLines("{{#['<blue>', '<red>']}}", "{{.}}{{#a}}: {{blah}}{{/}}{{#.hasNext}},{{/}}", "{{/}}");
-		Runner.main(new String[] { "-oout.test", "-lOFF", "-Da=true", "-Dblah=blah", "--access=FULL", "--", "-" });
+		Runner.main(new String[] { "-oout.test", "-lOFF", "-Da=true", "-Dblah=2 words ", "--access=FULL", "--", "-" });
 
 		final Path path = Paths.get("out.test");
 		final String renderedContent = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
 		Files.delete(path);
-		assertEquals("<blue>: blah," + System.lineSeparator() + "<red>: blah" + System.lineSeparator(), renderedContent);
+		assertEquals("<blue>: 2 words ," + System.lineSeparator() + "<red>: 2 words " + System.lineSeparator(), renderedContent);
 	}
 
 	@Test (expected = Test.None.class) // No exception expected

@@ -188,7 +188,7 @@ public final class AnnotationHandlers {
 
 					for (int j = i; j < i + read; j++) {
 						if (b[off + j] != buffer[j]) {
-							updateOutputStream(truncateSize + i).write(b, off + j, len - j);
+							updateOutputStream(truncateSize + j).write(b, off + j, len - j);
 							return;
 						}
 					}

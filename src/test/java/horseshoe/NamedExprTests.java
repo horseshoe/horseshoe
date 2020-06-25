@@ -48,6 +48,11 @@ public class NamedExprTests {
 	}
 
 	@Test
+	public void testNamedExprCache() throws IOException, LoadException {
+		assertEquals("Good, Good, Bad, ", new TemplateLoader().load("Test", "{{# true }}{{ Good() -> 'Good' }}{{ Good() }}, {{ Good() }}, {{ Good() -> 'Bad' }}{{ Good() }}{{/}}, {{ Good() }}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
+	}
+
+	@Test
 	public void testNamedExprMethodCall() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader().load("Test", "{{returnArg -> .}}{{(returnArg(\"123\") + \"4\").replace(\"1\", \"2\")}}");

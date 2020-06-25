@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe;
 
 import java.util.NoSuchElementException;
 

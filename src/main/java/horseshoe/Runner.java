@@ -505,7 +505,13 @@ public class Runner {
 		if (split < 0) {
 			dataMap.put(value, Boolean.TRUE);
 		} else {
-			dataMap.put(value.substring(0, split), new DataParser(value, split + 1, true).parseAsValue());
+			final String key = value.substring(0, split);
+
+			try {
+				dataMap.put(key, new DataParser(value, split + 1, true).parseAsValue());
+			} catch (final RuntimeException e) {
+				dataMap.put(key, value.substring(split + 1));
+			}
 		}
 	}
 
