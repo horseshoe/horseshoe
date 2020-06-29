@@ -255,4 +255,26 @@ public abstract class Streamable<T> implements Iterable<T> {
 	 */
 	public abstract void add(final T value);
 
+	/**
+	 * Adds values in an iterable to the streamable.
+	 *
+	 * @param iterable the iterable to add as flattened items
+	 */
+	public void flatAdd(final Iterable<? extends T> iterable) {
+		for (final T item : iterable) {
+			add(item);
+		}
+	}
+
+	/**
+	 * Adds values in an array to the streamable.
+	 *
+	 * @param values the values to add
+	 */
+	public void flatAdd(final T[] values) {
+		for (final T item : values) {
+			add(item);
+		}
+	}
+
 }

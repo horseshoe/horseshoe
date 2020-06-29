@@ -228,11 +228,11 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 | 12 | a<code>&amp;&amp;</code>b \(Logical And\) | Left&nbsp;to&nbsp;right |
 | 13 | a<code>&#124;&#124;</code>b \(Logical Or\) | Left&nbsp;to&nbsp;right |
 | 14 | a<code>?:</code>b \(Null Coalesce\), <br>a<code>??</code>b \(Null Coalesce \- Alternate\), <br>a<code>?</code>b \(Ternary\), <br>a<code>:</code>b \(Pair\) | Right&nbsp;to&nbsp;left |
-| 15 | a<code>=</code>b \(Bind\) | Right&nbsp;to&nbsp;left |
+| 15 | a<code>=</code>b \(Bind Local Name\) | Right&nbsp;to&nbsp;left |
 | 16 | a<code>,</code>b\* \(Item Separator\) | Left&nbsp;to&nbsp;right |
-| 17 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\), <br><code>\#&lt;</code>a \(Return\) | Left&nbsp;to&nbsp;right |
+| 17 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\), <br><code>\#^</code>a \(Return\) | Left&nbsp;to&nbsp;right |
 | 18 | a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
-| 19 | a<code>\#&#124;</code>b \(Streaming Remap\), <br>a<code>\#\.</code>b \(Streaming Remap \- Alternate\), <br>a<code>\#?</code>b \(Streaming Filter\), <br>a<code>\#&gt;</code>b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
+| 19 | a<code>\#&gt;</code>b \(Streaming Remap\), <br>a<code>\#\.</code>b \(Streaming Remap \- Alternate\), <br>a<code>\#&#124;</code>b \(Streaming Flatten Remap\), <br>a<code>\#?</code>b \(Streaming Filter\), <br>a<code>\#&lt;</code>b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
 
 #### Named Expressions
 Named expressions are tags with the form `{{ name -> expression }}` or `{{ name(param1, param2) -> expression }}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags).
@@ -269,8 +269,8 @@ results in a whitespace-only string, since `func()` is not defined within the pa
 
 Streaming operations can be used in expressions to transform, filter, or reduce data within a single expression. They can be used on iterables, arrays, or individual objects. Individual objects with `null` values are treated as absent.
 
-Streaming transformations (`{{ a #| i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator.
+Streaming transformations (`{{ a #> i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator. Flattening transformations (`{{ [[1, 2], [3, 4], null] #| i -> i `) allow lists to be combined.
 
 Streaming filters (`{{# names #? name -> /* Find names with initials. */ ~/\b.[.]/.matcher(name).find() }}`) are used to filter out unneeded items. The new list is the result of the operator.
 
-Streaming reductions (`{{ sum = 0; values #> value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.
+Streaming reductions (`{{ sum = 0; values #< value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.

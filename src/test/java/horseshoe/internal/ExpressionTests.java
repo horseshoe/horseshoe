@@ -6,15 +6,10 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -98,21 +93,6 @@ public class ExpressionTests {
 	@Test(expected = IllegalArgumentException.class)
 	public void testBadBackreachTooFar() throws ReflectiveOperationException {
 		new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "../", Collections.emptyMap(), true);
-	}
-
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadCompare() throws ReflectiveOperationException {
-		assertNotEquals(0, Expression.compare(false, 5, "5"));
-	}
-
-	@Test(expected = ClassCastException.class)
-	public void testBadCompare2() throws ReflectiveOperationException {
-		assertNotEquals(0, Expression.compare(false, "5", 5));
-	}
-
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadCompare3() throws ReflectiveOperationException {
-		assertNotEquals(0, Expression.compare(false, new Object(), new Object()));
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -266,52 +246,6 @@ public class ExpressionTests {
 	}
 
 	@Test
-	public void testCompare() {
-		final Object[] notEqual = { (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), ' ', new AtomicInteger(33), new AtomicLong(34L) };
-
-		for (int i = 0; i < notEqual.length; i++) {
-			for (int j = 0; j < notEqual.length; j++) {
-				if (i == j) {
-					assertEquals(0, Expression.compare(true, notEqual[i], notEqual[j]));
-				} else if (i < j) {
-					assertTrue(Expression.compare(true, notEqual[i], notEqual[j]) < 0);
-				} else {
-					assertTrue(Expression.compare(true, notEqual[i], notEqual[j]) > 0);
-				}
-			}
-
-			assertNotEquals(0, Expression.compare(true, notEqual[i], new Date(0)));
-			assertNotEquals(0, Expression.compare(true, notEqual[i], null));
-			assertNotEquals(0, Expression.compare(true, null, notEqual[i]));
-		}
-
-		final Object[] equal = { (byte)32, (short)32, 32, 32L, 32.0f, 32.0, BigDecimal.valueOf(32.0), BigInteger.valueOf(32), ' ', new AtomicInteger(32), new AtomicLong(32L) };
-
-		for (int i = 0; i < equal.length; i++) {
-			for (int j = 0; j < equal.length; j++) {
-				assertEquals(0, Expression.compare(true, equal[i], equal[j]));
-			}
-		}
-
-		assertNotEquals(0, Expression.compare(true, 5, "5"));
-		assertNotEquals(0, Expression.compare(true, "5", 5));
-		assertTrue(Expression.compare(false, "a", "b") < 0);
-		assertTrue(Expression.compare(false, "2", "1") > 0);
-		assertEquals(0, Expression.compare(true, new Date(0), new Date(0)));
-		assertNotEquals(0, Expression.compare(true, new Date(0), new Date(1)));
-		assertTrue(Expression.compare(false, new Date(0), new Date(1)) < 0);
-		assertTrue(Expression.compare(false, new Date(1), new Date(0)) > 0);
-
-		final Object[] stringEquivalents = { new StringBuilder().append("5"), "5", '5' };
-
-		for (int i = 0; i < stringEquivalents.length; i++) {
-			for (int j = 0; j < stringEquivalents.length; j++) {
-				assertEquals(0, Expression.compare(true, stringEquivalents[i], stringEquivalents[j]));
-			}
-		}
-	}
-
-	@Test
 	public void testCompareOperators() throws ReflectiveOperationException {
 		assertEquals("true, false, true, false, true, false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(\"a\" + \"bc\" == \"ab\" + \"c\") + \", \" + (5 + 8.3 == 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 == 0xFFFF) + \", \" + (\"A\" == \"B\") + \", \" + (null == null) + \", \" + (null == 5)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
 		assertEquals("false, true, false, true, false, true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(\"a\" + \"bc\" != \"ab\" + \"c\") + \", \" + (5 + 8.3 != 5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 != 0xFFFF) + \", \" + (\"A\" != \"B\") + \", \" + (null != null) + \", \" + (null != 5)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
@@ -321,17 +255,6 @@ public class ExpressionTests {
 		assertEquals("false, false, false, false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(\"a\" + \"bc\" >  \"ab\" + \"c\") + \", \" + (5 + 8.3 >  5.31 + 8) + \", \" + (0xFFFFFFFFFFFF - 0xFFFFFFFF0000 >  0xFFFF) + \", \" + (\"A\" >  \"B\")", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
 		assertEquals("false", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(null?.?toString() == true?.?toString())", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
 		assertEquals("true", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "\"a\" + \"b\" == \"ab\"", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
-	}
-
-	@Test
-	public void testConvertToBoolean() {
-		for (final Object object : new Object[] { true, (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), ' ', new AtomicInteger(33), new AtomicLong(34L), "", "a" }) {
-			assertTrue(Expression.convertToBoolean(object));
-		}
-
-		for (final Object object : new Object[] { false, (byte)0, (short)0, 0, 0L, 0.0f, 0.0, BigDecimal.valueOf(0.0), BigInteger.valueOf(0), '\0', new AtomicInteger(0), new AtomicLong(0L), null }) {
-			assertFalse(Expression.convertToBoolean(object));
-		}
 	}
 
 	@Test(expected = HaltRenderingException.class)
@@ -353,11 +276,17 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testIdentifier() {
+		assertNotEquals(new Identifier("blah", 1), new Object());
+		assertNotEquals(new Identifier("blah", 2), new Identifier("blah", 1));
+	}
+
+	@Test
 	public void testIntegralOperators() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("r", 10, "i2", 2, "bigNum", 9999999999L);
-		assertEquals((((10 | 2) ^ 2) >> 2) << 10, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(((+r | i2) ^ 2) >> 2) << r", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
-		assertEquals((9999999999L >>> (9999999999L & 10)) + -10 + (9999999999L >>> 10), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(bigNum >>> (bigNum & r)) + -r + (bigNum >> r)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
-		assertEquals(~(0 - +2) - -3, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~(0 - +2) - -3", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
+		assertEquals((((10 | 2) ^ 2) >> 2) << 10, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(((+r | i2) ^ 2) >> 2) << r", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());
+		assertEquals((9999999999L >>> (9999999999L & 10)) + -10 + (9999999999L >>> 10), ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(bigNum >>> (bigNum & r)) + -r + (bigNum >> r)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());
+		assertEquals(~(0 - +2) - -3, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~(0 - +2) - -3", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());
 	}
 
 	@Test
@@ -414,7 +343,7 @@ public class ExpressionTests {
 	public void testLocals() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("r", 10, "i2", 2, "π", 3.14159265358979311599796346854, "bigNum", 9999999999L);
 		assertTrue(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "π = 3.14159265358979311599796346854; r /* radius */ = 4; \"r = \" + r + \", d = \" + (r * 2) + \", a = \" + (π * r * r)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString().startsWith("r = 4, d = 8, a = 50.26"));
-		assertEquals(418.87902047863909846168578443727, (Double)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "r = 4; 4 / 3.0 * π * ./r *./r", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)), 0.00001);
+		assertEquals(418.87902047863909846168578443727, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "r = 4; 4 / 3.0 * π * ./r *./r", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).doubleValue(), 0.00001);
 		assertNull(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "b == 0 ? (a = 1) : 4; a", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
 
 		{
@@ -449,10 +378,10 @@ public class ExpressionTests {
 	@Test
 	public void testMathOperators() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("r", 10, "i2", 2, "π", 3.14159265358979311599796346854, "bigNum", 9999999999L);
-		assertEquals(2 * 3.14159265358979311599796346854 * 10 - 2, (Double)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(2 * π * r - i2)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)), 0.00001);
-		assertEquals(9999999999L + 9999999999L / 2 + 9999999999L % 2 - 3.14159265358979311599796346854, (Double)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "bigNum + bigNum / 2 + bigNum % 2 - π", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)), 0.00001);
-		assertEquals((int)(0x10000000L * 5280), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000 * 5280", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
-		assertEquals(0x10000000L * 5280, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000L * 5280", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
+		assertEquals(2 * 3.14159265358979311599796346854 * 10 - 2, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(2 * π * r - i2)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).doubleValue(), 0.00001);
+		assertEquals(9999999999L + 9999999999L / 2 + 9999999999L % 2 - 3.14159265358979311599796346854, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "bigNum + bigNum / 2 + bigNum % 2 - π", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).doubleValue(), 0.00001);
+		assertEquals((int)(0x10000000L * 5280), ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000 * 5280", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());
+		assertEquals(0x10000000L * 5280, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000L * 5280", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).longValue());
 	}
 
 	@Test
@@ -468,7 +397,7 @@ public class ExpressionTests {
 
 	@Test
 	public void testPlusOperator() throws ReflectiveOperationException {
-		final Map<String, Object> context = Helper.loadMap("a", "a", "b", 5, "c", new StringBuilder("c"), "d", 6.5, "e", Pattern.compile("test_[0-9]+"));
+		final Map<String, Object> context = Helper.loadMap("a", "a", "b", 5, "c", "c", "d", 6.5, "e", Pattern.compile("test_[0-9]+"));
 		assertEquals("a11.5", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a + (b + d)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
 		assertEquals("10.5c", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "1 + 5.6; +4 + d + c", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
 		assertEquals("ctest_[0-9]+56.5", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "c + e + b + d", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
@@ -492,7 +421,7 @@ public class ExpressionTests {
 
 	@Test
 	public void testReturn() throws ReflectiveOperationException {
-		assertEquals("BlueGreen", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "#<'Blue' + 'Green'; 'Yellow'", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
+		assertEquals("BlueGreen", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "#^'Blue' + 'Green'; 'Yellow'", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap())).toString());
 	}
 
 	@Test

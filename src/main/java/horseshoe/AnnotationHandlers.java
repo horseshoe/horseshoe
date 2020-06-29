@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import horseshoe.internal.Expression;
+import horseshoe.internal.Operands;
 
 /**
  * The AnnotationHandlers class is used to create common {@link AnnotationHandler}s. It also contains the default annotation handlers map if none is specified.
@@ -73,8 +73,8 @@ public final class AnnotationHandlers {
 				charset = Charset.forName(encoding.toString());
 			}
 
-			overwrite = Expression.convertToBoolean(properties.get("overwrite"));
-			append = Expression.convertToBoolean(properties.get("append"));
+			overwrite = Operands.convertToBoolean(properties.get("overwrite"));
+			append = Operands.convertToBoolean(properties.get("append"));
 
 			// Create the directory if it doesn't exist, and then return the writer
 			final File directory = file.getParentFile();

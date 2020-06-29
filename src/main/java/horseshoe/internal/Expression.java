@@ -4,18 +4,15 @@ import static horseshoe.internal.MethodBuilder.*;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,19 +28,30 @@ import horseshoe.internal.MethodBuilder.Label;
 public final class Expression {
 
 	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
-	private static final int FIRST_LOCAL_BINDING_INDEX = Evaluable.FIRST_LOCAL_INDEX + Operand.REQUIRED_LOCAL_VARIABLE_SLOTS;
+	private static final int FIRST_LOCAL_BINDING_INDEX = Evaluable.FIRST_LOCAL_INDEX;
 
 	// Reflected Methods
 	private static final Constructor<?> ARRAY_LIST_CTOR_INT;
 	private static final Method ACCESSOR_LOOKUP;
 	private static final Method EXPRESSION_EVALUATE;
-	private static final Method EXPRESSION_GET_VALUE;
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING;
+	private static final Method HORSESHOE_INT_AND;
+	private static final Method HORSESHOE_INT_NOT;
+	private static final Method HORSESHOE_INT_OR;
+	private static final Method HORSESHOE_INT_SHIFT_LEFT;
+	private static final Method HORSESHOE_INT_SHIFT_RIGHT;
+	private static final Method HORSESHOE_INT_SHIFT_RIGHT_ZERO;
+	private static final Method HORSESHOE_INT_XOR;
+	private static final Method HORSESHOE_NUMBER_DIVIDE;
+	private static final Method HORSESHOE_NUMBER_MULTIPLY;
+	private static final Method HORSESHOE_NUMBER_MODULO;
+	private static final Method HORSESHOE_NUMBER_NEGATE;
 	private static final Method IDENTIFIER_FIND_VALUE;
 	private static final Method IDENTIFIER_FIND_VALUE_METHOD;
 	private static final Method IDENTIFIER_GET_ROOT_VALUE;
 	private static final Method IDENTIFIER_GET_VALUE;
 	private static final Method IDENTIFIER_GET_VALUE_METHOD;
+	private static final Method ITERABLE_ITERATOR;
 	private static final Method ITERATOR_HAS_NEXT;
 	private static final Method ITERATOR_NEXT;
 	private static final Constructor<?> LINKED_HASH_MAP_CTOR_INT;
@@ -51,6 +59,9 @@ public final class Expression {
 	private static final Method LIST_ADD;
 	private static final Method MAP_PUT;
 	private static final Method OBJECT_TO_STRING;
+	private static final Method OPERANDS_ADD;
+	private static final Method OPERANDS_GET_CLASS;
+	private static final Method OPERANDS_SUBTRACT;
 	private static final Method PATTERN_COMPILE;
 	private static final Method RENDER_CONTEXT_GET_INDENTATION;
 	private static final Method RENDER_CONTEXT_GET_SECTION_DATA;
@@ -63,7 +74,8 @@ public final class Expression {
 	private static final Method STACK_POP;
 	private static final Method STACK_PUSH_OBJECT;
 	private static final Method STREAMABLE_ADD;
-	private static final Method STREAMABLE_ITERATOR;
+	private static final Method STREAMABLE_FLAT_ADD_ARRAY;
+	private static final Method STREAMABLE_FLAT_ADD_ITERABLE;
 	private static final Method STREAMABLE_OF_UNKNOWN;
 	private static final Method STRING_BUILDER_APPEND_OBJECT;
 	private static final Constructor<?> STRING_BUILDER_INIT_STRING;
@@ -98,9 +110,9 @@ public final class Expression {
 
 	private static final class ParseState {
 		final Map<String, Expression> namedExpressions;
-		final HashMap<Expression, Integer> expressions = new HashMap<>();
-		final HashMap<Identifier, Integer> identifiers = new HashMap<>();
-		final HashMap<String, Integer> localBindings = new HashMap<>();
+		final Map<Expression, Integer> expressions = new LinkedHashMap<>();
+		final Map<Identifier, Integer> identifiers = new LinkedHashMap<>();
+		final Map<String, Integer> localBindings = new LinkedHashMap<>();
 		final Stack<Operand> operands = new Stack<>();
 		final Stack<Operator> operators = new Stack<>();
 
@@ -190,13 +202,24 @@ public final class Expression {
 			ARRAY_LIST_CTOR_INT = ArrayList.class.getConstructor(int.class);
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", RenderContext.class, Object[].class);
-			EXPRESSION_GET_VALUE = Expression.class.getMethod("getClass", RenderContext.class, String.class);
 			HALT_EXCEPTION_CTOR_STRING = HaltRenderingException.class.getConstructor(String.class);
+			HORSESHOE_INT_AND = HorseshoeInt.class.getMethod("and", HorseshoeInt.class);
+			HORSESHOE_INT_NOT = HorseshoeInt.class.getMethod("not");
+			HORSESHOE_INT_OR = HorseshoeInt.class.getMethod("or", HorseshoeInt.class);
+			HORSESHOE_INT_SHIFT_LEFT = HorseshoeInt.class.getMethod("shiftLeft", HorseshoeInt.class);
+			HORSESHOE_INT_SHIFT_RIGHT = HorseshoeInt.class.getMethod("shiftRight", HorseshoeInt.class);
+			HORSESHOE_INT_SHIFT_RIGHT_ZERO = HorseshoeInt.class.getMethod("shiftRightZero", HorseshoeInt.class);
+			HORSESHOE_INT_XOR = HorseshoeInt.class.getMethod("xor", HorseshoeInt.class);
+			HORSESHOE_NUMBER_DIVIDE = HorseshoeNumber.class.getMethod("divide", HorseshoeNumber.class);
+			HORSESHOE_NUMBER_MULTIPLY = HorseshoeNumber.class.getMethod("multiply", HorseshoeNumber.class);
+			HORSESHOE_NUMBER_MODULO = HorseshoeNumber.class.getMethod("modulo", HorseshoeNumber.class);
+			HORSESHOE_NUMBER_NEGATE = HorseshoeNumber.class.getMethod("negate");
 			IDENTIFIER_FIND_VALUE = Identifier.class.getMethod("findValue", RenderContext.class, int.class);
 			IDENTIFIER_FIND_VALUE_METHOD = Identifier.class.getMethod("findValue", RenderContext.class, int.class, Object[].class);
 			IDENTIFIER_GET_ROOT_VALUE = Identifier.class.getMethod("getRootValue", RenderContext.class);
 			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
+			ITERABLE_ITERATOR = Iterable.class.getMethod("iterator");
 			ITERATOR_HAS_NEXT = Iterator.class.getMethod("hasNext");
 			ITERATOR_NEXT = Iterator.class.getMethod("next");
 			LINKED_HASH_MAP_CTOR_INT = LinkedHashMap.class.getConstructor(int.class);
@@ -204,6 +227,9 @@ public final class Expression {
 			LIST_ADD = List.class.getMethod("add", Object.class);
 			MAP_PUT = Map.class.getMethod("put", Object.class, Object.class);
 			OBJECT_TO_STRING = Object.class.getMethod("toString");
+			OPERANDS_ADD = Operands.class.getMethod("add", Object.class, Object.class);
+			OPERANDS_GET_CLASS = Operands.class.getMethod("getClass", RenderContext.class, String.class);
+			OPERANDS_SUBTRACT = Operands.class.getMethod("subtract", Object.class, Object.class);
 			PATTERN_COMPILE = Pattern.class.getMethod("compile", String.class, int.class);
 			RENDER_CONTEXT_GET_INDENTATION = RenderContext.class.getMethod("getIndentation");
 			RENDER_CONTEXT_GET_SECTION_DATA = RenderContext.class.getMethod("getSectionData");
@@ -216,7 +242,8 @@ public final class Expression {
 			STACK_POP = Stack.class.getMethod("pop");
 			STACK_PUSH_OBJECT = Stack.class.getMethod("push", Object.class);
 			STREAMABLE_ADD = Streamable.class.getMethod("add", Object.class);
-			STREAMABLE_ITERATOR = Streamable.class.getMethod("iterator");
+			STREAMABLE_FLAT_ADD_ARRAY = Streamable.class.getMethod("flatAdd", Object[].class);
+			STREAMABLE_FLAT_ADD_ITERABLE = Streamable.class.getMethod("flatAdd", Iterable.class);
 			STREAMABLE_OF_UNKNOWN = Streamable.class.getMethod("ofUnknown", Object.class);
 			STRING_BUILDER_APPEND_OBJECT = StringBuilder.class.getMethod("append", Object.class);
 			STRING_BUILDER_INIT_STRING = StringBuilder.class.getConstructor(String.class);
@@ -261,140 +288,32 @@ public final class Expression {
 	}
 
 	/**
-	 * Compares two objects.
+	 * Checks if a collection contains the same items as an array.
 	 *
-	 * @param equality true to test for equality, false to perform 3-way comparison
-	 * @param first the object to compare
-	 * @param second the object being compared
-	 * @return the result of comparing the two values where a negative value indicates the first object is less than the second, a positive value indicates the first object is greater than the second, and a value of zero indicates the objects are equivalent
+	 * @param <T> the type of item being compared
+	 * @param list1 the collection of items to compare
+	 * @param list2 the array of items to compare
+	 * @return true if list1 is empty and list2 is null or if the lists contain the same items in the same order, otherwise false
 	 */
-	@SuppressWarnings("unchecked")
-	public static int compare(final boolean equality, final Object first, final Object second) {
-		if (first instanceof Number) {
-			if (first instanceof Double || first instanceof Float) {
-				if (second instanceof Number) {
-					if (second instanceof Double || second instanceof Float) {
-						return Double.compare(((Number)first).doubleValue(), ((Number)second).doubleValue());
-					} else if (second instanceof BigDecimal) {
-						return BigDecimal.valueOf(((Number)first).doubleValue()).compareTo((BigDecimal)second);
-					} else if (second instanceof BigInteger) {
-						return BigDecimal.valueOf(((Number)first).doubleValue()).compareTo(new BigDecimal((BigInteger)second));
-					}
-
-					return BigDecimal.valueOf(((Number)first).doubleValue()).compareTo(BigDecimal.valueOf(((Number)second).longValue()));
-				} else if (second instanceof Character) {
-					return Double.compare(((Number)first).doubleValue(), ((Character)second).charValue());
-				}
-			} else if (first instanceof BigDecimal) {
-				if (second instanceof Number) {
-					if (second instanceof Double || second instanceof Float) {
-						return ((BigDecimal)first).compareTo(BigDecimal.valueOf(((Number)second).doubleValue()));
-					} else if (second instanceof BigDecimal) {
-						return ((BigDecimal)first).compareTo((BigDecimal)second);
-					} else if (second instanceof BigInteger) {
-						return ((BigDecimal)first).compareTo(new BigDecimal((BigInteger)second));
-					}
-
-					return ((BigDecimal)first).compareTo(BigDecimal.valueOf(((Number)second).longValue()));
-				} else if (second instanceof Character) {
-					return ((BigDecimal)first).compareTo(BigDecimal.valueOf(((Character)second).charValue()));
-				}
-			} else if (first instanceof BigInteger) {
-				if (second instanceof Number) {
-					if (second instanceof Double || second instanceof Float) {
-						return new BigDecimal((BigInteger)first).compareTo(BigDecimal.valueOf(((Number)second).doubleValue()));
-					} else if (second instanceof BigDecimal) {
-						return new BigDecimal((BigInteger)first).compareTo((BigDecimal)second);
-					} else if (second instanceof BigInteger) {
-						return ((BigInteger)first).compareTo((BigInteger)second);
-					}
-
-					return ((BigInteger)first).compareTo(BigInteger.valueOf(((Number)second).longValue()));
-				} else if (second instanceof Character) {
-					return ((BigInteger)first).compareTo(BigInteger.valueOf(((Character)second).charValue()));
-				}
-			} else {
-				if (second instanceof Number) {
-					if (second instanceof Double || second instanceof Float) {
-						return BigDecimal.valueOf(((Number)first).longValue()).compareTo(BigDecimal.valueOf(((Number)second).doubleValue()));
-					} else if (second instanceof BigDecimal) {
-						return BigDecimal.valueOf(((Number)first).longValue()).compareTo((BigDecimal)second);
-					} else if (second instanceof BigInteger) {
-						return BigInteger.valueOf(((Number)first).longValue()).compareTo((BigInteger)second);
-					}
-
-					return Long.compare(((Number)first).longValue(), ((Number)second).longValue());
-				} else if (second instanceof Character) {
-					return Long.compare(((Number)first).longValue(), ((Character)second).charValue());
-				}
-			}
-		} else if (first instanceof Character) {
-			if (second instanceof Number) {
-				if (second instanceof Double || second instanceof Float) {
-					return BigDecimal.valueOf(((Character)first).charValue()).compareTo(BigDecimal.valueOf(((Number)second).doubleValue()));
-				} else if (second instanceof BigDecimal) {
-					return BigDecimal.valueOf(((Character)first).charValue()).compareTo((BigDecimal)second);
-				} else if (second instanceof BigInteger) {
-					return BigInteger.valueOf(((Character)first).charValue()).compareTo((BigInteger)second);
-				}
-
-				return Long.compare(((Character)first).charValue(), ((Number)second).longValue());
-			} else if (second instanceof StringBuilder || second instanceof String || second instanceof Character) {
-				return first.toString().compareTo(second.toString());
-			}
-		} else if ((first instanceof StringBuilder || first instanceof String) &&
-				(second instanceof StringBuilder || second instanceof String || second instanceof Character)) {
-			return first.toString().compareTo(second.toString());
-		} else if (equality) {
-			return Objects.equals(first, second) ? 0 : 1;
-		} else if (first instanceof Comparable) {
-			return ((Comparable<Object>)first).compareTo(second);
+	private static <T> boolean equalLists(final Collection<T> list1, final T[] list2) {
+		if (list2 == null) {
+			return list1.isEmpty();
 		}
 
-		if (equality) {
-			return 1; // Indicate not equal
-		}
+		final int size = list1.size();
+		int i = 0;
 
-		throw new IllegalArgumentException("Unexpected object, expecting comparable object");
-	}
-
-	/**
-	 * Converts an object to a boolean.
-	 *
-	 * @param object the object to convert to a boolean
-	 * @return the result of converting the object to a boolean
-	 */
-	public static boolean convertToBoolean(final Object object) {
-		if (object == null) {
+		if (size != list2.length) {
 			return false;
-		} else if (object instanceof Number) {
-			if (object instanceof Double || object instanceof Float) {
-				return ((Number)object).doubleValue() != 0.0;
-			} else if (object instanceof BigDecimal) {
-				return BigDecimal.ZERO.compareTo((BigDecimal)object) != 0;
-			} else if (object instanceof BigInteger) {
-				return !BigInteger.ZERO.equals(object);
-			}
+		}
 
-			return ((Number)object).longValue() != 0;
-		} else if (object instanceof Boolean) {
-			return ((Boolean)object).booleanValue();
-		} else if (object instanceof Character) {
-			return ((Character)object).charValue() != 0;
+		for (final Iterator<T> it = list1.iterator(); it.hasNext(); i++) {
+			if (!it.next().equals(list2[i])) {
+				return false;
+			}
 		}
 
 		return true;
-	}
-
-	/**
-	 * Gets the class of the specified name.
-	 *
-	 * @param context the context used to get the class
-	 * @param name the name of the class to get
-	 * @return the class associated with the specified name
-	 */
-	public static Class<?> getClass(final RenderContext context, final String name) {
-		return context.getClass(name);
 	}
 
 	/**
@@ -798,7 +717,7 @@ public final class Expression {
 			case "?[?":
 				if (left != null) {
 					if (!Object.class.equals(left.type)) {
-						throw new IllegalArgumentException("Unexpected \"" + operator + "\" operator applied to " + (left.type == null ? "numeric" : left.type.getName()) + " value, expecting map or array type value in expression");
+						throw new IllegalArgumentException("Unexpected \"" + operator + "\" operator applied to " + left.type.getName() + ", expecting map or array type value in expression");
 					}
 
 					final Label end = left.builder.newLabel();
@@ -865,7 +784,7 @@ public final class Expression {
 				final Label decreasingLoop = left.builder.newLabel();
 				final Label end = left.builder.newLabel();
 
-				state.operands.push(new Operand(Object.class, left.toNumeric(false).addCode(POP, POP2, L2I, DUP).addAccess(ISTORE, Evaluable.FIRST_LOCAL_INDEX).append(right.toNumeric(false)).addCode(POP, POP2, L2I, DUP2).addBranch(IF_ICMPGT, decreasing)
+				state.operands.push(new Operand(Object.class, left.toNumeric(false).addPrimitiveConversion(Number.class, int.class).addCode(DUP).addAccess(ISTORE, Evaluable.FIRST_LOCAL_INDEX).append(right.toNumeric(false).addPrimitiveConversion(Number.class, int.class)).addCode(DUP2).addBranch(IF_ICMPGT, decreasing)
 						.addCode(SWAP, ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(increasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(IADD, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, increasingLoop).addBranch(GOTO, end)
 						.updateLabel(decreasing).addCode(ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(decreasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(SWAP, ISUB, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, decreasingLoop)
 						.updateLabel(end).addCode(POP)));
@@ -875,66 +794,55 @@ public final class Expression {
 			// Math Operations
 			case "+":
 				if (left == null) { // Unary +, basically do nothing except require a number
-					state.operands.push(new Operand(null, right.toNumeric(true)));
+					state.operands.push(new Operand(HorseshoeNumber.class, right.toNumeric(true)));
 				} else if (StringBuilder.class.equals(left.type)) { // Check for string concatenation
 					state.operands.push(left).peek().builder.append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT);
 				} else if (String.class.equals(left.type) || String.class.equals(right.type) || StringBuilder.class.equals(right.type)) {
 					state.operands.push(new Operand(StringBuilder.class, left.toObject(false).pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
-				} else if ((left.type == null || (left.type.isPrimitive() && !boolean.class.equals(left.type))) && (right.type == null || (right.type.isPrimitive() && !boolean.class.equals(right.type)))) { // Mathematical addition
-					state.operands.push(left.execMathOp(right, IADD, LADD, DADD, Evaluable.FIRST_LOCAL_INDEX));
-				} else { // String concatenation, mathematical addition, or invalid
-					final Label notStringBuilder = left.builder.newLabel();
-					final Label isString = left.builder.newLabel();
-					final Label notString = left.builder.newLabel();
-					final Label end = left.builder.newLabel();
-
-					state.operands.push(new Operand(Object.class, left.toObject(false).append(right.toObject(false)).addCode(SWAP, DUP_X1).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notStringBuilder).addCode(SWAP).addCast(StringBuilder.class).addCode(SWAP).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
-							.updateLabel(notStringBuilder).addCode(SWAP, DUP_X1).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(String.class).addBranch(IFNE, isString).addCode(DUP).addInstanceOfCheck(StringBuilder.class).addBranch(IFEQ, notString)
-							.updateLabel(isString).addCode(SWAP).pushNewObject(StringBuilder.class).addCode(DUP_X2, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).addInvoke(STRING_BUILDER_APPEND_OBJECT).addBranch(GOTO, end)
-							.updateLabel(notString).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX)))
-						.peek().execMathOp(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX)), IADD, LADD, DADD, Evaluable.FIRST_LOCAL_INDEX).toObject(false).updateLabel(end);
+				} else { // String concatenation, mathematical addition, collection addition, or invalid
+					state.operands.push(new Operand(Object.class, left.toObject(false).append(right.toObject(false)).addInvoke(OPERANDS_ADD)));
 				}
 
 				break;
 			case "-":
 				if (left == null) {
-					state.operands.push(right.execIntegralOp(INEG, LNEG));
+					state.operands.push(new Operand(HorseshoeNumber.class, right.toNumeric(true).addInvoke(HORSESHOE_NUMBER_NEGATE)));
 				} else {
-					state.operands.push(left.execMathOp(right, ISUB, LSUB, DSUB, Evaluable.FIRST_LOCAL_INDEX));
+					state.operands.push(new Operand(Object.class, left.toObject(false).append(right.toObject(false)).addInvoke(OPERANDS_SUBTRACT)));
 				}
 
 				break;
 			case "*":
-				state.operands.push(left.execMathOp(right, IMUL, LMUL, DMUL, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(new Operand(HorseshoeNumber.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(HORSESHOE_NUMBER_MULTIPLY)));
 				break;
 			case "/":
-				state.operands.push(left.execMathOp(right, IDIV, LDIV, DDIV, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(new Operand(HorseshoeNumber.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(HORSESHOE_NUMBER_DIVIDE)));
 				break;
 			case "%":
-				state.operands.push(left.execMathOp(right, IREM, LREM, DREM, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(new Operand(HorseshoeNumber.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(HORSESHOE_NUMBER_MODULO)));
 				break;
 
 			// Integral Operations
-			case "~": // Treat as x ^ -1
-				state.operands.push(right.execIntegralOp(new Operand(int.class, new MethodBuilder().pushConstant(-1)), IXOR, LXOR, false, Evaluable.FIRST_LOCAL_INDEX));
+			case "~":
+				state.operands.push(new Operand(HorseshoeInt.class, right.toNumeric(false).addInvoke(HORSESHOE_INT_NOT)));
 				break;
 			case "<<":
-				state.operands.push(left.execIntegralOp(right, ISHL, LSHL, true, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_SHIFT_LEFT)));
 				break;
 			case ">>":
-				state.operands.push(left.execIntegralOp(right, ISHR, LSHR, true, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_SHIFT_RIGHT)));
 				break;
 			case ">>>":
-				state.operands.push(left.execIntegralOp(right, IUSHR, LUSHR, true, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_SHIFT_RIGHT_ZERO)));
 				break;
 			case "&":
-				state.operands.push(left.execIntegralOp(right, IAND, LAND, false, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_AND)));
 				break;
 			case "^":
-				state.operands.push(left.execIntegralOp(right, IXOR, LXOR, false, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_XOR)));
 				break;
 			case "|":
-				state.operands.push(left.execIntegralOp(right, IOR, LOR, false, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_OR)));
 				break;
 
 			// Logical Operators
@@ -962,22 +870,22 @@ public final class Expression {
 
 			// Comparison Operators
 			case "<=":
-				state.operands.push(left.execCompareOp(right, IFLE, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(left.execCompareOp(right, IFLE));
 				break;
 			case ">=":
-				state.operands.push(left.execCompareOp(right, IFGE, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(left.execCompareOp(right, IFGE));
 				break;
 			case "<":
-				state.operands.push(left.execCompareOp(right, IFLT, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(left.execCompareOp(right, IFLT));
 				break;
 			case ">":
-				state.operands.push(left.execCompareOp(right, IFGT, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(left.execCompareOp(right, IFGT));
 				break;
 			case "==":
-				state.operands.push(left.execCompareOp(right, IFEQ, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(left.execCompareOp(right, IFEQ));
 				break;
 			case "!=":
-				state.operands.push(left.execCompareOp(right, IFNE, Evaluable.FIRST_LOCAL_INDEX));
+				state.operands.push(left.execCompareOp(right, IFNE));
 				break;
 
 			// Ternary Operations
@@ -1013,13 +921,7 @@ public final class Expression {
 				break;
 
 			case ";":
-				if (left.type == null) {
-					left.builder.addCode(POP, POP2, POP2);
-				} else {
-					left.builder.addCode(long.class.equals(left.type) || double.class.equals(left.type) ? POP2 : POP);
-				}
-
-				state.operands.push(new Operand(right.type, left.builder.append(right.builder)));
+				state.operands.push(new Operand(right.type, left.builder.addCode(long.class.equals(left.type) || double.class.equals(left.type) ? POP2 : POP).append(right.builder)));
 				break;
 
 			case ",":
@@ -1029,9 +931,9 @@ public final class Expression {
 				break;
 
 			// Streaming Operations
-			case "#.":
-			case "#|": { // Remap
-				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_ITERATOR);
+			case "#>":
+			case "#.": { // Remap
+				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
 				final Label startOfLoop = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
 
@@ -1040,8 +942,22 @@ public final class Expression {
 						.append(right.toObject(false)).addInvoke(STREAMABLE_ADD).addBranch(GOTO, startOfLoop).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
+			case "#|": { // Flat remap
+				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
+				final Label startOfLoop = mb.newLabel();
+				final Label endOfLoop = mb.newLabel();
+				final Label notNull = mb.newLabel();
+				final Label notIterable = mb.newLabel();
+
+				state.operands.push(new Operand(Object.class, mb.addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
+						.addCode(DUP2).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex())
+						.append(right.toObject(false)).addCode(DUP).addBranch(IFNONNULL, notNull).addCode(POP2).addBranch(GOTO, startOfLoop)
+						.updateLabel(notNull).addCode(DUP).addInstanceOfCheck(Iterable.class).addBranch(IFEQ, notIterable).addCast(Iterable.class).addInvoke(STREAMABLE_FLAT_ADD_ITERABLE).addBranch(GOTO, startOfLoop)
+						.updateLabel(notIterable).addCast(Object[].class).addInvoke(STREAMABLE_FLAT_ADD_ARRAY).addBranch(GOTO, startOfLoop).updateLabel(endOfLoop).addCode(POP)));
+				break;
+			}
 			case "#?": { // Filter
-				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_ITERATOR);
+				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
 				final Label startOfLoop = mb.newLabel();
 				final Label readdObject = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
@@ -1052,8 +968,8 @@ public final class Expression {
 						.updateLabel(readdObject).addInvoke(STREAMABLE_ADD).addBranch(GOTO, startOfLoop).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
-			case "#>": { // Reduction
-				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addInvoke(STREAMABLE_ITERATOR).addCode(ACONST_NULL);
+			case "#<": { // Reduction
+				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addInvoke(ITERABLE_ITERATOR).addCode(ACONST_NULL);
 				final Label startOfLoop = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
 
@@ -1062,7 +978,7 @@ public final class Expression {
 						.append(right.toObject(false)).addBranch(GOTO, startOfLoop).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
-			case "#<": // Return
+			case "#^": // Return
 				state.operands.push(new Operand(Object.class, right.toObject(true)));
 				break;
 
@@ -1081,7 +997,7 @@ public final class Expression {
 			case "~@": { // Get class
 				final Label isNull = right.builder.newLabel();
 
-				state.operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(EXPRESSION_GET_VALUE).updateLabel(isNull)));
+				state.operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS).updateLabel(isNull)));
 				break;
 			}
 
@@ -1264,24 +1180,13 @@ public final class Expression {
 		}
 
 		// Check for match to the cached expression
-		if (cachedExpression != null && state.expressions.isEmpty() == (cachedExpression.expressions == null)) {
-			boolean matchesCache = true;
-
-			for (final Entry<Expression, Integer> entry : state.expressions.entrySet()) {
-				if (!cachedExpression.expressions[entry.getValue()].equals(entry.getKey())) {
-					matchesCache = false;
-					break;
-				}
-			}
-
-			if (matchesCache) {
-				assert cachedExpression.originalString.equals(originalString) : "Invalid cached expression \"" + cachedExpression + "\" does not match parsed expression \"" + originalString + "\"";
-				this.expressions = cachedExpression.expressions;
-				this.identifiers = cachedExpression.identifiers;
-				this.evaluable = cachedExpression.evaluable;
-				this.isNamed = named;
-				return;
-			}
+		if (cachedExpression != null && equalLists(state.expressions.keySet(), cachedExpression.expressions) && equalLists(state.identifiers.keySet(), cachedExpression.identifiers)) {
+			assert cachedExpression.originalString.equals(originalString) : "Invalid cached expression \"" + cachedExpression + "\" does not match parsed expression \"" + originalString + "\"";
+			this.expressions = cachedExpression.expressions;
+			this.identifiers = cachedExpression.identifiers;
+			this.evaluable = cachedExpression.evaluable;
+			this.isNamed = named;
+			return;
 		}
 
 		// Populate all the expressions
@@ -1307,7 +1212,7 @@ public final class Expression {
 		}
 
 		// Create the evaluator
-		this.evaluable = mb.append(state.operands.pop().toObject(true)).build(Expression.class.getPackage().getName() + ".dyn.Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
+		this.evaluable = mb.append(state.operands.pop().toObject(true)).build(Expression.class.getPackage().getName() + ".Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		this.isNamed = named;
 		assert state.operands.isEmpty();
 	}

@@ -1,6 +1,7 @@
 package horseshoe.internal;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -77,6 +78,31 @@ public class StreamableTests {
 				return Arrays.asList("Test", "Test 2", 5, (Object)null).iterator();
 			}
 		}))));
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testFlatMap() {
+		final Streamable<Object> streamable = (Streamable<Object>)Streamable.ofUnknown(Arrays.asList(Arrays.asList(1, 2), new Object[] { 3, 4 }));
+
+		streamable.forEach(a -> {
+			if (a instanceof Iterable) {
+				streamable.flatAdd((Iterable<Object>)a);
+			} else if (a instanceof Object[]) {
+				streamable.flatAdd((Object[])a);
+			} else {
+				throw new RuntimeException("Value was not an iterable or array");
+			}
+		});
+
+		final Object[] results = new Object[] { 1, 2, 3, 4 };
+		final Iterator<Object> it = streamable.iterator();
+
+		for (final Object result : results) {
+			assertEquals(result, it.next());
+		}
+
+		assertFalse(it.hasNext());
 	}
 
 	@Test
