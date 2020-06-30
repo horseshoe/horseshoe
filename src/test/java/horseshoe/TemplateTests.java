@@ -161,8 +161,9 @@ public class TemplateTests {
 		assertEquals("2", new TemplateLoader().load("Filter Test", "{{min = ~@'Integer'.MAX_VALUE;[1,-1,1000] #. v-> v+1 #? j-> j>0 #< j => min=j<min?j:min}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals("1", new TemplateLoader().load("First Test", "{{[1,-1,1000] #< v-> #^ v}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals("1000", new TemplateLoader().load("Last Test", "{{[1,-1,1000] #< i=>i}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("10", new TemplateLoader().load("Sum Test", "{{sum = 0; [[1, 2], [3, 4].toArray(), null] #| i -> i #< i -> sum = sum + i}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
-		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Identifier Test", "{{sum = 0; [[1, 2], [3, 4].toArray(), null] #| + -> i #< i -> sum = sum + i}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("10", new TemplateLoader().load("Sum Test", "{{sum = 0; [[1, 2], [3, 4].toArray(), null] #? i -> i #| i -> i #< i -> sum = sum + i}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("", new TemplateLoader().load("Sum Test", "{{sum = 0; [[1, 2], [3, 4].toArray(), null, 5] #| i -> i #< i -> sum = sum + i}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Identifier Test", "{{sum = 0; [[1, 2], [3, 4].toArray(), null] #| + -> i #< i -> sum = sum + i}}"));
 	}
 
 	@Test

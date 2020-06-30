@@ -95,6 +95,13 @@ public class RunnerTests {
 	}
 
 	@Test
+	public void testBadOutputArgument() throws IOException {
+		systemInMock.provideLines("{{test}}");
+		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);
+		Runner.main(new String[] { "-oa/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z.out" });
+	}
+
+	@Test
 	public void testCurrentContext() throws IOException {
 		systemInMock.provideLines("{{#['blue', 'red']}}", "{{.}}{{#a}}: {{blah}}{{/}}{{#.hasNext}},{{/}}", "{{/}}");
 		Runner.main(new String[] { "--output", "out2.test", "-Da=true", "-Dblah=blah", "--output-charset=UTF-16BE", "--access=CURRENT", "-" });

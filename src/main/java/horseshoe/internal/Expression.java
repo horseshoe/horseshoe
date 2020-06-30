@@ -28,7 +28,7 @@ import horseshoe.internal.MethodBuilder.Label;
 public final class Expression {
 
 	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
-	private static final int FIRST_LOCAL_BINDING_INDEX = Evaluable.FIRST_LOCAL_INDEX;
+	private static final int FIRST_LOCAL_BINDING_INDEX = Evaluable.FIRST_LOCAL_INDEX + 2; // The first few indices are reserved for use internally by this class
 
 	// Reflected Methods
 	private static final Constructor<?> ARRAY_LIST_CTOR_INT;
@@ -501,7 +501,7 @@ public final class Expression {
 				final Label end = initializeLocalBindings.newLabel();
 
 				initializeLocalBindings.addCode(Evaluable.LOAD_ARGUMENTS).addBranch(IFNULL, ifNull).pushConstant(i).addCode(Evaluable.LOAD_ARGUMENTS).addCode(ARRAYLENGTH).addBranch(IF_ICMPGE, ifNull)
-					.addCode(Evaluable.LOAD_ARGUMENTS).pushConstant(i).addCode(AALOAD).addBranch(GOTO, end)
+					.addCode(Evaluable.LOAD_ARGUMENTS).pushConstant(i).addCode(AALOAD).addGoto(end, 1)
 					.updateLabel(ifNull).addCode(ACONST_NULL).updateLabel(end).addAccess(ASTORE, state.createLocalBinding(name));
 			}
 		}
@@ -785,7 +785,7 @@ public final class Expression {
 				final Label end = left.builder.newLabel();
 
 				state.operands.push(new Operand(Object.class, left.toNumeric(false).addPrimitiveConversion(Number.class, int.class).addCode(DUP).addAccess(ISTORE, Evaluable.FIRST_LOCAL_INDEX).append(right.toNumeric(false).addPrimitiveConversion(Number.class, int.class)).addCode(DUP2).addBranch(IF_ICMPGT, decreasing)
-						.addCode(SWAP, ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(increasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(IADD, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, increasingLoop).addBranch(GOTO, end)
+						.addCode(SWAP, ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(increasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(IADD, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, increasingLoop).addGoto(end, 0)
 						.updateLabel(decreasing).addCode(ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(decreasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(SWAP, ISUB, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, decreasingLoop)
 						.updateLabel(end).addCode(POP)));
 				break;
@@ -850,21 +850,21 @@ public final class Expression {
 				final Label notZero = right.builder.newLabel();
 				final Label end = right.builder.newLabel();
 
-				state.operands.push(new Operand(boolean.class, right.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(notZero).addCode(ICONST_0).updateLabel(end)));
+				state.operands.push(new Operand(boolean.class, right.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_1).addGoto(end, 1).updateLabel(notZero).addCode(ICONST_0).updateLabel(end)));
 				break;
 			}
 			case "&&": {
 				final Label notZero = left.builder.newLabel();
 				final Label end = left.builder.newLabel();
 
-				state.operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_0).addBranch(GOTO, end).updateLabel(notZero).append(right.toBoolean()).updateLabel(end)));
+				state.operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFNE, notZero).addCode(ICONST_0).addGoto(end, 1).updateLabel(notZero).append(right.toBoolean()).updateLabel(end)));
 				break;
 			}
 			case "||": {
 				final Label zero = left.builder.newLabel();
 				final Label end = left.builder.newLabel();
 
-				state.operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFEQ, zero).addCode(ICONST_1).addBranch(GOTO, end).updateLabel(zero).append(right.toBoolean()).updateLabel(end)));
+				state.operands.push(new Operand(boolean.class, left.toBoolean().addBranch(IFEQ, zero).addCode(ICONST_1).addGoto(end, 1).updateLabel(zero).append(right.toBoolean()).updateLabel(end)));
 				break;
 			}
 
@@ -907,7 +907,7 @@ public final class Expression {
 				final Label isFalse = left.builder.newLabel();
 				final Label end = left.builder.newLabel();
 
-				state.operands.push(new Operand(Object.class, state.operands.pop().toBoolean().addBranch(IFEQ, isFalse).append(left.builder).addBranch(GOTO, end).updateLabel(isFalse).append(right.builder).updateLabel(end)));
+				state.operands.push(new Operand(Object.class, state.operands.pop().toBoolean().addBranch(IFEQ, isFalse).append(left.builder).addGoto(end, 1).updateLabel(isFalse).append(right.builder).updateLabel(end)));
 				break;
 			}
 
@@ -939,7 +939,7 @@ public final class Expression {
 
 				state.operands.push(new Operand(Object.class, mb.addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP2).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex())
-						.append(right.toObject(false)).addInvoke(STREAMABLE_ADD).addBranch(GOTO, startOfLoop).updateLabel(endOfLoop).addCode(POP)));
+						.append(right.toObject(false)).addInvoke(STREAMABLE_ADD).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
 			case "#|": { // Flat remap
@@ -948,12 +948,14 @@ public final class Expression {
 				final Label endOfLoop = mb.newLabel();
 				final Label notNull = mb.newLabel();
 				final Label notIterable = mb.newLabel();
+				final Label notArray = mb.newLabel();
 
 				state.operands.push(new Operand(Object.class, mb.addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP2).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex())
-						.append(right.toObject(false)).addCode(DUP).addBranch(IFNONNULL, notNull).addCode(POP2).addBranch(GOTO, startOfLoop)
-						.updateLabel(notNull).addCode(DUP).addInstanceOfCheck(Iterable.class).addBranch(IFEQ, notIterable).addCast(Iterable.class).addInvoke(STREAMABLE_FLAT_ADD_ITERABLE).addBranch(GOTO, startOfLoop)
-						.updateLabel(notIterable).addCast(Object[].class).addInvoke(STREAMABLE_FLAT_ADD_ARRAY).addBranch(GOTO, startOfLoop).updateLabel(endOfLoop).addCode(POP)));
+						.append(right.toObject(false)).addCode(DUP).addBranch(IFNONNULL, notNull).addCode(POP2).addGoto(startOfLoop, -2)
+						.updateLabel(notNull).addCode(DUP).addInstanceOfCheck(Iterable.class).addBranch(IFEQ, notIterable).addCast(Iterable.class).addInvoke(STREAMABLE_FLAT_ADD_ITERABLE).addGoto(startOfLoop, -2)
+						.updateLabel(notIterable).addCode(DUP).addInstanceOfCheck(Object[].class).addBranch(IFEQ, notArray).addCast(Object[].class).addInvoke(STREAMABLE_FLAT_ADD_ARRAY).addGoto(startOfLoop, -2)
+						.updateLabel(notArray).addThrow(IllegalArgumentException.class, "Illegal flat map result, must be null, Iterable, or array", 2).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
 			case "#?": { // Filter
@@ -964,8 +966,8 @@ public final class Expression {
 
 				state.operands.push(new Operand(Object.class, mb.addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP2).addInvoke(ITERATOR_NEXT).addCode(DUP).addAccess(ASTORE, operator.getLocalBindingIndex())
-						.append(right.toBoolean()).addBranch(IFNE, readdObject).addCode(POP2).addBranch(GOTO, startOfLoop)
-						.updateLabel(readdObject).addInvoke(STREAMABLE_ADD).addBranch(GOTO, startOfLoop).updateLabel(endOfLoop).addCode(POP)));
+						.append(right.toBoolean()).addBranch(IFNE, readdObject).addCode(POP2).addGoto(startOfLoop, -2)
+						.updateLabel(readdObject).addInvoke(STREAMABLE_ADD).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
 			case "#<": { // Reduction
@@ -975,7 +977,7 @@ public final class Expression {
 
 				state.operands.push(new Operand(Object.class, mb.addCode(SWAP, DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex()).addCode(SWAP, POP)
-						.append(right.toObject(false)).addBranch(GOTO, startOfLoop).updateLabel(endOfLoop).addCode(POP)));
+						.append(right.toObject(false)).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
 			case "#^": // Return
@@ -991,7 +993,7 @@ public final class Expression {
 				break;
 
 			case "\u2620": case "~:<": // Die
-				state.operands.push(new Operand(Object.class, right.toObject(false).addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addCode(ATHROW)));
+				state.operands.push(new Operand(Object.class, right.toObject(false).addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addFlowBreakingCode(ATHROW, 0)));
 				break;
 
 			case "~@": { // Get class

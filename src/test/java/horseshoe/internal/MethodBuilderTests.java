@@ -39,10 +39,10 @@ public class MethodBuilderTests {
 		labels.put(10, mb.newLabel());
 
 		mb.addCode(ILOAD_1).addSwitch(labels, labels.get(2))
-				.updateLabel(labels.get(1)).pushNewObject(boolean.class, 1).pushNewObject(char.class, 1).pushNewObject(byte.class, 1).pushNewObject(short.class, 1).pushNewObject(long.class, 1).pushNewObject(int.class, 1).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addCode(ARETURN)
-				.updateLabel(labels.get(2)).pushNewObject(String.class, 2, 3).addCode(DUP, DUP).pushConstant(0).addCode(AALOAD).pushConstant(1).pushConstant("01").addCode(AASTORE).pushConstant(1).addCode(AALOAD).pushConstant(0).pushConstant("10").addCode(AASTORE).pushConstant(0).addCode(AALOAD).pushConstant(1).addCode(AALOAD).addInvoke(Object.class.getMethod("toString")).addCode(ARETURN)
-				.updateLabel(labels.get(5)).pushNewObject(double.class, 1).addCode(DUP).pushConstant(0).pushConstant(2.0).addCode(DASTORE).pushConstant(0).addCode(DALOAD).addPrimitiveConversion(double.class, Double.class).addInvoke(Object.class.getMethod("toString")).addCode(ARETURN)
-				.updateLabel(labels.get(10)).pushNewObject(float.class, 1).pushConstant(10.0f).addPrimitiveConversion(float.class, Integer.class).addInvoke(Object.class.getMethod("toString")).addCode(ARETURN);
+				.updateLabel(labels.get(1)).pushNewObject(boolean.class, 1).pushNewObject(char.class, 1).pushNewObject(byte.class, 1).pushNewObject(short.class, 1).pushNewObject(long.class, 1).pushNewObject(int.class, 1).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addFlowBreakingCode(ARETURN, 0)
+				.updateLabel(labels.get(2)).pushNewObject(String.class, 2, 3).addCode(DUP, DUP).pushConstant(0).addCode(AALOAD).pushConstant(1).pushConstant("01").addCode(AASTORE).pushConstant(1).addCode(AALOAD).pushConstant(0).pushConstant("10").addCode(AASTORE).pushConstant(0).addCode(AALOAD).pushConstant(1).addCode(AALOAD).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 0)
+				.updateLabel(labels.get(5)).pushNewObject(double.class, 1).addCode(DUP).pushConstant(0).pushConstant(2.0).addCode(DASTORE).pushConstant(0).addCode(DALOAD).addPrimitiveConversion(double.class, Double.class).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 0)
+				.updateLabel(labels.get(10)).pushNewObject(float.class, 1).pushConstant(10.0f).addPrimitiveConversion(float.class, Integer.class).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 0);
 		assertNotNull(mb.toString());
 
 		final SwitchClass switchTest = mb.build(name, SwitchClass.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
@@ -64,7 +64,7 @@ public class MethodBuilderTests {
 		final MethodBuilder mb = new MethodBuilder();
 
 		// Hello, world!
-		mb.pushConstant("Hello, world!").addCode(ARETURN);
+		mb.pushConstant("Hello, world!").addFlowBreakingCode(ARETURN, 0);
 		assertNotNull(mb.toString());
 		System.out.println(mb);
 		assertEquals("", new MethodBuilder().toString());
@@ -79,7 +79,7 @@ public class MethodBuilderTests {
 		final MethodBuilder mb = new MethodBuilder();
 
 		// Test method calls
-		mb.addCode(ALOAD_0).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addCode(ARETURN);
+		mb.addCode(ALOAD_0).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addFlowBreakingCode(ARETURN, 0);
 		assertNotNull(mb.toString());
 
 		final SimpleInterface instance = mb.build(name, SimpleInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
@@ -103,7 +103,7 @@ public class MethodBuilderTests {
 				.addCode(ALOAD_3, ICONST_0).addInvoke(List.class.getDeclaredMethod("get", int.class))
 				.addCast(Double.class)
 				.addInvoke(Double.class.getMethod("doubleValue"))
-				.addCode(DADD, DLOAD, (byte)4, DADD, DRETURN);
+				.addCode(DADD, DLOAD, (byte)4, DADD).addFlowBreakingCode(DRETURN, 0);
 		assertNotNull(mb.toString());
 		System.out.println(mb);
 
@@ -143,7 +143,7 @@ public class MethodBuilderTests {
 				.addFieldAccess(FieldClass.class.getDeclaredField("testB"), true)
 				.addCode(I2D, DADD, DUP2, D2I)
 				.addFieldAccess(FieldClass.class.getDeclaredField("testB"), false)
-				.addCode(DRETURN);
+				.addFlowBreakingCode(DRETURN, 0);
 		assertNotNull(mb.toString());
 		System.out.println(mb);
 
@@ -174,6 +174,13 @@ public class MethodBuilderTests {
 				final MethodBuilder mb = new MethodBuilder().addCode(WIDE, (byte)i, B0, B0, B0, B0, B0);
 				assertNotNull(mb.toString());
 				mb.addCode(WIDE, (byte)i);
+				assertNotNull(mb.toString());
+			} catch (final RuntimeException e) {
+				// Many failures expected
+			}
+
+			try {
+				final MethodBuilder mb = new MethodBuilder().addFlowBreakingCode((byte)i, 0);
 				assertNotNull(mb.toString());
 			} catch (final RuntimeException e) {
 				// Many failures expected
@@ -227,7 +234,7 @@ public class MethodBuilderTests {
 				.pushConstant(0.0).addPrimitiveConversion(double.class, Number.class).addPrimitiveConversion(Number.class, boolean.class).addBranch(IFNE, fail)
 				.pushConstant(0).addPrimitiveConversion(int.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFNE, fail)
 				.pushConstant(0L).addPrimitiveConversion(long.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFNE, fail)
-				.pushConstant("success").addCode(ARETURN).updateLabel(fail).addThrow(RuntimeException.class, null);
+				.pushConstant("success").addFlowBreakingCode(ARETURN, 0).updateLabel(fail).addThrow(RuntimeException.class, null, 0);
 		final SimpleInterface instance = mb.build(name, SimpleInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
 		assertEquals("success", instance.run());
 	}

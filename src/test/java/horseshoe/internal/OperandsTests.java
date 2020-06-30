@@ -153,8 +153,8 @@ public class OperandsTests {
 				assertEquals(numbers[i].doubleValue() / numbers[j].doubleValue(), HorseshoeNumber.ofUnknown(numbers[i]).divide(HorseshoeNumber.ofUnknown(numbers[j])).doubleValue(), Math.abs(numbers[i].doubleValue() / numbers[j].doubleValue() - numbers[i].longValue() / numbers[j].longValue()) + 0.0001);
 			}
 
-			assertEquals(numbers[i].doubleValue() / ' ', HorseshoeNumber.ofUnknown(numbers[i]).divide(HorseshoeNumber.ofUnknown(' ')).doubleValue(), Math.abs(numbers[i].doubleValue() / ' ' - numbers[i].longValue() / ' ') + 0.0001);
-			assertEquals(' ' / numbers[i].doubleValue(), HorseshoeNumber.ofUnknown(' ').divide(HorseshoeNumber.ofUnknown(numbers[i])).doubleValue(), Math.abs(' ' / numbers[i].doubleValue() - ' ' / numbers[i].longValue()) + 0.0001);
+			assertEquals(numbers[i].doubleValue() / ' ', HorseshoeNumber.ofUnknown(numbers[i]).divide(HorseshoeNumber.ofUnknown(' ')).doubleValue(), Math.abs((numbers[i].doubleValue() / ' ') % 1.0) + 0.0001);
+			assertEquals(' ' / numbers[i].doubleValue(), HorseshoeNumber.ofUnknown(' ').divide(HorseshoeNumber.ofUnknown(numbers[i])).doubleValue(), Math.abs((' ' / numbers[i].doubleValue()) % 1.0) + 0.0001);
 		}
 
 		assertEquals(' ' / ' ', HorseshoeNumber.ofUnknown(' ').divide(HorseshoeNumber.ofUnknown(' ')).intValue());

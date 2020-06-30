@@ -72,17 +72,21 @@ public abstract class Streamable<T> implements Iterable<T> {
 	static final class StreamableList<T> extends Streamable<T> {
 
 		private T[] array;
+		private T[] iteratorArray;
 		private int size = 0;
 		private Iterator<T> initialIterator = null;
 
+		@SuppressWarnings("unchecked")
 		private StreamableList(final T[] array) {
 			this.array = array;
+			this.iteratorArray = (T[])new Object[array.length];
 			this.size = array.length;
 		}
 
 		@SuppressWarnings("unchecked")
 		StreamableList(final int initialSize, final Iterator<T> iterator) {
 			this.array = (T[])new Object[initialSize];
+			this.iteratorArray = (T[])new Object[initialSize];
 			this.initialIterator = iterator;
 		}
 
@@ -108,24 +112,23 @@ public abstract class Streamable<T> implements Iterable<T> {
 				return oldIterator;
 			}
 
-			final int oldSize = size;
-			size = 0;
-
-			return new Iterator<T>() {
-				int index = 0;
+			final T[] oldArray = array;
+			final Iterator<T> it = new Iterator<T>() {
+				private final int iteratorSize = size;
+				private int index = 0;
 
 				@Override
 				public boolean hasNext() {
-					return index < oldSize;
+					return index < iteratorSize;
 				}
 
 				@Override
 				public T next() {
-					if (index >= oldSize) {
+					if (!hasNext()) {
 						throw new NoSuchElementException();
 					}
 
-					return array[index++];
+					return iteratorArray[index++];
 				}
 
 				@Override
@@ -133,6 +136,11 @@ public abstract class Streamable<T> implements Iterable<T> {
 					// All values are automatically removed and must be re-added manually on every iteration
 				}
 			};
+
+			array = iteratorArray;
+			iteratorArray = oldArray;
+			size = 0;
+			return it;
 		}
 
 	}

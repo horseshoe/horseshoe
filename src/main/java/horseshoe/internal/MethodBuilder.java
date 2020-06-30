@@ -43,6 +43,9 @@ public final class MethodBuilder {
 	private static final byte CHECKCAST       = new Opcode("checkcast",       0xC0, 3,  0, Opcode.PROP_CONST_POOL_INDEX).id; // 2: indexbyte1, indexbyte2 (stack: objectref -> objectref)
 	private static final byte GETFIELD        = new Opcode("getfield",        0xB4, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).id; // 2: indexbyte1, indexbyte2 (stack: objectref -> value)
 	private static final byte GETSTATIC       = new Opcode("getstatic",       0xB2, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).id; // 2: indexbyte1, indexbyte2 (stack: -> value)
+	private static final byte GOTO            = new Opcode("goto",            0xA7, 3,  0, Opcode.PROP_BRANCH_OFFSET | Opcode.PROP_BREAKS_FLOW).id; // 2: branchbyte1, branchbyte2 (stack: [no change])
+	@SuppressWarnings("unused")
+	private static final byte GOTO_W          = new Opcode("goto_w",          0xC8, 5,  0, Opcode.PROP_BRANCH_OFFSET_4 | Opcode.PROP_BREAKS_FLOW).id; // 4: branchbyte1, branchbyte2, branchbyte3, branchbyte4 (stack: [no change])
 	private static final byte INSTANCEOF      = new Opcode("instanceof",      0xC1, 3,  0, Opcode.PROP_CONST_POOL_INDEX).id; // 2: indexbyte1, indexbyte2 (stack: objectref -> result)
 	private static final byte INVOKEINTERFACE = new Opcode("invokeinterface", 0xB9, 5,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).id; // 4: indexbyte1, indexbyte2, count, 0 (stack: objectref, [arg1, arg2, ...] -> result)
 	private static final byte INVOKESPECIAL   = new Opcode("invokespecial",   0xB7, 3,  0, Opcode.PROP_CONST_POOL_INDEX | Opcode.PROP_HAS_VARIABLE_STACK_OFFSET).id; // 2: indexbyte1, indexbyte2 (stack: objectref, [arg1, arg2, ...] -> result)
@@ -72,14 +75,14 @@ public final class MethodBuilder {
 	public static final byte ALOAD_1      = new Opcode("aload_1",      0x2B, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: -> objectref)
 	public static final byte ALOAD_2      = new Opcode("aload_2",      0x2C, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: -> objectref)
 	public static final byte ALOAD_3      = new Opcode("aload_3",      0x2D, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: -> objectref)
-	public static final byte ARETURN      = new Opcode("areturn",      0xB0, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: objectref -> [empty])
+	public static final byte ARETURN      = new Opcode("areturn",      0xB0, 1, -1, Opcode.PROP_CLEARS_STACK | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: objectref -> [empty])
 	public static final byte ARRAYLENGTH  = new Opcode("arraylength",  0xBE, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: arrayref -> length)
 	public static final byte ASTORE       = new Opcode("astore",       0x3A, 2, -1, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).id; // 1: index (stack: objectref ->)
 	public static final byte ASTORE_0     = new Opcode("astore_0",     0x4B, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: objectref ->)
 	public static final byte ASTORE_1     = new Opcode("astore_1",     0x4C, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: objectref ->)
 	public static final byte ASTORE_2     = new Opcode("astore_2",     0x4D, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: objectref ->)
 	public static final byte ASTORE_3     = new Opcode("astore_3",     0x4E, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: objectref ->)
-	public static final byte ATHROW       = new Opcode("athrow",       0xBF, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: objectref -> [empty], objectref)
+	public static final byte ATHROW       = new Opcode("athrow",       0xBF, 1, -1, Opcode.PROP_CLEARS_STACK | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: objectref -> [empty], objectref)
 	public static final byte BALOAD       = new Opcode("baload",       0x33, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: arrayref, index -> value)
 	public static final byte BASTORE      = new Opcode("bastore",      0x54, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: arrayref, index, value ->)
 	public static final byte BIPUSH       = new Opcode("bipush",       0x10, 2,  1, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_IS_STANDALONE_VALID).id; // 1: byte (stack: -> value)
@@ -105,7 +108,7 @@ public final class MethodBuilder {
 	public static final byte DMUL         = new Opcode("dmul",         0x6B, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
 	public static final byte DNEG         = new Opcode("dneg",         0x77, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> result)
 	public static final byte DREM         = new Opcode("drem",         0x73, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
-	public static final byte DRETURN      = new Opcode("dreturn",      0xAF, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> [empty])
+	public static final byte DRETURN      = new Opcode("dreturn",      0xAF, 1, -2, Opcode.PROP_CLEARS_STACK | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> [empty])
 	public static final byte DSTORE       = new Opcode("dstore",       0x39, 2, -2, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).id; // 1: index (stack: value ->)
 	public static final byte DSTORE_0     = new Opcode("dstore_0",     0x47, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value ->)
 	public static final byte DSTORE_1     = new Opcode("dstore_1",     0x48, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value ->)
@@ -138,15 +141,13 @@ public final class MethodBuilder {
 	public static final byte FMUL         = new Opcode("fmul",         0x6A, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
 	public static final byte FNEG         = new Opcode("fneg",         0x76, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> result)
 	public static final byte FREM         = new Opcode("frem",         0x72, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
-	public static final byte FRETURN      = new Opcode("freturn",      0xAE, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> [empty])
+	public static final byte FRETURN      = new Opcode("freturn",      0xAE, 1, -1, Opcode.PROP_CLEARS_STACK | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> [empty])
 	public static final byte FSTORE       = new Opcode("fstore",       0x38, 2, -1, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).id; // 1: index (stack: value ->)
 	public static final byte FSTORE_0     = new Opcode("fstore_0",     0x43, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value ->)
 	public static final byte FSTORE_1     = new Opcode("fstore_1",     0x44, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value ->)
 	public static final byte FSTORE_2     = new Opcode("fstore_2",     0x45, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value ->)
 	public static final byte FSTORE_3     = new Opcode("fstore_3",     0x46, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value ->)
 	public static final byte FSUB         = new Opcode("fsub",         0x66, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
-	public static final byte GOTO         = new Opcode("goto",         0xA7, 3,  0, Opcode.PROP_BRANCH_OFFSET).id; // 2: branchbyte1, branchbyte2 (stack: [no change])
-	public static final byte GOTO_W       = new Opcode("goto_w",       0xC8, 5,  0, Opcode.PROP_BRANCH_OFFSET_4).id; // 4: branchbyte1, branchbyte2, branchbyte3, branchbyte4 (stack: [no change])
 	public static final byte I2B          = new Opcode("i2b",          0x91, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> result)
 	public static final byte I2C          = new Opcode("i2c",          0x92, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> result)
 	public static final byte I2D          = new Opcode("i2d",          0x87, 1,  1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> result)
@@ -193,7 +194,7 @@ public final class MethodBuilder {
 	public static final byte INEG         = new Opcode("ineg",         0x74, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> result)
 	public static final byte IOR          = new Opcode("ior",          0x80, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
 	public static final byte IREM         = new Opcode("irem",         0x70, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
-	public static final byte IRETURN      = new Opcode("ireturn",      0xAC, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> [empty])
+	public static final byte IRETURN      = new Opcode("ireturn",      0xAC, 1, -1, Opcode.PROP_CLEARS_STACK | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> [empty])
 	public static final byte ISHL         = new Opcode("ishl",         0x78, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
 	public static final byte ISHR         = new Opcode("ishr",         0x7A, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
 	public static final byte ISTORE       = new Opcode("istore",       0x36, 2, -1, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).id; // 1: index (stack: value ->)
@@ -226,7 +227,7 @@ public final class MethodBuilder {
 	public static final byte LNEG         = new Opcode("lneg",         0x75, 1,  0, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> result)
 	public static final byte LOR          = new Opcode("lor",          0x81, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
 	public static final byte LREM         = new Opcode("lrem",         0x71, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
-	public static final byte LRETURN      = new Opcode("lreturn",      0xAD, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> [empty])
+	public static final byte LRETURN      = new Opcode("lreturn",      0xAD, 1, -2, Opcode.PROP_CLEARS_STACK | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value -> [empty])
 	public static final byte LSHL         = new Opcode("lshl",         0x79, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
 	public static final byte LSHR         = new Opcode("lshr",         0x7B, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value1, value2 -> result)
 	public static final byte LSTORE       = new Opcode("lstore",       0x37, 2, -2, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).id; // 1: index (stack: value ->)
@@ -244,7 +245,7 @@ public final class MethodBuilder {
 	public static final byte POP          = new Opcode("pop",          0x57, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: value ->)
 	public static final byte POP2         = new Opcode("pop2",         0x58, 1, -2, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: {value2, value1} ->)
 	public static final byte RET          = new Opcode("ret",          0xA9, 2,  0, Opcode.PROP_LOCAL_INDEX | Opcode.PROP_IS_STANDALONE_VALID).id; // 1: index (stack: [No change])
-	public static final byte RETURN       = new Opcode("return",       0xB1, 1,  0, Opcode.PROP_HAS_VARIABLE_STACK_OFFSET | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: -> [empty])
+	public static final byte RETURN       = new Opcode("return",       0xB1, 1,  0, Opcode.PROP_CLEARS_STACK | Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: -> [empty])
 	public static final byte SALOAD       = new Opcode("saload",       0x35, 1, -1, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: arrayref, index -> value)
 	public static final byte SASTORE      = new Opcode("sastore",      0x56, 1, -3, Opcode.PROP_IS_STANDALONE_VALID).id; // (stack: arrayref, index, value ->)
 	public static final byte SIPUSH       = new Opcode("sipush",       0x11, 3,  1, Opcode.PROP_HAS_CUSTOM_EXTRA_BYTES | Opcode.PROP_IS_STANDALONE_VALID).id; // 2: byte1, byte2 (stack: -> value)
@@ -343,6 +344,10 @@ public final class MethodBuilder {
 		private static final int PROP_HAS_VARIABLE_LENGTH = 0x08;
 		/** This value indicates the opcode has a variable stack offset. */
 		private static final int PROP_HAS_VARIABLE_STACK_OFFSET = 0x10;
+		/** This value indicates the opcode breaks the flow of code, including invalidating the stack size. */
+		private static final int PROP_BREAKS_FLOW = 0x20;
+		/** This value indicates the opcode clears the stack. */
+		private static final int PROP_CLEARS_STACK = 0x60;
 		/** This value indicates the opcode is valid to use as a stand-alone instruction. */
 		private static final int PROP_IS_STANDALONE_VALID = 0x80;
 
@@ -660,13 +665,13 @@ public final class MethodBuilder {
 		if (opcode == null || !opcode.has(Opcode.PROP_BRANCH_OFFSET)) {
 			final String mnemonic = (opcode == null ? "0x" + Integer.toHexString(instruction & 0xFF) : opcode.mnemonic);
 			throw new IllegalArgumentException("Unexpected bytecode instruction: " + mnemonic + ", expecting a branch instruction");
+		} else if (opcode.has(Opcode.PROP_BREAKS_FLOW)) {
+			throw new IllegalArgumentException("Illegal branch instruction " + opcode.mnemonic + ", instuction cannot be added as a branch instruction");
 		}
 
 		label.addReference(this, length, length + 1);
 
-		if (instruction == GOTO_W) {
-			return append(GOTO, B0, B0);
-		} else if (instruction == JSR_W) {
+		if (instruction == JSR_W) {
 			stackSize++;
 			maxStackSize = Math.max(maxStackSize, stackSize);
 			return append(JSR, B0, B0);
@@ -720,7 +725,7 @@ public final class MethodBuilder {
 
 		if (opcode == null) {
 			throw new IllegalArgumentException("Invalid bytecode instruction 0x" + Integer.toHexString(code[start] & 0xFF) + " at index " + start);
-		} else if (!opcode.has(Opcode.PROP_IS_STANDALONE_VALID)) {
+		} else if (!opcode.has(Opcode.PROP_IS_STANDALONE_VALID) || opcode.has(Opcode.PROP_BREAKS_FLOW)) {
 			throw new IllegalArgumentException("Illegal bytecode instruction " + opcode.mnemonic + " at index " + start + ", instuction cannot be added directly");
 		} else if (code[start] == WIDE) {
 			if (start + 1 >= code.length) {
@@ -787,6 +792,42 @@ public final class MethodBuilder {
 	}
 
 	/**
+	 * Adds flow-breaking code to the builder, reserving extra space in the builder if necessary. The length is automatically extended. Any exception will leave the builder in a valid state without the opcode added.
+	 *
+	 * @param code the code to add to the builder
+	 * @param stackPop the number of times the stack should be popped after the instruction, assuming it was a no-op
+	 * @return this builder
+	 */
+	public MethodBuilder addFlowBreakingCode(final byte code, final int stackPop) {
+		final Opcode opcode = OPCODES[code & 0xFF];
+
+		if (opcode == null) {
+			throw new IllegalArgumentException("Invalid bytecode instruction 0x" + Integer.toHexString(code & 0xFF));
+		} else if (!opcode.has(Opcode.PROP_IS_STANDALONE_VALID) || !opcode.has(Opcode.PROP_BREAKS_FLOW)) {
+			throw new IllegalArgumentException("Illegal bytecode instruction " + opcode.mnemonic + ", instuction cannot be added directly");
+		}
+
+		append(new byte[] { code }, 1);
+		stackSize = stackSize + opcode.stackOffset - stackPop;
+		maxStackSize = Math.max(maxStackSize, stackSize);
+		return this;
+	}
+
+	/**
+	 * Adds a goto to the given label. Note that the label must be in the same buffer or it must be combined with the buffer containing the label at some point.
+	 *
+	 * @param label the label to branch to
+	 * @param stackPop the number of times the stack should be popped after the goto, assuming it was a no-op
+	 * @return this builder
+	 */
+	public MethodBuilder addGoto(final Label label, final int stackPop) {
+		label.addReference(this, length, length + 1);
+		stackSize -= stackPop;
+		maxStackSize = Math.max(maxStackSize, stackSize);
+		return append(GOTO, B0, B0);
+	}
+
+	/**
 	 * Adds an instanceof check.
 	 *
 	 * @param type the type to check
@@ -813,10 +854,10 @@ public final class MethodBuilder {
 			maxStackSize = Math.max(maxStackSize, stackSize);
 			return append(INVOKESTATIC, B0, B0);
 		} else if (Modifier.isInterface(method.getDeclaringClass().getModifiers())) {
-			final int stackOffset = getCallStackOffset(method);
-			stackSize += stackOffset - 1;
+			final int stackOffset = getCallStackOffset(method) - 1;
+			stackSize += stackOffset;
 			maxStackSize = Math.max(maxStackSize, stackSize);
-			return append(INVOKEINTERFACE, B0, B0, (byte)(getStackSize(method.getReturnType()) + 1 - stackOffset), B0);
+			return append(INVOKEINTERFACE, B0, B0, (byte)(getStackSize(method.getReturnType()) - stackOffset), B0);
 		} else if (Modifier.isPrivate(modifiers) || superCall) {
 			stackSize += getCallStackOffset(method) - 1;
 			maxStackSize = Math.max(maxStackSize, stackSize);
@@ -1014,15 +1055,16 @@ public final class MethodBuilder {
 	 *
 	 * @param throwable the class of the throwable to throw
 	 * @param message the message to use for constructing the throwable
+	 * @param stackPop the number of times the stack should be popped after the throw, assuming it was a no-op
 	 * @return this builder
 	 */
-	public MethodBuilder addThrow(final Class<? extends Throwable> throwable, final String message) {
+	public MethodBuilder addThrow(final Class<? extends Throwable> throwable, final String message, final int stackPop) {
 		try {
 			if (message == null) {
-				return pushNewObject(throwable).addCode(DUP).addInvoke(throwable.getConstructor()).addCode(ATHROW);
+				return pushNewObject(throwable).addCode(DUP).addInvoke(throwable.getConstructor()).addFlowBreakingCode(ATHROW, stackPop);
 			}
 
-			return pushNewObject(throwable).addCode(DUP).pushConstant(message).addInvoke(throwable.getConstructor(String.class)).addCode(ATHROW);
+			return pushNewObject(throwable).addCode(DUP).pushConstant(message).addInvoke(throwable.getConstructor(String.class)).addFlowBreakingCode(ATHROW, stackPop);
 		} catch (final ReflectiveOperationException e) {
 			throw new IncompatibleClassChangeError("Failed to get required class constructor: " + e.getMessage());
 		}

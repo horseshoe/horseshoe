@@ -1,6 +1,10 @@
 package horseshoe.internal;
 
-import static horseshoe.internal.MethodBuilder.*;
+import static horseshoe.internal.MethodBuilder.ARETURN;
+import static horseshoe.internal.MethodBuilder.ICONST_0;
+import static horseshoe.internal.MethodBuilder.ICONST_1;
+import static horseshoe.internal.MethodBuilder.IFEQ;
+import static horseshoe.internal.MethodBuilder.IFNE;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -69,7 +73,7 @@ final class Operand {
 		final Label trueLabel = builder.newLabel();
 		final Label end = builder.newLabel();
 
-		return new Operand(boolean.class, new MethodBuilder().pushConstant(compareBranchOpcode == IFEQ || compareBranchOpcode == IFNE).append(toObject(false)).append(other.toObject(false)).addInvoke(COMPARE).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addBranch(GOTO, end)
+		return new Operand(boolean.class, new MethodBuilder().pushConstant(compareBranchOpcode == IFEQ || compareBranchOpcode == IFNE).append(toObject(false)).append(other.toObject(false)).addInvoke(COMPARE).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addGoto(end, 1)
 				.updateLabel(trueLabel).addCode(ICONST_1).updateLabel(end));
 	}
 
@@ -95,13 +99,13 @@ final class Operand {
 	MethodBuilder toNumeric(final boolean allowFloating) {
 		if (type.isPrimitive()) {
 			if (boolean.class.equals(type)) {
-				return builder.addThrow(IllegalArgumentException.class, "Unexpected boolean value, expecting numeric value");
+				return builder.addThrow(IllegalArgumentException.class, "Unexpected boolean value, expecting numeric value", 0);
 			} else if (double.class.equals(type)) {
 				if (allowFloating) {
 					return builder.addInvoke(HORSESHOE_FLOAT_OF_DOUBLE);
 				}
 
-				return builder.addThrow(IllegalArgumentException.class, "Unexpected " + type.getSimpleName() + " value, expecting integral value");
+				return builder.addThrow(IllegalArgumentException.class, "Unexpected " + type.getSimpleName() + " value, expecting integral value", 1);
 			} else if (long.class.equals(type)) {
 				return builder.addInvoke(HORSESHOE_INT_OF_LONG);
 			} else if (int.class.equals(type)) {
@@ -131,7 +135,7 @@ final class Operand {
 			builder.addInvoke(TO_STRING);
 		}
 
-		return generateReturn ? builder.addCode(ARETURN) : builder;
+		return generateReturn ? builder.addFlowBreakingCode(ARETURN, 0) : builder;
 	}
 
 	@Override
