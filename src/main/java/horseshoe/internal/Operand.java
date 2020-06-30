@@ -1,6 +1,5 @@
 package horseshoe.internal;
 
-import static horseshoe.internal.MethodBuilder.ARETURN;
 import static horseshoe.internal.MethodBuilder.ICONST_0;
 import static horseshoe.internal.MethodBuilder.ICONST_1;
 import static horseshoe.internal.MethodBuilder.IFEQ;
@@ -73,7 +72,7 @@ final class Operand {
 		final Label trueLabel = builder.newLabel();
 		final Label end = builder.newLabel();
 
-		return new Operand(boolean.class, new MethodBuilder().pushConstant(compareBranchOpcode == IFEQ || compareBranchOpcode == IFNE).append(toObject(false)).append(other.toObject(false)).addInvoke(COMPARE).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addGoto(end, 1)
+		return new Operand(boolean.class, new MethodBuilder().pushConstant(compareBranchOpcode == IFEQ || compareBranchOpcode == IFNE).append(toObject()).append(other.toObject()).addInvoke(COMPARE).addBranch(compareBranchOpcode, trueLabel).addCode(ICONST_0).addGoto(end, 1)
 				.updateLabel(trueLabel).addCode(ICONST_1).updateLabel(end));
 	}
 
@@ -128,14 +127,14 @@ final class Operand {
 	 * @param generateReturn true to generate return instructions rather than place the object on the stack, otherwise false
 	 * @return the resulting object operand
 	 */
-	MethodBuilder toObject(final boolean generateReturn) {
+	MethodBuilder toObject() {
 		if (type.isPrimitive()) {
-			builder.addPrimitiveConversion(type, Object.class);
+			return builder.addPrimitiveConversion(type, Object.class);
 		} else if (StringBuilder.class.equals(type)) {
-			builder.addInvoke(TO_STRING);
+			return builder.addInvoke(TO_STRING);
 		}
 
-		return generateReturn ? builder.addFlowBreakingCode(ARETURN, 0) : builder;
+		return builder;
 	}
 
 	@Override

@@ -403,7 +403,7 @@ public final class Expression {
 
 			if (lastNavigation) {
 				// Create a new output formed by invoking identifiers[index].getValue(object, ...)
-				final MethodBuilder objectBuilder = state.operands.pop().toObject(false);
+				final MethodBuilder objectBuilder = state.operands.pop().toObject();
 				final Label skipFunc = objectBuilder.newLabel();
 
 				state.operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(skipFunc)));
@@ -433,9 +433,9 @@ public final class Expression {
 				if (state.operators.pop().has(Operator.SAFE)) {
 					// Create a new output formed by invoking identifiers[index].getValue(object)
 					final Label end = state.operands.peek().builder.newLabel();
-					state.operands.push(new Operand(Object.class, state.operands.pop().toObject(false).addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
+					state.operands.push(new Operand(Object.class, state.operands.pop().toObject().addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
 				} else {
-					state.operands.push(new Operand(Object.class, state.operands.pop().toObject(false).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
+					state.operands.push(new Operand(Object.class, state.operands.pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
 				}
 			} else {
 				final Integer localBindingIndex = unstatedBackreach ? state.getLocalBinding(name) : null;
@@ -726,7 +726,7 @@ public final class Expression {
 						left.builder.addCode(DUP).addBranch(IFNULL, end);
 					}
 
-					state.operands.push(new Operand(Object.class, left.builder.append(right.toObject(false)).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
+					state.operands.push(new Operand(Object.class, left.builder.append(right.toObject()).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
 					break;
 				} // Intentional fall-through if left is null
 			case "{": {
@@ -748,9 +748,9 @@ public final class Expression {
 						final Operand first = state.operands.peek(i + pairs);
 
 						if (Entry.class.equals(first.type)) {
-							builder.addCode(DUP).append(first.toObject(false)).append(state.operands.peek(i + --pairs).toObject(false)).addInvoke(MAP_PUT).addCode(POP);
+							builder.addCode(DUP).append(first.toObject()).append(state.operands.peek(i + --pairs).toObject()).addInvoke(MAP_PUT).addCode(POP);
 						} else {
-							builder.addCode(DUP).append(first.toObject(false)).addCode(DUP).addInvoke(MAP_PUT).addCode(POP);
+							builder.addCode(DUP).append(first.toObject()).addCode(DUP).addInvoke(MAP_PUT).addCode(POP);
 						}
 					}
 
@@ -759,7 +759,7 @@ public final class Expression {
 					final MethodBuilder builder = new MethodBuilder().pushNewObject(ArrayList.class).addCode(DUP).pushConstant(operator.getRightExpressions()).addInvoke(ARRAY_LIST_CTOR_INT);
 
 					for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
-						builder.addCode(DUP).append(state.operands.peek(i).toObject(false)).addInvoke(LIST_ADD).addCode(POP);
+						builder.addCode(DUP).append(state.operands.peek(i).toObject()).addInvoke(LIST_ADD).addCode(POP);
 					}
 
 					state.operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
@@ -767,7 +767,7 @@ public final class Expression {
 					final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashSet.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_SET_CTOR_INT);
 
 					for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
-						builder.addCode(DUP).append(state.operands.peek(i).toObject(false)).addInvoke(SET_ADD).addCode(POP);
+						builder.addCode(DUP).append(state.operands.peek(i).toObject()).addInvoke(SET_ADD).addCode(POP);
 					}
 
 					state.operands.pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
@@ -796,11 +796,11 @@ public final class Expression {
 				if (left == null) { // Unary +, basically do nothing except require a number
 					state.operands.push(new Operand(HorseshoeNumber.class, right.toNumeric(true)));
 				} else if (StringBuilder.class.equals(left.type)) { // Check for string concatenation
-					state.operands.push(left).peek().builder.append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT);
+					state.operands.push(left).peek().builder.append(right.toObject()).addInvoke(STRING_BUILDER_APPEND_OBJECT);
 				} else if (String.class.equals(left.type) || String.class.equals(right.type) || StringBuilder.class.equals(right.type)) {
-					state.operands.push(new Operand(StringBuilder.class, left.toObject(false).pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject(false)).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
+					state.operands.push(new Operand(StringBuilder.class, left.toObject().pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject()).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
 				} else { // String concatenation, mathematical addition, collection addition, or invalid
-					state.operands.push(new Operand(Object.class, left.toObject(false).append(right.toObject(false)).addInvoke(OPERANDS_ADD)));
+					state.operands.push(new Operand(Object.class, left.toObject().append(right.toObject()).addInvoke(OPERANDS_ADD)));
 				}
 
 				break;
@@ -808,7 +808,7 @@ public final class Expression {
 				if (left == null) {
 					state.operands.push(new Operand(HorseshoeNumber.class, right.toNumeric(true).addInvoke(HORSESHOE_NUMBER_NEGATE)));
 				} else {
-					state.operands.push(new Operand(Object.class, left.toObject(false).append(right.toObject(false)).addInvoke(OPERANDS_SUBTRACT)));
+					state.operands.push(new Operand(Object.class, left.toObject().append(right.toObject()).addInvoke(OPERANDS_SUBTRACT)));
 				}
 
 				break;
@@ -893,7 +893,7 @@ public final class Expression {
 			case "?:": {
 				final Label end = left.builder.newLabel();
 
-				state.operands.push(new Operand(Object.class, left.toObject(false).addCode(DUP).addBranch(IFNONNULL, end).addCode(POP).append(right.toObject(false)).updateLabel(end)));
+				state.operands.push(new Operand(Object.class, left.toObject().addCode(DUP).addBranch(IFNONNULL, end).addCode(POP).append(right.toObject()).updateLabel(end)));
 				break;
 			}
 			case "?": {
@@ -912,7 +912,7 @@ public final class Expression {
 			}
 
 			case ":":
-				state.operands.push(new Operand(Entry.class, left.toObject(false))).push(new Operand(Entry.class, right.toObject(false)));
+				state.operands.push(new Operand(Entry.class, left.toObject())).push(new Operand(Entry.class, right.toObject()));
 
 				if (state.operators.isEmpty() || !state.operators.peek().has(Operator.ALLOW_PAIRS)) {
 					state.operators.push(Operator.get(",", true).withRightExpressions(-1));
@@ -933,17 +933,17 @@ public final class Expression {
 			// Streaming Operations
 			case "#>":
 			case "#.": { // Remap
-				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
+				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
 				final Label startOfLoop = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
 
 				state.operands.push(new Operand(Object.class, mb.addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP2).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex())
-						.append(right.toObject(false)).addInvoke(STREAMABLE_ADD).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
+						.append(right.toObject()).addInvoke(STREAMABLE_ADD).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
 			case "#|": { // Flat remap
-				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
+				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
 				final Label startOfLoop = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
 				final Label notNull = mb.newLabel();
@@ -952,14 +952,14 @@ public final class Expression {
 
 				state.operands.push(new Operand(Object.class, mb.addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP2).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex())
-						.append(right.toObject(false)).addCode(DUP).addBranch(IFNONNULL, notNull).addCode(POP2).addGoto(startOfLoop, -2)
+						.append(right.toObject()).addCode(DUP).addBranch(IFNONNULL, notNull).addCode(POP2).addGoto(startOfLoop, -2)
 						.updateLabel(notNull).addCode(DUP).addInstanceOfCheck(Iterable.class).addBranch(IFEQ, notIterable).addCast(Iterable.class).addInvoke(STREAMABLE_FLAT_ADD_ITERABLE).addGoto(startOfLoop, -2)
 						.updateLabel(notIterable).addCode(DUP).addInstanceOfCheck(Object[].class).addBranch(IFEQ, notArray).addCast(Object[].class).addInvoke(STREAMABLE_FLAT_ADD_ARRAY).addGoto(startOfLoop, -2)
 						.updateLabel(notArray).addThrow(IllegalArgumentException.class, "Illegal flat map result, must be null, Iterable, or array", 2).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
 			case "#?": { // Filter
-				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
+				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
 				final Label startOfLoop = mb.newLabel();
 				final Label readdObject = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
@@ -971,17 +971,17 @@ public final class Expression {
 				break;
 			}
 			case "#<": { // Reduction
-				final MethodBuilder mb = left.toObject(false).addInvoke(STREAMABLE_OF_UNKNOWN).addInvoke(ITERABLE_ITERATOR).addCode(ACONST_NULL);
+				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addInvoke(ITERABLE_ITERATOR).addCode(ACONST_NULL);
 				final Label startOfLoop = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
 
 				state.operands.push(new Operand(Object.class, mb.addCode(SWAP, DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex()).addCode(SWAP, POP)
-						.append(right.toObject(false)).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
+						.append(right.toObject()).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
 			case "#^": // Return
-				state.operands.push(new Operand(Object.class, right.toObject(true)));
+				state.operands.push(new Operand(Object.class, right.toObject().addFlowBreakingCode(ARETURN, 0).addCode(ACONST_NULL)));
 				break;
 
 			case "(":
@@ -989,17 +989,17 @@ public final class Expression {
 				break;
 
 			case "=":
-				state.operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).append(left.builder)));
+				state.operands.push(new Operand(Object.class, right.toObject().addCode(DUP).append(left.builder)));
 				break;
 
 			case "\u2620": case "~:<": // Die
-				state.operands.push(new Operand(Object.class, right.toObject(false).addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addFlowBreakingCode(ATHROW, 0)));
+				state.operands.push(new Operand(Object.class, right.toObject().addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addFlowBreakingCode(ATHROW, 0).addCode(ACONST_NULL)));
 				break;
 
 			case "~@": { // Get class
 				final Label isNull = right.builder.newLabel();
 
-				state.operands.push(new Operand(Object.class, right.toObject(false).addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS).updateLabel(isNull)));
+				state.operands.push(new Operand(Object.class, right.toObject().addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS).updateLabel(isNull)));
 				break;
 			}
 
@@ -1030,7 +1030,7 @@ public final class Expression {
 
 				// Convert all parameters to objects and store them in the array
 				for (int i = 0; i < parameterCount; i++) {
-					methodResult.addCode(DUP).pushConstant(i).append(state.operands.peek(parameterCount - 1 - i).toObject(false)).addCode(AASTORE);
+					methodResult.addCode(DUP).pushConstant(i).append(state.operands.peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
 				}
 			}
 
@@ -1051,7 +1051,7 @@ public final class Expression {
 		if (parameterCount == 0) {
 			expressionResult.addCode(DUP).pushConstant(0).addInvoke(STACK_PEEK);
 		} else {
-			expressionResult.append(state.operands.peek(parameterCount - 1).toObject(false));
+			expressionResult.append(state.operands.peek(parameterCount - 1).toObject());
 		}
 
 		expressionResult.addInvoke(STACK_PUSH_OBJECT).addCode(POP).addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT);
@@ -1061,7 +1061,7 @@ public final class Expression {
 			expressionResult.pushNewObject(Object.class, parameterCount - 1);
 
 			for (int i = 0; i < parameterCount - 1; i++) {
-				expressionResult.addCode(DUP).pushConstant(i).append(state.operands.peek(parameterCount - 2 - i).toObject(false)).addCode(AASTORE);
+				expressionResult.addCode(DUP).pushConstant(i).append(state.operands.peek(parameterCount - 2 - i).toObject()).addCode(AASTORE);
 			}
 		} else {
 			expressionResult.addCode(ACONST_NULL);
@@ -1214,7 +1214,7 @@ public final class Expression {
 		}
 
 		// Create the evaluator
-		this.evaluable = mb.append(state.operands.pop().toObject(true)).build(Expression.class.getPackage().getName() + ".Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
+		this.evaluable = mb.append(state.operands.pop().toObject()).addFlowBreakingCode(ARETURN, 0).build(Expression.class.getPackage().getName() + ".Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		this.isNamed = named;
 		assert state.operands.isEmpty();
 	}

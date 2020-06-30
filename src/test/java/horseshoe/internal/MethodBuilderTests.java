@@ -39,10 +39,10 @@ public class MethodBuilderTests {
 		labels.put(10, mb.newLabel());
 
 		mb.addCode(ILOAD_1).addSwitch(labels, labels.get(2))
-				.updateLabel(labels.get(1)).pushNewObject(boolean.class, 1).pushNewObject(char.class, 1).pushNewObject(byte.class, 1).pushNewObject(short.class, 1).pushNewObject(long.class, 1).pushNewObject(int.class, 1).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addFlowBreakingCode(ARETURN, 0)
+				.updateLabel(labels.get(1)).pushNewObject(boolean.class, 1).pushNewObject(char.class, 1).pushNewObject(byte.class, 1).pushNewObject(short.class, 1).pushNewObject(long.class, 1).pushNewObject(int.class, 1).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addFlowBreakingCode(ARETURN, 6)
 				.updateLabel(labels.get(2)).pushNewObject(String.class, 2, 3).addCode(DUP, DUP).pushConstant(0).addCode(AALOAD).pushConstant(1).pushConstant("01").addCode(AASTORE).pushConstant(1).addCode(AALOAD).pushConstant(0).pushConstant("10").addCode(AASTORE).pushConstant(0).addCode(AALOAD).pushConstant(1).addCode(AALOAD).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 0)
 				.updateLabel(labels.get(5)).pushNewObject(double.class, 1).addCode(DUP).pushConstant(0).pushConstant(2.0).addCode(DASTORE).pushConstant(0).addCode(DALOAD).addPrimitiveConversion(double.class, Double.class).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 0)
-				.updateLabel(labels.get(10)).pushNewObject(float.class, 1).pushConstant(10.0f).addPrimitiveConversion(float.class, Integer.class).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 0);
+				.updateLabel(labels.get(10)).pushNewObject(float.class, 1).pushConstant(10.0f).addPrimitiveConversion(float.class, Integer.class).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 1);
 		assertNotNull(mb.toString());
 
 		final SwitchClass switchTest = mb.build(name, SwitchClass.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
@@ -143,7 +143,7 @@ public class MethodBuilderTests {
 				.addFieldAccess(FieldClass.class.getDeclaredField("testB"), true)
 				.addCode(I2D, DADD, DUP2, D2I)
 				.addFieldAccess(FieldClass.class.getDeclaredField("testB"), false)
-				.addFlowBreakingCode(DRETURN, 0);
+				.addFlowBreakingCode(DRETURN, 33);
 		assertNotNull(mb.toString());
 		System.out.println(mb);
 
@@ -323,6 +323,11 @@ public class MethodBuilderTests {
 	@Test(expected = IllegalArgumentException.class)
 	public void testBadNewObject2() {
 		new MethodBuilder().pushNewObject(int.class);
+	}
+
+	@Test(expected = IllegalStateException.class)
+	public void testBadStack() throws ReflectiveOperationException {
+		new MethodBuilder().addCode(ACONST_NULL).build("BadStack", FinalClass.class, MethodBuilderTests.class.getClassLoader());
 	}
 
 }

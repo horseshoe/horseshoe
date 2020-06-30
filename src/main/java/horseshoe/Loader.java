@@ -358,12 +358,12 @@ public final class Loader implements AutoCloseable {
 	}
 
 	/**
-	 * Gets the appropriate location object.
+	 * Gets the current location object being parsed by the loader.
 	 *
 	 * @return the location
 	 */
 	public Object toLocation() {
-		return new LineLocation(file == null ? name : file.toString(), location.line);
+		return new LineLocation(file == null ? name : file, location.line);
 	}
 
 	@Override

@@ -66,6 +66,11 @@ public class SettingsTests {
 	@Test
 	public void testHTMLEscaping() {
 		Assert.assertEquals("&amp;&lt;&gt;&quot;&#39;", Settings.HTML_ESCAPE_FUNCTION.escape("&<>\"'"));
+		Assert.assertEquals("&lt;&gt;&quot;&#39;&amp;", Settings.HTML_ESCAPE_FUNCTION.escape("<>\"'&"));
+		Assert.assertEquals("&gt;&quot;&#39;&amp;&lt;", Settings.HTML_ESCAPE_FUNCTION.escape(">\"'&<"));
+		Assert.assertEquals("&quot;&#39;&amp;&lt;&gt;", Settings.HTML_ESCAPE_FUNCTION.escape("\"'&<>"));
+		Assert.assertEquals("&#39;&amp;&lt;&gt;&quot;", Settings.HTML_ESCAPE_FUNCTION.escape("'&<>\""));
+		Assert.assertEquals("Hello, World!", Settings.HTML_ESCAPE_FUNCTION.escape("Hello, World!"));
 	}
 
 	@Test

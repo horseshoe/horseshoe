@@ -795,7 +795,7 @@ public final class MethodBuilder {
 	 * Adds flow-breaking code to the builder, reserving extra space in the builder if necessary. The length is automatically extended. Any exception will leave the builder in a valid state without the opcode added.
 	 *
 	 * @param code the code to add to the builder
-	 * @param stackPop the number of times the stack should be popped after the instruction, assuming it was a no-op
+	 * @param stackPop the number of times the stack should be popped after the instruction, assuming it did not break the flow of the code
 	 * @return this builder
 	 */
 	public MethodBuilder addFlowBreakingCode(final byte code, final int stackPop) {
@@ -817,7 +817,7 @@ public final class MethodBuilder {
 	 * Adds a goto to the given label. Note that the label must be in the same buffer or it must be combined with the buffer containing the label at some point.
 	 *
 	 * @param label the label to branch to
-	 * @param stackPop the number of times the stack should be popped after the goto, assuming it was a no-op
+	 * @param stackPop the number of times the stack should be popped after the goto, assuming it did not break the flow of the code
 	 * @return this builder
 	 */
 	public MethodBuilder addGoto(final Label label, final int stackPop) {
@@ -1055,7 +1055,7 @@ public final class MethodBuilder {
 	 *
 	 * @param throwable the class of the throwable to throw
 	 * @param message the message to use for constructing the throwable
-	 * @param stackPop the number of times the stack should be popped after the throw, assuming it was a no-op
+	 * @param stackPop the number of times the stack should be popped after the throw, assuming it did not break the flow of the code
 	 * @return this builder
 	 */
 	public MethodBuilder addThrow(final Class<? extends Throwable> throwable, final String message, final int stackPop) {
@@ -1190,6 +1190,10 @@ public final class MethodBuilder {
 	 * @throws ReflectiveOperationException if the loader throws an exception while loading the bytecode
 	 */
 	public <T> Class<T> build(final String name, final Class<T> base, final ClassLoader loader) throws ReflectiveOperationException {
+		if (stackSize != 0) {
+			throw new IllegalStateException("Stack size is not zero: " + stackSize);
+		}
+
 		// Add this class
 		getConstant(new UTF8String(name.replace('.', '/'))).locations.add(new Location(constantPool, constantPool.getLength() + 1));
 		final ConstantPoolEntry classNameInfo = constantPool.add(this, CLASS_CONSTANT, B0, B0);

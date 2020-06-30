@@ -63,12 +63,13 @@ public class Settings {
 	 * The escape function that escapes a string as HTML, specifically the &amp;, &lt;, &gt;, ", and ' characters.
 	 */
 	public static final EscapeFunction HTML_ESCAPE_FUNCTION = new EscapeFunction() {
-		@Override
-		public String escape(final String raw) {
+		private String escapeStartingAt(final String raw, final String firstEscape, final int firstIndex) {
 			final StringBuilder sb = new StringBuilder(raw.length() + 16);
-			int start = 0;
+			int start = firstIndex + 1;
 
-			for (int i = 0; i < raw.length(); i++) {
+			sb.append(raw, 0, firstIndex).append(firstEscape);
+
+			for (int i = firstIndex + 1; i < raw.length(); i++) {
 				switch (raw.charAt(i)) {
 					case '&':
 						sb.append(raw, start, i).append("&amp;");
@@ -95,7 +96,29 @@ public class Settings {
 				}
 			}
 
-			return start == 0 ? raw : sb.append(raw, start, raw.length()).toString();
+			return sb.append(raw, start, raw.length()).toString();
+		}
+
+		@Override
+		public String escape(final String raw) {
+			for (int i = 0; i < raw.length(); i++) {
+				switch (raw.charAt(i)) {
+					case '&':
+						return escapeStartingAt(raw, "&amp;", i);
+					case '<':
+						return escapeStartingAt(raw, "&lt;", i);
+					case '>':
+						return escapeStartingAt(raw, "&gt;", i);
+					case '"':
+						return escapeStartingAt(raw, "&quot;", i);
+					case '\'':
+						return escapeStartingAt(raw, "&#39;", i);
+					default:
+						break;
+				}
+			}
+
+			return raw;
 		}
 	};
 
