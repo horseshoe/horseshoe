@@ -1,5 +1,3 @@
-## Note: This is a pre-release version, use at your own risk
-
 # Horseshoe
 Horseshoe for Java
 
@@ -23,7 +21,7 @@ Horseshoe for Java
 
 ## FAQ
 ### What is Horseshoe?
-Horseshoe is a templating system used to generate information from a data model. It was primarily designed around the use case of quickly generating source code for languages like C++ and Java. It is written in Java with an emphasis on minimizing dependencies. It uses a Mustache-like syntax with an extended expression system supporting method calls to allow processing of both static data and dynamically-generated data.
+Horseshoe is a templating system used to generate information from a data model. It was primarily designed around the use case of quickly generating source code for languages like C++ and Java. It is written in Java with a heavy emphasis on minimizing dependencies. It uses a Mustache-like syntax with an extended expression system supporting method calls to allow processing of both static data and dynamically-generated data.
 
 ### How is Horseshoe similar to Mustache?
 Horseshoe uses the same tags as Mustache. These tags have the same meaning as they do in Mustache. Due to the extended expression syntax, it is difficult to gauge whether or not it is Mustache-compliant. However, when a Mustache-compliant context object is used, Horseshoe passes all required tests in the Mustache specification v1.1.2.
@@ -41,12 +39,13 @@ The following table summarizes the literals supported by Horseshoe. A more detai
 |-----------|-------------------|
 | `int` | `123` |
 | `long` | `123L` / `0x100000000` |
-| `double` | `3.14` |
+| `double` | `3.14` / `2f` |
 | `boolean` | `true` / `false` |
 | `java.lang.Object` | `null` |
-| `java.lang.String` | `"a string"` |
+| `java.lang.String` | `"a \"string\""` / 'a ''string''' |
 | `java.util.regex.Pattern` | `~/pattern/` |
 | `java.util.List` | `[1,2,3,4]` |
+| `java.util.Set` | `{1,2,3,4}` |
 | `java.util.Map` | `[1:2,3:4]` / `[:]` |
 
 ### Which operators are supported by Horseshoe expressions?
@@ -56,7 +55,7 @@ Horseshoe supports most non-assignment operators used in common languages. The e
 Horseshoe supports any file extension for template files. However, convention is to use a capital "U", which resembles a horseshoe.
 
 ### How is whitespace within a template handled by Horseshoe?
-Horseshoe uses the same whitespace paradigm as Mustache. All tags except for content (and unescaped content) and partial tags qualify for consideration as standalone tags. In this case, the entire line is excluded from output and only processed by Horseshoe. More details can be found in the [Tags](#tags) section.
+Horseshoe uses the same whitespace paradigm as Mustache. All tags except for content (including unescaped content) qualify for consideration as stand-alone tags. In this case, the entire line is excluded from output and only processed by Horseshoe. More details can be found in the [Tags](#tags) section.
 
 ## Code Example
 The following example demonstrates how to use the Horseshoe library from within Java code. [Template examples](#template-examples) are located in a separate section.
@@ -85,7 +84,7 @@ System.out.println(writer.toString()); // Prints "Hello, world!"
 ```
 
 ## Template Examples
-Examples of Horseshoe templates can be found in the `samples` directory. The `samples/results` directory contains the results of running these templates through the Horseshoe engine runner with default settings and an empty data map. (Line endings may vary, as they are operating system dependent by default.)
+Examples of Horseshoe templates can be found in the `samples` directory. The `samples/results` directory contains the results of running these templates through the Horseshoe engine runner with default settings and an empty data map. (Line endings may differ, as they vary by operating system when using default settings.)
 
 The Horseshoe engine runner can be used to render templates from the command line. The runner can be invoked using Java's `-jar` argument: `java -jar horseshoe.jar`. It provides a subset of the rendering options available in the Horseshoe library. A list of all available options for the runner can be listed using the `--help` argument.
 
@@ -98,14 +97,14 @@ Horseshoe uses tags to specify dynamic parts of a template. The tags typically s
 All tags except for content tags may qualify as stand-alone tags. A stand-alone tag is a tag that contains only whitespace before the opening braces on the beginning line and only whitespace after the closing braces on the ending line. This holds true for multiline tags and when using custom delimiters.
 
 #### Comments
-Comment tags (`{{! ignore this }}`) are structured the same as Mustache comments. A comment tag beings with `!`.
+Comment tags (`{{! ignore this }}`) are structured the same as Mustache comments. A comment tag begins with `!`.
 
 #### Content
 Content tags (`{{ content }}`) are similar to Mustache interpolation tags. The current context is used to look up the value specified inside the tag. The value is then rendered in place of the tag.
 
 There are a couple major differences from Mustache interpolation tags:
 1. The printed values are not HTML-escaped by default, since Horseshoe is designed for generating source code rather than HTML. Horseshoe can be configured to escape HTML if desired.
-2. The value specified inside the content tag represents a [Horseshoe expression](#expressions). Values such as `some-content` will be interpreted as the value `some` minus the value `content` rather than the value of `some-content`. This can be changed via a setting to match the Mustache interpolation tag if desired.
+2. The value specified inside the content tag represents a [Horseshoe expression](#expressions). Note that values such as `some-content` will be interpreted as the value `some` minus the value `content` rather than the value of `some-content`. This setting can be changed to match the Mustache interpolation tag if desired. Or the value can be quoted by wrapping the value in backticks (`` `some-content` ``).
 
 #### Unescaped Content
 Unescaped content (`{{{ content }}}`, `{{& content }}`) is the same as normal content in Horseshoe, since content is not escaped by default. It only differs from normal content if content escaping is enabled. The tag can either start with a `{` and end with a `}` or simply start with a `&`.
@@ -113,7 +112,7 @@ Unescaped content (`{{{ content }}}`, `{{& content }}`) is the same as normal co
 #### Partials
 Partial tags (`{{> partial }}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++. The partial template is loaded (either from the specified filename or the corresponding template from the template loader) and placed into the current template.
 
-If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. The double indirection operator can be used on partial tags (`{{>> partial }}`) to avoid applying the indentation to every line yet still ignore trailing whitespace and newline. This is a Horseshoe feature.
+If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. The double indirection operator can be used on partial tags (`{{>> partial }}`) to avoid applying the indentation to every line yet still ignore trailing whitespace and newline.
 
 #### Set Delimiter (`{{=<% %>=}}`)
 The set delimiter tag is structured the same as it is for Mustache. It is used to change the delimiters from `{{` and `}}` to other sequences in templates that contain many double braces that are part of the literal text. The new sequences are applicable for all tags. Here is a brief example,
@@ -183,18 +182,22 @@ Horseshoe expressions look a lot like expressions in modern programming language
 
 Multiple statements can be chained together inside an expression, using a semicolon (`;`) as a separator. A trailing semicolon at the end of the expression is not needed. A comma (`,`) is used to separate method parameters and list or map entries.
 
-Horseshoe expressions use `[]` or `{}` for both list and map literals. Any list that contains a colon (`:`) separator is treated as a map. Entries in a map literal without a colon are treated as if the given item is used as both the key and the value. The `{}` is used for creating iterable maps, whereas the `[]` maps can be used to lookup values. The `[]` should be used anywhere iteration is not desired.
+Horseshoe expressions use `[]` for list / map literals or `{}` for set / map literals. Any list or set that contains a colon (`:`) separator is treated as a map. Entries in a map literal without a colon are treated as if the given item is used as both the key and the value.
 
-Commas can be used anywhere within an expression. If a comma is used in a context where it would otherwise not be allowed (`{{ 4, 5 }}`), the result is interpreted as if it were wrapped in `{}` to form a list or iterable map. These are considered auto-converted lists and maps.
+Commas can be used anywhere within an expression. If a comma is used in a context where it would otherwise not be allowed (`{{ 4, 5 }}`), the result is interpreted as if it were wrapped in `[]` to form a list or map map. These are considered auto-converted lists and maps.
 
 #### Integer Literals
 Integer literals are sequences of digits or `0x` followed by hexadecimal digits. The value can be prefixed with `-` or `+` to indicate sign and is parsed as a 32-bit signed integer. If the value does not fit into a 32-bit signed integer, or the literal is suffixed with `L` or `l`, then the value is parsed as a 64-bit signed integer. Octal and binary integer literals as well as underscores within integer literals are not supported.
 
 #### Double Literals
-Double literals are sequences of digits, hexadecimal digits, `.`, exponents, and binary exponents as specified in float and double literals of C, C++, and Java. The value can be prefixed with `-` or `+` to indicate sign. Differences from the languages specifications include 1) literals containing a `.` must have digits (or hexadecimal digits) immediately preceding the `.` and digits (or hexadecimal digits) or an exponent (or binary exponent) immediately following the `.` (to reduce syntax ambiguity) and 2) literals can optionally end in either `d` or `D` in lieu of `f` or `F`, which affects the precision of the resulting value. Additionally, the literals `-Infinity` and `+Infinity` are supported. Long double literals as well as underscores within double literals are not supported.
+Double literals are sequences of digits, hexadecimal digits, `.`, exponents, and binary exponents as specified in float and double literals of C, C++, and Java. The value can be prefixed with `-` or `+` to indicate sign. Differences from the languages specifications include the following:
+1. Literals containing a `.` must have digits (or hexadecimal digits) immediately preceding the `.` and digits (or hexadecimal digits) or an exponent (or binary exponent) immediately following the `.` (to reduce syntax ambiguity).
+2. Literals can optionally end in `d`, `D`, `f`, or `F`, which affects the precision of the resulting value.
+
+Additionally, the literals `-Infinity` and `+Infinity` are supported. Long double literals as well as underscores within double literals are not supported.
 
 #### String Literals
-String literals are sequences of characters wrapped in either single quotes or double quotes. When wrapped in single quotes no escape sequences are allowed and the literal consists of the exact characters given. The following escape sequences are substituted for string literals wrapped in double quotes:
+String literals are sequences of characters wrapped in either single quotes or double quotes. When wrapped in single quotes the only escape sequence is `''` (double single quote) to escape a single quote. All other characters in the literal are the exact characters given. The following escape sequences are substituted for string literals wrapped in double quotes:
 - `\\` - Backslash (`\`)
 - `\"` - Double quote (`"`)
 - `\'` - Single quote (`'`)
@@ -203,6 +206,8 @@ String literals are sequences of characters wrapped in either single quotes or d
 - `\n` - Newline
 - `\f` - Form feed
 - `\r` - Carriage return
+- `\{` - Open curly brace (`{`)
+- `\}` - Close curly brace (`}`)
 - `\0` - Null (Octal escape sequences not supported)
 - `\xh...` - Unicode character with hex code point `h...`
 - `\uhhhh` - Unicode character with hex code point `hhhh`
