@@ -1,16 +1,16 @@
 # Horseshoe
 Horseshoe for Java
 
-![Build](https://github.com/nicklauslittle/horseshoe-j/workflows/Build/badge.svg)
-[![Codacy](https://api.codacy.com/project/badge/Grade/07cec89cb05f4ed4ba8759f6ad8bdc97)](https://www.codacy.com/manual/nicklaus.little/horseshoe-j?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nicklauslittle/horseshoe-j&amp;utm_campaign=Badge_Grade)
-[![Coverage](https://api.codacy.com/project/badge/Coverage/07cec89cb05f4ed4ba8759f6ad8bdc97)](https://www.codacy.com/manual/nicklaus.little/horseshoe-j?utm_source=github.com&utm_medium=referral&utm_content=nicklauslittle/horseshoe-j&utm_campaign=Badge_Coverage)
-[![Coverity](https://scan.coverity.com/projects/20222/badge.svg)](https://scan.coverity.com/projects/nicklauslittle-horseshoe-j)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=security_rating)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=bugs)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
-[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=nicklauslittle_horseshoe-j&metric=alert_status)](https://sonarcloud.io/dashboard?id=nicklauslittle_horseshoe-j)
-[![license](https://img.shields.io/github/license/nicklauslittle/horseshoe-j?label=License&logo=github)](https://github.com/nicklauslittle/horseshoe-j/blob/master/LICENSE)
+![Build](https://github.com/horseshoe/horseshoe/workflows/Build/badge.svg)
+[![Codacy](https://app.codacy.com/project/badge/Grade/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Grade)
+[![Coverage](https://app.codacy.com/project/badge/Grade/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Coverage)
+[![Coverity](https://scan.coverity.com/projects/21451/badge.svg)](https://scan.coverity.com/projects/horseshoe)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=security_rating)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=bugs)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=alert_status)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
+[![license](https://img.shields.io/github/license/horseshoe/horseshoe?label=License&logo=github)](https://github.com/horseshoe/horseshoe/blob/master/LICENSE)
 
 ## Goals
 - Provide a Mustache-like template engine for generating source code.

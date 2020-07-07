@@ -20,7 +20,7 @@ jobs:
 
     - name: Download Coverity Build Tool
       run: |
-        wget https://scan.coverity.com/download/linux64 --post-data "token=$COVERITY_TOKEN&project=nicklauslittle%2Fhorseshoe-j" -O cov-analysis-linux64.tar.gz
+        wget https://scan.coverity.com/download/linux64 --post-data "token=$COVERITY_TOKEN&project=horseshoe%2Fhorseshoe" -O cov-analysis-linux64.tar.gz
         mkdir cov-analysis-linux64
         tar xzf cov-analysis-linux64.tar.gz --strip 1 -C cov-analysis-linux64
       env:
@@ -35,6 +35,6 @@ jobs:
     - name: Upload Results
       run: |
         export VERSION=`git describe --tags --match v[0-9]*`
-        curl --form token=$COVERITY_TOKEN --form email=nicklaus.little@gmail.com --form file=@horseshoe-cov.tar.bz2 --form version="$VERSION" --form description="Horseshoe $VERSION" https://scan.coverity.com/builds?project=nicklauslittle%2Fhorseshoe-j
+        curl --form token=$COVERITY_TOKEN --form email=nicklaus.little@gmail.com --form file=@horseshoe-cov.tar.bz2 --form version="$VERSION" --form description="Horseshoe $VERSION" https://scan.coverity.com/builds?project=horseshoe%2Fhorseshoe
       env:
         COVERITY_TOKEN: ${{ secrets.COVERITY_TOKEN }}

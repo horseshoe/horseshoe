@@ -16,7 +16,7 @@ jobs:
         java-version: 11
 
     - name: Build with Gradle
-      run: ./gradlew sonarqube -Dsonar.projectKey=nicklauslittle_horseshoe-j -Dsonar.organization=nicklauslittle -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONAR_TOKEN
+      run: ./gradlew sonarqube -Dsonar.projectKey=horseshoe_horseshoe -Dsonar.organization=horseshoe -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONARQUBE_TOKEN
       env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONARQUBE_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
