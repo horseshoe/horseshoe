@@ -14,7 +14,7 @@ public final class Stack<T> implements Iterable<T> {
 	private int size = 0;
 
 	private class LIFOIterator implements java.util.Iterator<T> {
-		int index = size;
+		private int index = size;
 
 		@Override
 		public boolean hasNext() {

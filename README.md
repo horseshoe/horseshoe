@@ -3,7 +3,7 @@ Horseshoe for Java
 
 ![Build](https://github.com/horseshoe/horseshoe/workflows/Build/badge.svg)
 [![Codacy](https://app.codacy.com/project/badge/Grade/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Grade)
-[![Coverage](https://app.codacy.com/project/badge/Grade/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Coverage)
+[![Coverage](https://app.codacy.com/project/badge/Coverage/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Coverage)
 [![Coverity](https://scan.coverity.com/projects/21451/badge.svg)](https://scan.coverity.com/projects/horseshoe)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=security_rating)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=bugs)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
