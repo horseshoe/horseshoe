@@ -35,12 +35,12 @@ public class TemplateTests {
 	}
 
 	@Test (expected = Test.None.class) // No exception expected
-	public void testCloseException() throws LoadException {
+	public void testCloseException() throws LoadException, IOException {
 		final String templateName = "Duplicate Template Close Exception";
-		final TemplateLoader loader = new TemplateLoader().add(templateName, new StringReader(""));
+		final TemplateLoader loader = new TemplateLoader().put(templateName, new StringReader(""));
 
 		loader.load(templateName);
-		loader.add(templateName, new Reader() {
+		loader.load(templateName, new Reader() {
 			@Override
 			public int read(final char[] cbuf, final int off, final int len) {
 				return -1;
@@ -178,13 +178,13 @@ public class TemplateTests {
 
 		assertEquals(" ", new TemplateLoader().load("Simple Test", " ").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 
-		final TemplateLoader tl1 = new TemplateLoader().add("Dup", new StringReader("1")).add("Dup", "2");
+		final TemplateLoader tl1 = new TemplateLoader().put("Dup", new StringReader("1")).put("Dup", "2");
 		tl1.load("Dup", new StringReader("3"));
 		tl1.load("Dup", "55");
-		assertEquals("3", tl1.load("Dup", new StringReader("4")).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
-		new TemplateLoader().add("Dup", new StringReader("1")).close();
+		assertEquals("4", tl1.load("Dup", new StringReader("4")).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		new TemplateLoader().put("Dup", new StringReader("1"));
 
-		assertEquals("a", new TemplateLoader().add(new TemplateLoader().add("a", "a").load("a")).load("b", "{{>a}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("a", new TemplateLoader().put(new TemplateLoader().load("a", "a")).load("b", "{{>a}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 
 		new TemplateLoader().getIncludeDirectories().add(Paths.get("."));
 
@@ -195,8 +195,8 @@ public class TemplateTests {
 		assertEquals("It works!" + LS, new TemplateLoader().put(fakePath, reloadTemplate).load("Test 3", "{{>" + fakePath + "}}" + LS).render(new Settings(), Collections.emptyMap(), new java.io.StringWriter()).toString());
 	}
 
-	@Test (expected = LoadException.class)
-	public void testTemplateLoaderException1() throws LoadException {
+	@Test (expected = IOException.class)
+	public void testTemplateLoaderException1() throws LoadException, IOException {
 		new TemplateLoader().load("Exception Test", new StringReader(" ") {
 			@Override
 			public int read(final char[] cbuf, final int off, final int len) throws IOException {
@@ -206,13 +206,18 @@ public class TemplateTests {
 	}
 
 	@Test (expected = LoadException.class)
-	public void testTemplateLoaderException2() throws LoadException {
+	public void testTemplateLoaderException2() throws LoadException, IOException {
 		new TemplateLoader().load("Exception Test", new StringReader("{{>" + Paths.get("non-existant-file").toAbsolutePath() + "}}"));
 	}
 
-	@Test (expected = LoadException.class)
-	public void testTemplateLoaderException3() throws LoadException {
-		new TemplateLoader().load("Non-existant Test");
+	@Test
+	public void testTemplateLoaderException3() throws LoadException, IOException {
+		assertThrows(IllegalArgumentException.class, () -> new TemplateLoader().load());
+		assertThrows(IllegalArgumentException.class, () -> new TemplateLoader().load(null, new Object()));
+		assertThrows(IllegalArgumentException.class, () -> new TemplateLoader().load(new Object(), new Object()));
+		assertThrows(IllegalArgumentException.class, () -> new TemplateLoader().load(new Object[] { null, null }));
+		assertThrows(IllegalArgumentException.class, () -> new TemplateLoader().load(new Object()));
+		assertThrows(IllegalArgumentException.class, () -> new TemplateLoader().load(new Object[] { null }));
 	}
 
 }

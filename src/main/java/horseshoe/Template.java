@@ -35,7 +35,7 @@ public class Template {
 
 	private final Object identifier;
 	private final Section section;
-	private final List<Renderer> actions = new ArrayList<>();
+	private final List<Renderer> renderList = new ArrayList<>();
 
 	/**
 	 * Creates an empty template with the specified name.
@@ -45,16 +45,16 @@ public class Template {
 	 */
 	protected Template(final String name, final Object identifier) {
 		this.identifier = identifier;
-		this.section = new Section(null, name, identifier, null, null, true);
+		this.section = new Section(null, name == null ? "[Anonymous]" : name, identifier, null, null, true);
 	}
 
 	/**
-	 * Gets the actions associated with the template.
+	 * Gets the render actions associated with the template.
 	 *
-	 * @return the actions associated with the template
+	 * @return the render actions associated with the template
 	 */
-	protected final List<Renderer> getActions() {
-		return actions;
+	protected final List<Renderer> getRenderList() {
+		return renderList;
 	}
 
 	/**
@@ -91,8 +91,8 @@ public class Template {
 
 			renderContext.getIndentation().push("");
 
-			for (final Renderer action : actions) {
-				action.render(renderContext, writer);
+			for (final Renderer renderer : renderList) {
+				renderer.render(renderContext, writer);
 			}
 		} catch (final HaltRenderingException e) {
 			settings.getLogger().log(Level.SEVERE, e.getMessage());

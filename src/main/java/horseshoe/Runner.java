@@ -488,10 +488,11 @@ public class Runner {
 	 * @param loader the loader used to load the template
 	 * @param charset the character set used to read stdin
 	 * @return the loaded template
+	 * @throws IOException if there is an error reading from stdin
 	 * @throws LoadException if an error occurs while loading the template
 	 */
-	private static Template loadTemplateFromStdIn(final TemplateLoader loader, final Charset charset) throws LoadException {
-		return loader.load("<stdin>", new BufferedReader(new InputStreamReader(System.in, charset)));
+	private static Template loadTemplateFromStdIn(final TemplateLoader loader, final Charset charset) throws IOException, LoadException {
+		return loader.load(new BufferedReader(new InputStreamReader(System.in, charset)));
 	}
 
 	/**

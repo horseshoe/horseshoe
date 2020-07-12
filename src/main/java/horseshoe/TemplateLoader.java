@@ -1,6 +1,5 @@
 package horseshoe;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.Charset;
@@ -12,7 +11,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,7 +29,6 @@ public class TemplateLoader {
 	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL | Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<Object, Template> templates = new HashMap<>();
-	private final Map<Object, Loader> loaderMap = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
 	private Charset charset = StandardCharsets.UTF_8;
 	private boolean preventPartialPathTraversal = true;
@@ -47,6 +44,26 @@ public class TemplateLoader {
 			this.start = start;
 			this.end = end;
 			this.unescapedEnd = "}" + end;
+		}
+
+	}
+
+	private final class Loadable {
+
+		private final Template template;
+		private final Loader loader;
+
+		public Loadable(final Template template, final Loader loader) {
+			this.template = template;
+			this.loader = loader;
+		}
+
+		public Template load() throws IOException, LoadException {
+			try {
+				return loadTemplate(template, loader, new Stack<Loader>());
+			} finally {
+				loader.close();
+			}
 		}
 
 	}
@@ -150,124 +167,6 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Adds templates from strings. The templates will not be loaded until they are referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. Any templates already loaded are ignored.
-	 *
-	 * @param templates a map of template names to template strings
-	 * @return this loader
-	 */
-	public final TemplateLoader add(final Map<String, String> templates) {
-		for (final Entry<String, String> entry : templates.entrySet()) {
-			add(entry.getKey(), entry.getValue());
-		}
-
-		return this;
-	}
-
-	/**
-	 * Adds a template from a string. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
-	 *
-	 * @param name the name of the template
-	 * @param value the string value to load as a template
-	 * @return this loader
-	 */
-	public final TemplateLoader add(final String name, final String value) {
-		if (!templates.containsKey(name)) {
-			addLoader(name, new Loader(name, value));
-		}
-
-		return this;
-	}
-
-	/**
-	 * Adds a template to the loader. If the template already exists in the template loader, then this has no effect.
-	 *
-	 * @param template the template to add to the loader
-	 * @return this loader
-	 */
-	public final TemplateLoader add(final Template template) {
-		if (!templates.containsKey(template.getIdentifier())) {
-			return put(template);
-		}
-
-		return this;
-	}
-
-	/**
-	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(Path)} method is called with the specified template name. If the template is already loaded, this has no effect.
-	 *
-	 * @param file the file to load as a template
-	 * @param charset the character set to use when loading the file
-	 * @return this loader
-	 * @throws FileNotFoundException if the file does not exist
-	 */
-	public final TemplateLoader add(final Path file, final Charset charset) throws FileNotFoundException {
-		final Path absoluteFile = file.toAbsolutePath().normalize();
-
-		if (!templates.containsKey(absoluteFile)) {
-			addLoader(absoluteFile, new Loader(absoluteFile, charset));
-		}
-
-		return this;
-	}
-
-	/**
-	 * Adds a template from a file. The template will not be loaded until it is referenced by another template being loaded or the {@link #load(String)} method is called with the specified template name. If the template is already loaded, this has no effect.
-	 *
-	 * @param file the file to load as a template
-	 * @return this loader
-	 * @throws FileNotFoundException if the file does not exist
-	 */
-	public final TemplateLoader add(final Path file) throws FileNotFoundException {
-		return add(file, charset);
-	}
-
-	/**
-	 * Adds a template using a reader. If the template is already loaded, this has no effect on the internal state of the template loader and the reader is closed.
-	 *
-	 * @param name the name of the template
-	 * @param reader the reader to use to load as a template
-	 * @return this loader
-	 */
-	public final TemplateLoader add(final String name, final Reader reader) {
-		if (!templates.containsKey(name)) {
-			addLoader(name, new Loader(name, reader));
-		} else {
-			try {
-				reader.close();
-			} catch (final IOException e) {
-				Template.LOGGER.log(Level.WARNING, "Failed to close reader for template \"" + name + "\"", e);
-			}
-		}
-
-		return this;
-	}
-
-	/**
-	 * Adds a loader to the template loader with the specified identifier.
-	 *
-	 * @param identifier the identifier of the template
-	 * @param loader the loader used to load the template
-	 */
-	private void addLoader(final Object identifier, final Loader loader) {
-		final Loader oldLoader = loaderMap.put(identifier, loader);
-
-		if (oldLoader != null) {
-			oldLoader.close();
-		}
-	}
-
-	/**
-	 * Closes any open readers. If no open readers exist, this has no effect. This can be used to cleanup after a load exception occurs.
-	 */
-	public void close() {
-		for (final Loader loader : loaderMap.values()) {
-			loader.close();
-		}
-
-		loaderMap.clear();
-	}
-
-	/**
 	 * Gets the character set used for loading additional templates.
 	 *
 	 * @return the character set used for loading additional templates
@@ -304,50 +203,59 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Loads a template from a string. If the template is already loaded, this has no effect.
+	 * Loads a named template from a string. The template is loaded and cached in the loader.
 	 *
 	 * @param name the name of the template
 	 * @param value the string value to load as a template
-	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
+	 * @return the loaded template
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
 	public final Template load(final String name, final String value) throws LoadException {
-		return add(name, value).load(name);
+		try (final Loader loader = new Loader(name, value)) {
+			return loadTemplate(new Template(name, name), loader, new Stack<Loader>());
+		} catch (final IOException e) {
+			throw new AssertionError("Loader should never throw " + e.getClass().getName(), e);
+		}
 	}
 
 	/**
-	 * Loads a template from a file. If the template is already loaded, this has no effect.
+	 * Loads a template using a reader. The template is loaded and cached in the loader.
+	 *
+	 * @param name the name of the template
+	 * @param reader the reader to use to load as a template
+	 * @return the loaded template
+	 * @throws IOException if an I/O exception is encountered while reading from the reader
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public final Template load(final String name, final Reader reader) throws IOException, LoadException {
+		try (final Loader loader = new Loader(name, reader)) {
+			return loadTemplate(new Template(name, name), loader, new Stack<Loader>());
+		}
+	}
+
+	/**
+	 * Loads a template from a file. The template is loaded and cached in the loader.
 	 *
 	 * @param file the file to load as a template
 	 * @param charset the character encoding to use when loading the template from the file
-	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
-	 * @throws IOException if the file failed to load
+	 * @return the loaded template
+	 * @throws IOException if an I/O exception is encountered while opening or reading the file
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
 	public final Template load(final Path file, final Charset charset) throws IOException, LoadException {
 		final Path absoluteFile = file.toAbsolutePath().normalize();
 
-		// Try to load via a cached template
-		final Template cachedTemplate = templates.get(absoluteFile);
-
-		if (cachedTemplate != null) {
-			return cachedTemplate;
-		}
-
-		// Load via a cached loader
-		add(absoluteFile, charset);
-
-		try (final Loader loader = loaderMap.remove(absoluteFile)) {
-			return loadTemplate(new Template(file.toString(), absoluteFile), new Stack<Loader>(), loader);
+		try (final Loader loader = new Loader(absoluteFile, charset)) {
+			return loadTemplate(new Template(file.toString(), absoluteFile), loader, new Stack<Loader>());
 		}
 	}
 
 	/**
-	 * Loads a template from a file. If the template is already loaded, this has no effect.
+	 * Loads a template from a file. The template is loaded and cached in the loader.
 	 *
 	 * @param file the file to load as a template
-	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
-	 * @throws IOException if the file failed to load
+	 * @return the loaded template
+	 * @throws IOException if an I/O exception is encountered while opening or reading the file
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
 	public final Template load(final Path file) throws IOException, LoadException {
@@ -355,26 +263,82 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Loads a template using a reader. If the template is already loaded, this has no effect on the internal state of the template loader and the reader is closed.
+	 * Loads an anonymous template from a string.
 	 *
-	 * @param name the name of the template
-	 * @param reader the reader to use to load as a template
-	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
+	 * @param value the string value to load as a template
+	 * @return the loaded template
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	public final Template load(final String name, final Reader reader) throws LoadException {
-		return add(name, reader).load(name);
+	public final Template load(final String value) throws LoadException {
+		return load(null, value);
 	}
 
 	/**
-	 * Loads the specified template using the specified settings. If the template is already loaded the settings are ignored.
+	 * Loads an anonymous template using a reader.
 	 *
-	 * @param name the name of the template to load
-	 * @return the loaded template, or null if the template could not be loaded and the settings specify not to throw on a load failure
+	 * @param reader the reader to use to load as a template
+	 * @return the loaded template
+	 * @throws IOException if an I/O exception is encountered while reading from the reader
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	public final Template load(final String name) throws LoadException {
-		return load(name, new Stack<Loader>());
+	public final Template load(final Reader reader) throws IOException, LoadException {
+		return load(null, reader);
+	}
+
+	/**
+	 * Loads multiple templates via Reader or String, returning the last template loaded. All templates are created before loading begins, enabling recursive calls among the templates.
+	 *
+	 * @param toLoad the templates to load, with all templates being preceded by a name, except the last template
+	 * @return the last loaded template
+	 * @throws IOException if an I/O exception is encountered while reading from a reader
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public final Template load(final Object... toLoad) throws IOException, LoadException {
+		if (toLoad.length == 0) {
+			throw new IllegalArgumentException("At least one template must be specified");
+		}
+
+		final List<Loadable> loadables = new ArrayList<>();
+		Template lastTemplate = null;
+		int i;
+
+		for (i = 0; i < toLoad.length - 1; ) {
+			if (toLoad[i] != null && !(toLoad[i] instanceof String)) {
+				throw new IllegalArgumentException("Expecting template name at index " + i + ", found " + toLoad[i].getClass().getName());
+			}
+
+			final String name = (String)toLoad[i];
+			final Template template = new Template(name, name);
+			lastTemplate = template;
+
+			if (!templates.containsKey(name)) {
+				putTemplate(name, template);
+			}
+
+			if (toLoad[i + 1] instanceof String) {
+				loadables.add(new Loadable(template, new Loader(name, (String)toLoad[i + 1])));
+				i += 2;
+			} else if (toLoad[i + 1] instanceof Reader) {
+				loadables.add(new Loadable(template, new Loader(name, (Reader)toLoad[i + 1])));
+				i += 2;
+			} else {
+				throw new IllegalArgumentException("Expecting template at index " + (i + 1) + ", found " + (toLoad[i + 1] == null ? "null" : toLoad[i + 1].getClass().getName()));
+			}
+		}
+
+		for (final Loadable loadable : loadables) {
+			loadable.load();
+		}
+
+		if (i == toLoad.length) {
+			return lastTemplate;
+		} else if (toLoad[i] instanceof String) {
+			return load((String)toLoad[i]);
+		} else if (toLoad[i] instanceof Reader) {
+			return load((Reader)toLoad[i]);
+		}
+
+		throw new IllegalArgumentException("Expecting template at index " + i + ", found " + (toLoad[i] == null ? "null" : toLoad[i].getClass().getName()));
 	}
 
 	/**
@@ -392,13 +356,6 @@ public class TemplateLoader {
 
 			if (cachedTemplate != null) {
 				return cachedTemplate;
-			}
-
-			// Try to use a cached loader
-			try (final Loader loader = loaderMap.remove(name)) {
-				if (loader != null) {
-					return loadTemplate(new Template(name, name), loaders, loader);
-				}
 			}
 
 			// Load the template
@@ -440,12 +397,6 @@ public class TemplateLoader {
 			return cachedTemplate;
 		}
 
-		try (final Loader loader = loaderMap.remove(absoluteFile)) {
-			if (loader != null) {
-				return loadTemplate(new Template(name, absoluteFile), loaders, loader);
-			}
-		}
-
 		// Ensure the file exists and access is not prevented via partial path traversal before loading from file
 		if (!absoluteFile.toFile().isFile()) {
 			return null;
@@ -466,7 +417,7 @@ public class TemplateLoader {
 		}
 
 		try (Loader loader = new Loader(absoluteFile, charset)) {
-			return loadTemplate(new Template(name, absoluteFile), loaders, loader);
+			return loadTemplate(new Template(name, absoluteFile), loader, loaders);
 		}
 	}
 
@@ -474,13 +425,13 @@ public class TemplateLoader {
 	 * Loads the list of actions to be performed when rendering the template.
 	 *
 	 * @param template the template to load
-	 * @param loaders the stack of items being loaded
 	 * @param loader the item being loaded
+	 * @param loaders the stack of items being loaded
 	 * @return the loaded template
-	 * @throws LoadException if an error is encountered while loading the template
 	 * @throws IOException if an error is encountered while reading from a file or stream
+	 * @throws LoadException if an error is encountered while loading the template
 	 */
-	protected final Template loadTemplate(final Template template, final Stack<Loader> loaders, final Loader loader) throws LoadException, IOException {
+	protected final Template loadTemplate(final Template template, final Loader loader, final Stack<Loader> loaders) throws IOException, LoadException {
 		putTemplate(template.getIdentifier(), template);
 		Template.LOGGER.log(Level.FINE, "Loading template {0}", template.getSection());
 
@@ -488,7 +439,7 @@ public class TemplateLoader {
 
 		loaders.push(loader);
 		state.sections.push(template.getSection());
-		state.renderLists.push(template.getActions());
+		state.renderLists.push(template.getRenderList());
 
 		// Parse all tags
 		while (true) {
@@ -561,10 +512,10 @@ public class TemplateLoader {
 					final String name = StringUtils.trim(tag, 1, tag.length());
 					final Template partial = new Template(name, state.loader.toLocation());
 
-					partial.getSection().getLocalPartials().put(name, partial);
 					state.sections.peek().getLocalPartials().put(name, partial);
+					partial.getSection().getLocalPartials().putAll(state.sections.peek().getLocalPartials());
 					state.sections.push(partial.getSection());
-					state.renderLists.push(partial.getActions());
+					state.renderLists.push(partial.getRenderList());
 					return;
 				}
 
@@ -601,9 +552,9 @@ public class TemplateLoader {
 			case '#': { // Start a new section, or repeat the previous section
 				final String expression = StringUtils.trim(tag, 1, tag.length());
 
-				if (expression.length() == 0 && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
+				if (expression.isEmpty() && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
 					state.sections.push(Section.repeat(state.sections.peek(), state.loader.toLocation()));
-				} else if (expression.length() != 0 && expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
+				} else if (!expression.isEmpty() && expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
 					final Matcher annotation = ANNOTATION_PATTERN.matcher(expression);
 
 					if (!annotation.matches()) {
@@ -702,6 +653,59 @@ public class TemplateLoader {
 	}
 
 	/**
+	 * Loads a template from a string and puts it in the cache of the loader.
+	 *
+	 * @param name the name of the template
+	 * @param value the string value to load as a template
+	 * @return this loader
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public final TemplateLoader put(final String name, final String value) throws LoadException {
+		load(name, value);
+		return this;
+	}
+
+	/**
+	 * Loads a template from a file and puts it in the cache of the loader.
+	 *
+	 * @param file the file to load as a template
+	 * @param charset the character encoding to use when loading the template from the file
+	 * @return this loader
+	 * @throws IOException if the file failed to load
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public final TemplateLoader put(final Path file, final Charset charset) throws IOException, LoadException {
+		load(file, charset);
+		return this;
+	}
+
+	/**
+	 * Loads a template from a file and puts it in the cache of the loader.
+	 *
+	 * @param file the file to load as a template
+	 * @return this loader
+	 * @throws IOException if the file failed to load
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public final TemplateLoader put(final Path file) throws IOException, LoadException {
+		return put(file, charset);
+	}
+
+	/**
+	 * Loads a template using a reader and puts it in the cache of the loader.
+	 *
+	 * @param name the name of the template
+	 * @param reader the reader to use to load as a template
+	 * @return this loader
+	 * @throws IOException if an I/O exception is encountered while reading from the reader
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public final TemplateLoader put(final String name, final Reader reader) throws IOException, LoadException {
+		load(name, reader);
+		return this;
+	}
+
+	/**
 	 * Puts a template into the loader.
 	 *
 	 * @param template the template to put into the loader
@@ -743,7 +747,9 @@ public class TemplateLoader {
 	 * @param template the template to put into the loader
 	 */
 	protected final void putTemplate(final Object identifier, final Template template) {
-		templates.put(identifier, template);
+		if (identifier != null) {
+			templates.put(identifier, template);
+		}
 	}
 
 	/**

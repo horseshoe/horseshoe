@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import horseshoe.internal.Expression;
-import horseshoe.internal.OverlayMap;
 
 final class Section {
 
@@ -89,8 +88,8 @@ final class Section {
 			this.namedExpressions = new HashMap<>();
 			this.localPartials = new HashMap<>();
 		} else {
-			this.namedExpressions = new OverlayMap<>(parent.namedExpressions);
-			this.localPartials = new OverlayMap<>(parent.localPartials);
+			this.namedExpressions = new HashMap<>(parent.namedExpressions);
+			this.localPartials = new HashMap<>(parent.localPartials);
 			parent.children.add(this);
 		}
 	}

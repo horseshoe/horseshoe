@@ -3,6 +3,7 @@ package horseshoe;
 import static horseshoe.Helper.loadMap;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,8 +23,8 @@ public final class PartialsTests {
 	public void testIndentation() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
-				.add("f", "With a new line!\n")
-				.add("g", "A{{!}} simple {{!}}test!\n{{! Should not show up even as empty line. }}\n\t{{>f}}\nAnd another.\n")
+				.put("f", "With a new line!\n")
+				.put("g", "A{{!}} simple {{!}}test!\n{{! Should not show up even as empty line. }}\n\t{{>f}}\nAnd another.\n")
 				.load("Test", "{{#a}}\t{{>g}}{{/a}}\n{{#a}}\n\t\t{{>g}}\n{{/a}}\n");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("b", 2, "x", false)), writer);
@@ -34,8 +35,8 @@ public final class PartialsTests {
 	public void testIndentation2() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
-				.add("f", "With a new line!\n")
-				.add("g", "A{{!}} simp\n\nle\n {{!}}\ntest!\n{{! Should not show up even as empty line. }}\n\t{{>f}}\nAnd another.\n")
+				.put("f", "With a new line!\n")
+				.put("g", "A{{!}} simp\n\nle\n {{!}}\ntest!\n{{! Should not show up even as empty line. }}\n\t{{>f}}\nAnd another.\n")
 				.load("Test", "{{#a}}\t{{>g}}{{/a}}\n{{#a}}\n\t\t{{>g}}\n{{/a}} ");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("b", 2, "x", false)), writer);
@@ -51,8 +52,8 @@ public final class PartialsTests {
 			Files.write(path, ("{{>" + path2.toAbsolutePath() + "}}" + LS).getBytes(StandardCharsets.UTF_16BE));
 			Files.write(path2, ("It Works!" + LS).getBytes(StandardCharsets.UTF_8));
 			final TemplateLoader loader = new TemplateLoader();
-			loader.add(loader.load(path.toAbsolutePath().normalize(), StandardCharsets.UTF_16BE));
-			Assert.assertEquals("It Works!" + LS, loader.load(path).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+			loader.put(loader.load(path.toAbsolutePath().normalize(), StandardCharsets.UTF_16BE));
+			Assert.assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16BE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
 		} finally {
 			Files.delete(path);
 			Files.delete(path2);
@@ -78,13 +79,11 @@ public final class PartialsTests {
 			Assert.assertEquals("It Works!" + LS, loader.load(pathReload, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
 
 			final TemplateLoader loader2 = new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get(".")))
-					.add(path2);
+					.put(path2);
 
 			Assert.assertEquals("It Works!" + LS, loader2.load(path, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
 
 			Assert.assertEquals("It Works!" + LS, new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get("."))).load("Inline Test", "{{>DELETE_ME2.test}}" + LS).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-
-			Assert.assertEquals("It Works!" + LS, new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get("."))).load("DELETE_ME2.test").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
 		} finally {
 			Files.delete(path);
 			Files.delete(path2);
@@ -114,9 +113,9 @@ public final class PartialsTests {
 	public void testNestedPartials() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
-				.add("f", "{{#a}}{{>g}}{{b}}{{/a}}{{^a}}{{x}}{{/a}}")
-				.add("g", "{{#x}}{{>f}}{{x}}{{/x}}")
-				.load("Test", "{{>g}}");
+				.load("f", "{{# a }}{{> g }}{{ b }}{{/ a }}{{^ a }}{{ x }}{{/ a }}",
+					"g", new StringReader("{{# x }}{{> f }}{{ x }}{{/ x }}"),
+					"{{> g }}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("b", 2, "x", false), "x", true), writer);
 		Assert.assertEquals("2true", writer.toString());
@@ -126,18 +125,18 @@ public final class PartialsTests {
 	public void testRecursivePartial() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
-				.add("f", "{{b}}{{#a}}{{>f}}{{/a}}")
-				.load("Test", "{{>f}}");
+				.load("f", "{{ b }}{{# a }}{{> f }}{{/ a }}",
+					new StringReader("{{> f }}"));
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
 		Assert.assertEquals("324", writer.toString());
 	}
 
-	@Test(expected = StackOverflowError.class)
+	@Test(expected = LoadException.class)
 	public void testBadRecursivePartial() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
-				.add("f", "{{b}}{{>Test}}")
+				.put("f", "{{b}}{{>Test}}")
 				.load("Test", "{{>f}}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
@@ -147,7 +146,17 @@ public final class PartialsTests {
 	public void testInlinePartials() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
-				.load("Test", "{{<g}}{{#a}}{{b}}{{x}}{{/a}}{{/g}}{{>g}}{{#a}}{{>g}}{{/a}}");
+				.load("Test", "{{< g }}{{# a }}{{ b }}{{ x }}{{/ a }}{{/ g }}{{> g }}{{# a }}{{> g }}{{/ a }}");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, loadMap("a", loadMap("b", 2, "x", false), "x", true), writer);
+		Assert.assertEquals("2false", writer.toString());
+	}
+
+	@Test
+	public void testInlinePartials2() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Template template = new TemplateLoader()
+				.load("Test", "{{< a }}{{ b }}{{ x }}{{/ a }}{{# b }}{{< a }}bad{{/ a }}{{/ b }}{{< g }}{{# a }}{{> a }}{{/ a }}{{/ g }}{{> g }}{{# a }}{{> g }}{{/ a }}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("b", 2, "x", false), "x", true), writer);
 		Assert.assertEquals("2false", writer.toString());
@@ -205,8 +214,9 @@ public final class PartialsTests {
 	public void testClashingPartialsAndData() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
-				.add("f", "{{f.b}}")
-				.load("Test", "{{#f}}{{<f}}{{a}}{{/f}}{{>f}}{{/f}}{{>f}}");
+				.load("f", "bad",
+					"f", "{{f.b}}",
+					"Test", "{{#f}}{{<f}}{{a}}{{/f}}{{>f}}{{/f}}{{>f}}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("f", loadMap("a", "123", "b", "456")), writer);
 		Assert.assertEquals("123456", writer.toString());

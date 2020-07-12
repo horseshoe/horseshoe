@@ -24,7 +24,7 @@ final class TemplateRenderer implements Renderer {
 		public void render(final RenderContext context, final Writer writer) throws IOException {
 			context.getIndentation().push(context.getIndentation().peek() + indentation);
 
-			for (final Renderer action : template.getActions()) {
+			for (final Renderer action : template.getRenderList()) {
 				action.render(context, writer);
 			}
 
@@ -46,7 +46,7 @@ final class TemplateRenderer implements Renderer {
 			writer.write(indentation);
 			context.getIndentation().push("");
 
-			for (final Renderer action : template.getActions()) {
+			for (final Renderer action : template.getRenderList()) {
 				action.render(context, writer);
 			}
 
@@ -65,7 +65,7 @@ final class TemplateRenderer implements Renderer {
 		public void render(final RenderContext context, final Writer writer) throws IOException {
 			context.getIndentation().push("");
 
-			for (final Renderer action : template.getActions()) {
+			for (final Renderer action : template.getRenderList()) {
 				action.render(context, writer);
 			}
 

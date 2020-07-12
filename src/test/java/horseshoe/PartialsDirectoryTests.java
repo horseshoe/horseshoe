@@ -132,7 +132,7 @@ public class PartialsDirectoryTests {
 		Assert.assertEquals(partials[partials.length - 1].contents, writer.toString());
 
 		final Path unrelatedFile = writeFileContents(temporaryFolder.newFile(), "DummyContents").toPath();
-		loader.add(unrelatedFile).load(unrelatedFile, StandardCharsets.US_ASCII);
+		loader.put(unrelatedFile).load(unrelatedFile, StandardCharsets.US_ASCII);
 	}
 
 }

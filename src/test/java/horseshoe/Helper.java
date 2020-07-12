@@ -87,13 +87,13 @@ public class Helper {
 	 * @throws IOException if an exception occurs while rendering (should never happen, since rendering is done with a StringWriter)
 	 */
 	public static void executeMustacheTest(final String template, final Map<String, Object> data, final Map<String, Object> partialMap, final String expected) throws LoadException, IOException {
-		final Map<String, String> partials = new LinkedHashMap<>();
+		final TemplateLoader loader = TemplateLoader.newMustacheLoader();
 
 		for (final Entry<String, Object> partial : partialMap.entrySet()) {
-			partials.put(partial.getKey(), partial.getValue().toString());
+			loader.put(partial.getKey(), partial.getValue().toString());
 		}
 
-		executeTest(TemplateLoader.newMustacheLoader().add(partials).load("Mustache Test", template), Settings.newMustacheSettings(), data, expected);
+		executeTest(loader.load("Mustache Test", template), Settings.newMustacheSettings(), data, expected);
 	}
 
 }
