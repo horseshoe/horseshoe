@@ -1,0 +1,22 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2.2.0
+    - name: Set up JDK
+      uses: actions/setup-java@v1.3.0
+      with:
+        java-version: 11
+    - name: Publish with Gradle
+      run: ./gradlew publish
+      env:
+        PGP_SIGNING_KEY: ${{ secrets.PGP_SIGNING_KEY }}
+        PGP_SIGNING_PASSWORD: ${{ secrets.PGP_SIGNING_PASSWORD }}
+        SONATYPE_USER: ${{ secrets.SONATYPE_USER }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_TOKEN }}
