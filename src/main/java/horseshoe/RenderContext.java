@@ -19,6 +19,7 @@ public final class RenderContext {
 	private Object repeatedSectionData = null;
 	private final Stack<SectionRenderer> sectionRenderers = new Stack<>();
 	private final Stack<String> indentation = new Stack<>();
+	private final Stack<Template> sectionPartials = new Stack<>();
 	private final Map<String, Class<?>> loadableClasses = new HashMap<>();
 
 	/**
@@ -33,6 +34,7 @@ public final class RenderContext {
 		this.annotationMap = annotationMap;
 
 		sectionData.push(new LinkedHashMap<>(globalData));
+		sectionPartials.push(new Template("[Null Partial Section]", "null"));
 	}
 
 	/**
@@ -99,6 +101,15 @@ public final class RenderContext {
 	 */
 	public Stack<Object> getSectionData() {
 		return sectionData;
+	}
+
+	/**
+	 * Gets the section partials used by the rendering process.
+	 *
+	 * @return the section partials used by the rendering process
+	 */
+	public Stack<Template> getSectionPartials() {
+		return sectionPartials;
 	}
 
 	/**

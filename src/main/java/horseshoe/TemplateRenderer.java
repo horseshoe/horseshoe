@@ -11,6 +11,58 @@ final class TemplateRenderer implements Renderer {
 	private final Template template;
 	private final String indentation;
 
+	private static final class AllLineIndentationSectionPartialRenderer implements Renderer {
+		private final String indentation;
+
+		public AllLineIndentationSectionPartialRenderer(final String indentation) {
+			this.indentation = indentation;
+		}
+
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			context.getIndentation().push(context.getIndentation().peek() + indentation);
+
+			for (final Renderer action : context.getSectionPartials().peek().getRenderList()) {
+				action.render(context, writer);
+			}
+
+			context.getIndentation().pop();
+		}
+	}
+
+	private static final class FirstLineIndentationSectionPartialRenderer implements Renderer {
+		private final String indentation;
+
+		public FirstLineIndentationSectionPartialRenderer(final String indentation) {
+			this.indentation = indentation;
+		}
+
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			writer.write(indentation);
+			context.getIndentation().push("");
+
+			for (final Renderer action : context.getSectionPartials().peek().getRenderList()) {
+				action.render(context, writer);
+			}
+
+			context.getIndentation().pop();
+		}
+	}
+
+	private static final class NoIndentationSectionPartialRenderer implements Renderer {
+		@Override
+		public void render(final RenderContext context, final Writer writer) throws IOException {
+			context.getIndentation().push("");
+
+			for (final Renderer action : context.getSectionPartials().peek().getRenderList()) {
+				action.render(context, writer);
+			}
+
+			context.getIndentation().pop();
+		}
+	}
+
 	private static final class AllLineIndentationRenderer implements Renderer {
 		private final Template template;
 		private final String indentation;
@@ -93,7 +145,16 @@ final class TemplateRenderer implements Renderer {
 		final Renderer newRenderer;
 		final Renderer nextRenderer;
 
-		if (indentation == null) {
+		if (template == null) {
+			if (indentation == null) {
+				newRenderer = new NoIndentationSectionPartialRenderer();
+			} else if (container.size() <= containerIndex + 1 || ((nextRenderer = container.get(containerIndex + 1)) instanceof StaticContentRenderer &&
+					((StaticContentRenderer)nextRenderer).followsStandaloneTag())) {
+				newRenderer = new AllLineIndentationSectionPartialRenderer(indentation);
+			} else {
+				newRenderer = new FirstLineIndentationSectionPartialRenderer(indentation);
+			}
+		} else if (indentation == null) {
 			newRenderer = new NoIndentationRenderer(template);
 		} else if (container.size() <= containerIndex + 1 || ((nextRenderer = container.get(containerIndex + 1)) instanceof StaticContentRenderer &&
 				((StaticContentRenderer)nextRenderer).followsStandaloneTag())) {

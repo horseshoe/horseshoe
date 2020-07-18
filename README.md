@@ -30,7 +30,7 @@ Horseshoe uses the same tags as Mustache. These tags have the same meaning as th
 Horseshoe does not have the same design goals as Mustache, resulting in many different decisions when creating the specification. For example, Horseshoe was designed for generation of source code, not HTML. For this reason, content is not HTML-escaped by default (the settings can be created with `horseshoe.Settings.newMustacheSettings()` to support this feature). Other differences include a more complex expression syntax ("interpolation" in Mustache-speak) and support for method calls in expressions.
 
 ### Does Horseshoe support Mustache lambdas?
-Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an expression syntax that supports method calls. Expressions can be named and reused to support similar functionality to Mustache lambdas.
+Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an expression syntax that supports method calls and [anonymous partials](#section-partials). [Expressions](#expressions) can be named and reused to support similar functionality to Mustache lambdas. [Anonymous partials](#section-partials) are used to support rendering nested sections by applying a partial template.
 
 ### What literal types are supported in Horseshoe expressions?
 The following table summarizes the literals supported by Horseshoe. A more detailed explanation of each can be found in the [Expressions](#expressions) section.
@@ -112,7 +112,7 @@ Unescaped content (`{{{ content }}}`, `{{& content }}`) is the same as normal co
 #### Partials
 Partial tags (`{{> partial }}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++. The partial template is loaded (either from the specified filename or the corresponding template from the template loader) and placed into the current template.
 
-If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. The double indirection operator can be used on partial tags (`{{>> partial }}`) to avoid applying the indentation to every line yet still ignore trailing whitespace and newline.
+If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. <b>The double indirection operator can be used on partial tags (`{{>> partial }}`) to avoid applying the indentation to every line yet still ignore trailing whitespace and newline after the partial.</b>
 
 #### Set Delimiter (`{{=<% %>=}}`)
 The set delimiter tag is structured the same as it is for Mustache. It is used to change the delimiters from `{{` and `}}` to other sequences in templates that contain many double braces that are part of the literal text. The new sequences are applicable for all tags. Here is a brief example,
@@ -131,7 +131,7 @@ Section tags (`{{# map }}`) in Horseshoe are similar to Mustache section tags. A
 
 Internal objects that are treated as foreach sections include arrays, iterables, and streams (if using Java 8 and up). All other objects are treated as conditional sections. For booleans, the conditional section will only be rendered for `true` values. For numeric or character primitives, the conditional section will only be rendered for non-zero values. For optionals (if using Java 8 and up), the conditional section will only be rendered for values that are present. The conditional section is never rendered for a null value.
 
-All sections except for booleans and [annotations](#annotations) push the value onto the context stack. Foreach sections push each child item onto the stack as it iterates over the collection.
+All sections except for booleans, [annotations](#annotations), and [section partials](#section-partials) push the value onto the context stack. Foreach sections push each child item onto the stack as it iterates over the collection.
 
 #### Repeated Sections
 Repeated section tags (`{{#}}`) are used to duplicate the previous section at the same scope. Nested scopes within a repeated section can also be repeated, allowing a hierarchical repeating of sections. For example,
@@ -158,7 +158,7 @@ Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are section tags t
 Built-in annotations include the following:
 - @StdErr - Sends output to stderr.
 - @StdOut - Sends output to stdout.
-- @File('name': 'filename', 'encoding': 'UTF-16', 'overwrite': false, 'append') - Sends output to the file with the specified name, using the specified encoding. The file is only written if the contents of the file are different than the rendered contents, unless overwrite is specified as true. If append is specified as true the rendered contents are appended to the file.
+- @File('name': 'filename', 'encoding': 'UTF-16', 'overwrite': false, 'append') - Sends output to the file with the specified name, using the specified encoding. <b>The file is only written if the contents of the file are different than the rendered contents, unless overwrite is specified as true.</b> If append is specified as true the rendered contents are appended to the file.
 
 #### Inverted Sections
 Inverted section tags (`{{^ exists }}`) are used to negate a conditional or foreach section. Inverted sections are only rendered when the negated section would not be rendered. Null objects, numeric zero values, `false`, as well as empty lists or arrays are several examples of values that will cause an inverted section to be rendered.
@@ -175,7 +175,22 @@ An inverted section tag can be left empty (`{{^}}`) to indicate that the inverte
 #### Inline Partials
 Inline partial tags (`{{< partial }}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a string or template file.
 
-Inline partials can only be included (using a partial tag) in the scope of the template in which they are declared. They cannot be included in any other template. This prevents naming collisions of inline partials in multiple templates and allows inline partials to be overridden later in a template or in a nested scope.
+Inline partials can only be included (using a partial tag) in the scope of the template in which they are declared. They cannot be included in any other template other than inline partials. This prevents naming collisions of inline partials with external partials. Inline partials may be overridden later in a template or in a nested scope.
+
+<b>Closing tags for inline partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows inline partials to end without a trailing newline and not cause an output line in the current template.
+
+#### Section Partials
+Section partial tags (`{{#> partial }}`) apply a partial template to the nested section. This provides some functionality similar to a Mustache lambda, except that no code is used to render the section. It is all within the confines of the Horseshoe template.
+
+In order to support rendering the nested section, the referenced partial template uses anonymous partials, or partial tags without a name. For example,
+```horseshoe
+{{< dash }}
+---{{>}}---{{/}}
+{{#> dash }}a{{/}}, {{#> dash }}b{{/}}, {{#> dash }}c{{/}}
+```
+results in "---a---, ---b---, ---c---".
+
+<b>Closing tags for section partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows section partials to end without a trailing newline and not cause an output line in the current template.
 
 ### Expressions
 Horseshoe expressions look a lot like expressions in modern programming languages. Expressions can contain named values, literals, method calls, and operator symbols. Expressions can also contain comments using C, C++, and Java style comments using either `/*...*/` or `//...`. Multiple lines are allowed inside a single expression.
@@ -249,10 +264,10 @@ Named expressions are scoped to the context in which they are declared and can b
 Root-level named expressions in each partial template are made available to the calling template when a partial is included (`{{> f }}` includes all root-level expressions from the partial "f" at the current scope). For example,
 ```horseshoe
 {{< a }}
-  {{ lower->toLowerCase() }}
+  {{ lower() -> toLowerCase() }}
 {{/}}
-{{ lower->toString() }}
-{{ upper->toUpperCase() }}
+{{ lower() -> toString() }}
+{{ upper() -> toUpperCase() }}
 {{# "Original String" }}
   {{> a }}
   {{ upper() + "-" + lower() }}

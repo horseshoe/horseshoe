@@ -15,8 +15,11 @@ jobs:
       with:
         java-version: 11
 
+    - name: Jar Check
+      run: ./gradlew jar && echo '{{ salutation }}, {{ audience }}!' | java -jar build/libs/* -Dsalutation=Hello -Daudience=World
+
     - name: Build with Gradle
-      run: ./gradlew build
+      run: ./gradlew clean build
 
     - name: Upload Code Coverage
       continue-on-error: true

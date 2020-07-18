@@ -2,6 +2,7 @@ package horseshoe;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -164,6 +165,16 @@ public class TemplateLoader {
 		for (final Path path : includeDirectories) {
 			this.includeDirectories.add(path);
 		}
+	}
+
+	/**
+	 * Gets the loaded template matching the specified identifier.
+	 *
+	 * @param identifier the identifier of the template
+	 * @return the loaded template, or null if the template could not be found
+	 */
+	public final Template get(final Object identifier) {
+		return templates.get(identifier);
 	}
 
 	/**
@@ -349,10 +360,10 @@ public class TemplateLoader {
 	 * @return the loaded template
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	private Template load(final String name, final Stack<Loader> loaders) throws LoadException {
+	private Template loadPartial(final String name, final Stack<Loader> loaders) throws LoadException {
 		try {
 			// Try to use a cached template
-			final Template cachedTemplate = templates.get(name);
+			final Template cachedTemplate = get(name);
 
 			if (cachedTemplate != null) {
 				return cachedTemplate;
@@ -381,6 +392,49 @@ public class TemplateLoader {
 	}
 
 	/**
+	 * Loads the given partial tag.
+	 *
+	 * @param loaders the current stack of loaders
+	 * @param state the load state of the template
+	 * @param tag the string representation of the tag
+	 * @return the name of the loaded partial
+	 * @throws LoadException if an error is encountered while loading the partial
+	 */
+	private String loadPartial(final Stack<Loader> loaders, final LoadState state, final String tag) throws LoadException {
+		final String name;
+		final Template partial;
+		String indentation = null;
+
+		if (tag.length() > 1 && tag.charAt(1) == '>') { // >> uses indentation on first line, no trailing new line
+			state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
+			name = StringUtils.trim(tag, 2, tag.length());
+		} else {
+			name = StringUtils.trim(tag, 1, tag.length());
+			indentation = state.removeStandaloneTagHead();
+
+			// 1) Standalone tag uses indentation for each line, no trailing new line
+			// 2) Non-standalone tag uses indentation on first line, with trailing new line
+			if (indentation == null) {
+				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE;
+			} else {
+				state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
+			}
+		}
+
+		if (name.isEmpty()) {
+			partial = null;
+		} else {
+			final Template localPartial = state.sections.peek().getLocalPartials().get(name);
+
+			partial = (localPartial != null ? localPartial : loadPartial(name, loaders));
+			state.sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
+		}
+
+		new TemplateRenderer(state.renderLists.peek(), partial, indentation);
+		return name;
+	}
+
+	/**
 	 * Tries to load the specified template by file. If the template is already loaded, the previously loaded instance is returned and all settings are ignored.
 	 *
 	 * @param name the name of the template to load
@@ -391,7 +445,7 @@ public class TemplateLoader {
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
 	private Template loadTemplate(final String name, final Path absoluteFile, final Stack<Loader> loaders) throws IOException, LoadException {
-		final Template cachedTemplate = templates.get(absoluteFile);
+		final Template cachedTemplate = get(absoluteFile);
 
 		if (cachedTemplate != null) {
 			return cachedTemplate;
@@ -521,35 +575,35 @@ public class TemplateLoader {
 
 				break;
 
-			case '>': { // Load partial
-				final String name;
-				String indentation = null;
+			case '>':
+				loadPartial(loaders, state, tag);
+				return;
 
-				if (tag.length() > 1 && tag.charAt(1) == '>') { // >> uses indentation on first line, no trailing new line
-					state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
-					name = StringUtils.trim(tag, 2, tag.length());
-				} else {
-					name = StringUtils.trim(tag, 1, tag.length());
-					indentation = state.removeStandaloneTagHead();
+			case '#': {
+				if (tag.length() > 1 && tag.charAt(1) == '>') { // Section Partial
+					final int index = state.renderLists.peek().size();
+					state.renderLists.peek().add(null);
 
-					// 1) Standalone tag uses indentation for each line, no trailing new line
-					// 2) Non-standalone tag uses indentation on first line, with trailing new line
-					if (indentation == null) {
-						state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE;
-					} else {
-						state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
-					}
+					final Template partial = new Template(loadPartial(loaders, state, tag.substring(1)), state.loader.toLocation());
+					state.renderLists.peek().set(index, new Renderer() {
+						@Override
+						public void render(final RenderContext context, final Writer writer) throws IOException {
+							context.getSectionPartials().push(partial);
+						}
+					});
+					state.renderLists.peek().add(new Renderer() {
+						@Override
+						public void render(final RenderContext context, final Writer writer) throws IOException {
+							context.getSectionPartials().pop();
+						}
+					});
+
+					state.sections.push(partial.getSection());
+					state.renderLists.push(partial.getRenderList());
+					return;
 				}
 
-				final Template localPartial = state.sections.peek().getLocalPartials().get(name);
-				final Template partial = (localPartial != null ? localPartial : load(name, loaders));
-
-				state.sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
-				new TemplateRenderer(state.renderLists.peek(), partial, indentation);
-				return;
-			}
-
-			case '#': { // Start a new section, or repeat the previous section
+				// Start a new section, or repeat the previous section
 				final String expression = StringUtils.trim(tag, 1, tag.length());
 
 				if (expression.isEmpty() && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
@@ -616,7 +670,11 @@ public class TemplateLoader {
 					throw new LoadException(loaders, "Unclosed section, expecting close tag for section " + section);
 				}
 
-				state.sections.pop();
+				if (state.sections.pop().getParent() == null) { // Null parent means top-level, which indicates an inline partial
+					state.removeStandaloneTagHead();
+					state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
+				}
+
 				state.renderLists.pop();
 				return;
 			}

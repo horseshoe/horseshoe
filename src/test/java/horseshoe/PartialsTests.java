@@ -132,12 +132,32 @@ public final class PartialsTests {
 		Assert.assertEquals("324", writer.toString());
 	}
 
+	@Test
+	public void testSectionPartial() throws IOException, LoadException {
+		Assert.assertEquals("-a--b--c-", new TemplateLoader().load("f", "-{{>}}-", "Test", "{{#> f }}a{{/ f }}{{#> f }}b{{/}}{{#> f }}c{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+	}
+
+	@Test
+	public void testSectionPartial2() throws IOException, LoadException {
+		Assert.assertEquals("<p>" + LS + "\tTest" + LS + "paragraph </p>", new TemplateLoader().load("p", "<p>\n\t{{>>}}\n</p>", "{{#> p }}\nTest\nparagraph {{/ p }}\n").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+	}
+
+	@Test
+	public void testSectionPartial3() throws IOException, LoadException {
+		Assert.assertEquals("<p>" + LS + "\tTest" + LS + "\tparagraph" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}<ul><li>Item</li></ul>\n").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+	}
+
+	@Test
+	public void testSectionPartial4() throws IOException, LoadException {
+		Assert.assertEquals("<p>" + LS + "\tTest" + LS + "paragraph" + LS + "1" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}1\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}<ul><li>Item</li></ul>\n").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+	}
+
 	@Test(expected = LoadException.class)
 	public void testBadRecursivePartial() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
-				.put("f", "{{b}}{{>Test}}")
-				.load("Test", "{{>f}}");
+				.put("f", "{{ b }}{{> Test }}")
+				.load("Test", "{{> f }}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
 	}
@@ -160,6 +180,11 @@ public final class PartialsTests {
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("b", 2, "x", false), "x", true), writer);
 		Assert.assertEquals("2false", writer.toString());
+	}
+
+	@Test
+	public void testInlinePartials3() throws IOException, LoadException {
+		Assert.assertEquals("Allow an inline partial without a newline", new TemplateLoader().load("{{< a }}\n an{{/}}\nAllow{{> a }} inline partial without a newline").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test

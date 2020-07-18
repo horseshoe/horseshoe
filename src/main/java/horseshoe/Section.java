@@ -178,6 +178,15 @@ final class Section {
 	}
 
 	/**
+	 * Gets the parent of the section.
+	 *
+	 * @return the parent of the section, null if top-level
+	 */
+	Section getParent() {
+		return parent;
+	}
+
+	/**
 	 * Checks the invisibility of the section.
 	 *
 	 * @return true if the section is invisible, otherwise false
