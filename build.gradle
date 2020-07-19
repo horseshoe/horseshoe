@@ -87,3 +87,9 @@ jar {
 			'Main-Class': 'horseshoe.Runner'
 	}
 }
+
+tasks.withType(Jar) {
+	from('LICENSE') {
+		into 'META-INF'
+	}
+}
