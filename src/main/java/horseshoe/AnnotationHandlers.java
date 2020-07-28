@@ -36,12 +36,20 @@ public final class AnnotationHandlers {
 
 		defaultAnnotations.put("StdErr", printWriter(System.err, Charset.defaultCharset()));
 		defaultAnnotations.put("StdOut", printWriter(System.out, Charset.defaultCharset()));
-		defaultAnnotations.put("File", fileWriter());
+		defaultAnnotations.put("File", fileWriter(new File(System.getProperty("user.dir")), StandardCharsets.UTF_8));
 
 		DEFAULT_ANNOTATIONS = Collections.unmodifiableMap(defaultAnnotations);
 	}
 
 	private static final class FileWriterHandler implements AnnotationHandler {
+
+		private final File rootDir;
+		private final Charset defaultCharset;
+
+		private FileWriterHandler(final File rootDir, final Charset defaultCharset) {
+			this.rootDir = rootDir;
+			this.defaultCharset = defaultCharset;
+		}
 
 		@Override
 		public Writer getWriter(final Writer writer, final Object value) throws IOException {
@@ -50,20 +58,20 @@ public final class AnnotationHandlers {
 
 			if (value instanceof Map) {
 				properties = (Map<?, ?>)value;
-				file = new File(String.valueOf(properties.get("name")));
+				file = new File(rootDir, String.valueOf(properties.get("name")));
 			} else if (value instanceof List) {
 				final List<?> list = (List<?>)value;
 				final int size = list.size();
 
 				properties = size > 1 && list.get(1) instanceof Map ? (Map<?, ?>)list.get(1) : Collections.emptyMap();
-				file = new File(String.valueOf(size == 0 ? null : list.get(0)));
+				file = new File(rootDir, String.valueOf(size == 0 ? null : list.get(0)));
 			} else {
 				properties = Collections.emptyMap();
-				file = new File(String.valueOf(value));
+				file = new File(rootDir, String.valueOf(value));
 			}
 
 			// Load properties
-			Charset charset = StandardCharsets.UTF_8;
+			Charset charset = defaultCharset;
 			boolean overwrite = false;
 			boolean append = false;
 
@@ -266,10 +274,12 @@ public final class AnnotationHandlers {
 	/**
 	 * Creates an annotation handler that sends all output to a file. The file can be specified by passing a string argument or a map argument with a "name" entry to the annotation in the template. If a map argument is used, then the "encoding" entry can be used to specify a specific character set, the "append" entry can be used to append to a file, and the "overwrite" entry can force a file to be overwritten.
 	 *
+	 * @param rootDir the root directory for the pathnames provided
+	 * @param defaultCharset the {@link Charset} to use when not specified otherwise
 	 * @return the new annotation handler
 	 */
-	public static AnnotationHandler fileWriter() {
-		return new FileWriterHandler();
+	public static AnnotationHandler fileWriter(final File rootDir, final Charset defaultCharset) {
+		return new FileWriterHandler(rootDir, defaultCharset);
 	}
 
 }
