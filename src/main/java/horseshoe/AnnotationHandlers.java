@@ -14,6 +14,8 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -36,17 +38,17 @@ public final class AnnotationHandlers {
 
 		defaultAnnotations.put("StdErr", printWriter(System.err, Charset.defaultCharset()));
 		defaultAnnotations.put("StdOut", printWriter(System.out, Charset.defaultCharset()));
-		defaultAnnotations.put("File", fileWriter(new File(System.getProperty("user.dir")), StandardCharsets.UTF_8));
+		defaultAnnotations.put("File", fileWriter(Paths.get("."), StandardCharsets.UTF_8));
 
 		DEFAULT_ANNOTATIONS = Collections.unmodifiableMap(defaultAnnotations);
 	}
 
 	private static final class FileWriterHandler implements AnnotationHandler {
 
-		private final File rootDir;
+		private final Path rootDir;
 		private final Charset defaultCharset;
 
-		private FileWriterHandler(final File rootDir, final Charset defaultCharset) {
+		private FileWriterHandler(final Path rootDir, final Charset defaultCharset) {
 			this.rootDir = rootDir;
 			this.defaultCharset = defaultCharset;
 		}
@@ -58,16 +60,16 @@ public final class AnnotationHandlers {
 
 			if (value instanceof Map) {
 				properties = (Map<?, ?>)value;
-				file = new File(rootDir, String.valueOf(properties.get("name")));
+				file = rootDir.resolve(Paths.get(String.valueOf(properties.get("name")))).toFile();
 			} else if (value instanceof List) {
 				final List<?> list = (List<?>)value;
 				final int size = list.size();
 
 				properties = size > 1 && list.get(1) instanceof Map ? (Map<?, ?>)list.get(1) : Collections.emptyMap();
-				file = new File(rootDir, String.valueOf(size == 0 ? null : list.get(0)));
+				file = rootDir.resolve(Paths.get(String.valueOf(size == 0 ? null : list.get(0)))).toFile();
 			} else {
 				properties = Collections.emptyMap();
-				file = new File(rootDir, String.valueOf(value));
+				file = rootDir.resolve(Paths.get(String.valueOf(value))).toFile();
 			}
 
 			// Load properties
@@ -278,7 +280,7 @@ public final class AnnotationHandlers {
 	 * @param defaultCharset the {@link Charset} to use when not specified otherwise
 	 * @return the new annotation handler
 	 */
-	public static AnnotationHandler fileWriter(final File rootDir, final Charset defaultCharset) {
+	public static AnnotationHandler fileWriter(final Path rootDir, final Charset defaultCharset) {
 		return new FileWriterHandler(rootDir, defaultCharset);
 	}
 
