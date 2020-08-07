@@ -109,6 +109,8 @@ public final class Expression {
 	private final boolean isNamed;
 
 	private static final class ParseState {
+		final int startIndex;
+		final String trimmedString;
 		final Map<String, Expression> namedExpressions;
 		final Map<Expression, Integer> expressions = new LinkedHashMap<>();
 		final Map<Identifier, Integer> identifiers = new LinkedHashMap<>();
@@ -116,7 +118,9 @@ public final class Expression {
 		final Stack<Operand> operands = new Stack<>();
 		final Stack<Operator> operators = new Stack<>();
 
-		private ParseState(final Map<String, Expression> namedExpressions) {
+		private ParseState(final int startIndex, final String trimmedString, final Map<String, Expression> namedExpressions) {
+			this.startIndex = startIndex;
+			this.trimmedString = trimmedString;
 			this.namedExpressions = namedExpressions;
 		}
 
@@ -138,16 +142,6 @@ public final class Expression {
 		}
 
 		/**
-		 * Gets a local binding index. If one does not exist with the specified name, returns null.
-		 *
-		 * @param name the name of the binding
-		 * @return the local index of the binding, or null if one does not exist
-		 */
-		Integer getLocalBinding(final String name) {
-			return localBindings.get(name);
-		}
-
-		/**
 		 * Gets the index for the specified identifier. If the identifier does not exist in the map, a new entry will be created and that index will be returned.
 		 *
 		 * @param identifier the identifier to locate
@@ -162,6 +156,25 @@ public final class Expression {
 			}
 
 			return index;
+		}
+
+		/**
+		 * Gets a local binding index. If one does not exist with the specified name, returns null.
+		 *
+		 * @param name the name of the binding
+		 * @return the local index of the binding, or null if one does not exist
+		 */
+		Integer getLocalBinding(final String name) {
+			return localBindings.get(name);
+		}
+
+		/**
+		 * Gets the index of the matcher within the tag.
+		 *
+		 * @return the index of the matcher within the tag
+		 */
+		int getIndex(final Matcher matcher) {
+			return startIndex + matcher.regionStart();
 		}
 
 		/**
@@ -342,7 +355,7 @@ public final class Expression {
 				isRoot = true;
 
 				if (isInternal || isMethod || (identifier.startsWith(".") && !".".equals(identifier))) {
-					throw new IllegalArgumentException("Invalid identifier with prefix \"" + prefixString + "\" at offset " + matcher.regionStart() + " in expression");
+					throw new IllegalArgumentException("Invalid identifier with prefix \"" + prefixString + "\" (index " + state.getIndex(matcher) + ")");
 				}
 			} else {
 				final String backreachString = matcher.group("backreach");
@@ -444,7 +457,7 @@ public final class Expression {
 				// Look-ahead for an assignment operation
 				if (operator != null && operator.has(Operator.ASSIGNMENT)) {
 					if (!unstatedBackreach) {
-						throw new IllegalArgumentException("Invalid assignment to non-local variable at offset " + matcher.regionStart() + " in expression");
+						throw new IllegalArgumentException("Invalid assignment to non-local variable (index " + state.getIndex(matcher) + ")");
 					}
 
 					state.operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, state.createLocalBinding(name))));
@@ -618,7 +631,7 @@ public final class Expression {
 		if (!hasLeftExpression && matcher.usePattern(lastNavigation ? IDENTIFIER_PATTERN : IDENTIFIER_WITH_PREFIX_PATTERN).lookingAt()) { // Identifier
 			return parseIdentifier(state, matcher, lastOperator, lastNavigation);
 		} else if (lastNavigation) { // An identifier must follow the navigation operator
-			throw new IllegalArgumentException("Invalid identifier at offset " + matcher.regionStart() + " in expression");
+			throw new IllegalArgumentException("Invalid identifier (index " + state.getIndex(matcher) + ")");
 		} else if (!hasLeftExpression && matcher.usePattern(DOUBLE_PATTERN).lookingAt()) { // Double literal
 			state.operands.push(new Operand(double.class, new MethodBuilder().pushConstant(Double.parseDouble(matcher.group("double")))));
 		} else if (!hasLeftExpression && matcher.usePattern(LONG_PATTERN).lookingAt()) { // Long literal
@@ -648,7 +661,7 @@ public final class Expression {
 					state.operators.push(state.operators.pop().addRightExpression());
 				} else if (operator.has(Operator.TRAILING_IDENTIFIER)) {
 					if (!matcher.region(matcher.end(), matcher.regionEnd()).usePattern(TRAILING_IDENTIFIER_PATTERN).lookingAt()) {
-						throw new IllegalArgumentException("Identifier required after \"" + operator + "\" operator at offset " + matcher.regionStart() + " in expression");
+						throw new IllegalArgumentException("Missing identifier after \"" + operator + "\" operator (index " + state.getIndex(matcher) + ")");
 					}
 
 					state.operators.push(operator.withLocalBindingIndex(state.createLocalBinding(matcher.group("name"))));
@@ -667,7 +680,7 @@ public final class Expression {
 
 					if (closedOperator.getClosingString() != null) {
 						if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
-							throw new IllegalArgumentException("Unexpected \"" + token + "\" at offset " + matcher.regionStart() + ", expecting \"" + closedOperator.getClosingString() + "\" in expression");
+							throw new IllegalArgumentException("Unexpected \"" + token + "\", expecting \"" + closedOperator.getClosingString() + "\" (index " + state.getIndex(matcher) + ")");
 						}
 
 						state.operators.push(closedOperator);
@@ -680,9 +693,10 @@ public final class Expression {
 				}
 			}
 
-			throw new IllegalArgumentException("Unexpected \"" + token + "\" at offset " + matcher.regionStart() + " in expression");
+			throw new IllegalArgumentException("Unexpected \"" + token + "\" (index " + state.getIndex(matcher) + ")");
 		} else {
-			throw new IllegalArgumentException("Unrecognized identifier at offset " + matcher.regionStart() + " in expression");
+			final String start = state.trimmedString.length() - matcher.regionStart() > 10 ? state.trimmedString.substring(matcher.regionStart(), matcher.regionStart() + 7) + "..." : state.trimmedString.substring(matcher.regionStart());
+			throw new IllegalArgumentException("Unrecognized operand \"" + start + "\" (index " + state.getIndex(matcher) + ")");
 		}
 
 		return null;
@@ -717,7 +731,7 @@ public final class Expression {
 			case "?[?":
 				if (left != null) {
 					if (!Object.class.equals(left.type)) {
-						throw new IllegalArgumentException("Unexpected \"" + operator + "\" operator applied to " + left.type.getName() + ", expecting map or array type value in expression");
+						throw new IllegalArgumentException("Unexpected \"" + operator + "\" operator applied to " + left.type.getName() + ", expecting map or array type value");
 					}
 
 					final Label end = left.builder.newLabel();
@@ -898,7 +912,7 @@ public final class Expression {
 			}
 			case "?": {
 				if (!Entry.class.equals(right.type)) {
-					throw new IllegalArgumentException("Incomplete ternary operator, missing \":\" in expression");
+					throw new IllegalArgumentException("Incomplete ternary operator, missing \":\"");
 				}
 
 				assert Entry.class.equals(left.type);
@@ -1004,7 +1018,7 @@ public final class Expression {
 			}
 
 			default:
-				throw new IllegalStateException("Unrecognized operator \"" + operator + "\" while processing expression");
+				throw new IllegalStateException("Unrecognized operator \"" + operator + "\"");
 		}
 	}
 
@@ -1082,27 +1096,28 @@ public final class Expression {
 	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	public Expression(final Object location, final String expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
-		this(null, location, expressionString, namedExpressions, horseshoeExpressions);
+	Expression(final Object location, final String expression, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
+		this(null, location, 0, expression, namedExpressions, horseshoeExpressions);
 	}
 
 	/**
 	 * Creates a new expression, using the cached expression if applicable.
 	 *
-	 * @param cachedExpression a cached copy of the expression that can be leverage to improve performance if applicable.
+	 * @param cachedExpression a cached copy of the expression that can be leveraged to improve performance if applicable.
 	 * @param location the location of the expression
-	 * @param expressionString the trimmed, advanced expression string
+	 * @param startIndex the starting index of the expression within the given scope
+	 * @param expression the trimmed expression string (starting at {@code expressionStart})
 	 * @param namedExpressions the map used to lookup named expressions
 	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	public Expression(final Expression cachedExpression, final Object location, final String expressionString, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
-		final ParseState state = new ParseState(namedExpressions);
+	public Expression(final Expression cachedExpression, final Object location, final int startIndex, final String expression, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
+		final ParseState state = new ParseState(startIndex, expression, namedExpressions);
 		final MethodBuilder mb = new MethodBuilder();
 		boolean named = false;
 
 		this.location = location;
-		this.originalString = expressionString;
+		this.originalString = expression;
 
 		if (".".equals(originalString)) {
 			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK)));
@@ -1118,21 +1133,21 @@ public final class Expression {
 			}
 		} else { // Tokenize the entire expression, using the shunting yard algorithm
 			int initializeBindingsStart = 0;
-			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(originalString);
-			final int length = originalString.length();
+			final int end = expression.length();
+			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(expression);
 
 			if (matcher.lookingAt()) {
 				namedExpressions.put(matcher.group("name"), this);
 				named = true;
 				parseNamedExpressionHeading(state, mb, matcher);
 				initializeBindingsStart = state.localBindings.size();
-				matcher.region(matcher.end(), length);
+				matcher.region(matcher.end(), end);
 			}
 
 			Operator lastOperator = Operator.get("(", false);
 
 			// Loop through all tokens
-			for (; matcher.regionStart() < length; matcher.region(matcher.end(), length)) {
+			for (; matcher.regionStart() < end; matcher.region(matcher.end(), end)) {
 				lastOperator = parseToken(state, matcher, lastOperator);
 			}
 
@@ -1141,7 +1156,7 @@ public final class Expression {
 				Operator operator = state.operators.pop();
 
 				if (operator.getClosingString() != null) {
-					throw new IllegalArgumentException("Unexpected end of expression, expecting \"" + operator.getClosingString() + "\" (unmatched \"" + operator.getString() + "\") in expression");
+					throw new IllegalArgumentException("Unexpected end of expression, expecting \"" + operator.getClosingString() + "\" (unmatched \"" + operator.getString() + "\")");
 				} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS) && (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION | Operator.X_RIGHT_EXPRESSIONS))) { // Process multi-argument operators, but allow trailing commas
 					operator = operator.addRightExpression();
 				} else if (lastOperator != null && lastOperator.has(Operator.RIGHT_EXPRESSION)) {

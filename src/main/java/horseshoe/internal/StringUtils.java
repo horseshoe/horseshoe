@@ -36,6 +36,18 @@ public final class StringUtils {
 
 	}
 
+	public static final class TrimmedString {
+
+		public final int start;
+		public final String string;
+
+		public TrimmedString(final int start, final String string) {
+			this.start = start;
+			this.string = string;
+		}
+
+	}
+
 	/**
 	 * Finds the next end of line sequence. An end of line sequence is equivalent to the following pattern: \r\n|[\n\x0B\x0C\r\u0085\u2028\u2029]
 	 *
@@ -109,25 +121,24 @@ public final class StringUtils {
 	}
 
 	/**
-	 * Creates a trimmed character sequence from the specified start and end.
+	 * Gets the trimmed string from the specified starting index.
 	 *
-	 * @param value the character sequence to trim
-	 * @param start the starting index (inclusive) in the character sequence
-	 * @param end the ending index (exclusive) in the character sequence
-	 * @return the trimmed character sequence
+	 * @param value the string to trim
+	 * @param start the starting index (inclusive) in the string
+	 * @return the trimmed string
 	 */
-	public static String trim(final String value, final int start, final int end) {
-		for (int i = start; i < end; i++) {
+	public static TrimmedString trim(final String value, final int start) {
+		for (int i = start; i < value.length(); i++) {
 			if (!isWhitespace(value.charAt(i))) {
 				int j;
 
-				for (j = end; isWhitespace(value.charAt(j - 1)); j--);
+				for (j = value.length(); isWhitespace(value.charAt(j - 1)); j--);
 
-				return value.substring(i, j);
+				return new TrimmedString(i, value.substring(i, j));
 			}
 		}
 
-		return "";
+		return new TrimmedString(start, "");
 	}
 
 	/**

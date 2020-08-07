@@ -20,6 +20,7 @@ import horseshoe.internal.Expression;
 import horseshoe.internal.Identifier;
 import horseshoe.internal.ParsedLine;
 import horseshoe.internal.StringUtils;
+import horseshoe.internal.StringUtils.TrimmedString;
 
 /**
  * The TemplateLoader class is used to load any number of {@link Template}s before rendering. Various properties can be configured to load templates with different settings.
@@ -27,7 +28,7 @@ import horseshoe.internal.StringUtils;
 public class TemplateLoader {
 
 	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(?<parameters>.*)\\s*\\)\\s*)?", Pattern.DOTALL | Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(.*)\\s*\\)\\s*)?", Pattern.DOTALL | Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<Object, Template> templates = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
@@ -93,16 +94,16 @@ public class TemplateLoader {
 		 * Create a new expression checking the cache to see if it already exists.
 		 *
 		 * @param location the location of the expression
-		 * @param expression the string representation of the expression
+		 * @param expression the trimmed expression string
 		 * @param extensions the set of extensions currently in use
 		 * @return the new expression or a cached copy of the expression with updated location
 		 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 		 */
-		private Expression createExpression(final Object location, final String expression, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
-			final Expression cachedExpression = expressionCache.get(expression);
-			final Expression newExpression = new Expression(cachedExpression, location, cachedExpression == null ? expression : cachedExpression.toString(), sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS));
+		private Expression createExpression(final Object location, final TrimmedString expression, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
+			final Expression cachedExpression = expressionCache.get(expression.string);
+			final Expression newExpression = new Expression(cachedExpression, location, expression.start, expression.string, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS));
 
-			expressionCache.put(expression, newExpression);
+			expressionCache.put(expression.string, newExpression);
 			return newExpression;
 		}
 
@@ -407,9 +408,9 @@ public class TemplateLoader {
 
 		if (tag.length() > 1 && tag.charAt(1) == '>') { // >> uses indentation on first line, no trailing new line
 			state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
-			name = StringUtils.trim(tag, 2, tag.length());
+			name = StringUtils.trim(tag, 2).string;
 		} else {
-			name = StringUtils.trim(tag, 1, tag.length());
+			name = StringUtils.trim(tag, 1).string;
 			indentation = state.removeStandaloneTagHead();
 
 			// 1) Standalone tag uses indentation for each line, no trailing new line
@@ -563,7 +564,7 @@ public class TemplateLoader {
 
 			case '<': // Local partial
 				if (extensions.contains(Extension.INLINE_PARTIALS)) {
-					final String name = StringUtils.trim(tag, 1, tag.length());
+					final String name = StringUtils.trim(tag, 1).string;
 					final Template partial = new Template(name, state.loader.toLocation());
 
 					state.sections.peek().getLocalPartials().put(name, partial);
@@ -604,23 +605,23 @@ public class TemplateLoader {
 				}
 
 				// Start a new section, or repeat the previous section
-				final String expression = StringUtils.trim(tag, 1, tag.length());
+				final TrimmedString expression = StringUtils.trim(tag, 1);
 
-				if (expression.isEmpty() && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
+				if (expression.string.isEmpty() && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
 					state.sections.push(Section.repeat(state.sections.peek(), state.loader.toLocation()));
-				} else if (!expression.isEmpty() && expression.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
-					final Matcher annotation = ANNOTATION_PATTERN.matcher(expression);
+				} else if (!expression.string.isEmpty() && expression.string.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
+					final Matcher annotation = ANNOTATION_PATTERN.matcher(tag).region(expression.start, tag.length());
 
 					if (!annotation.matches()) {
 						throw new LoadException(loaders, "Invalid annotation format");
 					}
 
-					final String sectionName = annotation.group("name");
-					final String parameters = annotation.group("parameters");
+					final String sectionName = annotation.group(1);
+					final String parameters = annotation.group(2);
 					final Object location = state.loader.toLocation();
 
 					// Load the annotation arguments
-					state.sections.push(new Section(state.sections.peek(), sectionName, location, parameters == null ? null : state.createExpression(location, parameters, extensions), sectionName.substring(1), true));
+					state.sections.push(new Section(state.sections.peek(), sectionName, location, parameters == null ? null : state.createExpression(location, new TrimmedString(annotation.start(2), parameters), extensions), sectionName.substring(1), true));
 				} else { // Start a new section
 					final Object location = state.loader.toLocation();
 
@@ -634,10 +635,10 @@ public class TemplateLoader {
 			}
 
 			case '^': { // Start a new inverted section, or else block for the current section
-				final String expression = StringUtils.trim(tag, 1, tag.length());
+				final TrimmedString expression = StringUtils.trim(tag, 1);
 				final SectionRenderer renderer;
 
-				if (expression.length() == 0 && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
+				if (expression.string.isEmpty() && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
 					if (state.sections.peek().getExpression() == null && state.sections.peek().getAnnotation() == null || state.sections.peek().getRenderList() != state.renderLists.pop()) {
 						throw new LoadException(loaders, "Section else tag outside section start tag");
 					}
@@ -657,13 +658,13 @@ public class TemplateLoader {
 			}
 
 			case '/': { // Close the current section
-				final String expression = StringUtils.trim(tag, 1, tag.length());
+				final TrimmedString expression = StringUtils.trim(tag, 1);
 				final Section section = state.sections.peek();
 
 				if (state.sections.size() <= 1) { // There should always be at least one section on the stack (the template root section)
 					throw new LoadException(loaders, "Section close tag without matching section start tag");
-				} else if ((expression.length() > 0 || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression)) {
-					if (expression.length() > 0 && extensions.contains(Extension.SMART_END_TAGS)) {
+				} else if ((!expression.string.isEmpty() || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression.string)) {
+					if (!expression.string.isEmpty() && extensions.contains(Extension.SMART_END_TAGS)) {
 						break;
 					}
 
@@ -693,7 +694,7 @@ public class TemplateLoader {
 			case '{': // Unescaped content tag
 			case '&':
 				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
-				state.renderLists.peek().add(new DynamicContentRenderer(state.createExpression(state.loader.toLocation(), StringUtils.trim(tag, 1, tag.length()), extensions), false));
+				state.renderLists.peek().add(new DynamicContentRenderer(state.createExpression(state.loader.toLocation(), StringUtils.trim(tag, 1), extensions), false));
 				return;
 
 			default:
@@ -701,7 +702,7 @@ public class TemplateLoader {
 		}
 
 		// Load the expression
-		final Expression expression = state.createExpression(state.loader.toLocation(), StringUtils.trim(tag, 0, tag.length()), extensions);
+		final Expression expression = state.createExpression(state.loader.toLocation(), StringUtils.trim(tag, 0), extensions);
 
 		if (!expression.isNamed()) {
 			// Default to parsing as a dynamic content tag

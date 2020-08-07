@@ -9,8 +9,8 @@ public class StringUtilTests {
 	public void testTrim() {
 		final String allWhitespaceString = " \t\n\r \u0085\u00A0\u202F"; // Escapes are space characters
 
-		Assert.assertEquals("", StringUtils.trim(allWhitespaceString, 0, allWhitespaceString.length()));
-		Assert.assertEquals("a", StringUtils.trim("\u202F\u202Fa\u202F\u202F", 0, 5)); // Escapes are space characters
+		Assert.assertEquals("", StringUtils.trim(allWhitespaceString, 0).string);
+		Assert.assertEquals("a", StringUtils.trim("\u202F\u202Fa\u202F\u202F", 0).string); // Escapes are space characters
 	}
 
 	private static void testNewLine(final String value, final int start, final int end) {
