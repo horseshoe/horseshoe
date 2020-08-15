@@ -3,9 +3,11 @@ package horseshoe.internal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import horseshoe.RenderContext;
 
@@ -25,8 +27,30 @@ public final class Operands {
 			}
 		} else if (left instanceof StringBuilder) {
 			return ((StringBuilder)left).append(right);
-		} else if (left instanceof Collection) {
+		} else if (left instanceof Set) {
 			if (right instanceof Collection) {
+				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
+
+				result.addAll((Collection<?>)right);
+				return result;
+			} else if (right instanceof Map) {
+				final Map<?, ?> rightMap = (Map<?, ?>)right;
+				final Map<Object, Object> result = new LinkedHashMap<>(rightMap.size());
+
+				for (final Object object : (Set<?>)left) {
+					result.put(object, object);
+				}
+
+				result.putAll(rightMap);
+				return result;
+			}
+		} else if (left instanceof Collection) {
+			if (right instanceof Set) {
+				final Set<Object> result = new LinkedHashSet<>((Collection<?>)left);
+
+				result.addAll((Set<?>)right);
+				return result;
+			} else if (right instanceof Collection) {
 				final Collection<?> leftCollection = (Collection<?>)left;
 				final Collection<?> rightCollection = (Collection<?>)right;
 				final List<Object> result = new ArrayList<>(leftCollection.size() + rightCollection.size());
@@ -152,6 +176,18 @@ public final class Operands {
 		if (left instanceof Number || left instanceof Character) {
 			if (right instanceof Number || right instanceof Character) {
 				return HorseshoeNumber.ofUnknown(left).subtract(HorseshoeNumber.ofUnknown(right));
+			}
+		} else if (left instanceof Set) {
+			if (right instanceof Collection) {
+				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
+
+				result.removeAll((Collection<?>)right);
+				return result;
+			} else if (right instanceof Map) {
+				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
+
+				result.removeAll(((Map<?, ?>)right).keySet());
+				return result;
 			}
 		} else if (left instanceof Collection) {
 			if (right instanceof Collection) {

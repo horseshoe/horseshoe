@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -58,11 +59,17 @@ public class OperandsTests {
 
 		assertEquals(Arrays.asList(1, 2, 3), Operands.add(Arrays.asList(1), Arrays.asList(2, 3)));
 		assertEquals(expectedMap, Operands.add(Arrays.asList(1), Collections.singletonMap(2, 3)));
+		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Operands.add(new LinkedHashSet<>(Arrays.asList(1)), Arrays.asList(2, 3)));
+		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Operands.add(Arrays.asList(1), new LinkedHashSet<>(Arrays.asList(2, 3, 1))));
+		assertEquals(expectedMap, Operands.add(new LinkedHashSet<>(Arrays.asList(1)), Collections.singletonMap(2, 3)));
 		assertEquals(expectedMap, Operands.add(Collections.singletonMap(1, 1), Collections.singletonMap(2, 3)));
 		assertEquals(expectedMap, Operands.add(Collections.singletonMap(2, 3), Arrays.asList(1)));
 
 		assertThrows(IllegalArgumentException.class, () -> Operands.add(Arrays.asList(1, 2, 3), null));
 		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, Arrays.asList(1, 2, 3)));
+
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(Collections.singleton(1), null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, Collections.singleton(1)));
 
 		assertThrows(IllegalArgumentException.class, () -> Operands.add(Collections.singletonMap(1, 2), null));
 		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, Collections.singletonMap(1, 2)));
@@ -275,11 +282,16 @@ public class OperandsTests {
 
 		assertEquals(Arrays.asList(1, 3), Operands.subtract(Arrays.asList(1, 2, 3), Arrays.asList(2)));
 		assertEquals(Arrays.asList(1, 3), Operands.subtract(Arrays.asList(1, 2, 3), Collections.singletonMap(2, 3)));
+		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 3)), Operands.subtract(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Arrays.asList(2)));
+		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 3)), Operands.subtract(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Collections.singletonMap(2, 3)));
 		assertEquals(Collections.singletonMap(1, 1), Operands.subtract(startingMap, Collections.singletonMap(2, 5)));
 		assertEquals(Collections.singletonMap(2, 3), Operands.subtract(startingMap, Arrays.asList(1, 3)));
 
 		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(Arrays.asList(1, 2, 3), null));
 		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, Arrays.asList(1, 2, 3)));
+
+		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(Collections.singleton(1), null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, Collections.singleton(1)));
 
 		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(Collections.singletonMap(1, 2), null));
 		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, Collections.singletonMap(1, 2)));

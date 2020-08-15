@@ -8,8 +8,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import horseshoe.Stack;
-
 import org.junit.Test;
 
 public class StackTests {

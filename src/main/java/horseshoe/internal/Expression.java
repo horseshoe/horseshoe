@@ -33,6 +33,7 @@ public final class Expression {
 	// Reflected Methods
 	private static final Constructor<?> ARRAY_LIST_CTOR_INT;
 	private static final Method ACCESSOR_LOOKUP;
+	private static final Method ACCESSOR_LOOKUP_RANGE;
 	private static final Method EXPRESSION_EVALUATE;
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING;
 	private static final Method HORSESHOE_INT_AND;
@@ -214,6 +215,7 @@ public final class Expression {
 		try {
 			ARRAY_LIST_CTOR_INT = ArrayList.class.getConstructor(int.class);
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
+			ACCESSOR_LOOKUP_RANGE = Accessor.class.getMethod("lookupRange", Object.class, Object.class, Object.class);
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", RenderContext.class, Object[].class);
 			HALT_EXCEPTION_CTOR_STRING = HaltRenderingException.class.getConstructor(String.class);
 			HORSESHOE_INT_AND = HorseshoeInt.class.getMethod("and", HorseshoeInt.class);
@@ -339,7 +341,7 @@ public final class Expression {
 	 * @return the last operator, which may be either null or a method call operator
 	 */
 	private static Operator parseIdentifier(final ParseState state, final Matcher matcher, final Operator lastOperator, final boolean lastNavigation) {
-		final String identifier = matcher.group("identifier");
+		final String identifierText = matcher.group("identifier");
 		final boolean isMethod = matcher.group("isMethod") != null;
 		int backreach = 0;
 		boolean isRoot = false;
@@ -354,7 +356,7 @@ public final class Expression {
 			if (prefixString != null) { // Currently only '/' and '\' are allowed as prefixes
 				isRoot = true;
 
-				if (isInternal || isMethod || (identifier.startsWith(".") && !".".equals(identifier))) {
+				if (isInternal || isMethod || (identifierText.startsWith(".") && !".".equals(identifierText))) {
 					throw new IllegalArgumentException("Invalid identifier with prefix \"" + prefixString + "\" (index " + state.getIndex(matcher) + ")");
 				}
 			} else {
@@ -364,7 +366,7 @@ public final class Expression {
 					backreach = backreachString.length() / 3;
 				} else if (matcher.group("current") == null) {
 					// Check for literals
-					switch (identifier) {
+					switch (identifierText) {
 						case "true":
 							state.operands.push(new Operand(boolean.class, new MethodBuilder().pushConstant(1)));
 							return null;
@@ -383,16 +385,16 @@ public final class Expression {
 		}
 
 		// Process the identifier
-		if (".".equals(identifier)) {
+		if (".".equals(identifierText)) {
 			if (isRoot) {
 				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE)));
 			} else {
 				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).addInvoke(STACK_PEEK)));
 			}
-		} else if ("..".equals(identifier)) {
+		} else if ("..".equals(identifierText)) {
 			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).addInvoke(STACK_PEEK)));
 		} else if (isInternal) { // Everything that starts with "." is considered internal
-			switch (identifier) {
+			switch (identifierText) {
 				case "hasNext":
 					state.operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).addInvoke(STACK_PEEK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_HAS_NEXT)));
 					break;
@@ -412,7 +414,7 @@ public final class Expression {
 					break;
 			}
 		} else if (isMethod) { // Process the method call
-			final String name = identifier.startsWith("`") ? identifier.substring(1, identifier.length() - 1).replace("``", "`") : identifier;
+			final String name = identifierText.startsWith("`") ? identifierText.substring(1, identifierText.length() - 1).replace("``", "`") : identifierText;
 
 			if (lastNavigation) {
 				// Create a new output formed by invoking identifiers[index].getValue(object, ...)
@@ -438,17 +440,18 @@ public final class Expression {
 				return state.operators.push(Operator.createMethod(name, !unstatedBackreach)).peek();
 			}
 		} else { // Process the identifier
-			final String name = identifier.startsWith("`") ? identifier.substring(1, identifier.length() - 1).replace("``", "`") : identifier;
+			final String name = identifierText.startsWith("`") ? identifierText.substring(1, identifierText.length() - 1).replace("``", "`") : identifierText;
 
 			if (lastNavigation) {
-				final int index = state.getIdentifierIndex(new Identifier(name));
+				final Identifier identifier = new Identifier(name);
+				final int index = state.getIdentifierIndex(identifier);
 
 				if (state.operators.pop().has(Operator.SAFE)) {
 					// Create a new output formed by invoking identifiers[index].getValue(object)
 					final Label end = state.operands.peek().builder.newLabel();
-					state.operands.push(new Operand(Object.class, state.operands.pop().toObject().addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
+					state.operands.push(new Operand(Object.class, identifier, state.operands.pop().toObject().addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
 				} else {
-					state.operands.push(new Operand(Object.class, state.operands.pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
+					state.operands.push(new Operand(Object.class, identifier, state.operands.pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
 				}
 			} else {
 				final Integer localBindingIndex = unstatedBackreach ? state.getLocalBinding(name) : null;
@@ -464,13 +467,14 @@ public final class Expression {
 				} else if (localBindingIndex != null) { // Check for a local binding
 					state.operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, localBindingIndex)));
 				} else { // Resolve the identifier
-					final int index = state.getIdentifierIndex(new Identifier(name));
+					final Identifier identifier = new Identifier(name);
+					final int index = state.getIdentifierIndex(identifier);
 
 					// Create a new output formed by invoking identifiers[index].getRootValue(context, access) or identifiers[index].findValue(context, backreach, access)
 					if (isRoot) {
-						state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_GET_ROOT_VALUE)));
+						state.operands.push(new Operand(Object.class, identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_GET_ROOT_VALUE)));
 					} else {
-						state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(unstatedBackreach ? Identifier.UNSTATED_BACKREACH : backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
+						state.operands.push(new Operand(Object.class, identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(unstatedBackreach ? Identifier.UNSTATED_BACKREACH : backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
 					}
 				}
 			}
@@ -726,21 +730,28 @@ public final class Expression {
 		final Operand left = operator.has(Operator.LEFT_EXPRESSION) ? state.operands.pop() : null;
 
 		switch (operator.getString()) {
-			// Array / Map Operations
+			// List / Set / Array / Map / String Lookup Operations
 			case "[":
 			case "?[?":
 				if (left != null) {
-					if (!Object.class.equals(left.type)) {
-						throw new IllegalArgumentException("Unexpected \"" + operator + "\" operator applied to " + left.type.getName() + ", expecting map or array type value");
+					final Operand subject = Entry.class.equals(right.type) ? state.operands.pop() : left;
+
+					if (!Object.class.equals(subject.type)) {
+						throw new IllegalArgumentException("Unexpected \"" + operator + "\" operator applied to " + subject.type.getName() + ", expecting list, map, set, or array type value");
 					}
 
-					final Label end = left.builder.newLabel();
+					final Label end = subject.builder.newLabel();
 
 					if (operator.has(Operator.SAFE)) {
-						left.builder.addCode(DUP).addBranch(IFNULL, end);
+						subject.builder.addCode(DUP).addBranch(IFNULL, end);
 					}
 
-					state.operands.push(new Operand(Object.class, left.builder.append(right.toObject()).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
+					if (Entry.class.equals(right.type)) {
+						state.operands.push(new Operand(Object.class, subject.builder.append(left.toObject()).append(right.toObject()).addInvoke(ACCESSOR_LOOKUP_RANGE).updateLabel(end)));
+					} else {
+						state.operands.push(new Operand(Object.class, subject.builder.append(right.toObject()).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
+					}
+
 					break;
 				} // Intentional fall-through if left is null
 			case "{": {
@@ -1013,7 +1024,13 @@ public final class Expression {
 			case "~@": { // Get class
 				final Label isNull = right.builder.newLabel();
 
-				state.operands.push(new Operand(Object.class, right.toObject().addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS).updateLabel(isNull)));
+				if (right.identifier != null) {
+					final Label notNull = right.builder.newLabel();
+					state.operands.push(new Operand(Object.class, right.toObject().addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addGoto(notNull, 0).updateLabel(isNull).addCode(POP).pushConstant(right.identifier.getName()).updateLabel(notNull).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS)));
+				} else {
+					state.operands.push(new Operand(Object.class, right.toObject().addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS).updateLabel(isNull)));
+				}
+
 				break;
 			}
 

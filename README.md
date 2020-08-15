@@ -197,9 +197,12 @@ Horseshoe expressions look a lot like expressions in modern programming language
 
 Multiple statements can be chained together inside an expression, using a semicolon (`;`) as a separator. A trailing semicolon at the end of the expression is not needed. A comma (`,`) is used to separate method parameters and list or map entries.
 
+#### Lists, Maps, and Sets
 Horseshoe expressions use `[]` for list / map literals or `{}` for set / map literals. Any list or set that contains a colon (`:`) separator is treated as a map. Entries in a map literal without a colon are treated as if the given item is used as both the key and the value.
 
-Commas can be used anywhere within an expression. If a comma is used in a context where it would otherwise not be allowed (`{{ 4, 5 }}`), the result is interpreted as if it were wrapped in `[]` to form a list or map map. These are considered auto-converted lists and maps.
+Commas can be used anywhere within an expression. If a comma is used in a context where it would otherwise not be allowed (`{{ 4, 5 }}`), the result is interpreted as if it were wrapped in `[]` to form a list or map. These are considered auto-converted lists and maps.
+
+Lists, maps, and sets can be added and subtracted to form new lists, maps, and sets (`[1, 2] + {2, 3, 4} - [3]`). They can be sliced by range (`list[1:2]`) or by another list, map, or set (`map[{1, 3, 'Apple'}]`) using the [lookup operator](#supported-operators).
 
 #### Integer Literals
 Integer literals are sequences of digits or `0x` followed by hexadecimal digits. The value can be prefixed with `-` or `+` to indicate sign and is parsed as a 32-bit signed integer. If the value does not fit into a 32-bit signed integer, or the literal is suffixed with `L` or `l`, then the value is parsed as a 64-bit signed integer. Octal and binary integer literals as well as underscores within integer literals are not supported.

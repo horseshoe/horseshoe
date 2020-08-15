@@ -29,7 +29,8 @@ final class Operand {
 	private static final Method HORSESHOE_NUMBER_OF_UNKNOWN;
 	private static final Method TO_STRING;
 
-	public final Class<?> type; // null indicates a stack with { long longVal, double doubleVal, int type } on top
+	public final Class<?> type;
+	public final Identifier identifier;
 	public final MethodBuilder builder;
 
 	static {
@@ -54,7 +55,19 @@ final class Operand {
 	 * @param builder the builder used to generate data of the specified type
 	 */
 	Operand(final Class<?> type, final MethodBuilder builder) {
+		this(type, null, builder);
+	}
+
+	/**
+	 * Creates a new operand of the specified type using the builder.
+	 *
+	 * @param type the type of the operand
+	 * @param identifier the identifier associated with the operand
+	 * @param builder the builder used to generate data of the specified type
+	 */
+	Operand(final Class<?> type, final Identifier identifier, final MethodBuilder builder) {
 		this.type = type;
+		this.identifier = identifier;
 		this.builder = builder;
 
 		assert ALLOWED_TYPES.contains(type);

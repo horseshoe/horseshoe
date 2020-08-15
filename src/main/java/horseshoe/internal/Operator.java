@@ -82,8 +82,8 @@ final class Operator {
 		operators.add(new Operator("{",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "Set / Map Literal", "}", 0, 0));
 		operators.add(new Operator("[",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "List / Map Literal", "]", 0, 0));
 		operators.add(new Operator("[:]",    0,  0, "Empty Map"));
-		operators.add(new Operator("[",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Lookup", "]", 0, 1));
-		operators.add(new Operator("?[?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | SAFE, "Safe Lookup", "]", 0, 1));
+		operators.add(new Operator("[",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS, "Lookup", "]", 0, 1));
+		operators.add(new Operator("?[?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS | SAFE, "Safe Lookup", "]", 0, 1));
 		operators.add(createMethod("(", true));
 		operators.add(new Operator("(",      0,  RIGHT_EXPRESSION, "Parentheses", ")", 0, 1));
 		operators.add(new Operator("~@",     0,  RIGHT_EXPRESSION, "Get Class"));

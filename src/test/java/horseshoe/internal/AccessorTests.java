@@ -1,11 +1,15 @@
 package horseshoe.internal;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 import horseshoe.Helper;
 import horseshoe.LoadException;
@@ -73,6 +77,26 @@ public class AccessorTests {
 
 	}
 
+	private static Map<Object, Object> asMap(final Object... values) {
+		final Map<Object, Object> map = new LinkedHashMap<>();
+
+		for (int i = 0; i < values.length; i += 2) {
+			map.put(values[i], values[i + 1]);
+		}
+
+		return map;
+	}
+
+	private static Set<Object> asSet(final Object... values) {
+		final Set<Object> set = new LinkedHashSet<>();
+
+		for (int i = 0; i < values.length; i++) {
+			set.add(values[i]);
+		}
+
+		return set;
+	}
+
 	@Test
 	public void testFields() throws IOException, LoadException {
 		assertEquals("", new TemplateLoader().load("Fields", "{{PrivateClassInstance.field}}").render(new Settings(), Helper.loadMap("PrivateClassInstance", new PrivateClass()), new java.io.StringWriter()).toString());
@@ -81,6 +105,22 @@ public class AccessorTests {
 	@Test
 	public void testInaccessibleMethod() throws IOException, LoadException {
 		assertEquals(ManagementFactory.getOperatingSystemMXBean().getArch(), new TemplateLoader().load("Inaccessible Method", "{{ManagementFactory.getOperatingSystemMXBean().getArch()}}").render(new Settings(), Helper.loadMap("ManagementFactory", ManagementFactory.class), new java.io.StringWriter()).toString());
+	}
+
+	@Test
+	public void testLookup() {
+		assertEquals(Arrays.asList(2, 3), Accessor.lookup(new int[] { 4, 2, 5, 3, 1 }, Arrays.asList(1, 3)));
+		assertEquals(Arrays.asList(2, 3), Accessor.lookup(Arrays.asList(4, 2, 5, 3, 1), Arrays.asList(1, 3)));
+		assertEquals(asMap(2, 7, 3, 8), Accessor.lookup(asMap(14, 9, 2, 7, 5, 10, 3, 8, 1, 6), Arrays.asList(2, 3, 4)));
+		assertEquals("Sam I am", Accessor.lookup("I am Sam", Arrays.asList(-3, -2, -1, -4, 0, 1, 2, 3)));
+		assertEquals('I', Accessor.lookup("I am Sam", 0));
+		assertEquals(asSet(2, 3), Accessor.lookup(asSet(14, 2, 5, 3, 1), Arrays.asList(2, 3, 4)));
+
+		assertArrayEquals(new int[] {2, 5, 3}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, 4));
+		assertEquals(Arrays.asList(2, 5, 3), Accessor.lookupRange(Arrays.asList(4, 2, 5, 3, 1), 1, 4));
+		assertEquals(asMap(2, 7, 3, 8), Accessor.lookupRange(asMap(14, 9, 2, 7, 5, 10, 3, 8, 1, 6), 2, 5));
+		assertEquals("Sam", Accessor.lookupRange("I am Sam!", -4, -1));
+		assertEquals(asSet(2, 3), Accessor.lookupRange(asSet(14, 2, 5, 3, 1), 2, 5));
 	}
 
 	@Test

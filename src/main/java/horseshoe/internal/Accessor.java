@@ -5,8 +5,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public abstract class Accessor {
 
@@ -75,14 +80,25 @@ public abstract class Accessor {
 
 	}
 
+	private static final class Range {
+		public final int start;
+		public final int end;
+
+		public Range(final int start, final int end, final int length) {
+			this.end = end < 0 ? Math.max(0, length + end) : Math.min(length, end);
+			this.start = start < 0 ? Math.max(0, Math.min(length + start, this.end)) : Math.min(this.end, start);
+		}
+	}
+
 	/**
-	 * Checks if the result is valid.
+	 * Calculates the index of a lookup. Negative values indicate an index from the end.
 	 *
-	 * @param result the result to check
-	 * @return true if the result is valid, otherwise false
+	 * @param size the size of the container
+	 * @param index the index to lookup
+	 * @return the calculated index
 	 */
-	public static boolean isValid(final Object result) {
-		return result != INVALID;
+	private static int calculateIndex(final int size, final int index) {
+		return index < 0 ? size + index : index;
 	}
 
 	/**
@@ -107,17 +123,54 @@ public abstract class Accessor {
 	}
 
 	/**
-	 * Looks up a value based on a map or array and the lookup operator.
+	 * Checks if the result is valid.
+	 *
+	 * @param result the result to check
+	 * @return true if the result is valid, otherwise false
+	 */
+	public static boolean isValid(final Object result) {
+		return result != INVALID;
+	}
+
+	/**
+	 * Looks up a value based on a map, array, list, set, or string and the lookup operand.
 	 *
 	 * @param context the context object to resolve
-	 * @param lookup the value within the context to resolve
+	 * @param lookup the value to lookup within the context
 	 * @return the result of the lookup
 	 */
 	public static Object lookup(final Object context, final Object lookup) {
 		if (context instanceof Map) {
-			return ((Map<?, ?>)context).get(lookup);
+			return lookupMap((Map<?, ?>)context, lookup);
 		} else if (context instanceof List) {
-			return ((List<?>)context).get(((Number)lookup).intValue());
+			return lookupList((List<?>)context, lookup);
+		} else if (context instanceof String) {
+			return lookupString((String)context, lookup);
+		} else if (context instanceof Set) {
+			return lookupSet((Set<?>)context, lookup);
+		}
+
+		return lookupArray(context, lookup);
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	@SuppressWarnings("unchecked")
+	private static Object lookupArray(final Object context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<Number> collection = (Collection<Number>)lookup;
+			final List<Object> list = new ArrayList<>(collection.size());
+
+			for (final Number number : collection) {
+				list.add(lookupArray(context, number.intValue()));
+			}
+
+			return list;
 		}
 
 		final Class<?> componentType = context.getClass().getComponentType();
@@ -141,6 +194,239 @@ public abstract class Accessor {
 		}
 
 		return ((short[])context)[((Number)lookup).intValue()];
+	}
+
+	/**
+	 * Looks up a value based on an array and a range.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param start the start of the range to lookup
+	 * @param end the end of the range to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArrayRange(final Object context, final int start, final int end) {
+		final Class<?> componentType = context.getClass().getComponentType();
+
+		if (!componentType.isPrimitive()) {
+			final Object[] array = (Object[])context;
+			final Range range = new Range(start, end, array.length);
+			return Arrays.copyOfRange(array, range.start, range.end);
+		} else if (int.class.equals(componentType)) {
+			final int[] array = (int[])context;
+			final Range range = new Range(start, end, array.length);
+			return Arrays.copyOfRange(array, range.start, range.end);
+		} else if (byte.class.equals(componentType)) {
+			final byte[] array = (byte[])context;
+			final Range range = new Range(start, end, array.length);
+			return Arrays.copyOfRange(array, range.start, range.end);
+		} else if (double.class.equals(componentType)) {
+			final double[] array = (double[])context;
+			final Range range = new Range(start, end, array.length);
+			return Arrays.copyOfRange(array, range.start, range.end);
+		} else if (boolean.class.equals(componentType)) {
+			final boolean[] array = (boolean[])context;
+			final Range range = new Range(start, end, array.length);
+			return Arrays.copyOfRange(array, range.start, range.end);
+		} else if (float.class.equals(componentType)) {
+			final float[] array = (float[])context;
+			final Range range = new Range(start, end, array.length);
+			return Arrays.copyOfRange(array, range.start, range.end);
+		} else if (long.class.equals(componentType)) {
+			final long[] array = (long[])context;
+			final Range range = new Range(start, end, array.length);
+			return Arrays.copyOfRange(array, range.start, range.end);
+		} else if (char.class.equals(componentType)) {
+			final char[] array = (char[])context;
+			final Range range = new Range(start, end, array.length);
+			return Arrays.copyOfRange(array, range.start, range.end);
+		}
+
+		final short[] array = (short[])context;
+		final Range range = new Range(start, end, array.length);
+		return Arrays.copyOfRange(array, range.start, range.end);
+	}
+
+	/**
+	 * Looks up a value based on a list and the lookup operand.
+	 *
+	 * @param context the list object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	@SuppressWarnings("unchecked")
+	private static Object lookupList(final List<?> context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<Number> collection = (Collection<Number>)lookup;
+			final List<Object> list = new ArrayList<>(collection.size());
+
+			for (final Number number : collection) {
+				list.add(context.get(calculateIndex(context.size(), number.intValue())));
+			}
+
+			return list;
+		}
+
+		return context.get(calculateIndex(context.size(), ((Number)lookup).intValue()));
+	}
+
+	/**
+	 * Looks up a value based on a list and a range.
+	 *
+	 * @param context the list object used to perform the lookup
+	 * @param start the start of the range to lookup
+	 * @param end the end of the range to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupListRange(final List<?> context, final int start, final int end) {
+		final Range range = new Range(start, end, context.size());
+		return new ArrayList<Object>(context.subList(range.start, range.end));
+	}
+
+	/**
+	 * Looks up a value based on a map and the lookup operand.
+	 *
+	 * @param context the map object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupMap(final Map<?, ?> context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final Map<Object, Object> map = new LinkedHashMap<>();
+
+			for (final Object object : collection) {
+				if (context.containsKey(object)) {
+					map.put(object, context.get(object));
+				}
+			}
+
+			return map;
+		}
+
+		return context.get(lookup);
+	}
+
+	/**
+	 * Looks up a value based on a map and a range.
+	 *
+	 * @param context the map object used to perform the lookup
+	 * @param start the start of the range to lookup
+	 * @param end the end of the range to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupMapRange(final Map<?, ?> context, final int start, final int end) {
+		final Map<Object, Object> map = new LinkedHashMap<>();
+
+		for (int i = start; i < end; i++) {
+			if (context.containsKey(i)) {
+				map.put(i, context.get(i));
+			}
+		}
+
+		return map;
+	}
+
+	/**
+	 * Looks up a value based on a map, array, list, set, or string and a range.
+	 *
+	 * @param context the context object to resolve
+	 * @param start the start of the range to lookup
+	 * @param end the end of the range to lookup
+	 * @return the result of the lookup
+	 */
+	public static Object lookupRange(final Object context, final Object start, final Object end) {
+		if (context instanceof Map) {
+			return lookupMapRange((Map<?, ?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+		} else if (context instanceof List) {
+			return lookupListRange((List<?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+		} else if (context instanceof String) {
+			return lookupStringRange((String)context, ((Number)start).intValue(), ((Number)end).intValue());
+		} else if (context instanceof Set) {
+			return lookupSetRange((Set<?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+		}
+
+		return lookupArrayRange(context, ((Number)start).intValue(), ((Number)end).intValue());
+	}
+
+	/**
+	 * Looks up a value based on a set and the lookup operand.
+	 *
+	 * @param context the set object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupSet(final Set<?> context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final Set<Object> set = new LinkedHashSet<>();
+
+			for (final Object object : collection) {
+				if (context.contains(object)) {
+					set.add(object);
+				}
+			}
+
+			return set;
+		}
+
+		return context.contains(lookup) ? lookup : null;
+	}
+
+	/**
+	 * Looks up a value based on a set and a range.
+	 *
+	 * @param context the set object used to perform the lookup
+	 * @param start the start of the range to lookup
+	 * @param end the end of the range to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupSetRange(final Set<?> context, final int start, final int end) {
+		final Set<Object> set = new LinkedHashSet<>();
+
+		for (int i = start; i < end; i++) {
+			if (context.contains(i)) {
+				set.add(i);
+			}
+		}
+
+		return set;
+	}
+
+	/**
+	 * Looks up a value based on a list and the lookup operand.
+	 *
+	 * @param context the list object used to perform the lookup
+	 * @param lookup the value to lookup within the list
+	 * @return the result of the lookup
+	 */
+	@SuppressWarnings("unchecked")
+	private static Object lookupString(final String context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<Number> collection = (Collection<Number>)lookup;
+			final char[] chars = new char[collection.size()];
+			int i = 0;
+
+			for (final Number number : collection) {
+				chars[i++] = context.charAt(calculateIndex(context.length(), number.intValue()));
+			}
+
+			return new String(chars);
+		}
+
+		return context.charAt(calculateIndex(context.length(), ((Number)lookup).intValue()));
+	}
+
+	/**
+	 * Looks up a value based on a string and a range.
+	 *
+	 * @param context the string used to perform the lookup
+	 * @param start the start of the range to lookup
+	 * @param end the end of the range to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupStringRange(final String context, final int start, final int end) {
+		final Range range = new Range(start, end, context.length());
+		return context.substring(range.start, range.end);
 	}
 
 	/**
