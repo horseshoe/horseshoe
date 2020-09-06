@@ -36,17 +36,6 @@ public final class Expression {
 	private static final Method ACCESSOR_LOOKUP_RANGE;
 	private static final Method EXPRESSION_EVALUATE;
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING;
-	private static final Method HORSESHOE_INT_AND;
-	private static final Method HORSESHOE_INT_NOT;
-	private static final Method HORSESHOE_INT_OR;
-	private static final Method HORSESHOE_INT_SHIFT_LEFT;
-	private static final Method HORSESHOE_INT_SHIFT_RIGHT;
-	private static final Method HORSESHOE_INT_SHIFT_RIGHT_ZERO;
-	private static final Method HORSESHOE_INT_XOR;
-	private static final Method HORSESHOE_NUMBER_DIVIDE;
-	private static final Method HORSESHOE_NUMBER_MULTIPLY;
-	private static final Method HORSESHOE_NUMBER_MODULO;
-	private static final Method HORSESHOE_NUMBER_NEGATE;
 	private static final Method IDENTIFIER_FIND_VALUE;
 	private static final Method IDENTIFIER_FIND_VALUE_METHOD;
 	private static final Method IDENTIFIER_GET_ROOT_VALUE;
@@ -61,8 +50,19 @@ public final class Expression {
 	private static final Method MAP_PUT;
 	private static final Method OBJECT_TO_STRING;
 	private static final Method OPERANDS_ADD;
+	private static final Method OPERANDS_AND;
+	private static final Method OPERANDS_DIVIDE;
 	private static final Method OPERANDS_GET_CLASS;
+	private static final Method OPERANDS_MULTIPLY;
+	private static final Method OPERANDS_MODULO;
+	private static final Method OPERANDS_NEGATE;
+	private static final Method OPERANDS_NOT;
+	private static final Method OPERANDS_OR;
+	private static final Method OPERANDS_SHIFT_LEFT;
+	private static final Method OPERANDS_SHIFT_RIGHT;
+	private static final Method OPERANDS_SHIFT_RIGHT_ZERO;
 	private static final Method OPERANDS_SUBTRACT;
+	private static final Method OPERANDS_XOR;
 	private static final Method PATTERN_COMPILE;
 	private static final Method RENDER_CONTEXT_GET_INDENTATION;
 	private static final Method RENDER_CONTEXT_GET_SECTION_DATA;
@@ -218,17 +218,6 @@ public final class Expression {
 			ACCESSOR_LOOKUP_RANGE = Accessor.class.getMethod("lookupRange", Object.class, Object.class, Object.class);
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", RenderContext.class, Object[].class);
 			HALT_EXCEPTION_CTOR_STRING = HaltRenderingException.class.getConstructor(String.class);
-			HORSESHOE_INT_AND = HorseshoeInt.class.getMethod("and", HorseshoeInt.class);
-			HORSESHOE_INT_NOT = HorseshoeInt.class.getMethod("not");
-			HORSESHOE_INT_OR = HorseshoeInt.class.getMethod("or", HorseshoeInt.class);
-			HORSESHOE_INT_SHIFT_LEFT = HorseshoeInt.class.getMethod("shiftLeft", HorseshoeInt.class);
-			HORSESHOE_INT_SHIFT_RIGHT = HorseshoeInt.class.getMethod("shiftRight", HorseshoeInt.class);
-			HORSESHOE_INT_SHIFT_RIGHT_ZERO = HorseshoeInt.class.getMethod("shiftRightZero", HorseshoeInt.class);
-			HORSESHOE_INT_XOR = HorseshoeInt.class.getMethod("xor", HorseshoeInt.class);
-			HORSESHOE_NUMBER_DIVIDE = HorseshoeNumber.class.getMethod("divide", HorseshoeNumber.class);
-			HORSESHOE_NUMBER_MULTIPLY = HorseshoeNumber.class.getMethod("multiply", HorseshoeNumber.class);
-			HORSESHOE_NUMBER_MODULO = HorseshoeNumber.class.getMethod("modulo", HorseshoeNumber.class);
-			HORSESHOE_NUMBER_NEGATE = HorseshoeNumber.class.getMethod("negate");
 			IDENTIFIER_FIND_VALUE = Identifier.class.getMethod("findValue", RenderContext.class, int.class);
 			IDENTIFIER_FIND_VALUE_METHOD = Identifier.class.getMethod("findValue", RenderContext.class, int.class, Object[].class);
 			IDENTIFIER_GET_ROOT_VALUE = Identifier.class.getMethod("getRootValue", RenderContext.class);
@@ -243,8 +232,19 @@ public final class Expression {
 			MAP_PUT = Map.class.getMethod("put", Object.class, Object.class);
 			OBJECT_TO_STRING = Object.class.getMethod("toString");
 			OPERANDS_ADD = Operands.class.getMethod("add", Object.class, Object.class);
+			OPERANDS_AND = Operands.class.getMethod("and", Number.class, Number.class);
+			OPERANDS_DIVIDE = Operands.class.getMethod("divide", Number.class, Number.class);
 			OPERANDS_GET_CLASS = Operands.class.getMethod("getClass", RenderContext.class, String.class);
+			OPERANDS_MULTIPLY = Operands.class.getMethod("multiply", Number.class, Number.class);
+			OPERANDS_MODULO = Operands.class.getMethod("modulo", Number.class, Number.class);
+			OPERANDS_NEGATE = Operands.class.getMethod("negate", Number.class);
+			OPERANDS_NOT = Operands.class.getMethod("not", Number.class);
+			OPERANDS_OR = Operands.class.getMethod("or", Number.class, Number.class);
+			OPERANDS_SHIFT_LEFT = Operands.class.getMethod("shiftLeft", Number.class, Number.class);
+			OPERANDS_SHIFT_RIGHT = Operands.class.getMethod("shiftRight", Number.class, Number.class);
+			OPERANDS_SHIFT_RIGHT_ZERO = Operands.class.getMethod("shiftRightZero", Number.class, Number.class);
 			OPERANDS_SUBTRACT = Operands.class.getMethod("subtract", Object.class, Object.class);
+			OPERANDS_XOR = Operands.class.getMethod("xor", Number.class, Number.class);
 			PATTERN_COMPILE = Pattern.class.getMethod("compile", String.class, int.class);
 			RENDER_CONTEXT_GET_INDENTATION = RenderContext.class.getMethod("getIndentation");
 			RENDER_CONTEXT_GET_SECTION_DATA = RenderContext.class.getMethod("getSectionData");
@@ -819,7 +819,7 @@ public final class Expression {
 			// Math Operations
 			case "+":
 				if (left == null) { // Unary +, basically do nothing except require a number
-					state.operands.push(new Operand(HorseshoeNumber.class, right.toNumeric(true)));
+					state.operands.push(new Operand(Double.class, right.toNumeric(true)));
 				} else if (StringBuilder.class.equals(left.type)) { // Check for string concatenation
 					state.operands.push(left).peek().builder.append(right.toObject()).addInvoke(STRING_BUILDER_APPEND_OBJECT);
 				} else if (String.class.equals(left.type) || String.class.equals(right.type) || StringBuilder.class.equals(right.type)) {
@@ -831,43 +831,43 @@ public final class Expression {
 				break;
 			case "-":
 				if (left == null) {
-					state.operands.push(new Operand(HorseshoeNumber.class, right.toNumeric(true).addInvoke(HORSESHOE_NUMBER_NEGATE)));
+					state.operands.push(new Operand(Double.class, right.toNumeric(true).addInvoke(OPERANDS_NEGATE)));
 				} else {
 					state.operands.push(new Operand(Object.class, left.toObject().append(right.toObject()).addInvoke(OPERANDS_SUBTRACT)));
 				}
 
 				break;
 			case "*":
-				state.operands.push(new Operand(HorseshoeNumber.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(HORSESHOE_NUMBER_MULTIPLY)));
+				state.operands.push(new Operand(Double.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(OPERANDS_MULTIPLY)));
 				break;
 			case "/":
-				state.operands.push(new Operand(HorseshoeNumber.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(HORSESHOE_NUMBER_DIVIDE)));
+				state.operands.push(new Operand(Double.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(OPERANDS_DIVIDE)));
 				break;
 			case "%":
-				state.operands.push(new Operand(HorseshoeNumber.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(HORSESHOE_NUMBER_MODULO)));
+				state.operands.push(new Operand(Double.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(OPERANDS_MODULO)));
 				break;
 
 			// Integral Operations
 			case "~":
-				state.operands.push(new Operand(HorseshoeInt.class, right.toNumeric(false).addInvoke(HORSESHOE_INT_NOT)));
+				state.operands.push(new Operand(Integer.class, right.toNumeric(false).addInvoke(OPERANDS_NOT)));
 				break;
 			case "<<":
-				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_SHIFT_LEFT)));
+				state.operands.push(new Operand(Integer.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(OPERANDS_SHIFT_LEFT)));
 				break;
 			case ">>":
-				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_SHIFT_RIGHT)));
+				state.operands.push(new Operand(Integer.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(OPERANDS_SHIFT_RIGHT)));
 				break;
 			case ">>>":
-				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_SHIFT_RIGHT_ZERO)));
+				state.operands.push(new Operand(Integer.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(OPERANDS_SHIFT_RIGHT_ZERO)));
 				break;
 			case "&":
-				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_AND)));
+				state.operands.push(new Operand(Integer.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(OPERANDS_AND)));
 				break;
 			case "^":
-				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_XOR)));
+				state.operands.push(new Operand(Integer.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(OPERANDS_XOR)));
 				break;
 			case "|":
-				state.operands.push(new Operand(HorseshoeInt.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(HORSESHOE_INT_OR)));
+				state.operands.push(new Operand(Integer.class, left.toNumeric(false).append(right.toNumeric(false)).addInvoke(OPERANDS_OR)));
 				break;
 
 			// Logical Operators

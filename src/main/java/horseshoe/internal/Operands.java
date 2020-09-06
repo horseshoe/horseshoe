@@ -1,5 +1,7 @@
 package horseshoe.internal;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -8,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import horseshoe.RenderContext;
 
@@ -23,7 +27,7 @@ public final class Operands {
 	public static Object add(final Object left, final Object right) {
 		if (left instanceof Number || left instanceof Character) {
 			if (right instanceof Number || right instanceof Character) {
-				return HorseshoeNumber.ofUnknown(left).add(HorseshoeNumber.ofUnknown(right));
+				return add(toNumeric(left), toNumeric(right));
 			}
 		} else if (left instanceof StringBuilder) {
 			return ((StringBuilder)left).append(right);
@@ -99,6 +103,48 @@ public final class Operands {
 	}
 
 	/**
+	 * Adds two numerics.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	private static Number add(final Number left, final Number right) {
+		if (left instanceof Long) {
+			if (right instanceof Double) {
+				return ((Long)left).longValue() + ((Double)right).doubleValue();
+			}
+
+			return ((Long)left).longValue() + right.longValue();
+		} else if (left instanceof Integer) {
+			if (right instanceof Long) {
+				return ((Integer)left).intValue() + ((Long)right).longValue();
+			} else if (right instanceof Integer) {
+				return ((Integer)left).intValue() + ((Integer)right).intValue();
+			}
+
+			return ((Integer)left).intValue() + ((Double)right).doubleValue();
+		}
+
+		return ((Double)left).doubleValue() + right.doubleValue();
+	}
+
+	/**
+	 * Performs a bitwise AND on two integral values.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Number and(final Number left, final Number right) {
+		if (left instanceof Integer && right instanceof Integer) {
+			return ((Integer)left).intValue() & ((Integer)right).intValue();
+		}
+
+		return left.longValue() & right.longValue();
+	}
+
+	/**
 	 * Compares two objects.
 	 *
 	 * @param equality true to test for equality, false to perform 3-way comparison
@@ -110,11 +156,11 @@ public final class Operands {
 	public static int compare(final boolean equality, final Object first, final Object second) {
 		if (first instanceof Number) {
 			if (second instanceof Number || second instanceof Character) {
-				return HorseshoeNumber.ofUnknown(first).compareTo(HorseshoeNumber.ofUnknown(second));
+				return compare(toNumeric(first), toNumeric(second));
 			}
 		} else if (first instanceof Character) {
 			if (second instanceof Number || second instanceof Character) {
-				return HorseshoeNumber.ofUnknown(first).compareTo(HorseshoeNumber.ofUnknown(second));
+				return compare(toNumeric(first), toNumeric(second));
 			} else if (second instanceof StringBuilder || second instanceof String) {
 				return first.toString().compareTo(second.toString());
 			}
@@ -135,14 +181,30 @@ public final class Operands {
 	}
 
 	/**
-	 * Gets the class of the specified name.
+	 * Compare two numerics.
 	 *
-	 * @param context the context used to get the class
-	 * @param name the name of the class to get
-	 * @return the class associated with the specified name
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
 	 */
-	public static Class<?> getClass(final RenderContext context, final String name) {
-		return context.getClass(name);
+	public static int compare(final Number left, final Number right) {
+		if (left instanceof Long) {
+			if (right instanceof Double) {
+				return Double.compare(((Long)left).longValue(), ((Double)right).doubleValue());
+			}
+
+			return Long.compare(((Long)left).longValue(), right.longValue());
+		} else if (left instanceof Integer) {
+			if (right instanceof Long) {
+				return Long.compare(((Integer)left).intValue(), ((Long)right).longValue());
+			} else if (right instanceof Integer) {
+				return Integer.compare(((Integer)left).intValue(), ((Integer)right).intValue());
+			}
+
+			return Double.compare(((Integer)left).intValue(), ((Double)right).doubleValue());
+		}
+
+		return Double.compare(((Double)left).doubleValue(), right.doubleValue());
 	}
 
 	/**
@@ -155,7 +217,13 @@ public final class Operands {
 		if (object == null) {
 			return false;
 		} else if (object instanceof Number) {
-			return HorseshoeNumber.ofUnknown(object).toBoolean();
+			final Number number = toNumeric(object);
+
+			if (number instanceof Double) {
+				return ((Double)number).doubleValue() != 0.0 && !((Double)number).isNaN();
+			}
+
+			return number.longValue() != 0;
 		} else if (object instanceof Boolean) {
 			return ((Boolean)object).booleanValue();
 		} else if (object instanceof Character) {
@@ -163,6 +231,188 @@ public final class Operands {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Divides two numerics.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Number divide(final Number left, final Number right) {
+		if (left instanceof Long) {
+			if (right instanceof Double) {
+				return ((Long)left).longValue() / ((Double)right).doubleValue();
+			}
+
+			return ((Long)left).longValue() / right.longValue();
+		} else if (left instanceof Integer) {
+			if (right instanceof Long) {
+				return ((Integer)left).intValue() / ((Long)right).longValue();
+			} else if (right instanceof Integer) {
+				return ((Integer)left).intValue() / ((Integer)right).intValue();
+			}
+
+			return ((Integer)left).intValue() / ((Double)right).doubleValue();
+		}
+
+		return ((Double)left).doubleValue() / right.doubleValue();
+	}
+
+	/**
+	 * Gets the class of the specified name.
+	 *
+	 * @param context the context used to get the class
+	 * @param name the name of the class to get
+	 * @return the class associated with the specified name
+	 */
+	public static Class<?> getClass(final RenderContext context, final String name) {
+		return context.getClass(name);
+	}
+
+	/**
+	 * Computes one numeric value modulo another numeric.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Number modulo(final Number left, final Number right) {
+		if (left instanceof Long) {
+			if (right instanceof Double) {
+				return ((Long)left).longValue() % ((Double)right).doubleValue();
+			}
+
+			return ((Long)left).longValue() % right.longValue();
+		} else if (left instanceof Integer) {
+			if (right instanceof Long) {
+				return ((Integer)left).intValue() % ((Long)right).longValue();
+			} else if (right instanceof Integer) {
+				return ((Integer)left).intValue() % ((Integer)right).intValue();
+			}
+
+			return ((Integer)left).intValue() % ((Double)right).doubleValue();
+		}
+
+		return ((Double)left).doubleValue() % right.doubleValue();
+	}
+
+	/**
+	 * Multiplies two numerics.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Number multiply(final Number left, final Number right) {
+		if (left instanceof Long) {
+			if (right instanceof Double) {
+				return ((Long)left).longValue() * ((Double)right).doubleValue();
+			}
+
+			return ((Long)left).longValue() * right.longValue();
+		} else if (left instanceof Integer) {
+			if (right instanceof Long) {
+				return ((Integer)left).intValue() * ((Long)right).longValue();
+			} else if (right instanceof Integer) {
+				return ((Integer)left).intValue() * ((Integer)right).intValue();
+			}
+
+			return ((Integer)left).intValue() * ((Double)right).doubleValue();
+		}
+
+		return ((Double)left).doubleValue() * right.doubleValue();
+	}
+
+	/**
+	 * Negates a numeric value.
+	 *
+	 * @param value the operand
+	 * @return the result of the operation
+	 */
+	public static Number negate(final Number value) {
+		if (value instanceof Long) {
+			return -((Long)value).longValue();
+		} else if (value instanceof Integer) {
+			return -((Integer)value).intValue();
+		}
+
+		return -((Double)value).doubleValue();
+	}
+
+	/**
+	 * Performs a bitwise OR on an integral value.
+	 *
+	 * @param value the operand
+	 * @return the result of the operation
+	 */
+	public static Number not(final Number value) {
+		if (value instanceof Integer) {
+			return ~((Integer)value).intValue();
+		}
+
+		return ~((Long)value).longValue();
+	}
+
+	/**
+	 * Performs a bitwise OR on two integral values.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Number or(final Number left, final Number right) {
+		if (left instanceof Integer && right instanceof Integer) {
+			return ((Integer)left).intValue() | ((Integer)right).intValue();
+		}
+
+		return left.longValue() | right.longValue();
+	}
+
+	/**
+	 * Performs a left shift on two integral values.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Number shiftLeft(final Number left, final Number right) {
+		if (left instanceof Integer) {
+			return ((Integer)left).intValue() << right.intValue();
+		}
+
+		return left.longValue() << right.intValue();
+	}
+
+	/**
+	 * Performs a right shift on two integral values.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Number shiftRight(final Number left, final Number right) {
+		if (left instanceof Integer) {
+			return ((Integer)left).intValue() >> right.intValue();
+		}
+
+		return left.longValue() >> right.intValue();
+	}
+
+	/**
+	 * Performs a right shift zero on two integral values.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Number shiftRightZero(final Number left, final Number right) {
+		if (left instanceof Integer) {
+			return ((Integer)left).intValue() >>> right.intValue();
+		}
+
+		return left.longValue() >>> right.intValue();
 	}
 
 	/**
@@ -175,7 +425,7 @@ public final class Operands {
 	public static Object subtract(final Object left, final Object right) {
 		if (left instanceof Number || left instanceof Character) {
 			if (right instanceof Number || right instanceof Character) {
-				return HorseshoeNumber.ofUnknown(left).subtract(HorseshoeNumber.ofUnknown(right));
+				return subtract(toNumeric(left), toNumeric(right));
 			}
 		} else if (left instanceof Set) {
 			if (right instanceof Collection) {
@@ -216,6 +466,94 @@ public final class Operands {
 		}
 
 		throw new IllegalArgumentException("Invalid objects cannot be subtracted: " + (left == null ? "null" : left.getClass().getName()) + " - " + (right == null ? "null" : right.getClass().getName()));
+	}
+
+	/**
+	 * Subtracts two numerics.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	private static Number subtract(final Number left, final Number right) {
+		if (left instanceof Long) {
+			if (right instanceof Double) {
+				return ((Long)left).longValue() - ((Double)right).doubleValue();
+			}
+
+			return ((Long)left).longValue() - right.longValue();
+		} else if (left instanceof Integer) {
+			if (right instanceof Long) {
+				return ((Integer)left).intValue() - ((Long)right).longValue();
+			} else if (right instanceof Integer) {
+				return ((Integer)left).intValue() - ((Integer)right).intValue();
+			}
+
+			return ((Integer)left).intValue() - ((Double)right).doubleValue();
+		}
+
+		return ((Double)left).doubleValue() - right.doubleValue();
+	}
+
+	/**
+	 * Converts an object to an integral value (either an Integer or Long).
+	 *
+	 * @param object the object to convert to an integral
+	 * @return the integral value
+	 */
+	public static Number toIntegral(final Object object) {
+		if (object instanceof Number) {
+			if (object instanceof Long || object instanceof Integer) {
+				return (Number)object;
+			} else if (object instanceof Byte || object instanceof Short || object instanceof AtomicInteger) {
+				return ((Number)object).intValue();
+			} else if (object instanceof BigInteger || object instanceof AtomicLong) {
+				return ((Number)object).longValue();
+			}
+		} else if (object instanceof Character) {
+			return (int)((Character)object).charValue();
+		}
+
+		throw new IllegalArgumentException("Unexpected " + (object == null ? "null" : object.getClass().getName()) + " value, expecting integral value");
+	}
+
+	/**
+	 * Converts an object to a numeric value (either an Integer, Long, or Double).
+	 *
+	 * @param object the object to convert to a numeric
+	 * @return the numeric value
+	 */
+	public static Number toNumeric(final Object object) {
+		if (object instanceof Number) {
+			if (object instanceof Long || object instanceof Integer || object instanceof Double) {
+				return (Number)object;
+			} else if (object instanceof Float || object instanceof BigDecimal) {
+				return ((Number)object).doubleValue();
+			} else if (object instanceof Byte || object instanceof Short || object instanceof AtomicInteger) {
+				return ((Number)object).intValue();
+			} else if (object instanceof BigInteger || object instanceof AtomicLong) {
+				return ((Number)object).longValue();
+			}
+		} else if (object instanceof Character) {
+			return (int)((Character)object).charValue();
+		}
+
+		throw new IllegalArgumentException("Unexpected " + (object == null ? "null" : object.getClass().getName()) + " value, expecting numeric value");
+	}
+
+	/**
+	 * Performs a bitwise XOR on two integral values.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Number xor(final Number left, final Number right) {
+		if (left instanceof Integer && right instanceof Integer) {
+			return ((Integer)left).intValue() ^ ((Integer)right).intValue();
+		}
+
+		return left.longValue() ^ right.longValue();
 	}
 
 	private Operands() {

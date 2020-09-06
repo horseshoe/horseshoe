@@ -302,6 +302,7 @@ public class ExpressionTests {
 		assertEquals((((10 | 2) ^ 2) >> 2) << 10, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(((+r | i2) ^ 2) >> 2) << r", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());
 		assertEquals((9999999999L >>> (9999999999L & 10)) + -10 + (9999999999L >>> 10), ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(bigNum >>> (bigNum & r)) + -r + (bigNum >> r)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());
 		assertEquals(~(0 - +2) - -3, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "~(0 - +2) - -3", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());
+		assertEquals("name", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "a = 'prefix:name'; a.substring(a.indexOf(':') + 1)", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
 	}
 
 	@Test

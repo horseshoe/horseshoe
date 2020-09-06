@@ -90,10 +90,34 @@ public class OperandsTests {
 		assertNotEquals(0, Operands.compare(false, new Object(), new Object()));
 	}
 
+	@SuppressWarnings("serial")
 	@Test
-	public void testBadHorseshoeNumber() throws ReflectiveOperationException {
-		assertThrows(IllegalArgumentException.class, () -> HorseshoeNumber.ofUnknown(null));
-		assertThrows(IllegalArgumentException.class, () -> HorseshoeNumber.ofUnknown("Bad"));
+	public void testBadNumbers() throws ReflectiveOperationException {
+		assertThrows(IllegalArgumentException.class, () -> Operands.toNumeric(null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.toNumeric("Bad"));
+		assertThrows(IllegalArgumentException.class, () -> Operands.toNumeric(new Number() {
+			@Override
+			public int intValue() {
+				return 0;
+			}
+
+			@Override
+			public long longValue() {
+				return 0;
+			}
+
+			@Override
+			public float floatValue() {
+				return 0;
+			}
+
+			@Override
+			public double doubleValue() {
+				return 0;
+			}
+		}));
+		assertThrows(IllegalArgumentException.class, () -> Operands.toIntegral(null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.toIntegral(5.6));
 	}
 
 	@Test
@@ -157,99 +181,92 @@ public class OperandsTests {
 	public void testDivide() {
 		for (int i = 0; i < numbers.length; i++) {
 			for (int j = 0; j < numbers.length; j++) {
-				assertEquals(numbers[i].doubleValue() / numbers[j].doubleValue(), HorseshoeNumber.ofUnknown(numbers[i]).divide(HorseshoeNumber.ofUnknown(numbers[j])).doubleValue(), Math.abs(numbers[i].doubleValue() / numbers[j].doubleValue() - numbers[i].longValue() / numbers[j].longValue()) + 0.0001);
+				assertEquals(numbers[i].doubleValue() / numbers[j].doubleValue(), Operands.divide(Operands.toNumeric(numbers[i]), Operands.toNumeric(numbers[j])).doubleValue(), Math.abs(numbers[i].doubleValue() / numbers[j].doubleValue() - numbers[i].longValue() / numbers[j].longValue()) + 0.0001);
 			}
 
-			assertEquals(numbers[i].doubleValue() / ' ', HorseshoeNumber.ofUnknown(numbers[i]).divide(HorseshoeNumber.ofUnknown(' ')).doubleValue(), Math.abs((numbers[i].doubleValue() / ' ') % 1.0) + 0.0001);
-			assertEquals(' ' / numbers[i].doubleValue(), HorseshoeNumber.ofUnknown(' ').divide(HorseshoeNumber.ofUnknown(numbers[i])).doubleValue(), Math.abs((' ' / numbers[i].doubleValue()) % 1.0) + 0.0001);
+			assertEquals(numbers[i].doubleValue() / ' ', Operands.divide(Operands.toNumeric(numbers[i]), Operands.toNumeric(' ')).doubleValue(), Math.abs((numbers[i].doubleValue() / ' ') % 1.0) + 0.0001);
+			assertEquals(' ' / numbers[i].doubleValue(), Operands.divide(Operands.toNumeric(' '), Operands.toNumeric(numbers[i])).doubleValue(), Math.abs((' ' / numbers[i].doubleValue()) % 1.0) + 0.0001);
 		}
 
-		assertEquals(' ' / ' ', HorseshoeNumber.ofUnknown(' ').divide(HorseshoeNumber.ofUnknown(' ')).intValue());
+		assertEquals(' ' / ' ', Operands.divide(Operands.toNumeric(' '), Operands.toNumeric(' ')).intValue());
 	}
 
 	@Test
-	public void testHorseshoeFloat() {
-		assertEquals(5, HorseshoeFloat.of(5.6).intValue());
-		assertEquals(5, HorseshoeFloat.of(5.6).longValue());
-		assertEquals(5.6f, HorseshoeFloat.of(5.6).floatValue(), 0);
-		assertEquals(-5.6f, HorseshoeFloat.of(5.6).negate().floatValue(), 0);
-		assertEquals(HorseshoeFloat.of(5.6), HorseshoeFloat.of(5.6));
-		assertNotEquals(HorseshoeFloat.of(5.7), HorseshoeFloat.of(5.6));
-		assertNotEquals(HorseshoeFloat.of(5.6), "5.6");
-		assertEquals(HorseshoeInt.of(5), HorseshoeFloat.of(5));
-		assertEquals(HorseshoeFloat.of(5).hashCode(), HorseshoeFloat.of(5).hashCode());
-		assertTrue(HorseshoeFloat.of(5.6).toBoolean());
-		assertFalse(HorseshoeFloat.of(0).toBoolean());
-		assertFalse(HorseshoeFloat.of(Double.NaN).toBoolean());
+	public void testFloatingPointUnaryOperations() {
+		for (int i = 0; i < numbers.length; i++) {
+			assertEquals(-numbers[i].doubleValue(), Operands.negate(Operands.toNumeric(numbers[i])).doubleValue(), 0.0);
+		}
+
+		assertTrue(Operands.convertToBoolean(Operands.toNumeric(5.6)));
+		assertFalse(Operands.convertToBoolean(Operands.toNumeric(0)));
+		assertFalse(Operands.convertToBoolean(Operands.toNumeric(Double.NaN)));
 	}
 
 	@Test
-	public void testHorseshoeInt() {
+	public void testIntegralOperations() {
 		for (final Number number : new Number[] { (byte)1, (short)2, 3, 4L, BigInteger.valueOf(8), new AtomicInteger(33), new AtomicLong(34L) }) {
-			assertEquals(number.intValue(), HorseshoeInt.ofUnknown(number).longValue());
+			assertEquals(number.intValue(), Operands.toIntegral(number).longValue());
+			assertEquals(~number.intValue(), Operands.not(Operands.toIntegral(number)).intValue());
 		}
 
-		assertEquals(' ', HorseshoeInt.ofUnknown(' ').longValue());
-		assertThrows(IllegalArgumentException.class, () -> HorseshoeInt.ofUnknown(null));
-		assertThrows(IllegalArgumentException.class, () -> HorseshoeInt.ofUnknown(5.6));
-
-		assertEquals(-5, HorseshoeInt.of(-5).intValue());
-		assertEquals(-5, HorseshoeInt.of(-5L).intValue());
-		assertEquals(-5f, HorseshoeInt.of(-5).floatValue(), 0);
-		assertEquals(-5f, HorseshoeInt.of(-5L).floatValue(), 0);
-		assertEquals(1, HorseshoeInt.of(3).and(HorseshoeInt.of(-3)).intValue());
-		assertEquals(1, HorseshoeInt.of(3).and(HorseshoeInt.of(-3)).longValue());
-		assertEquals(1, HorseshoeInt.of(3).and(HorseshoeInt.of(-3L)).intValue());
-		assertEquals(1, HorseshoeInt.of(3).and(HorseshoeInt.of(-3L)).longValue());
-		assertEquals(-3, HorseshoeInt.of(-4).or(HorseshoeInt.of(1)).intValue());
-		assertEquals(-3, HorseshoeInt.of(-4).or(HorseshoeInt.of(1)).longValue());
-		assertEquals(-3, HorseshoeInt.of(-4).or(HorseshoeInt.of(1L)).intValue());
-		assertEquals(-3, HorseshoeInt.of(-4).or(HorseshoeInt.of(1L)).longValue());
-		assertEquals(1 << 31, HorseshoeInt.of(3).shiftLeft(HorseshoeInt.of(31L)).longValue());
-		assertEquals(3L << 31, HorseshoeInt.of(3L).shiftLeft(HorseshoeInt.of(31)).longValue());
-		assertEquals(-1 >>> 31, HorseshoeInt.of(-1).shiftRightZero(HorseshoeInt.of(31L)).longValue());
-		assertEquals(-1L >>> 31, HorseshoeInt.of(-1L).shiftRightZero(HorseshoeInt.of(31)).longValue());
-		assertEquals(2, HorseshoeInt.of(3).xor(HorseshoeInt.of(1)).intValue());
-		assertEquals(2, HorseshoeInt.of(3).xor(HorseshoeInt.of(1)).longValue());
-		assertEquals(2, HorseshoeInt.of(3).xor(HorseshoeInt.of(1L)).intValue());
-		assertEquals(2, HorseshoeInt.of(3).xor(HorseshoeInt.of(1L)).longValue());
-		assertEquals(HorseshoeInt.of(5).hashCode(), HorseshoeInt.of(5).hashCode());
-		assertEquals(HorseshoeInt.of(5), HorseshoeInt.of(5));
-		assertNotEquals(HorseshoeInt.of(5), HorseshoeInt.of(4));
-		assertEquals(HorseshoeInt.of(5), HorseshoeFloat.of(5));
-		assertNotEquals(HorseshoeInt.of(5), HorseshoeFloat.of(5.6));
-		assertNotEquals(HorseshoeInt.of(5), HorseshoeFloat.of(4));
-		assertNotEquals(HorseshoeInt.of(5), "5");
-		assertTrue(HorseshoeInt.of(1L).toBoolean());
-		assertFalse(HorseshoeInt.of(0).toBoolean());
+		assertEquals(' ', Operands.toIntegral(' ').longValue());
+		assertEquals(-5, Operands.toIntegral(-5).intValue());
+		assertEquals(-5, Operands.toIntegral(-5L).intValue());
+		assertEquals(-5f, Operands.toIntegral(-5).floatValue(), 0);
+		assertEquals(-5f, Operands.toIntegral(-5L).floatValue(), 0);
+		assertEquals(1, Operands.and(Operands.toIntegral(3), Operands.toIntegral(-3)).intValue());
+		assertEquals(1, Operands.and(Operands.toIntegral(3), Operands.toIntegral(-3)).longValue());
+		assertEquals(1, Operands.and(Operands.toIntegral(3), Operands.toIntegral(-3L)).intValue());
+		assertEquals(1, Operands.and(Operands.toIntegral(3), Operands.toIntegral(-3L)).longValue());
+		assertEquals(-3, Operands.or(Operands.toIntegral(-4), Operands.toIntegral(1)).intValue());
+		assertEquals(-3, Operands.or(Operands.toIntegral(-4L), Operands.toIntegral(1)).longValue());
+		assertEquals(-3, Operands.or(Operands.toIntegral(-4), Operands.toIntegral(1L)).intValue());
+		assertEquals(-3, Operands.or(Operands.toIntegral(-4), Operands.toIntegral(1L)).longValue());
+		assertEquals(1 << 31, Operands.shiftLeft(Operands.toIntegral(3), Operands.toIntegral(31L)).longValue());
+		assertEquals(3L << 31, Operands.shiftLeft(Operands.toIntegral(3L), Operands.toIntegral(31)).longValue());
+		assertEquals(-1 >>> 31, Operands.shiftRightZero(Operands.toIntegral(-1), Operands.toIntegral(31L)).longValue());
+		assertEquals(-1L >>> 31, Operands.shiftRightZero(Operands.toIntegral(-1L), Operands.toIntegral(31)).longValue());
+		assertEquals(2, Operands.xor(Operands.toIntegral(3), Operands.toIntegral(1)).intValue());
+		assertEquals(2, Operands.xor(Operands.toIntegral(3L), Operands.toIntegral(1)).longValue());
+		assertEquals(2, Operands.xor(Operands.toIntegral(3), Operands.toIntegral(1L)).intValue());
+		assertEquals(2, Operands.xor(Operands.toIntegral(3), Operands.toIntegral(1L)).longValue());
+		assertEquals(Operands.toIntegral(5).hashCode(), Operands.toIntegral(5).hashCode());
+		assertEquals(Operands.toIntegral(5), Operands.toIntegral(5));
+		assertNotEquals(Operands.toIntegral(5), Operands.toIntegral(4));
+		assertEquals(Operands.toIntegral(5), Operands.toNumeric(5));
+		assertNotEquals(Operands.toIntegral(5), Operands.toNumeric(5.6));
+		assertNotEquals(Operands.toIntegral(5), Operands.toNumeric(4));
+		assertNotEquals(Operands.toIntegral(5), "5");
+		assertTrue(Operands.convertToBoolean(Operands.toIntegral(1L)));
+		assertFalse(Operands.convertToBoolean(Operands.toIntegral(0)));
 	}
 
 	@Test
 	public void testMultiply() {
 		for (int i = 0; i < numbers.length; i++) {
 			for (int j = 0; j < numbers.length; j++) {
-				assertEquals(numbers[i].doubleValue() * numbers[j].doubleValue(), HorseshoeNumber.ofUnknown(numbers[i]).multiply(HorseshoeNumber.ofUnknown(numbers[j])).doubleValue(), 0.0001);
+				assertEquals(numbers[i].doubleValue() * numbers[j].doubleValue(), Operands.multiply(Operands.toNumeric(numbers[i]), Operands.toNumeric(numbers[j])).doubleValue(), 0.0001);
 			}
 
-			assertEquals(numbers[i].doubleValue() * ' ', HorseshoeNumber.ofUnknown(numbers[i]).multiply(HorseshoeNumber.ofUnknown(' ')).doubleValue(), 0.0001);
-			assertEquals(' ' * numbers[i].doubleValue(), HorseshoeNumber.ofUnknown(' ').multiply(HorseshoeNumber.ofUnknown(numbers[i])).doubleValue(), 0.0001);
+			assertEquals(numbers[i].doubleValue() * ' ', Operands.multiply(Operands.toNumeric(numbers[i]), Operands.toNumeric(' ')).doubleValue(), 0.0001);
+			assertEquals(' ' * numbers[i].doubleValue(), Operands.multiply(Operands.toNumeric(' '), Operands.toNumeric(numbers[i])).doubleValue(), 0.0001);
 		}
 
-		assertEquals(' ' * ' ', HorseshoeNumber.ofUnknown(' ').multiply(HorseshoeNumber.ofUnknown(' ')).intValue());
+		assertEquals(' ' * ' ', Operands.multiply(Operands.toNumeric(' '), Operands.toNumeric(' ')).intValue());
 	}
 
 	@Test
 	public void testModulo() {
 		for (int i = 0; i < numbers.length; i++) {
 			for (int j = 0; j < numbers.length; j++) {
-				assertEquals(numbers[i].doubleValue() % numbers[j].doubleValue(), HorseshoeNumber.ofUnknown(numbers[i]).modulo(HorseshoeNumber.ofUnknown(numbers[j])).doubleValue(), 0.0001);
+				assertEquals(numbers[i].doubleValue() % numbers[j].doubleValue(), Operands.modulo(Operands.toNumeric(numbers[i]), Operands.toNumeric(numbers[j])).doubleValue(), 0.0001);
 			}
 
-			assertEquals(numbers[i].doubleValue() % ' ', HorseshoeNumber.ofUnknown(numbers[i]).modulo(HorseshoeNumber.ofUnknown(' ')).doubleValue(), 0.0001);
-			assertEquals(' ' % numbers[i].doubleValue(), HorseshoeNumber.ofUnknown(' ').modulo(HorseshoeNumber.ofUnknown(numbers[i])).doubleValue(), 0.0001);
+			assertEquals(numbers[i].doubleValue() % ' ', Operands.modulo(Operands.toNumeric(numbers[i]), Operands.toNumeric(' ')).doubleValue(), 0.0001);
+			assertEquals(' ' % numbers[i].doubleValue(), Operands.modulo(Operands.toNumeric(' '), Operands.toNumeric(numbers[i])).doubleValue(), 0.0001);
 		}
 
-		assertEquals(' ' % ' ', HorseshoeNumber.ofUnknown(' ').modulo(HorseshoeNumber.ofUnknown(' ')).intValue());
+		assertEquals(' ' % ' ', Operands.modulo(Operands.toNumeric(' '), Operands.toNumeric(' ')).intValue());
 	}
 
 	@Test

@@ -17,31 +17,34 @@ import horseshoe.internal.MethodBuilder.Label;
 final class Operand {
 
 	private static final Set<Class<?>> ALLOWED_TYPES = Collections.unmodifiableSet(new HashSet<Class<?>>(Arrays.asList(
-			boolean.class, int.class, long.class, double.class, HorseshoeNumber.class, HorseshoeInt.class, Object.class, String.class, StringBuilder.class, Entry.class)));
+			boolean.class, int.class, long.class, double.class, Double.class, Integer.class, Object.class, String.class, StringBuilder.class, Entry.class)));
 
 	// Reflected Methods
 	private static final Method COMPARE;
 	private static final Method CONVERT_TO_BOOLEAN;
-	private static final Method HORSESHOE_FLOAT_OF_DOUBLE;
-	private static final Method HORSESHOE_INT_OF_LONG;
-	private static final Method HORSESHOE_INT_OF_INT;
-	private static final Method HORSESHOE_INT_OF_UNKNOWN;
-	private static final Method HORSESHOE_NUMBER_OF_UNKNOWN;
+	private static final Method TO_INTEGRAL;
+	private static final Method TO_NUMERIC;
 	private static final Method TO_STRING;
 
+	/**
+	 * The type associated with the operand.
+	 * NOTE: A class of {@code Double} indicates any potential floating-point {@code Number}, and a class of {@code Integer} indicates any potential integral {@code Number} (including {@code Long}).
+	 */
 	public final Class<?> type;
+
+	/**
+	 * The identifier associated with the operand if one exists, otherwise null.
+	 */
 	public final Identifier identifier;
+
 	public final MethodBuilder builder;
 
 	static {
 		try {
 			COMPARE = Operands.class.getMethod("compare", boolean.class, Object.class, Object.class);
 			CONVERT_TO_BOOLEAN = Operands.class.getMethod("convertToBoolean", Object.class);
-			HORSESHOE_FLOAT_OF_DOUBLE = HorseshoeFloat.class.getMethod("of", double.class);
-			HORSESHOE_INT_OF_LONG = HorseshoeInt.class.getMethod("of", long.class);
-			HORSESHOE_INT_OF_INT = HorseshoeInt.class.getMethod("of", int.class);
-			HORSESHOE_INT_OF_UNKNOWN = HorseshoeInt.class.getMethod("ofUnknown", Object.class);
-			HORSESHOE_NUMBER_OF_UNKNOWN = HorseshoeNumber.class.getMethod("ofUnknown", Object.class);
+			TO_INTEGRAL = Operands.class.getMethod("toIntegral", Object.class);
+			TO_NUMERIC = Operands.class.getMethod("toNumeric", Object.class);
 			TO_STRING = Object.class.getMethod("toString");
 		} catch (final ReflectiveOperationException e) {
 			throw new ExceptionInInitializerError("Failed to get required class member: " + e.getMessage());
@@ -114,24 +117,24 @@ final class Operand {
 				return builder.addThrow(IllegalArgumentException.class, "Unexpected boolean value, expecting numeric value", 0);
 			} else if (double.class.equals(type)) {
 				if (allowFloating) {
-					return builder.addInvoke(HORSESHOE_FLOAT_OF_DOUBLE);
+					return builder.addPrimitiveConversion(type, Number.class);
 				}
 
 				return builder.addThrow(IllegalArgumentException.class, "Unexpected " + type.getSimpleName() + " value, expecting integral value", 1);
 			} else if (long.class.equals(type)) {
-				return builder.addInvoke(HORSESHOE_INT_OF_LONG);
+				return builder.addPrimitiveConversion(type, Number.class);
 			} else if (int.class.equals(type)) {
-				return builder.addInvoke(HORSESHOE_INT_OF_INT);
+				return builder.addPrimitiveConversion(type, Number.class);
 			}
-		} else if (HorseshoeInt.class.equals(type) || (allowFloating && HorseshoeNumber.class.equals(type))) {
+		} else if (Integer.class.equals(type) || (allowFloating && Double.class.equals(type))) {
 			return builder;
 		}
 
 		if (allowFloating) {
-			return builder.addInvoke(HORSESHOE_NUMBER_OF_UNKNOWN);
+			return builder.addInvoke(TO_NUMERIC);
 		}
 
-		return builder.addInvoke(HORSESHOE_INT_OF_UNKNOWN);
+		return builder.addInvoke(TO_INTEGRAL);
 	}
 
 	/**
