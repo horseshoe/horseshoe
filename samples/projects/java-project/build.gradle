@@ -1,0 +1,16 @@
+plugins {
+	id 'java'
+	id 'application'
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation project(':horseshoe')
+}
+
+application {
+	mainClassName = 'example.Runner'
+}

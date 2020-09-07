@@ -29,7 +29,7 @@ public class RunnerTests {
 
 	@Test (expected = Test.None.class) // No exception expected
 	public void generateExampleResults() throws IOException {
-		Files.walk(Paths.get("samples"), 1)
+		Files.walk(Paths.get("samples/data"), 1)
 				.filter(path -> path.toString().endsWith(".U"))
 				.forEach(path -> {
 					final Path dataFile = path.resolveSibling(path.getFileName().toString().replace(".U", ".data"));
@@ -151,7 +151,7 @@ public class RunnerTests {
 
 	@Test (expected = Test.None.class) // No exception expected
 	public void testJson() throws IOException {
-		assertEquals(0L, Files.walk(Paths.get("samples/json"))
+		assertEquals(0L, Files.walk(Paths.get("samples/data/json"))
 				.filter(path -> path.toString().endsWith(".json"))
 				.filter(path -> {
 					final String fileName = path.getFileName().toString();

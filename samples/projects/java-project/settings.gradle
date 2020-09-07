@@ -1,0 +1,4 @@
+rootProject.name = 'horseshoe-example-project'
+
+include 'horseshoe'
+project(':horseshoe').projectDir = file('../../../')

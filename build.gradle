@@ -12,6 +12,7 @@ repositories {
 }
 
 checkstyle {
+	configDirectory = file("${projectDir}/config/checkstyle")
 	toolVersion = 'latest.release'
 }
 
