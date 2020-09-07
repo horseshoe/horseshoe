@@ -366,10 +366,10 @@ public class ExpressionTests {
 		assertNull(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "b == 0 ? (a = 1) : 4; a", Collections.emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
 
 		{
-			final int length = 2000;
+			final int length = 250;
 			final ArrayList<Object> result = new ArrayList<>(length);
-			final StringBuilder sb = new StringBuilder("");
-			final StringBuilder resultSB = new StringBuilder("[");
+			final StringBuilder sb = new StringBuilder(length * 7);
+			final StringBuilder resultSB = new StringBuilder(length * 5).append("[");
 
 			for (int i = 0; i < length; i++) {
 				result.add(i, i);

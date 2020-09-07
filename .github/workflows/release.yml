@@ -20,14 +20,14 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
 
-    - name: Build Docker Image
-      run: docker build . --file Dockerfile --tag horseshoe
-
-    - name: Test Docker Image
-      run: docker run --rm -t horseshoe
-
     - name: Upload Artifacts
       uses: fnkr/github-action-ghr@v1.3
       env:
         GHR_PATH: build/libs
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build Docker Image
+      run: docker build . --file Dockerfile --tag horseshoe
+
+    - name: Test Docker Image
+      run: docker run --rm -t horseshoe

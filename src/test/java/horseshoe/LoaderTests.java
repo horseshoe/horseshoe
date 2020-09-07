@@ -79,12 +79,12 @@ public class LoaderTests {
 		try (final Loader loader = new Loader("ReaderTest", reader)) {
 			reader.toRead = 8;
 
-			for (int i = 0; i < 8_000; i++) {
+			for (int i = 0; i < 64; i++) {
 				final String read = loader.next(StringPartReader.DELIMITER);
 				assertEquals(reader.lastRead, read);
 			}
 
-			for (int i = 0; i < 800; i++) {
+			for (int i = 0; i < 16; i++) {
 				reader.toRead = (1 << RAND.nextInt(16)) + RAND.nextInt(8 * 1024);
 				final String read = loader.next(StringPartReader.DELIMITER);
 				assertEquals(reader.lastRead, read);
