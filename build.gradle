@@ -107,7 +107,7 @@ publishing {
 				def repoUrl = System.getenv('GITHUB_SERVER_URL') + "/${repository}"
 				def baseRepoUrl = repoUrl.substring('https://'.length())
 				name = 'Horseshoe'
-				description = 'Horseshoe for Java'
+				description = 'Horseshoe for Java is a templating system used to generate source code and other dynamic content from a template and organized data. It uses a Mustache-like syntax with extended expressions for dynamic data manipulation.'
 				url = repoUrl
 				organization {
 					name = group

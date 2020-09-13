@@ -2,7 +2,7 @@ FROM ubuntu AS build
 COPY . /usr/src/horseshoe
 WORKDIR /usr/src/horseshoe
 RUN apt-get update && \
-	DEBIAN_FRONTEND=noninteractive apt-get install -y default-jdk git && \
+	DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends default-jdk git && \
 	rm -rf /var/lib/apt/lists/*
 RUN ./gradlew jar && \
 	rm build/libs/*-javadoc.jar build/libs/*-sources.jar

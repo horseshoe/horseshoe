@@ -1,5 +1,5 @@
 # Horseshoe
-Horseshoe for Java
+Horseshoe for Java is a templating system used to generate source code and other dynamic content from a template and organized data. It uses a Mustache-like syntax with extended expressions for dynamic data manipulation.
 
 ![Build](https://github.com/horseshoe/horseshoe/workflows/Build/badge.svg)
 [![Codacy](https://app.codacy.com/project/badge/Grade/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Grade)
@@ -14,14 +14,14 @@ Horseshoe for Java
 
 ## Goals
 - Provide a Mustache-like template engine for generating source code.
-- Allow both static and dynamically-generated data models.
+- Allow both static data and dynamically-generated data.
 - Allow common operator symbols to be used to support basic expressions and manipulations.
-- Allow iteration over iterable objects with support for basic properties such as first/last/index.
-- Allow iterations to be easily repeatable.
+- Allow iteration over iterable objects with support for additional properties such as first/last/index.
+- Allow iterations to be easily repeatable within a template.
 
 ## FAQ
 ### What is Horseshoe?
-Horseshoe is a templating system used to generate information from a data model. It was primarily designed around the use case of quickly generating source code for languages like C++ and Java. It is written in Java with a heavy emphasis on minimizing dependencies. It uses a Mustache-like syntax with an extended expression system supporting method calls to allow processing of both static data and dynamically-generated data.
+Horseshoe is a templating system used to generate content from a template and organized data. It was primarily designed around the use case of quickly generating source code for languages like C++ and Java. It is written in Java with a heavy emphasis on minimizing dependencies. It uses a Mustache-like syntax with extended expressions supporting method calls and operators that can be used to dynamically manipulate data.
 
 ### How is Horseshoe similar to Mustache?
 Horseshoe uses the same tags as Mustache. These tags have the same meaning as they do in Mustache. Due to the extended expression syntax, it is difficult to gauge whether or not it is Mustache-compliant. However, when a Mustache-compliant context object is used, Horseshoe passes all required tests in the Mustache specification v1.1.2.
@@ -89,7 +89,7 @@ Examples of Horseshoe templates can be found in the `samples` directory. The `sa
 The Horseshoe engine runner can be used to render templates from the command line. The runner can be invoked using Java's `-jar` argument: `java -jar horseshoe.jar`. It provides a subset of the rendering options available in the Horseshoe library. A list of all available options for the runner can be listed using the `--help` argument.
 
 ## Description
-Horseshoe is a Mustache-like templating system focused on fast source code generation. The templates consist of mixed tags and content that are ingested and rendered in accordance with a data model. Horseshoe uses an advanced expression syntax to allow data-driven rendering.
+Horseshoe is a Mustache-like templating system focused on fast source code generation. The templates consist of mixed tags and content that are parsed and rendered using organized data. An advanced expression syntax allows data to be dynamically generated and manipulated at render-time. Rendered data can be output a number of different ways, including a update-only file stream which will not modify the file unless the content changes. This can improve performance when using timestamp-based build systems by eliminating unnecessary rebuilds.
 
 ### Tags
 Horseshoe uses tags to specify dynamic parts of a template. The tags typically start with `{{` and end with `}}`. (The delimiters can be changed using the set delimiter tag.) Those familiar with Mustache will recognize the majority of the tags used by Horseshoe.
