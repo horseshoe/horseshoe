@@ -164,13 +164,13 @@ public class RunnerTests {
 							return false;
 						}
 
-						System.out.println(fileName + " - accepted");
+						System.err.println(fileName + " - accepted");
 					} catch (final RuntimeException | StackOverflowError e) {
 						if (fileName.startsWith("n_") || fileName.startsWith("i_")) {
 							return false;
 						}
 
-						System.out.println(fileName + " - rejected: " + e.getMessage());
+						System.err.println(fileName + " - rejected: " + e.getMessage());
 					} catch (final IOException e) {
 						throw new RuntimeException(e);
 					}

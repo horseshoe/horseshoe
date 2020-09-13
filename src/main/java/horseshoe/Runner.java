@@ -2,8 +2,8 @@ package horseshoe;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -49,7 +49,7 @@ public class Runner {
 			CommandLineOption.ofNameWithArgument('d', "data-file", "file", "Adds the contents of <file> to the global data map. The file is parsed as a UTF-8 JSON object, with some YAML-like features allowed: anchors, aliases, and plain single-line scalars. All members of the JSON object are added to the map. This option may be specified multiple times."),
 			CommandLineOption.ofNameWithArgument('I', "include", "directory", "Adds <directory> to the list of directories to be included when searching for partials. This option may be specified multiple times."),
 			CommandLineOption.ofNameWithArgument("input-charset", "charset", "Sets the charset of the input to <charset>. Defaults to UTF-8 for files. Valid values are " + join(", ", getCharsetNames()) + "."),
-			CommandLineOption.ofNameWithArgument('o', "output", "output-filename", "Writes output to <output-filename> instead of <stdout>."),
+			CommandLineOption.ofNameWithArgument('o', "output", "output-filename", "Writes updated output to <output-filename> instead of <stdout>."),
 			CommandLineOption.ofNameWithArgument('c', "output-charset", "charset", "Sets the charset of the output to <charset>. Defaults to UTF-8 for files. Valid values are " + join(", ", getCharsetNames()) + ".")
 	);
 
@@ -597,7 +597,7 @@ public class Runner {
 		}
 
 		// Render the templates
-		try (final Writer writer = new BufferedWriter(outputFile == null ? new OutputStreamWriter(System.out, stdOutCharset) : new OutputStreamWriter(new FileOutputStream(outputFile), outputCharset))) {
+		try (final Writer writer = new BufferedWriter(outputFile == null ? new OutputStreamWriter(System.out, stdOutCharset) : new OutputStreamWriter(new FileUpdateOutputStream(new File(outputFile), false), outputCharset))) {
 			for (final Template template : templates) {
 				template.render(settings, globalData, writer);
 			}

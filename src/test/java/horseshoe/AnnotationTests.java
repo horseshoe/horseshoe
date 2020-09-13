@@ -175,7 +175,7 @@ public class AnnotationTests {
 		try {
 			Files.write(path, ("Test 1" + LS + "Test 3" + LS).getBytes(StandardCharsets.UTF_8));
 
-			try (final OutputStream os = new AnnotationHandlers.FileUpdateOutputStream(path.toFile(), false)) {
+			try (final OutputStream os = new FileUpdateOutputStream(path.toFile(), false)) {
 				os.write(("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 				os.flush();
 				os.write("Test".getBytes(StandardCharsets.UTF_8));
@@ -187,7 +187,7 @@ public class AnnotationTests {
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 
-			try (final OutputStream os = new AnnotationHandlers.FileUpdateOutputStream(path.toFile(), true)) {
+			try (final OutputStream os = new FileUpdateOutputStream(path.toFile(), true)) {
 				os.write(("Test 2").getBytes(StandardCharsets.UTF_8));
 			}
 
@@ -195,7 +195,7 @@ public class AnnotationTests {
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 
-			try (final OutputStream os = new AnnotationHandlers.FileUpdateOutputStream(path.toFile(), true)) {
+			try (final OutputStream os = new FileUpdateOutputStream(path.toFile(), true)) {
 				os.write('2');
 			}
 
