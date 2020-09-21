@@ -297,3 +297,6 @@ Streaming transformations (`{{ a #> i -> transform(i) }}`) allow data to be rema
 Streaming filters (`{{# names #? name -> /* Find names with initials. */ ~/\b.[.]/.matcher(name).find() }}`) are used to filter out unneeded items. The new list is the result of the operator.
 
 Streaming reductions (`{{ sum = 0; values #< value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.
+
+## Docker Image
+The Horseshoe docker image executes the runner using the given run arguments. Files can be mounted into the container using the `/data` volume. For example, `docker run -v ~/horseshoe_data:/data horseshoe/horseshoe /data/input.U -o /data/output.cxx` reads the file `~/horseshoe_data/input.U` and writes the results to the file `~/horseshoe_data/output.cxx`.
