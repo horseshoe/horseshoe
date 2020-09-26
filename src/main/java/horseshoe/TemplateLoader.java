@@ -28,7 +28,11 @@ import horseshoe.internal.StringUtils.TrimmedString;
 public class TemplateLoader {
 
 	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(@" + Identifier.PATTERN + ")\\s*(?:\\(\\s*(.*)\\s*\\)\\s*)?", Pattern.DOTALL | Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*(?:[(]\\s*(?<arguments>.*)\\s*[)]\\s*)?", Pattern.DOTALL | Pattern.UNICODE_CHARACTER_CLASS);
+
+	private static final String IDENTIFIER_OPTIONAL_PARENS = Identifier.PATTERN + "(?:\\s*[(]\\s*[)])?";
+	private static final Pattern LOAD_PARTIAL_PATTERN = Pattern.compile("\\s*(?:(?<nameOnly>[^|]+?)\\s*|(?<partial>[^\\s].*?)\\s*[|]\\s*(?<imports>|[*]|" + IDENTIFIER_OPTIONAL_PARENS + "(?:\\s*,\\s*" + IDENTIFIER_OPTIONAL_PARENS + ")*)\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile(Identifier.PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<Object, Template> templates = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
@@ -402,15 +406,14 @@ public class TemplateLoader {
 	 * @throws LoadException if an error is encountered while loading the partial
 	 */
 	private String loadPartial(final Stack<Loader> loaders, final LoadState state, final String tag) throws LoadException {
-		final String name;
-		final Template partial;
+		final Matcher matcher;
 		String indentation = null;
 
 		if (tag.length() > 1 && tag.charAt(1) == '>') { // >> uses indentation on first line, no trailing new line
+			matcher = LOAD_PARTIAL_PATTERN.matcher(tag).region(2, tag.length());
 			state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
-			name = StringUtils.trim(tag, 2).string;
 		} else {
-			name = StringUtils.trim(tag, 1).string;
+			matcher = LOAD_PARTIAL_PATTERN.matcher(tag).region(1, tag.length());
 			indentation = state.removeStandaloneTagHead();
 
 			// 1) Standalone tag uses indentation for each line, no trailing new line
@@ -422,13 +425,37 @@ public class TemplateLoader {
 			}
 		}
 
-		if (name.isEmpty()) {
-			partial = null;
-		} else {
-			final Template localPartial = state.sections.peek().getLocalPartials().get(name);
+		// Check if the tag matches the load partial pattern
+		if (!matcher.matches()) {
+			throw new LoadException(loaders, "Invalid load partial tag");
+		}
 
-			partial = (localPartial != null ? localPartial : loadPartial(name, loaders));
+		final String imports = matcher.group("imports");
+		final String name = matcher.group(imports == null ? "nameOnly" : "partial");
+
+		// Check for anonymous partials
+		if (name == null) {
+			new TemplateRenderer(state.renderLists.peek(), null, indentation);
+			return null;
+		}
+
+		// Load the partial and any associated imports
+		final Template localPartial = state.sections.peek().getLocalPartials().get(name);
+		final Template partial = (localPartial != null ? localPartial : loadPartial(name, loaders));
+
+		if ("*".equals(imports)) {
 			state.sections.peek().getNamedExpressions().putAll(partial.getSection().getNamedExpressions());
+		} else if (imports != null) {
+			for (final Matcher identifiers = IDENTIFIER_PATTERN.matcher(imports); identifiers.find(); ) {
+				final String expressionName = identifiers.group();
+				final Expression expression = partial.getSection().getNamedExpressions().get(expressionName);
+
+				if (expression == null) {
+					throw new LoadException(loaders, "Expression \"" + expressionName + "\" not found in partial");
+				}
+
+				state.sections.peek().getNamedExpressions().put(expressionName, expression);
+			}
 		}
 
 		new TemplateRenderer(state.renderLists.peek(), partial, indentation);
@@ -616,8 +643,8 @@ public class TemplateLoader {
 						throw new LoadException(loaders, "Invalid annotation format");
 					}
 
-					final String sectionName = annotation.group(1);
-					final String parameters = annotation.group(2);
+					final String sectionName = annotation.group("name");
+					final String parameters = annotation.group("arguments");
 					final Object location = state.loader.toLocation();
 
 					// Load the annotation arguments

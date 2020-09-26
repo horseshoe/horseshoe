@@ -188,7 +188,7 @@ In order to support rendering the nested section, the referenced partial templat
 ---{{>}}---{{/}}
 {{#> dash }}a{{/}}, {{#> dash }}b{{/}}, {{#> dash }}c{{/}}
 ```
-results in "---a---, ---b---, ---c---".
+results in `---a---, ---b---, ---c---`.
 
 <b>Closing tags for section partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows section partials to end without a trailing newline and not cause an output line in the current template.
 
@@ -264,7 +264,7 @@ Referencing a named expression using a function-like syntax evaluates the expres
 
 Named expressions are scoped to the context in which they are declared and can be overridden at lower level scopes. They always take precedence over equivalently named methods on the current context object. If a method is preferred over a named expression, it can be prefixed (using `./` or `../`), since named expressions can not be invoked using prefixes.
 
-Root-level named expressions in each partial template are made available to the calling template when a partial is included (`{{> f }}` includes all root-level expressions from the partial "f" at the current scope). For example,
+Root-level named expressions in each partial template can be imported into the calling template when a partial is included (`{{> f | * }}` includes all root-level expressions from the partial "f" at the current scope). Root-level named expressions can be imported individually as well. For example,
 ```horseshoe
 {{< a }}
   {{ lower() -> toLowerCase() }}
@@ -272,11 +272,11 @@ Root-level named expressions in each partial template are made available to the 
 {{ lower() -> toString() }}
 {{ upper() -> toUpperCase() }}
 {{# "Original String" }}
-  {{> a }}
+  {{> a | lower }}
   {{ upper() + "-" + lower() }}
 {{/}}
 ```
-results in "  ORIGINAL STRING-original string", because the `lower` named expression is overridden when the partial `a` is included on line 7. This allows partials to contain either content to render or named expressions as a payload.
+results in `  ORIGINAL STRING-original string`, because the `lower` named expression is overridden when the partial `a` is included on line 7. This allows partials to contain either content to render or named expressions as a payload.
 
 However, named expressions are not exposed to included partial templates. This is done so that all templates including partials are self-contained. For example,
 ```horseshoe
@@ -299,4 +299,4 @@ Streaming filters (`{{# names #? name -> /* Find names with initials. */ ~/\b.[.
 Streaming reductions (`{{ sum = 0; values #< value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.
 
 ## Docker Image
-The Horseshoe docker image executes the runner using the given run arguments. Files can be mounted into the container using the `/data` volume. For example, `docker run -v ~/horseshoe_data:/data horseshoe/horseshoe /data/input.U -o /data/output.cxx` reads the file `~/horseshoe_data/input.U` and writes the results to the file `~/horseshoe_data/output.cxx`.
+The Horseshoe docker image executes the runner using the given run arguments. Files can be mounted into the container using the `--volume` option. For example, `docker run -v ~/horseshoe_data:/data horseshoe/horseshoe /data/input.U -o /data/output.cxx` reads the file `~/horseshoe_data/input.U` and writes the results to the file `~/horseshoe_data/output.cxx`.

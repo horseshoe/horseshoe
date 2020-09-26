@@ -18,7 +18,6 @@ FROM ${JRE_IMAGE} AS deploy
 COPY --from=build /usr/src/horseshoe/build/libs/horseshoe-*.jar /usr/bin/
 RUN cd /usr/bin && ln -s horseshoe-*.jar horseshoe.jar
 WORKDIR /root
-VOLUME /data
 
 ENTRYPOINT ["java", "-jar", "/usr/bin/horseshoe.jar"]
 CMD ["--version"]
