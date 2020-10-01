@@ -26,13 +26,27 @@ jobs:
         GHR_PATH: build/libs
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build Docker Images
-      run: echo ${GITHUB_REF} && rm -rf build && docker build . --file Dockerfile --tag horseshoe/horseshoe --tag horseshoe/horseshoe:${GITHUB_REF/refs\/tags\//}
+    - name: Test Dockerfile
+      run: rm -rf build && docker build . --file Dockerfile --tag horseshoe-test
 
     - name: Test Docker Image
-      run: docker run --rm -t horseshoe/horseshoe
+      run: docker run --rm -t horseshoe-test
 
-    - name: Push Docker Images
-      run: docker login --username horseshoe --password $DOCKERHUB_TOKEN && docker push horseshoe/horseshoe
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+      with:
+        platforms: all
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v1
+      with:
+        version: latest
+
+    - name: Build JAR
+      run: ./gradlew clean jar
+
+    - name: Build Docker Images
+      run: echo "$DOCKERHUB_TOKEN" | docker login --username horseshoe --password-stdin && docker buildx build . --file Dockerfile --tag horseshoe/horseshoe --tag horseshoe/horseshoe:${GITHUB_REF/refs\/tags\//} --platform linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x --build-arg DEPLOY=deploy-local-jar --build-arg JAR_FILE=build/libs/horseshoe-*.jar --target deploy --push
       env:
         DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
