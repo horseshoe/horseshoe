@@ -1,8 +1,6 @@
 package horseshoe;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
@@ -17,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import horseshoe.BufferedFileUpdateStream.Update;
 import horseshoe.internal.Operands;
 
 /**
@@ -70,8 +69,7 @@ public final class AnnotationHandlers {
 
 			// Load properties
 			Charset charset = defaultCharset;
-			boolean overwrite = false;
-			boolean append = false;
+			Update update = Update.UPDATE;
 
 			final Object encoding = properties.get("encoding");
 
@@ -79,8 +77,11 @@ public final class AnnotationHandlers {
 				charset = Charset.forName(encoding.toString());
 			}
 
-			overwrite = Operands.convertToBoolean(properties.get("overwrite"));
-			append = Operands.convertToBoolean(properties.get("append"));
+			if (Operands.convertToBoolean(properties.get("overwrite"))) {
+				update = Update.OVERWRITE;
+			} else if (Operands.convertToBoolean(properties.get("append"))) {
+				update = Update.APPEND;
+			}
 
 			// Create the directory if it doesn't exist, and then return the writer
 			final File directory = file.getParentFile();
@@ -89,11 +90,7 @@ public final class AnnotationHandlers {
 				throw new IOException("Failed to create directory " + directory.toString());
 			}
 
-			if (overwrite) {
-				return new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, append), charset));
-			}
-
-			return new BufferedWriter(new OutputStreamWriter(new FileUpdateOutputStream(file, append), charset));
+			return new OutputStreamWriter(new BufferedFileUpdateStream(file, update), charset);
 		}
 
 	}

@@ -16,6 +16,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import horseshoe.BufferedFileUpdateStream.Update;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -168,38 +170,76 @@ public class AnnotationTests {
 		}));
 	}
 
+	private static final class FileTest {
+		public final String initial;
+		public final String write;
+		public final Update update;
+		public final String result;
+
+		public FileTest(final String initial, final String write, final Update update, final String result) {
+			this.initial = initial;
+			this.write = write;
+			this.update = update;
+			this.result = result;
+		}
+
+		public FileTest(final String initial, final String write) {
+			this(initial, write, Update.UPDATE, write);
+		}
+	}
+
 	@Test
 	public void testFileUpdate() throws IOException, LoadException {
 		final Path path = Paths.get("DELETE_ME.test");
 
 		try {
+			final String bigBuf = new String(new byte[4096], StandardCharsets.US_ASCII).replace('\0', ' ');
+
 			Files.write(path, ("Test 1" + LS + "Test 3" + LS).getBytes(StandardCharsets.UTF_8));
 
-			try (final OutputStream os = new FileUpdateOutputStream(path.toFile(), false)) {
+			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), Update.UPDATE, bigBuf.length() - 1)) {
+				os.flush();
 				os.write(("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 				os.flush();
 				os.write("Test".getBytes(StandardCharsets.UTF_8));
 				os.write(' ');
 				os.write('2');
+				os.write(bigBuf.getBytes(StandardCharsets.UTF_8));
 			}
 
-			Assert.assertEquals("Test 1" + LS + "Test 2", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			Assert.assertEquals("Test 1" + LS + "Test 2" + bigBuf, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
-			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
-
-			try (final OutputStream os = new FileUpdateOutputStream(path.toFile(), true)) {
-				os.write(("Test 2").getBytes(StandardCharsets.UTF_8));
+			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), Update.OVERWRITE, bigBuf.length())) {
+				os.write(("Test" + LS).getBytes(StandardCharsets.UTF_8));
+				os.write(bigBuf.getBytes(StandardCharsets.UTF_8));
 			}
 
-			Assert.assertEquals("Test 1" + LS + "Test 2", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			Assert.assertEquals("Test" + LS + bigBuf, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
-			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
-
-			try (final OutputStream os = new FileUpdateOutputStream(path.toFile(), true)) {
-				os.write('2');
+			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), Update.OVERWRITE, bigBuf.length())) {
+				os.write(bigBuf.getBytes(StandardCharsets.UTF_8));
+				os.write('1');
 			}
 
-			Assert.assertEquals("Test 1" + LS + "2", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			Assert.assertEquals(bigBuf + "1", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+
+			for (final FileTest test : new FileTest[] {
+					new FileTest("Test" + LS, ""),
+					new FileTest("Test" + LS, "", Update.APPEND, "Test" + LS),
+					new FileTest("Test" + LS, "Test 2", Update.APPEND, "Test" + LS + "Test 2"),
+					new FileTest("Test" + LS, "Test 2", Update.OVERWRITE, "Test 2"),
+					new FileTest("Test" + LS, new String(new byte[65536], StandardCharsets.US_ASCII).replace('\0', ' ')),
+			}) {
+				Files.write(path, test.initial.getBytes(StandardCharsets.UTF_8));
+
+				try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), test.update, 4096)) {
+					if (!test.write.isEmpty()) {
+						os.write(test.write.getBytes(StandardCharsets.UTF_8));
+					}
+				}
+
+				Assert.assertEquals(test.result, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			}
 		} finally {
 			Files.delete(path);
 		}

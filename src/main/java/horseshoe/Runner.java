@@ -1,7 +1,5 @@
 package horseshoe;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -26,6 +24,7 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import horseshoe.BufferedFileUpdateStream.Update;
 import horseshoe.CommandLineOption.ArgumentPair;
 import horseshoe.CommandLineOption.OptionSet;
 import horseshoe.Settings.ContextAccess;
@@ -492,7 +491,7 @@ public class Runner {
 	 * @throws LoadException if an error occurs while loading the template
 	 */
 	private static Template loadTemplateFromStdIn(final TemplateLoader loader, final Charset charset) throws IOException, LoadException {
-		return loader.load(new BufferedReader(new InputStreamReader(System.in, charset)));
+		return loader.load(new InputStreamReader(System.in, charset));
 	}
 
 	/**
@@ -597,7 +596,7 @@ public class Runner {
 		}
 
 		// Render the templates
-		try (final Writer writer = new BufferedWriter(outputFile == null ? new OutputStreamWriter(System.out, stdOutCharset) : new OutputStreamWriter(new FileUpdateOutputStream(new File(outputFile), false), outputCharset))) {
+		try (final Writer writer = outputFile == null ? new OutputStreamWriter(System.out, stdOutCharset) : new OutputStreamWriter(new BufferedFileUpdateStream(new File(outputFile), Update.UPDATE), outputCharset)) {
 			for (final Template template : templates) {
 				template.render(settings, globalData, writer);
 			}

@@ -42,7 +42,7 @@ The following table summarizes the literals supported by Horseshoe. A more detai
 | `double` | `3.14` / `2f` |
 | `boolean` | `true` / `false` |
 | `java.lang.Object` | `null` |
-| `java.lang.String` | `"a \"string\""` / 'a ''string''' |
+| `java.lang.String` | `"a \"string\""` / `'a ''string'''` |
 | `java.util.regex.Pattern` | `~/pattern/` |
 | `java.util.List` | `[1,2,3,4]` |
 | `java.util.Set` | `{1,2,3,4}` |
