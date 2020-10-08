@@ -145,20 +145,19 @@ final class StaticContentRenderer implements Renderer {
 
 	}
 
-	/**
-	 * Creates a new render static content action using the specified lines. The list of lines must contain at least one line.
-	 *
-	 * @param lines the list of lines
-	 * @param startingLine the starting index in the list
-	 */
-	StaticContentRenderer(final List<Renderer> container, final List<ParsedLine> lines, final boolean followsStandaloneTag, final boolean indentFirstLine) {
+	static StaticContentRenderer create(final List<Renderer> container, final List<ParsedLine> lines, final boolean followsStandaloneTag, final boolean indentFirstLine) {
+		final StaticContentRenderer renderer = new StaticContentRenderer(container, lines, followsStandaloneTag, indentFirstLine);
+
+		container.add(renderer);
+		return renderer;
+	}
+
+	private StaticContentRenderer(final List<Renderer> container, final List<ParsedLine> lines, final boolean followsStandaloneTag, final boolean indentFirstLine) {
 		this.container = container;
 		this.containerIndex = container.size();
 		this.lines = lines;
 		this.followsStandaloneTag = followsStandaloneTag;
 		this.indentFirstLine = indentFirstLine;
-
-		container.add(this);
 	}
 
 	boolean followsStandaloneTag() {

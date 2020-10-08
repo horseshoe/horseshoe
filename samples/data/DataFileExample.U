@@ -1,9 +1,9 @@
 
-{{#schema.types}}
-class {{name}}
+{{# schema.types }}
+class {{ name }}
 {
-	{{#fields}}
-	{{type.name}} {{name}};
+	{{# fields }}
+	{{ type.name ?? type }} {{ name }};
 	{{/}}
 
 public:
@@ -11,10 +11,10 @@ public:
 };
 
 {{/}}
-{{#schema.fields}}
-static {{type.name}} {{name}};
+{{# schema.fields }}
+static {{ type.name ?? type }} {{ name }};
 {{/}}
 
-{{#schema.extras}}
+{{# schema.extras }}
 // {{.}}
 {{/}}

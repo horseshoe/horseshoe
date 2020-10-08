@@ -125,19 +125,18 @@ final class TemplateRenderer implements Renderer {
 		}
 	}
 
-	/**
-	 * Creates a new render template action.
-	 *
-	 * @param template the template to render
-	 * @param priorStaticContent the static content just prior to the template (for partial indentation)
-	 */
-	public TemplateRenderer(final List<Renderer> container, final Template template, final String indentation) {
+	static TemplateRenderer create(final List<Renderer> container, final Template template, final String indentation) {
+		TemplateRenderer renderer = new TemplateRenderer(container, template, indentation);
+
+		container.add(renderer);
+		return renderer;
+	}
+
+	private TemplateRenderer(final List<Renderer> container, final Template template, final String indentation) {
 		this.container = container;
 		this.containerIndex = container.size();
 		this.template = template;
 		this.indentation = indentation;
-
-		container.add(this);
 	}
 
 	@Override

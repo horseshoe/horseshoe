@@ -848,23 +848,24 @@ public final class MethodBuilder {
 	public MethodBuilder addInvoke(final Method method, final boolean superCall) {
 		getConstant(method).locations.add(new Location(this, length + 1));
 		final int modifiers = method.getModifiers();
+		final int methodStackOffset = getCallStackOffset(method.getReturnType(), method.getParameterTypes());
 
 		if (Modifier.isStatic(modifiers)) {
-			stackSize += getCallStackOffset(method);
+			stackSize += methodStackOffset;
 			maxStackSize = Math.max(maxStackSize, stackSize);
 			return append(INVOKESTATIC, B0, B0);
 		} else if (Modifier.isInterface(method.getDeclaringClass().getModifiers())) {
-			final int stackOffset = getCallStackOffset(method) - 1;
+			final int stackOffset = methodStackOffset - 1;
 			stackSize += stackOffset;
 			maxStackSize = Math.max(maxStackSize, stackSize);
 			return append(INVOKEINTERFACE, B0, B0, (byte)(getStackSize(method.getReturnType()) - stackOffset), B0);
 		} else if (Modifier.isPrivate(modifiers) || superCall) {
-			stackSize += getCallStackOffset(method) - 1;
+			stackSize += methodStackOffset - 1;
 			maxStackSize = Math.max(maxStackSize, stackSize);
 			return append(INVOKESPECIAL, B0, B0);
 		}
 
-		stackSize += getCallStackOffset(method) - 1;
+		stackSize += methodStackOffset - 1;
 		maxStackSize = Math.max(maxStackSize, stackSize);
 		return append(INVOKEVIRTUAL, B0, B0);
 	}
@@ -888,7 +889,7 @@ public final class MethodBuilder {
 	public MethodBuilder addInvoke(final Constructor<?> constructor) {
 		getConstant(constructor).locations.add(new Location(this, length + 1));
 
-		stackSize += getCallStackOffset(constructor) - 1;
+		stackSize += getCallStackOffset(void.class, constructor.getParameterTypes()) - 1;
 		maxStackSize = Math.max(maxStackSize, stackSize);
 		return append(INVOKESPECIAL, B0, B0);
 	}
@@ -1402,26 +1403,16 @@ public final class MethodBuilder {
 	}
 
 	/**
-	 * Gets the stack offset that results from invoking (or getting) a member (field, method, constructor). The object for non-static members is not factored into the stack offset.
+	 * Gets the stack offset that results from invoking a method or constructor with the given return type and parameter types. The object for non-static members is not factored into the stack offset.
 	 *
-	 * @param member the member to analyze
-	 * @return the stack offset that results from invoking (or getting) the member
+	 * @param returnType the return type of the method (void for constructors)
+	 * @param parameterTypes the parameter types of the method
+	 * @return the stack offset that results from invoking the method or constructor
 	 */
-	private static int getCallStackOffset(final Member member) {
-		if (member instanceof Method) {
-			final Method method = (Method)member;
-			int offset = getStackSize(method.getReturnType());
+	private static int getCallStackOffset(final Class<?> returnType, final Class<?>... parameterTypes) {
+		int offset = getStackSize(returnType);
 
-			for (final Class<?> type : method.getParameterTypes()) {
-				offset -= getStackSize(type);
-			}
-
-			return offset;
-		}
-
-		int offset = 0;
-
-		for (final Class<?> type : ((Constructor<?>)member).getParameterTypes()) {
+		for (final Class<?> type : parameterTypes) {
 			offset -= getStackSize(type);
 		}
 
@@ -1518,23 +1509,28 @@ public final class MethodBuilder {
 	 * @return the signature of the member
 	 */
 	private static String getSignature(final Member member) {
-		final Class<?>[] parameters;
-		final Class<?> returnType;
-
 		if (member instanceof Method) {
-			parameters = ((Method)member).getParameterTypes();
-			returnType = ((Method)member).getReturnType();
+			return getSignature(((Method)member).getReturnType(), ((Method)member).getParameterTypes());
 		} else if (member instanceof Constructor) {
-			parameters = ((Constructor<?>)member).getParameterTypes();
-			returnType = void.class;
-		} else { // Assume field
-			assert member instanceof Field : "Unknown member type " + member.getClass().getName();
-			return Array.newInstance(((Field)member).getType(), 0).getClass().getName().substring(1);
+			return getSignature(void.class, ((Constructor<?>)member).getParameterTypes());
 		}
 
+		// Assume field
+		assert member instanceof Field : "Unknown member type " + member.getClass().getName();
+		return Array.newInstance(((Field)member).getType(), 0).getClass().getName().substring(1);
+	}
+
+	/**
+	 * Gets the string signature given a return type and parameter types.
+	 *
+	 * @param returnType the return type of the method (void for constructors)
+	 * @param parameterTypes the parameter types of the method
+	 * @return the string signature
+	 */
+	private static String getSignature(final Class<?> returnType, final Class<?>... parameterTypes) {
 		final StringBuilder sb = new StringBuilder("(");
 
-		for (final Class<?> type : parameters) {
+		for (final Class<?> type : parameterTypes) {
 			sb.append(Array.newInstance(type, 0).getClass().getName().substring(1));
 		}
 

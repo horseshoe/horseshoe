@@ -435,7 +435,7 @@ public class TemplateLoader {
 
 		// Check for anonymous partials
 		if (name == null) {
-			new TemplateRenderer(state.renderLists.peek(), null, indentation);
+			TemplateRenderer.create(state.renderLists.peek(), null, indentation);
 			return null;
 		}
 
@@ -458,7 +458,7 @@ public class TemplateLoader {
 			}
 		}
 
-		new TemplateRenderer(state.renderLists.peek(), partial, indentation);
+		TemplateRenderer.create(state.renderLists.peek(), partial, indentation);
 		return name;
 	}
 
@@ -530,9 +530,9 @@ public class TemplateLoader {
 
 			if ((state.standaloneStatus == LoadState.TAG_CAN_BE_STANDALONE && state.isStandaloneTagTail(lines) && state.removeStandaloneTagHead() != null) ||
 					(state.standaloneStatus == LoadState.TAG_CHECK_TAIL_STANDALONE && state.isStandaloneTagTail(lines))) {
-				new StaticContentRenderer(state.renderLists.peek(), lines, true, false);
+				StaticContentRenderer.create(state.renderLists.peek(), lines, true, false);
 			} else {
-				new StaticContentRenderer(state.renderLists.peek(), lines, false, state.renderLists.peek().isEmpty());
+				StaticContentRenderer.create(state.renderLists.peek(), lines, false, state.renderLists.peek().isEmpty());
 			}
 
 			if (!loader.hasNext()) {
