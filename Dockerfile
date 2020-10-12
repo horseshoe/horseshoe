@@ -26,16 +26,14 @@ FROM jre-${TARGETARCH:-default} AS jre-base
 
 # Deploy from either a local JAR or the built JAR
 FROM jre-base AS deploy-built-jar
-ONBUILD COPY --from=build /usr/src/horseshoe/build/libs/horseshoe-*.jar /usr/bin/
+COPY --from=build /usr/src/horseshoe/build/libs/*.jar /usr/lib/horseshoe.jar
 
 FROM jre-base AS deploy-local-jar
-ONBUILD ARG JAR_FILE=/usr/src/horseshoe/build/libs/horseshoe-*.jar
-ONBUILD COPY ${JAR_FILE} /usr/bin/
+ONBUILD ARG JAR_FILE=build/libs/*.jar
+ONBUILD COPY ${JAR_FILE} /usr/lib/
 
 FROM deploy-${DEPLOY:-built-jar} AS deploy
 
-RUN cd /usr/bin && ln -s horseshoe-*.jar horseshoe.jar
-WORKDIR /root
-
-ENTRYPOINT ["java", "-jar", "/usr/bin/horseshoe.jar"]
+RUN java -jar /usr/lib/horseshoe.jar --version
+ENTRYPOINT ["java", "-jar", "/usr/lib/horseshoe.jar"]
 CMD ["--version"]

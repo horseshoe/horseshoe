@@ -168,11 +168,11 @@ public class OperandsTests {
 
 	@Test
 	public void testConvertToBoolean() {
-		for (final Object object : new Object[] { true, (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), ' ', new AtomicInteger(33), new AtomicLong(34L), "", "a" }) {
+		for (final Object object : new Object[] { true, (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), ' ', new AtomicInteger(33), new AtomicLong(34L), "a", new int[1], Collections.singletonList(0), Collections.singletonMap("key", "value"), new Object() }) {
 			assertTrue(Operands.convertToBoolean(object));
 		}
 
-		for (final Object object : new Object[] { false, (byte)0, (short)0, 0, 0L, 0.0f, 0.0, BigDecimal.valueOf(0.0), BigInteger.valueOf(0), '\0', new AtomicInteger(0), new AtomicLong(0L), null }) {
+		for (final Object object : new Object[] { false, (byte)0, (short)0, 0, 0L, 0.0f, 0.0, BigDecimal.valueOf(0.0), BigInteger.valueOf(0), '\0', new AtomicInteger(0), new AtomicLong(0L), "", new int[0], Collections.emptyList(), Collections.emptyMap(), null }) {
 			assertFalse(Operands.convertToBoolean(object));
 		}
 	}

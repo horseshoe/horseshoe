@@ -51,8 +51,12 @@ public final class Expression {
 	private static final Method OBJECT_TO_STRING;
 	private static final Method OPERANDS_ADD;
 	private static final Method OPERANDS_AND;
+	private static final Method OPERANDS_COMPARE;
 	private static final Method OPERANDS_DIVIDE;
+	private static final Method OPERANDS_EXPONENTIATE;
+	private static final Method OPERANDS_FIND_PATTERN;
 	private static final Method OPERANDS_GET_CLASS;
+	private static final Method OPERANDS_MATCHES_PATTERN;
 	private static final Method OPERANDS_MULTIPLY;
 	private static final Method OPERANDS_MODULO;
 	private static final Method OPERANDS_NEGATE;
@@ -233,8 +237,12 @@ public final class Expression {
 			OBJECT_TO_STRING = Object.class.getMethod("toString");
 			OPERANDS_ADD = Operands.class.getMethod("add", Object.class, Object.class);
 			OPERANDS_AND = Operands.class.getMethod("and", Number.class, Number.class);
+			OPERANDS_COMPARE = Operands.class.getMethod("compare", boolean.class, Object.class, Object.class);
 			OPERANDS_DIVIDE = Operands.class.getMethod("divide", Number.class, Number.class);
+			OPERANDS_EXPONENTIATE = Operands.class.getMethod("exponentiate", Number.class, Number.class);
+			OPERANDS_FIND_PATTERN = Operands.class.getMethod("findPattern", Object.class, Object.class);
 			OPERANDS_GET_CLASS = Operands.class.getMethod("getClass", RenderContext.class, String.class);
+			OPERANDS_MATCHES_PATTERN = Operands.class.getMethod("matchesPattern", Object.class, Object.class);
 			OPERANDS_MULTIPLY = Operands.class.getMethod("multiply", Number.class, Number.class);
 			OPERANDS_MODULO = Operands.class.getMethod("modulo", Number.class, Number.class);
 			OPERANDS_NEGATE = Operands.class.getMethod("negate", Number.class);
@@ -732,7 +740,7 @@ public final class Expression {
 		switch (operator.getString()) {
 			// List / Set / Array / Map / String Lookup Operations
 			case "[":
-			case "?[?":
+			case "?[":
 				if (left != null) {
 					final Operand subject = Entry.class.equals(right.type) ? state.operands.pop() : left;
 
@@ -817,6 +825,9 @@ public final class Expression {
 			}
 
 			// Math Operations
+			case "**":
+				state.operands.push(new Operand(Double.class, left.toNumeric(true).append(right.toNumeric(true)).addInvoke(OPERANDS_EXPONENTIATE)));
+				break;
 			case "+":
 				if (left == null) { // Unary +, basically do nothing except require a number
 					state.operands.push(new Operand(Double.class, right.toNumeric(true)));
@@ -894,6 +905,9 @@ public final class Expression {
 			}
 
 			// Comparison Operators
+			case "<=>":
+				state.operands.push(new Operand(int.class, new MethodBuilder().pushConstant(false).append(left.toObject()).append(right.toObject()).addInvoke(OPERANDS_COMPARE)));
+				break;
 			case "<=":
 				state.operands.push(left.execCompareOp(right, IFLE));
 				break;
@@ -911,6 +925,13 @@ public final class Expression {
 				break;
 			case "!=":
 				state.operands.push(left.execCompareOp(right, IFNE));
+				break;
+
+			case "=~":
+				state.operands.push(new Operand(boolean.class, new MethodBuilder().append(left.toObject()).append(right.toObject()).addInvoke(OPERANDS_FIND_PATTERN)));
+				break;
+			case "==~":
+				state.operands.push(new Operand(boolean.class, new MethodBuilder().append(left.toObject()).append(right.toObject()).addInvoke(OPERANDS_MATCHES_PATTERN)));
 				break;
 
 			// Ternary Operations

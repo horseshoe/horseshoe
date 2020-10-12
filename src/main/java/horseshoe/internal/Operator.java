@@ -83,12 +83,13 @@ final class Operator {
 		operators.add(new Operator("[",      0,  X_RIGHT_EXPRESSIONS | ALLOW_PAIRS, "List / Map Literal", "]", 0, 0));
 		operators.add(new Operator("[:]",    0,  0, "Empty Map"));
 		operators.add(new Operator("[",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS, "Lookup", "]", 0, 1));
-		operators.add(new Operator("?[?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS | SAFE, "Safe Lookup", "]", 0, 1));
+		operators.add(new Operator("?[",     0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS | SAFE, "Safe Lookup", "]", 0, 1));
 		operators.add(createMethod("(", true));
 		operators.add(new Operator("(",      0,  RIGHT_EXPRESSION, "Parentheses", ")", 0, 1));
 		operators.add(new Operator("~@",     0,  RIGHT_EXPRESSION, "Get Class"));
 		operators.add(new Operator(".",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION, "Navigate"));
-		operators.add(new Operator("?.?",    0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | SAFE, "Safe Navigate"));
+		operators.add(new Operator("?.",     0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | SAFE, "Safe Navigate"));
+		operators.add(new Operator("**",     1,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Exponentiate"));
 		operators.add(new Operator("+",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
 		operators.add(new Operator("-",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Minus"));
 		operators.add(new Operator("~",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Bitwise Negate"));
@@ -102,37 +103,42 @@ final class Operator {
 		operators.add(new Operator("<<",     6,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Shift Left"));
 		operators.add(new Operator(">>",     6,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Shift Right Sign Extend"));
 		operators.add(new Operator(">>>",    6,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Shift Right Zero Extend"));
-		operators.add(new Operator("<=",     7,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Less Than or Equal"));
-		operators.add(new Operator(">=",     7,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Greater Than or Equal"));
-		operators.add(new Operator("<",      7,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Less Than"));
-		operators.add(new Operator(">",      7,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Greater Than"));
-		operators.add(new Operator("==",     8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Equal"));
-		operators.add(new Operator("!=",     8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Not Equal"));
-		operators.add(new Operator("&",      9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise And"));
-		operators.add(new Operator("^",      10, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Xor"));
-		operators.add(new Operator("|",      11, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Or"));
-		operators.add(new Operator("&&",     12, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical And"));
-		operators.add(new Operator("||",     13, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical Or"));
-		operators.add(new Operator("?:",     14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce"));
-		operators.add(new Operator("??",     14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce - Alternate"));
-		operators.add(new Operator("?",      14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
-		operators.add(new Operator(":",      14, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair"));
-		operators.add(new Operator("=",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind Local Name"));
-		operators.add(new Operator(",",      16, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
-		operators.add(new Operator("\u2620", 17, RIGHT_EXPRESSION, "Die")); // Skull and crossbones
-		operators.add(new Operator("~:<",    17, RIGHT_EXPRESSION, "Die - Alternate"));
-		operators.add(new Operator("#^",     17, RIGHT_EXPRESSION, "Return"));
-		operators.add(new Operator(";",      18, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
-		operators.add(new Operator("#>",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap"));
-		operators.add(new Operator("#.",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap - Alternate"));
-		operators.add(new Operator("#|",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Flatten Remap"));
-		operators.add(new Operator("#?",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Filter"));
-		operators.add(new Operator("#<",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Reduction"));
+		operators.add(new Operator("<=>",    7,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Three-way Comparison"));
+		operators.add(new Operator("<=",     8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Less Than or Equal"));
+		operators.add(new Operator(">=",     8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Greater Than or Equal"));
+		operators.add(new Operator("<",      8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Less Than"));
+		operators.add(new Operator(">",      8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Greater Than"));
+		operators.add(new Operator("==",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Equal"));
+		operators.add(new Operator("!=",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Not Equal"));
+		operators.add(new Operator("=~",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Found Pattern"));
+		operators.add(new Operator("==~",    9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Matches Pattern"));
+		operators.add(new Operator("&",      10, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise And"));
+		operators.add(new Operator("^",      11, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Xor"));
+		operators.add(new Operator("|",      12, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Or"));
+		operators.add(new Operator("&&",     13, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical And"));
+		operators.add(new Operator("||",     14, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical Or"));
+		operators.add(new Operator("?:",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce"));
+		operators.add(new Operator("??",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce - Alternate"));
+		operators.add(new Operator("?",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
+		operators.add(new Operator(":",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair"));
+		operators.add(new Operator("=",      16, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind Local Name"));
+		operators.add(new Operator(",",      17, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
+		operators.add(new Operator("\u2620", 18, RIGHT_EXPRESSION, "Die")); // Skull and crossbones
+		operators.add(new Operator("~:<",    18, RIGHT_EXPRESSION, "Die - Alternate"));
+		operators.add(new Operator("#^",     18, RIGHT_EXPRESSION, "Return"));
+		operators.add(new Operator(";",      19, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
+		operators.add(new Operator("#>",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap"));
+		operators.add(new Operator("#.",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap - Alternate"));
+		operators.add(new Operator("#|",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Flatten Remap"));
+		operators.add(new Operator("#?",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Filter"));
+		operators.add(new Operator("#<",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Reduction"));
 
 		// These operators have known assertion failures and may contain ambiguities with other operators or Horseshoe features. These ambiguities have been thoroughly analyzed and deemed acceptable.
-		final Set<String> ignoreFailuresIn = new HashSet<>(Arrays.asList("?[?" /* ambiguous with "?" and "[" operators; allowed, because there is no unary "?" operator or binary "[?" operator */,
-				"?.?" /* ambiguous with "?" and "." operators; allowed, so must be separated with spaces or use parentheses if using as nested ternary (e.g. "a ? . ? b : c : d") */,
+		final Set<String> ignoreFailuresIn = new HashSet<>(Arrays.asList("?[" /* ambiguous with "?" and "[" operators; allowed, spaces must be used to disambiguate safe array lookup and ternary with list literal (e.g. "a ? [1..4] : null") */,
+				"?." /* ambiguous with "?" and "." operators; allowed, spaces must be used to disambiguate safe navigation and ternary with internal variable (e.g. "a ? .isFirst : d") */,
 				".." /* ambiguous with "." unary operator; allowed, because the "\" separator must be used when applying "." to the current object (".") */,
+				"=~" /* ambiguous with "~" operator if "=" were an operator; allowed, spaces must be used to disambiguate (e.g. "a = ~1") */,
+				"==~" /* ambiguous with "==" and "~" operators; allowed, spaces must be used to disambiguate (e.g. "0 == ~1") */,
 				"#^" /* ambiguous with section tag; allowed, because the operator would never be used at start of content tag */,
 				"#." /* ambiguous with "." unary operator; allowed, because there is no binary operator ending with "#" */));
 

@@ -48,6 +48,13 @@ public final class RenderContext {
 	}
 
 	/**
+	 * Creates a default render context with no global data.
+	 */
+	public RenderContext() {
+		this(new Settings(), Collections.<String, Object>emptyMap());
+	}
+
+	/**
 	 * Gets the annotation map used by the rendering process.
 	 *
 	 * @return the annotation map used by the rendering process

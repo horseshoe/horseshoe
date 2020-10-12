@@ -1,5 +1,6 @@
 package horseshoe.internal;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -8,19 +9,20 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 
 import horseshoe.RenderContext;
 
 public final class Operands {
 
 	/**
-	 * Adds two objects together. Handles numeric addition, string concatenation, and map / collection combination.
+	 * Adds two objects together. Handles numeric addition, string concatenation,
+	 * and map / collection combination.
 	 *
-	 * @param left the left operand
+	 * @param left  the left operand
 	 * @param right the right operand
 	 * @return the result of the operation
 	 */
@@ -154,7 +156,11 @@ public final class Operands {
 	 */
 	@SuppressWarnings("unchecked")
 	public static int compare(final boolean equality, final Object first, final Object second) {
-		if (first instanceof Number) {
+		if (first == null) {
+			return second == null ? 0 : -1;
+		} else if (second == null) {
+			return 1;
+		} else if (first instanceof Number) {
 			if (second instanceof Number || second instanceof Character) {
 				return compare(toNumeric(first), toNumeric(second));
 			}
@@ -168,7 +174,7 @@ public final class Operands {
 				(second instanceof StringBuilder || second instanceof String || second instanceof Character)) {
 			return first.toString().compareTo(second.toString());
 		} else if (equality) {
-			return Objects.equals(first, second) ? 0 : 1;
+			return first.equals(second) ? 0 : 1;
 		} else if (first instanceof Comparable) {
 			return ((Comparable<Object>)first).compareTo(second);
 		}
@@ -224,6 +230,14 @@ public final class Operands {
 			}
 
 			return number.longValue() != 0;
+		} else if (object instanceof CharSequence) {
+			return ((CharSequence)object).length() != 0;
+		} else if (object instanceof Collection) {
+			return !((Collection<?>)object).isEmpty();
+		} else if (object instanceof Map) {
+			return !((Map<?, ?>)object).isEmpty();
+		} else if (object.getClass().isArray()) {
+			return Array.getLength(object) != 0;
 		} else if (object instanceof Boolean) {
 			return ((Boolean)object).booleanValue();
 		} else if (object instanceof Character) {
@@ -261,6 +275,32 @@ public final class Operands {
 	}
 
 	/**
+	 * Exponentiates two numerics.
+	 *
+	 * @param left the left operand
+	 * @param right the right operand
+	 * @return the result of the operation
+	 */
+	public static Double exponentiate(final Number left, final Number right) {
+		return Math.pow(left.doubleValue(), right.doubleValue());
+	}
+
+	/**
+	 * Checks if the pattern matches any part of the input.
+	 *
+	 * @param input the input being matched against the pattern
+	 * @param pattern the pattern used to test the input
+	 * @return true if the pattern matches any part of the input, otherwise false
+	 */
+	public static boolean findPattern(final Object input, final Object pattern) {
+		if (pattern instanceof CharSequence) {
+			return Pattern.compile(pattern.toString()).matcher((CharSequence)input).find();
+		}
+
+		return ((Pattern)pattern).matcher((CharSequence)input).find();
+	}
+
+	/**
 	 * Gets the class of the specified name.
 	 *
 	 * @param context the context used to get the class
@@ -269,6 +309,21 @@ public final class Operands {
 	 */
 	public static Class<?> getClass(final RenderContext context, final String name) {
 		return context.getClass(name);
+	}
+
+	/**
+	 * Checks if the pattern matches the whole input.
+	 *
+	 * @param input the input being matched against the pattern
+	 * @param pattern the pattern used to test the input
+	 * @return true if the pattern matches the whole, otherwise false
+	 */
+	public static boolean matchesPattern(final Object input, final Object pattern) {
+		if (pattern instanceof CharSequence) {
+			return Pattern.compile(pattern.toString()).matcher((CharSequence)input).matches();
+		}
+
+		return ((Pattern)pattern).matcher((CharSequence)input).matches();
 	}
 
 	/**
