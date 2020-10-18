@@ -404,7 +404,7 @@ public class ExpressionTests {
 		assertEquals(9999999999L + 9999999999L / 2 + 9999999999L % 2 - 3.14159265358979311599796346854, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "bigNum + bigNum / 2 + bigNum % 2 - π", Collections.<String, Expression>emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).doubleValue(), 0.00001);
 		assertEquals((int)(0x10000000L * 5280), ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000 * 5280", Collections.<String, Expression>emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());
 		assertEquals(0x10000000L * 5280, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000L * 5280", Collections.<String, Expression>emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).longValue());
-		assertEquals(Math.pow(2, 6), ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "i2 ** 6", Collections.<String, Expression>emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).doubleValue(), 0);
+		assertEquals(-Math.pow(2, 6), ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "-i2 ** 6", Collections.<String, Expression>emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).doubleValue(), 0);
 	}
 
 	@Test

@@ -663,24 +663,31 @@ public class TemplateLoader {
 
 			case '^': { // Start a new inverted section, or else block for the current section
 				final TrimmedString expression = StringUtils.trim(tag, 1);
-				final SectionRenderer renderer;
 
-				if (expression.string.isEmpty() && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
+				if ((expression.string.isEmpty() || expression.string.startsWith("#")) && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
 					if (state.sections.peek().getExpression() == null && state.sections.peek().getAnnotation() == null || state.sections.peek().getRenderList() != state.renderLists.pop()) {
 						throw new LoadException(loaders, "Section else tag outside section start tag");
 					}
 
-					renderer = (SectionRenderer)state.renderLists.peek().get(state.renderLists.peek().size() - 1);
+					final Section previousSection = state.sections.peek();
+
+					if (expression.string.isEmpty()) { // "else" tag
+						state.renderLists.push(previousSection.getInvertedRenderList());
+					} else { // "else if" tag
+						final Object location = state.loader.toLocation();
+
+						state.sections.pop(1).push(new Section(state.sections.peek(), location, state.createExpression(location, StringUtils.trim(tag, 2), extensions)));
+						previousSection.getInvertedRenderList().add(SectionRenderer.FACTORY.create(state.sections.peek()));
+						state.renderLists.push(state.sections.peek().getRenderList());
+					}
 				} else { // Start a new inverted section
 					final Object location = state.loader.toLocation();
 
 					state.sections.push(new Section(state.sections.peek(), location, state.createExpression(location, expression, extensions)));
-					renderer = SectionRenderer.FACTORY.create(state.sections.peek());
-					state.renderLists.peek().add(renderer);
+					state.renderLists.peek().add(SectionRenderer.FACTORY.create(state.sections.peek()));
+					state.renderLists.push(state.sections.peek().getInvertedRenderList());
 				}
 
-				// Grab the inverted action list from the section
-				state.renderLists.push(renderer.getSection().getInvertedRenderList());
 				return;
 			}
 
