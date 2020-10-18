@@ -57,12 +57,13 @@ final class Operator {
 	public static final int RIGHT_ASSOCIATIVITY = 0x00000040; // Is evaluated right to left
 	public static final int ALLOW_PAIRS         = 0x00000080; // Can contain pairs
 	public static final int NAVIGATION          = 0x00000100; // Is a navigation operator
-	public static final int SAFE                = 0x00000200; // Is a safe operator
-	public static final int IGNORE_TRAILING     = 0x00000400; // Trailing operators should be ignored
-	public static final int ASSIGNMENT          = 0x00000800; // Is an assignment operator
-	public static final int TRAILING_IDENTIFIER = 0x00001000; // Requires a trailing identifier
+	public static final int IGNORE_FAILURES     = 0x00000200; // Failures should be ignored
+	public static final int SAFE                = 0x00000400; // Is a safe operator
+	public static final int IGNORE_TRAILING     = 0x00000800; // Trailing operators should be ignored
+	public static final int ASSIGNMENT          = 0x00001000; // Is an assignment operator
+	public static final int TRAILING_IDENTIFIER = 0x00002000; // Requires a trailing identifier
 
-	private static final int CONTAINER          = 0x00002000; // Is a container (has an ending match or comma separator)
+	private static final int CONTAINER          = 0x00004000; // Is a container (has an ending match or comma separator)
 
 	private static final List<Operator> OPERATORS;
 	private static final Map<String, Operator> OPERATOR_LOOKUP = new LinkedHashMap<>();
@@ -84,17 +85,20 @@ final class Operator {
 		operators.add(new Operator("[:]",    0,  0, "Empty Map"));
 		operators.add(new Operator("[",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS, "Lookup", "]", 0, 1));
 		operators.add(new Operator("?[",     0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS | SAFE, "Safe Lookup", "]", 0, 1));
+		operators.add(new Operator("[?",     0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS | IGNORE_FAILURES, "Nullable Lookup", "]", 0, 1));
 		operators.add(createMethod("(", true));
 		operators.add(new Operator("(",      0,  RIGHT_EXPRESSION, "Parentheses", ")", 0, 1));
 		operators.add(new Operator("~@",     0,  RIGHT_EXPRESSION, "Get Class"));
 		operators.add(new Operator(".",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION, "Navigate"));
 		operators.add(new Operator("?.",     0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | SAFE, "Safe Navigate"));
+		operators.add(new Operator(".?",     0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION | IGNORE_FAILURES, "Nullable Navigate"));
 		operators.add(new Operator("**",     1,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Exponentiate"));
 		operators.add(new Operator("+",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Plus"));
 		operators.add(new Operator("-",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Minus"));
 		operators.add(new Operator("~",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Bitwise Negate"));
 		operators.add(new Operator("!",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Logical Negate"));
 		operators.add(new Operator("..",     3,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Range"));
+		operators.add(new Operator("..<",    3,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Exclusive Range"));
 		operators.add(new Operator("*",      4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Multiply"));
 		operators.add(new Operator("/",      4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Divide"));
 		operators.add(new Operator("%",      4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Modulus"));
@@ -137,6 +141,7 @@ final class Operator {
 		final Set<String> ignoreFailuresIn = new HashSet<>(Arrays.asList("?[" /* ambiguous with "?" and "[" operators; allowed, spaces must be used to disambiguate safe array lookup and ternary with list literal (e.g. "a ? [1..4] : null") */,
 				"?." /* ambiguous with "?" and "." operators; allowed, spaces must be used to disambiguate safe navigation and ternary with internal variable (e.g. "a ? .isFirst : d") */,
 				".." /* ambiguous with "." unary operator; allowed, because the "\" separator must be used when applying "." to the current object (".") */,
+				"..<" /* see line above */,
 				"=~" /* ambiguous with "~" operator if "=" were an operator; allowed, spaces must be used to disambiguate (e.g. "a = ~1") */,
 				"==~" /* ambiguous with "==" and "~" operators; allowed, spaces must be used to disambiguate (e.g. "0 == ~1") */,
 				"#^" /* ambiguous with section tag; allowed, because the operator would never be used at start of content tag */,
@@ -219,34 +224,6 @@ final class Operator {
 	 */
 	public Operator addRightExpression() {
 		return withRightExpressions(rightExpressions + 1);
-	}
-
-	/**
-	 * Sets the number of right expressions for the operator.
-	 *
-	 * @param expressions the number of right expressions
-	 * @return the new operator
-	 */
-	public Operator withRightExpressions(final int expressions) {
-		if (!has(X_RIGHT_EXPRESSIONS)) {
-			throw new UnsupportedOperationException();
-		}
-
-		return new Operator(string, precedence, properties, description, closingString, 0, expressions);
-	}
-
-	/**
-	 * Gets the operator with the specified localBindingIndex.
-	 *
-	 * @param localBindingIndex the local binding index
-	 * @return the operator for the specified identifier
-	 */
-	public Operator withLocalBindingIndex(final int localBindingIndex) {
-		if (!has(TRAILING_IDENTIFIER)) {
-			throw new UnsupportedOperationException();
-		}
-
-		return new Operator(string, precedence, properties, description, closingString, localBindingIndex, 0);
 	}
 
 	/**
@@ -347,6 +324,34 @@ final class Operator {
 		}
 
 		return string;
+	}
+
+	/**
+	 * Gets the operator with the specified localBindingIndex.
+	 *
+	 * @param localBindingIndex the local binding index
+	 * @return the operator for the specified identifier
+	 */
+	public Operator withLocalBindingIndex(final int localBindingIndex) {
+		if (!has(TRAILING_IDENTIFIER)) {
+			throw new UnsupportedOperationException();
+		}
+
+		return new Operator(string, precedence, properties, description, closingString, localBindingIndex, 0);
+	}
+
+	/**
+	 * Sets the number of right expressions for the operator.
+	 *
+	 * @param expressions the number of right expressions
+	 * @return the new operator
+	 */
+	public Operator withRightExpressions(final int expressions) {
+		if (!has(X_RIGHT_EXPRESSIONS)) {
+			throw new UnsupportedOperationException();
+		}
+
+		return new Operator(string, precedence, properties, description, closingString, 0, expressions);
 	}
 
 }

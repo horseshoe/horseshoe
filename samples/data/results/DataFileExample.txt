@@ -10,7 +10,7 @@ public:
 
 class Type2
 {
-	 StringField;
+	std::string StringField;
 
 public:
 	...

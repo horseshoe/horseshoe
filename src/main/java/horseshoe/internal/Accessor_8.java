@@ -16,17 +16,10 @@ final class Accessor_8 {
 	/**
 	 * A map accessor provides access to a value in a map using the specified key.
 	 */
-	static final class MapAccessor extends Accessor {
-
-		private final String key;
+	static class MapAccessor extends Accessor.MapAccessor {
 
 		MapAccessor(final String key) {
-			this.key = key;
-		}
-
-		@Override
-		public Object get(final Object context) {
-			return ((Map<?, ?>)context).get(key);
+			super(key);
 		}
 
 		@SuppressWarnings("unchecked")

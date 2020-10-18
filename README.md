@@ -35,21 +35,21 @@ Horseshoe does not support Mustache lambdas. It foregoes lambdas in favor of an 
 ### What literal types are supported in Horseshoe expressions?
 The following table summarizes the literals supported by Horseshoe. A more detailed explanation of each can be found in the [Expressions](#expressions) section.
 
-| Java Type | Horseshoe Literal |
+| Horseshoe Type | Horseshoe Literal |
 |-----------|-------------------|
-| `int` | `123` |
-| `long` | `123L` / `0x100000000` |
-| `double` | `3.14` / `2f` |
+| `int` | `123`, `1_203_937` |
+| `long` | `123L` / `0x1_0000_0000` |
+| `double` | `3.14` / `2'600.452'864f` |
 | `boolean` | `true` / `false` |
-| `java.lang.Object` | `null` |
-| `java.lang.String` | `"a \"string\""` / `'a ''string'''` |
-| `java.util.regex.Pattern` | `~/pattern/` |
-| `java.util.List` | `[1,2,3,4]` |
-| `java.util.Set` | `{1,2,3,4}` |
-| `java.util.Map` | `[1:2,3:4]` / `[:]` |
+| `Object` | `null` |
+| `String` | `"a \"string\""` / `'a ''string'''` |
+| `Regular Expression` | `~/pattern/` |
+| `List` | `[1,2,3,4]` |
+| `Set` | `{1,2,3,4}` |
+| `Map` | `[1:2,3:4]` / `[:]` |
 
 ### Which operators are supported by Horseshoe expressions?
-Horseshoe supports most non-assignment operators used in common languages. The equals operator can be used to bind a name to a local statement. Note that a bound name is scoped to a single expression and is not the same as an assignment operator. For more information on all the operators, see the [Supported Operators](#supported-operators) section.
+Horseshoe supports most non-assignment operators used in common languages. However, the equals operator can be used to bind a name to a local statement. Note that a bound name is scoped to a single expression and is not the same as an assignment operator. For more information on all the operators, see the [Supported Operators](#supported-operators) section.
 
 ### What extension should be used for Horseshoe template files?
 Horseshoe supports any file extension for template files. However, convention is to use a capital "U", which resembles a horseshoe.
@@ -163,13 +163,15 @@ Built-in annotations include the following:
 #### Inverted Sections
 Inverted section tags (`{{^ exists }}`) are used to negate a conditional or foreach section. Inverted sections are only rendered when the negated section would not be rendered. Null objects, numeric zero values, `false`, as well as empty lists or arrays are several examples of values that will cause an inverted section to be rendered.
 
-An inverted section tag can be left empty (`{{^}}`) to indicate that the inverted section will be rendered when the conditional associated with the current section is false. For example,
+An inverted section tag may start with a `#` (`{{^# condition }}`) to indicate an alternate condition or foreach section that will be evaluated when all conditionals associated with previous sections evaluate to false. An inverted section tag can be left empty (`{{^}}`) to indicate that the inverted section will be rendered when all conditionals associated with previous sections evaluate to false. For example,
 ```horseshoe
 {{# a }}
   a evaluates to true
+{{^# b }}
+  b evaluates to true
 {{^}}
-  a evaluates to false
-{{/ a }}
+  a and b evaluate to false
+{{/ b }}
 ```
 
 #### Inline Partials
@@ -205,14 +207,14 @@ Commas can be used anywhere within an expression. If a comma is used in a contex
 Lists, maps, and sets can be added and subtracted to form new lists, maps, and sets (`[1, 2] + {2, 3, 4} - [3]`). They can be sliced by range (`list[1:2]`) or by another list, map, or set (`map[{1, 3, 'Apple'}]`) using the [lookup operator](#supported-operators).
 
 #### Integer Literals
-Integer literals are sequences of digits or `0x` followed by hexadecimal digits. The value can be prefixed with `-` or `+` to indicate sign and is parsed as a 32-bit signed integer. If the value does not fit into a 32-bit signed integer, or the literal is suffixed with `L` or `l`, then the value is parsed as a 64-bit signed integer. Octal and binary integer literals as well as underscores within integer literals are not supported.
+Integer literals are sequences of digits or `0x` followed by hexadecimal digits. The value can be prefixed with `-` or `+` to indicate sign and is parsed as a 32-bit signed integer. If the value does not fit into a 32-bit signed integer, or the literal is suffixed with `L` or `l`, then the value is parsed as a 64-bit signed integer. Underscores or single quotes may be used as digit separators after the first digit. Octal and binary integer literals are not supported.
 
 #### Double Literals
 Double literals are sequences of digits, hexadecimal digits, `.`, exponents, and binary exponents as specified in float and double literals of C, C++, and Java. The value can be prefixed with `-` or `+` to indicate sign. Differences from the languages specifications include the following:
 1. Literals containing a `.` must have digits (or hexadecimal digits) immediately preceding the `.` and digits (or hexadecimal digits) or an exponent (or binary exponent) immediately following the `.` (to reduce syntax ambiguity).
 2. Literals can optionally end in `d`, `D`, `f`, or `F`, which affects the precision of the resulting value.
 
-Additionally, the literals `-Infinity` and `+Infinity` are supported. Long double literals as well as underscores within double literals are not supported.
+Additionally, the literals `-Infinity` and `+Infinity` are supported. Underscores or single quotes may be used as digit separators after the first digit. Long double literals are not supported.
 
 #### String Literals
 String literals are sequences of characters wrapped in either single quotes or double quotes. When wrapped in single quotes the only escape sequence is `''` (double single quote) to escape a single quote. All other characters in the literal are the exact characters given. The following escape sequences are substituted for string literals wrapped in double quotes:
@@ -237,10 +239,10 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 #### Supported Operators
 | Precedence | Operators | Associativity |
 | ---------- | --------- | ------------- |
-| 0 | <code>\{</code>a\*<code>\}</code> \(Set / Map Literal\), <br><code>\[</code>a\*<code>\]</code> \(List / Map Literal\), <br><code>\[:\]</code> \(Empty Map\), <br>a<code>\[</code>b<code>\]</code> \(Lookup\), <br>a<code>?\[</code>b<code>\]</code> \(Safe Lookup\), <br>a<code>\(</code>b\*<code>\)</code> \(Call Method\), <br><code>\(</code>a<code>\)</code> \(Parentheses\), <br><code>~@</code>a \(Get Class\), <br>a<code>\.</code>b \(Navigate\), <br>a<code>?\.</code>b \(Safe Navigate\) | Left&nbsp;to&nbsp;right |
+| 0 | <code>\{</code>a\*<code>\}</code> \(Set / Map Literal\), <br><code>\[</code>a\*<code>\]</code> \(List / Map Literal\), <br><code>\[:\]</code> \(Empty Map\), <br>a<code>\[</code>b<code>\]</code> \(Lookup\), <br>a<code>?\[</code>b<code>\]</code> \(Safe Lookup\), <br>a<code>\[?</code>b<code>\]</code> \(Nullable Lookup\), <br>a<code>\(</code>b\*<code>\)</code> \(Call Method\), <br><code>\(</code>a<code>\)</code> \(Parentheses\), <br><code>~@</code>a \(Get Class\), <br>a<code>\.</code>b \(Navigate\), <br>a<code>?\.</code>b \(Safe Navigate\), <br>a<code>\.?</code>b \(Nullable Navigate\) | Left&nbsp;to&nbsp;right |
 | 1 | a<code>\*\*</code>b \(Exponentiate\) | Left&nbsp;to&nbsp;right |
 | 2 | <code>\+</code>a \(Unary Plus\), <br><code>\-</code>a \(Unary Minus\), <br><code>~</code>a \(Bitwise Negate\), <br><code>\!</code>a \(Logical Negate\) | Right&nbsp;to&nbsp;left |
-| 3 | a<code>\.\.</code>b \(Range\) | Left&nbsp;to&nbsp;right |
+| 3 | a<code>\.\.</code>b \(Range\), <br>a<code>\.\.&lt;</code>b \(Exclusive Range\) | Left&nbsp;to&nbsp;right |
 | 4 | a<code>\*</code>b \(Multiply\), <br>a<code>/</code>b \(Divide\), <br>a<code>%</code>b \(Modulus\) | Left&nbsp;to&nbsp;right |
 | 5 | a<code>\+</code>b \(Add\), <br>a<code>\-</code>b \(Subtract\) | Left&nbsp;to&nbsp;right |
 | 6 | a<code>&lt;&lt;</code>b \(Bitwise Shift Left\), <br>a<code>&gt;&gt;</code>b \(Bitwise Shift Right Sign Extend\), <br>a<code>&gt;&gt;&gt;</code>b \(Bitwise Shift Right Zero Extend\) | Left&nbsp;to&nbsp;right |
@@ -258,6 +260,9 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 | 18 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\), <br><code>\#^</code>a \(Return\) | Left&nbsp;to&nbsp;right |
 | 19 | a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
 | 20 | a<code>\#&gt;</code>b \(Streaming Remap\), <br>a<code>\#\.</code>b \(Streaming Remap \- Alternate\), <br>a<code>\#&#124;</code>b \(Streaming Flatten Remap\), <br>a<code>\#?</code>b \(Streaming Filter\), <br>a<code>\#&lt;</code>b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
+
+##### Nullable Operators
+Nullable operators are similar to safe operators in that they return `null` when an exception would be thrown. However, nullable operators return `null` when failing to resolve interpolated values or methods on the right side of the operator as well as when encountering a `null` value on the left side of an operator. For example, `{{ a.?b() }}` would return `null` if either `a` is `null` or `a` does not contain a method `b()`.
 
 #### Named Expressions
 Named expressions are tags with the form `{{ name -> expression }}` or `{{ name(param1, param2) -> expression }}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags).

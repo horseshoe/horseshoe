@@ -2,6 +2,8 @@ package horseshoe.internal;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -109,18 +111,39 @@ public class AccessorTests {
 
 	@Test
 	public void testLookup() {
-		assertEquals(Arrays.asList(2, 3), Accessor.lookup(new int[] { 4, 2, 5, 3, 1 }, Arrays.asList(1, 3)));
-		assertEquals(Arrays.asList(2, 3), Accessor.lookup(Arrays.asList(4, 2, 5, 3, 1), Arrays.asList(1, 3)));
-		assertEquals(asMap(2, 7, 3, 8), Accessor.lookup(asMap(14, 9, 2, 7, 5, 10, 3, 8, 1, 6), Arrays.asList(2, 3, 4)));
-		assertEquals("Sam I am", Accessor.lookup("I am Sam", Arrays.asList(-3, -2, -1, -4, 0, 1, 2, 3)));
-		assertEquals('I', Accessor.lookup("I am Sam", 0));
-		assertEquals(asSet(2, 3), Accessor.lookup(asSet(14, 2, 5, 3, 1), Arrays.asList(2, 3, 4)));
+		assertEquals(Arrays.asList(2, 3), Accessor.lookup(new int[] { 4, 2, 5, 3, 1 }, Arrays.asList(1, 3), false));
+		assertEquals(Arrays.asList(2, 3), Accessor.lookup(Arrays.asList(4, 2, 5, 3, 1), Arrays.asList(1, 3), false));
+		assertEquals(asMap(2, 7, 3, 8, 4, null), Accessor.lookup(asMap(14, 9, 2, 7, 4, null, 20, 10, 3, 8, 1, 6), Arrays.asList(2, 3, 4, 5), false));
+		assertEquals("Sam I am", Accessor.lookup("I am Sam", Arrays.asList(-3, -2, -1, -4, 0, 1, 2, 3), false));
+		assertEquals('I', Accessor.lookup("I am Sam", 0, false));
+		assertEquals(asSet(2, 3), Accessor.lookup(asSet(14, 2, 5, 3, 1), Arrays.asList(2, 3, 4), false));
 
-		assertArrayEquals(new int[] {2, 5, 3}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, 4));
-		assertEquals(Arrays.asList(2, 5, 3), Accessor.lookupRange(Arrays.asList(4, 2, 5, 3, 1), 1, 4));
-		assertEquals(asMap(2, 7, 3, 8), Accessor.lookupRange(asMap(14, 9, 2, 7, 5, 10, 3, 8, 1, 6), 2, 5));
-		assertEquals("Sam", Accessor.lookupRange("I am Sam!", -4, -1));
-		assertEquals(asSet(2, 3), Accessor.lookupRange(asSet(14, 2, 5, 3, 1), 2, 5));
+		assertThrows(ClassCastException.class, () -> Accessor.lookup(new Object(), Arrays.asList(2, 3, 4), false));
+		assertThrows(ClassCastException.class, () -> Accessor.lookup("I am Sam", Arrays.asList("Test"), false));
+		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookup("I am Sam", Arrays.asList(100), false));
+		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookup("I am Sam", Arrays.asList(-100), false));
+		assertNull(Accessor.lookup("I am Sam", Arrays.asList("Test"), true));
+		assertNull(Accessor.lookup("I am Sam", Arrays.asList(100), true));
+		assertNull(Accessor.lookup("I am Sam", Arrays.asList(-100), true));
+
+		assertArrayEquals(new int[] {2, 5, 3}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, 4, false));
+		assertArrayEquals(new int[] {1, 3, 5}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 4, 1, false));
+		assertEquals(Arrays.asList(2, 5, 3), Accessor.lookupRange(Arrays.asList(4, 2, 5, 3, 1), 1, 4, false));
+		assertEquals(Arrays.asList(1, 3, 5), Accessor.lookupRange(Arrays.asList(4, 2, 5, 3, 1), 4, 1, false));
+		assertEquals(asMap(2, 7, 3, 8, 4, null), Accessor.lookupRange(asMap(14, 9, 2, 7, 4, null, 20, 10, 3, 8, 1, 6), 2, 6, false));
+		assertEquals(asMap(2, 7, 3, 8, 4, null), Accessor.lookupRange(asMap(14, 9, 2, 7, 4, null, 20, 10, 3, 8, 1, 6), 5, 1, false));
+		assertEquals("Sam", Accessor.lookupRange("I am Sam!", -4, -1, false));
+		assertEquals("ma", Accessor.lookupRange("I am Sam!", 3, 1, false));
+		assertEquals(asSet(2, 3), Accessor.lookupRange(asSet(14, 2, 5, 3, 1), 2, 5, false));
+		assertEquals(asSet(2, 3), Accessor.lookupRange(asSet(14, 2, 5, 3, 1), 4, 1, false));
+
+		assertThrows(ClassCastException.class, () -> Accessor.lookupRange(new Object(), 0, 1, false));
+		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", -10, -1, false));
+		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", 0, -11, false));
+		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", 9, -1, false));
+		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", 0, 10, false));
+		assertNull(Accessor.lookupRange("I am Sam!", 0, 10, true));
+		assertEquals("Sam", Accessor.lookupRange("I am Sam!", -4, -1, false));
 	}
 
 	@Test

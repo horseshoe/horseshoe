@@ -270,6 +270,13 @@ public class OperandsTests {
 	}
 
 	@Test
+	public void testOperatorMethods() {
+		assertThrows(UnsupportedOperationException.class, () -> Operator.get("+", true).withLocalBindingIndex(-1));
+		assertThrows(UnsupportedOperationException.class, () -> Operator.get("+", true).withRightExpressions(2));
+		assertEquals("m: 2", Operator.createMethod("m", true).withRightExpressions(2).toString());
+	}
+
+	@Test
 	public void testSubtract() {
 		for (int i = 0; i < numbers.length; i++) {
 			for (int j = 0; j < numbers.length; j++) {

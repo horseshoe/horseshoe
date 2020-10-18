@@ -3,7 +3,7 @@
 class {{ name }}
 {
 	{{# fields }}
-	{{ type.name ?? type }} {{ name }};
+	{{ type.?name ?? type }} {{ name }};
 	{{/}}
 
 public:
@@ -12,7 +12,7 @@ public:
 
 {{/}}
 {{# schema.fields }}
-static {{ type.name ?? type }} {{ name }};
+static {{ type.?name ?? type }} {{ name }};
 {{/}}
 
 {{# schema.extras }}

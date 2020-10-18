@@ -248,6 +248,40 @@ public final class Operands {
 	}
 
 	/**
+	 * Creates a range.
+	 *
+	 * @param start the start of the range
+	 * @param end the end of the range
+	 * @param exclusive true if the end is exclusive, otherwise false
+	 * @return the result int array containing the range of values
+	 */
+	public static int[] createRange(final Number start, final Number end, final boolean exclusive) {
+		final int left = start.intValue();
+		final int right = end.intValue();
+
+		// Check for reverse range
+		if (right < left) {
+			final int length = left - right + (exclusive ? 0 : 1);
+			final int[] result = new int[length];
+
+			for (int i = 0, j = left; i < length; j--, i++) {
+				result[i] = j;
+			}
+
+			return result;
+		}
+
+		final int length = right - left + (exclusive ? 0 : 1);
+		final int[] result = new int[length];
+
+		for (int i = 0, j = left; i < length; j++, i++) {
+			result[i] = j;
+		}
+
+		return result;
+	}
+
+	/**
 	 * Divides two numerics.
 	 *
 	 * @param left the left operand

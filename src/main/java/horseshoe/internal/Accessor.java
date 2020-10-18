@@ -1,20 +1,24 @@
 package horseshoe.internal;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
 public abstract class Accessor {
 
+	private static final MethodHandles.Lookup LOOKUP = MethodHandles.publicLookup();
 	static final Factory FACTORY = new Factory();
 	static final Object INVALID = new Object();
 
@@ -83,10 +87,32 @@ public abstract class Accessor {
 	private static final class Range {
 		public final int start;
 		public final int end;
+		public final int size;
+		public final int increment;
 
 		public Range(final int start, final int end, final int length) {
-			this.end = end < 0 ? Math.max(0, length + end) : Math.min(length, end);
-			this.start = start < 0 ? Math.max(0, Math.min(length + start, this.end)) : Math.min(this.end, start);
+			this.start = calculateIndex(length, start);
+			this.end = calculateIndex(length, end);
+
+			if (this.end < this.start) {
+				if (this.end < -1) {
+					throw new ArrayIndexOutOfBoundsException(this.end);
+				} else if (this.start >= length) {
+					throw new ArrayIndexOutOfBoundsException(this.start);
+				}
+
+				this.size = this.start - this.end;
+				this.increment = -1;
+			} else {
+				if (this.start < 0) {
+					throw new ArrayIndexOutOfBoundsException(this.start);
+				} else if (this.end > length) {
+					throw new ArrayIndexOutOfBoundsException(this.end);
+				}
+
+				this.size = this.end - this.start;
+				this.increment = 1;
+			}
 		}
 	}
 
@@ -106,9 +132,9 @@ public abstract class Accessor {
 	 *
 	 * @param context the context object to resolve
 	 * @return the value of the identifier
-	 * @throws ReflectiveOperationException if the value cannot be retrieved due to an invalid reflection call
+	 * @throws Throwable if the underlying operation throws
 	 */
-	public abstract Object get(final Object context) throws ReflectiveOperationException;
+	public abstract Object get(final Object context) throws Throwable;
 
 	/**
 	 * Gets the value of a method identifier given the specified context and parameters as part of an expression.
@@ -116,9 +142,9 @@ public abstract class Accessor {
 	 * @param context the context object to resolve
 	 * @param parameters the parameters to the method
 	 * @return the result of invoking the method
-	 * @throws ReflectiveOperationException if the value cannot be retrieved due to an invalid reflection call
+	 * @throws Throwable if the underlying operation throws
 	 */
-	public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
+	public Object get(final Object context, final Object... parameters) throws Throwable {
 		return get(context);
 	}
 
@@ -137,20 +163,29 @@ public abstract class Accessor {
 	 *
 	 * @param context the context object to resolve
 	 * @param lookup the value to lookup within the context
+	 * @param ignoreFailures true to return null for failures, false to throw exceptions
 	 * @return the result of the lookup
 	 */
-	public static Object lookup(final Object context, final Object lookup) {
-		if (context instanceof Map) {
-			return lookupMap((Map<?, ?>)context, lookup);
-		} else if (context instanceof List) {
-			return lookupList((List<?>)context, lookup);
-		} else if (context instanceof String) {
-			return lookupString((String)context, lookup);
-		} else if (context instanceof Set) {
-			return lookupSet((Set<?>)context, lookup);
+	public static Object lookup(final Object context, final Object lookup, boolean ignoreFailures) {
+		try {
+			if (context instanceof Map) {
+				return lookupMap((Map<?, ?>)context, lookup);
+			} else if (context instanceof List) {
+				return lookupList((List<?>)context, lookup);
+			} else if (context instanceof String) {
+				return lookupString((String)context, lookup);
+			} else if (context instanceof Set) {
+				return lookupSet((Set<?>)context, lookup);
+			}
+
+			return lookupArray(context, lookup);
+		} catch (final IndexOutOfBoundsException | ClassCastException e) {
+			if (!ignoreFailures) {
+				throw e;
+			}
 		}
 
-		return lookupArray(context, lookup);
+		return null;
 	}
 
 	/**
@@ -162,11 +197,10 @@ public abstract class Accessor {
 	 */
 	@SuppressWarnings("unchecked")
 	private static Object lookupArray(final Object context, final Object lookup) {
-		if (lookup instanceof Collection) {
-			final Collection<Number> collection = (Collection<Number>)lookup;
-			final List<Object> list = new ArrayList<>(collection.size());
+		if (lookup instanceof Iterable) {
+			final List<Object> list = (lookup instanceof Collection ? new ArrayList<>(((Collection<?>)lookup).size()) : new ArrayList<>());
 
-			for (final Number number : collection) {
+			for (final Number number : (Iterable<Number>)lookup) {
 				list.add(lookupArray(context, number.intValue()));
 			}
 
@@ -175,7 +209,9 @@ public abstract class Accessor {
 
 		final Class<?> componentType = context.getClass().getComponentType();
 
-		if (!componentType.isPrimitive()) {
+		if (componentType == null) {
+			throw new ClassCastException(context.getClass().getName() + " cannot be cast to an array type");
+		} else if (!componentType.isPrimitive()) {
 			return ((Object[])context)[((Number)lookup).intValue()];
 		} else if (int.class.equals(componentType)) {
 			return ((int[])context)[((Number)lookup).intValue()];
@@ -207,43 +243,99 @@ public abstract class Accessor {
 	private static Object lookupArrayRange(final Object context, final int start, final int end) {
 		final Class<?> componentType = context.getClass().getComponentType();
 
-		if (!componentType.isPrimitive()) {
+		if (componentType == null) {
+			throw new ClassCastException(context.getClass().getName() + " cannot be cast to an array type");
+		} else if (!componentType.isPrimitive()) {
 			final Object[] array = (Object[])context;
 			final Range range = new Range(start, end, array.length);
-			return Arrays.copyOfRange(array, range.start, range.end);
+			final Object[] newArray = new Object[range.size];
+
+			for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+				newArray[j] = array[i];
+			}
+
+			return newArray;
 		} else if (int.class.equals(componentType)) {
 			final int[] array = (int[])context;
 			final Range range = new Range(start, end, array.length);
-			return Arrays.copyOfRange(array, range.start, range.end);
+			final int[] newArray = new int[range.size];
+
+			for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+				newArray[j] = array[i];
+			}
+
+			return newArray;
 		} else if (byte.class.equals(componentType)) {
 			final byte[] array = (byte[])context;
 			final Range range = new Range(start, end, array.length);
-			return Arrays.copyOfRange(array, range.start, range.end);
+			final byte[] newArray = new byte[range.size];
+
+			for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+				newArray[j] = array[i];
+			}
+
+			return newArray;
 		} else if (double.class.equals(componentType)) {
 			final double[] array = (double[])context;
 			final Range range = new Range(start, end, array.length);
-			return Arrays.copyOfRange(array, range.start, range.end);
+			final double[] newArray = new double[range.size];
+
+			for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+				newArray[j] = array[i];
+			}
+
+			return newArray;
 		} else if (boolean.class.equals(componentType)) {
 			final boolean[] array = (boolean[])context;
 			final Range range = new Range(start, end, array.length);
-			return Arrays.copyOfRange(array, range.start, range.end);
+			final boolean[] newArray = new boolean[range.size];
+
+			for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+				newArray[j] = array[i];
+			}
+
+			return newArray;
 		} else if (float.class.equals(componentType)) {
 			final float[] array = (float[])context;
 			final Range range = new Range(start, end, array.length);
-			return Arrays.copyOfRange(array, range.start, range.end);
+			final float[] newArray = new float[range.size];
+
+			for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+				newArray[j] = array[i];
+			}
+
+			return newArray;
 		} else if (long.class.equals(componentType)) {
 			final long[] array = (long[])context;
 			final Range range = new Range(start, end, array.length);
-			return Arrays.copyOfRange(array, range.start, range.end);
+			final long[] newArray = new long[range.size];
+
+			for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+				newArray[j] = array[i];
+			}
+
+			return newArray;
 		} else if (char.class.equals(componentType)) {
 			final char[] array = (char[])context;
 			final Range range = new Range(start, end, array.length);
-			return Arrays.copyOfRange(array, range.start, range.end);
+			final char[] newArray = new char[range.size];
+
+			for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+				newArray[j] = array[i];
+			}
+
+			return newArray;
 		}
 
 		final short[] array = (short[])context;
 		final Range range = new Range(start, end, array.length);
-		return Arrays.copyOfRange(array, range.start, range.end);
+		final short[] newArray = new short[range.size];
+
+		for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+			newArray[j] = array[i];
+		}
+
+		return newArray;
 	}
 
 	/**
@@ -255,11 +347,10 @@ public abstract class Accessor {
 	 */
 	@SuppressWarnings("unchecked")
 	private static Object lookupList(final List<?> context, final Object lookup) {
-		if (lookup instanceof Collection) {
-			final Collection<Number> collection = (Collection<Number>)lookup;
-			final List<Object> list = new ArrayList<>(collection.size());
+		if (lookup instanceof Iterable) {
+			final List<Object> list = (lookup instanceof Collection ? new ArrayList<>(((Collection<?>)lookup).size()) : new ArrayList<>());
 
-			for (final Number number : collection) {
+			for (final Number number : (Iterable<Number>)lookup) {
 				list.add(context.get(calculateIndex(context.size(), number.intValue())));
 			}
 
@@ -279,7 +370,19 @@ public abstract class Accessor {
 	 */
 	private static Object lookupListRange(final List<?> context, final int start, final int end) {
 		final Range range = new Range(start, end, context.size());
-		return new ArrayList<Object>(context.subList(range.start, range.end));
+		final List<Object> newList = new ArrayList<>(range.size);
+
+		if (range.increment > 0) {
+			for (final ListIterator<?> it = context.listIterator(range.start); it.nextIndex() != range.end; ) {
+				newList.add(it.next());
+			}
+		} else {
+			for (final ListIterator<?> it = context.listIterator(range.start + 1); it.previousIndex() != range.end; ) {
+				newList.add(it.previous());
+			}
+		}
+
+		return newList;
 	}
 
 	/**
@@ -290,13 +393,14 @@ public abstract class Accessor {
 	 * @return the result of the lookup
 	 */
 	private static Object lookupMap(final Map<?, ?> context, final Object lookup) {
-		if (lookup instanceof Collection) {
-			final Collection<?> collection = (Collection<?>)lookup;
+		if (lookup instanceof Iterable) {
 			final Map<Object, Object> map = new LinkedHashMap<>();
 
-			for (final Object object : collection) {
-				if (context.containsKey(object)) {
-					map.put(object, context.get(object));
+			for (final Object object : (Iterable<?>)lookup) {
+				final Object value = context.get(object);
+
+				if (value != null || context.containsKey(object)) {
+					map.put(object, value);
 				}
 			}
 
@@ -316,10 +420,14 @@ public abstract class Accessor {
 	 */
 	private static Object lookupMapRange(final Map<?, ?> context, final int start, final int end) {
 		final Map<Object, Object> map = new LinkedHashMap<>();
+		final int increment = end < start ? -1 : 1;
 
-		for (int i = start; i < end; i++) {
-			if (context.containsKey(i)) {
-				map.put(i, context.get(i));
+		for (int i = start; i != end; i += increment) {
+			final Integer integer = Integer.valueOf(i);
+			final Object value = context.get(integer);
+
+			if (value != null || context.containsKey(integer)) {
+				map.put(integer, value);
 			}
 		}
 
@@ -332,20 +440,29 @@ public abstract class Accessor {
 	 * @param context the context object to resolve
 	 * @param start the start of the range to lookup
 	 * @param end the end of the range to lookup
+	 * @param ignoreFailures true to return null for failures, false to throw exceptions
 	 * @return the result of the lookup
 	 */
-	public static Object lookupRange(final Object context, final Object start, final Object end) {
-		if (context instanceof Map) {
-			return lookupMapRange((Map<?, ?>)context, ((Number)start).intValue(), ((Number)end).intValue());
-		} else if (context instanceof List) {
-			return lookupListRange((List<?>)context, ((Number)start).intValue(), ((Number)end).intValue());
-		} else if (context instanceof String) {
-			return lookupStringRange((String)context, ((Number)start).intValue(), ((Number)end).intValue());
-		} else if (context instanceof Set) {
-			return lookupSetRange((Set<?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+	public static Object lookupRange(final Object context, final Object start, final Object end, final boolean ignoreFailures) {
+		try {
+			if (context instanceof Map) {
+				return lookupMapRange((Map<?, ?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+			} else if (context instanceof List) {
+				return lookupListRange((List<?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+			} else if (context instanceof String) {
+				return lookupStringRange((String)context, ((Number)start).intValue(), ((Number)end).intValue());
+			} else if (context instanceof Set) {
+				return lookupSetRange((Set<?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+			}
+
+			return lookupArrayRange(context, ((Number)start).intValue(), ((Number)end).intValue());
+		} catch (final IndexOutOfBoundsException | ClassCastException e) {
+			if (!ignoreFailures) {
+				throw e;
+			}
 		}
 
-		return lookupArrayRange(context, ((Number)start).intValue(), ((Number)end).intValue());
+		return null;
 	}
 
 	/**
@@ -356,11 +473,10 @@ public abstract class Accessor {
 	 * @return the result of the lookup
 	 */
 	private static Object lookupSet(final Set<?> context, final Object lookup) {
-		if (lookup instanceof Collection) {
-			final Collection<?> collection = (Collection<?>)lookup;
+		if (lookup instanceof Iterable) {
 			final Set<Object> set = new LinkedHashSet<>();
 
-			for (final Object object : collection) {
+			for (final Object object : (Iterable<?>)lookup) {
 				if (context.contains(object)) {
 					set.add(object);
 				}
@@ -382,10 +498,13 @@ public abstract class Accessor {
 	 */
 	private static Object lookupSetRange(final Set<?> context, final int start, final int end) {
 		final Set<Object> set = new LinkedHashSet<>();
+		final int increment = end < start ? -1 : 1;
 
-		for (int i = start; i < end; i++) {
-			if (context.contains(i)) {
-				set.add(i);
+		for (int i = start; i != end; i += increment) {
+			final Integer integer = Integer.valueOf(i);
+
+			if (context.contains(integer)) {
+				set.add(integer);
 			}
 		}
 
@@ -401,16 +520,14 @@ public abstract class Accessor {
 	 */
 	@SuppressWarnings("unchecked")
 	private static Object lookupString(final String context, final Object lookup) {
-		if (lookup instanceof Collection) {
-			final Collection<Number> collection = (Collection<Number>)lookup;
-			final char[] chars = new char[collection.size()];
-			int i = 0;
+		if (lookup instanceof Iterable) {
+			StringBuilder sb = (lookup instanceof Collection ? new StringBuilder(((Collection<?>)lookup).size()) : new StringBuilder());
 
-			for (final Number number : collection) {
-				chars[i++] = context.charAt(calculateIndex(context.length(), number.intValue()));
+			for (final Number number : (Iterable<Number>)lookup) {
+				sb.append(context.charAt(calculateIndex(context.length(), number.intValue())));
 			}
 
-			return new String(chars);
+			return sb.toString();
 		}
 
 		return context.charAt(calculateIndex(context.length(), ((Number)lookup).intValue()));
@@ -426,7 +543,13 @@ public abstract class Accessor {
 	 */
 	private static Object lookupStringRange(final String context, final int start, final int end) {
 		final Range range = new Range(start, end, context.length());
-		return context.substring(range.start, range.end);
+		final char[] newArray = new char[range.size];
+
+		for (int i = range.start, j = 0; j < range.size; i += range.increment, j++) {
+			newArray[j] = context.charAt(i);
+		}
+
+		return new String(newArray);
 	}
 
 	/**
@@ -434,9 +557,9 @@ public abstract class Accessor {
 	 *
 	 * @param context the context object to resolve
 	 * @return the value of the identifier or an invalid value
-	 * @throws ReflectiveOperationException if the value cannot be retrieved due to an invalid reflection call
+	 * @throws Throwable if the underlying operation throws
 	 */
-	public Object tryGet(final Object context) throws ReflectiveOperationException {
+	public Object tryGet(final Object context) throws Throwable {
 		return get(context);
 	}
 
@@ -446,82 +569,20 @@ public abstract class Accessor {
 	 * @param context the context object to resolve
 	 * @param parameters the parameters to the method
 	 * @return the result of invoking the method or an invalid value
-	 * @throws ReflectiveOperationException if the value cannot be retrieved due to an invalid reflection call
+	 * @throws Throwable if the underlying operation throws
 	 */
-	public Object tryGet(final Object context, final Object... parameters) throws ReflectiveOperationException {
+	public Object tryGet(final Object context, final Object... parameters) throws Throwable {
 		return get(context, parameters);
 	}
 
 	/**
 	 * An array length accessor provides access to the length of an array.
 	 */
-	private static final class ArrayLengthAccessor extends Accessor {
+	static class ArrayLengthAccessor extends Accessor {
 		@Override
 		public Object get(final Object context) throws ReflectiveOperationException {
 			return Array.getLength(context);
 		}
-	}
-
-	/**
-	 * A field accessor provides access to a field in a class.
-	 */
-	private static final class FieldAccessor extends Accessor {
-
-		private final Field field;
-
-		private FieldAccessor(final Field field) {
-			this.field = field;
-		}
-
-		/**
-		 * Creates a new field accessor.
-		 *
-		 * @param parent the parent class for the field
-		 * @param fieldName the name of the field
-		 * @return the new accessor, or null if no field could be found
-		 */
-		public static FieldAccessor create(final Class<?> parent, final String fieldName) {
-			// Find first matching field
-			for (Class<?> ancestor = parent; ancestor != null; ancestor = ancestor.getSuperclass()) {
-				if (Modifier.isPublic(ancestor.getModifiers())) {
-					for (final Field field : ancestor.getFields()) {
-						if (!Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
-							field.setAccessible(true); // By-pass internal checks on access
-							return new FieldAccessor(field);
-						}
-					}
-				}
-			}
-
-			return null;
-		}
-
-		/**
-		 * Creates a new static field accessor.
-		 *
-		 * @param parent the parent class for the field
-		 * @param fieldName the name of the field
-		 * @return the new accessor, or null if no field could be found
-		 */
-		public static FieldAccessor createStatic(final Class<?> parent, final String fieldName) {
-			// Get public static fields only from the current class if it is public
-			if (Modifier.isPublic(parent.getModifiers())) {
-				for (final Field field : parent.getFields()) {
-					if (Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
-						field.setAccessible(true); // By-pass internal checks on access
-						return new FieldAccessor(field);
-					}
-				}
-			}
-
-			return null;
-		}
-
-		@Override
-		public Object get(final Object context) throws ReflectiveOperationException {
-			return field.get(context);
-		}
-
 	}
 
 	/**
@@ -544,11 +605,11 @@ public abstract class Accessor {
 	/**
 	 * A map accessor provides access to a value in a map using the specified key.
 	 */
-	private static final class MapAccessor extends Accessor {
+	static class MapAccessor extends Accessor {
 
 		private static final MapAccessorFactory FACTORY;
 
-		private final String key;
+		final String key;
 
 		static {
 			MapAccessorFactory factory = new MapAccessorFactory();
@@ -586,11 +647,11 @@ public abstract class Accessor {
 	/**
 	 * A method accessor provides access to a method.
 	 */
-	private static final class MethodAccessor extends Accessor {
+	static class MethodAccessor extends Accessor {
 
-		private final Method method;
+		final Method method;
 
-		private MethodAccessor(final Method method) {
+		MethodAccessor(final Method method) {
 			this.method = method;
 		}
 
@@ -675,7 +736,11 @@ public abstract class Accessor {
 
 		@Override
 		public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
-			return method.invoke(context, parameters);
+			try {
+				return method.invoke(context, parameters);
+			} catch (final ReflectiveOperationException e) {
+				throw new ReflectiveOperationException("Failed to invoke method \"" + method.getName() + "\": " + e.getMessage(), e);
+			}
 		}
 
 		/**
@@ -709,12 +774,12 @@ public abstract class Accessor {
 	/**
 	 * A methods accessor allows access to one of a number of methods in a class.
 	 */
-	private static final class MethodsAccessor extends Accessor {
+	static class MethodsAccessor extends Accessor {
 
-		private final Method[] methods;
-		private int mruIndex = 0;
+		final Method[] methods;
+		int mruIndex = 0;
 
-		private MethodsAccessor(final Method[] methods) {
+		MethodsAccessor(final Method[] methods) {
 			this.methods = methods;
 		}
 
@@ -761,7 +826,7 @@ public abstract class Accessor {
 
 	static class Factory {
 
-		public Accessor create(final Object context, final Identifier identifier) {
+		public Accessor create(final Object context, final Identifier identifier) throws IllegalAccessException {
 			final Class<?> contextClass = context.getClass();
 
 			if (identifier.isMethod()) { // Method
@@ -771,7 +836,7 @@ public abstract class Accessor {
 
 				return MethodAccessor.create(contextClass, identifier.getName(), identifier.getParameterCount());
 			} else if (Class.class.equals(contextClass)) { // Static field
-				return FieldAccessor.createStatic((Class<?>)context, identifier.getName());
+				return createStaticFieldAccessor((Class<?>)context, identifier.getName());
 			} else if (Map.class.isAssignableFrom(contextClass)) {
 				return MapAccessor.FACTORY.create(identifier.getName());
 			} else if (contextClass.isArray() && "length".equals(identifier.getName())) {
@@ -779,7 +844,65 @@ public abstract class Accessor {
 			}
 
 			// Field
-			return FieldAccessor.create(contextClass, identifier.getName());
+			return createFieldAccessor(contextClass, identifier.getName());
+		}
+
+		/**
+		 * Creates a new field accessor.
+		 *
+		 * @param parent the parent class for the field
+		 * @param fieldName the name of the field
+		 * @return the new accessor, or null if no field could be found
+		 * @throws IllegalAccessException never
+		 */
+		private static Accessor createFieldAccessor(final Class<?> parent, final String fieldName) throws IllegalAccessException {
+			// Find first matching field
+			for (Class<?> ancestor = parent; ancestor != null; ancestor = ancestor.getSuperclass()) {
+				if (Modifier.isPublic(ancestor.getModifiers())) {
+					for (final Field field : ancestor.getFields()) {
+						if (!Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
+							final MethodHandle getter = LOOKUP.unreflectGetter(field).asType(MethodType.methodType(Object.class, Object.class));
+
+							return new Accessor() {
+								@Override
+								public Object get(final Object context) throws Throwable {
+									return getter.invokeExact(context);
+								}
+							};
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
+		/**
+		 * Creates a new static field accessor.
+		 *
+		 * @param parent the parent class for the field
+		 * @param fieldName the name of the field
+		 * @return the new accessor, or null if no field could be found
+		 * @throws IllegalAccessException never
+		 */
+		public static Accessor createStaticFieldAccessor(final Class<?> parent, final String fieldName) throws IllegalAccessException {
+			// Get public static fields only from the current class if it is public
+			if (Modifier.isPublic(parent.getModifiers())) {
+				for (final Field field : parent.getFields()) {
+					if (Modifier.isStatic(field.getModifiers()) && fieldName.equals(field.getName())) {
+						final MethodHandle getter = LOOKUP.unreflectGetter(field).asType(MethodType.methodType(Object.class));
+
+						return new Accessor() {
+							@Override
+							public Object get(final Object context) throws Throwable {
+								return getter.invokeExact();
+							}
+						};
+					}
+				}
+			}
+
+			return null;
 		}
 
 	}

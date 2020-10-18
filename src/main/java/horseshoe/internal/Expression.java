@@ -52,6 +52,7 @@ public final class Expression {
 	private static final Method OPERANDS_ADD;
 	private static final Method OPERANDS_AND;
 	private static final Method OPERANDS_COMPARE;
+	private static final Method OPERANDS_CREATE_RANGE;
 	private static final Method OPERANDS_DIVIDE;
 	private static final Method OPERANDS_EXPONENTIATE;
 	private static final Method OPERANDS_FIND_PATTERN;
@@ -88,10 +89,10 @@ public final class Expression {
 
 	// The patterns used for parsing the grammar
 	private static final Pattern COMMENT_PATTERN = Pattern.compile("(?:/(?s:/[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|[*].*?[*]/)\\s*)", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[-+]Infinity|[-+]?(?:[0-9]+[fFdD]|(?:[0-9]+[.]?[eE][-+]?[0-9]+|[0-9]+[.][0-9]+(?:[eE][-+]?[0-9]+)?|0[xX](?:[0-9A-Fa-f]+[.]?|[0-9A-Fa-f]+[.][0-9A-Fa-f]+)[pP][-+]?[0-9]+)[fFdD]?))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[-+]Infinity|[-+]?(?:[0-9][0-9_']*[fFdD]|(?:[0-9][0-9_']*[.]?[eE][-+]?[0-9_']+|[0-9][0-9_']*[.][0-9_']+(?:[eE][-+]?[0-9_']+)?|0[xX](?:[0-9A-Fa-f_']+[.]?|[0-9A-Fa-f_']+[.][0-9A-Fa-f_']+)[pP][-+]?[0-9_']+)[fFdD]?))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>" + Identifier.PATTERN + "|`(?:[^`]|``)+`|[.][.]|[.])\\s*" + COMMENT_PATTERN + "*(?<isMethod>[(])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_WITH_PREFIX_PATTERN;
-	private static final Pattern LONG_PATTERN = Pattern.compile("(?:(?<hexsign>[-+]?)0[xX](?<hexadecimal>[0-9A-Fa-f]+)|(?<decimal>[-+]?[0-9]+))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern LONG_PATTERN = Pattern.compile("(?:(?<hexsign>[-+]?)0[xX](?<hexadecimal>[0-9A-Fa-f_']+)|(?<decimal>[-+]?[0-9][0-9_']*))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern NAMED_EXPRESSION_PARAMETER_PATTERN = Pattern.compile("(?:,\\s*" + COMMENT_PATTERN + "*(?:(?<parameter>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*)?)", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile(COMMENT_PATTERN + "*(?<name>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*(?:[(]\\s*" + COMMENT_PATTERN + "*(?:(?<firstParameter>[.]|" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*)?(?<remainingParameters>" + NAMED_EXPRESSION_PARAMETER_PATTERN + "+)?[)]\\s*" + COMMENT_PATTERN + "*)?[-=]>\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern OPERATOR_PATTERN;
@@ -218,15 +219,15 @@ public final class Expression {
 	static {
 		try {
 			ARRAY_LIST_CTOR_INT = ArrayList.class.getConstructor(int.class);
-			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class);
-			ACCESSOR_LOOKUP_RANGE = Accessor.class.getMethod("lookupRange", Object.class, Object.class, Object.class);
+			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class, boolean.class);
+			ACCESSOR_LOOKUP_RANGE = Accessor.class.getMethod("lookupRange", Object.class, Object.class, Object.class, boolean.class);
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", RenderContext.class, Object[].class);
 			HALT_EXCEPTION_CTOR_STRING = HaltRenderingException.class.getConstructor(String.class);
 			IDENTIFIER_FIND_VALUE = Identifier.class.getMethod("findValue", RenderContext.class, int.class);
 			IDENTIFIER_FIND_VALUE_METHOD = Identifier.class.getMethod("findValue", RenderContext.class, int.class, Object[].class);
 			IDENTIFIER_GET_ROOT_VALUE = Identifier.class.getMethod("getRootValue", RenderContext.class);
-			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class);
-			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, Object[].class);
+			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class, boolean.class);
+			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, boolean.class, Object[].class);
 			ITERABLE_ITERATOR = Iterable.class.getMethod("iterator");
 			ITERATOR_HAS_NEXT = Iterator.class.getMethod("hasNext");
 			ITERATOR_NEXT = Iterator.class.getMethod("next");
@@ -238,6 +239,7 @@ public final class Expression {
 			OPERANDS_ADD = Operands.class.getMethod("add", Object.class, Object.class);
 			OPERANDS_AND = Operands.class.getMethod("and", Number.class, Number.class);
 			OPERANDS_COMPARE = Operands.class.getMethod("compare", boolean.class, Object.class, Object.class);
+			OPERANDS_CREATE_RANGE = Operands.class.getMethod("createRange", Number.class, Number.class, boolean.class);
 			OPERANDS_DIVIDE = Operands.class.getMethod("divide", Number.class, Number.class);
 			OPERANDS_EXPONENTIATE = Operands.class.getMethod("exponentiate", Number.class, Number.class);
 			OPERANDS_FIND_PATTERN = Operands.class.getMethod("findPattern", Object.class, Object.class);
@@ -432,10 +434,10 @@ public final class Expression {
 				state.operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(skipFunc)));
 
 				if (lastOperator.has(Operator.SAFE)) {
-					state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(SWAP)));
+					state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(SWAP).pushConstant(lastOperator.has(Operator.IGNORE_FAILURES))));
 					state.operands.push(new Operand(Object.class, objectBuilder.addCode(DUP).addBranch(IFNULL, skipFunc)));
 				} else {
-					state.operands.push(new Operand(Object.class, objectBuilder));
+					state.operands.push(new Operand(Object.class, objectBuilder.pushConstant(lastOperator.has(Operator.IGNORE_FAILURES))));
 					state.operands.push(new Operand(Object.class, new MethodBuilder()));
 				}
 
@@ -445,6 +447,7 @@ public final class Expression {
 				state.operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_FIND_VALUE_METHOD)));
 				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(unstatedBackreach ? Identifier.UNSTATED_BACKREACH : backreach)));
 				state.operands.push(new Operand(Object.class, new MethodBuilder()));
+
 				return state.operators.push(Operator.createMethod(name, !unstatedBackreach)).peek();
 			}
 		} else { // Process the identifier
@@ -453,13 +456,14 @@ public final class Expression {
 			if (lastNavigation) {
 				final Identifier identifier = new Identifier(name);
 				final int index = state.getIdentifierIndex(identifier);
+				final Operator operator = state.operators.pop();
 
-				if (state.operators.pop().has(Operator.SAFE)) {
+				if (operator.has(Operator.SAFE)) {
 					// Create a new output formed by invoking identifiers[index].getValue(object)
 					final Label end = state.operands.peek().builder.newLabel();
-					state.operands.push(new Operand(Object.class, identifier, state.operands.pop().toObject().addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
+					state.operands.push(new Operand(Object.class, identifier, state.operands.pop().toObject().addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
 				} else {
-					state.operands.push(new Operand(Object.class, identifier, state.operands.pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE)));
+					state.operands.push(new Operand(Object.class, identifier, state.operands.pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE)));
 				}
 			} else {
 				final Integer localBindingIndex = unstatedBackreach ? state.getLocalBinding(name) : null;
@@ -492,13 +496,13 @@ public final class Expression {
 	}
 
 	/**
-	 * Parse a named expression heading.
+	 * Parse a named expression signature.
 	 *
 	 * @param state the parse state
 	 * @param initializeLocalBindings the method builder used to initialize the local bindings
-	 * @param matcher the matcher pointing to the named expression heading
+	 * @param matcher the matcher pointing to the named expression signature
 	 */
-	private static void parseNamedExpressionHeading(final ParseState state, final MethodBuilder initializeLocalBindings, final Matcher matcher) {
+	private static void parseNamedExpressionSignature(final ParseState state, final MethodBuilder initializeLocalBindings, final Matcher matcher) {
 		final String firstParameter = matcher.group("firstParameter");
 		final String remainingParameters = matcher.group("remainingParameters");
 
@@ -645,10 +649,10 @@ public final class Expression {
 		} else if (lastNavigation) { // An identifier must follow the navigation operator
 			throw new IllegalArgumentException("Invalid identifier (index " + state.getIndex(matcher) + ")");
 		} else if (!hasLeftExpression && matcher.usePattern(DOUBLE_PATTERN).lookingAt()) { // Double literal
-			state.operands.push(new Operand(double.class, new MethodBuilder().pushConstant(Double.parseDouble(matcher.group("double")))));
+			state.operands.push(new Operand(double.class, new MethodBuilder().pushConstant(Double.parseDouble(matcher.group("double").replace("_", "").replace("'", "")))));
 		} else if (!hasLeftExpression && matcher.usePattern(LONG_PATTERN).lookingAt()) { // Long literal
 			final String decimal = matcher.group("decimal");
-			final long value = decimal == null ? Long.parseLong(matcher.group("hexsign") + matcher.group("hexadecimal"), 16) : Long.parseLong(decimal);
+			final long value = decimal == null ? Long.parseLong(matcher.group("hexsign") + matcher.group("hexadecimal").replace("_", "").replace("'", ""), 16) : Long.parseLong(decimal.replace("_", "").replace("'", ""));
 
 			if (matcher.group("isLong") != null || (int)value != value) {
 				state.operands.push(new Operand(long.class, new MethodBuilder().pushConstant(value)));
@@ -660,58 +664,78 @@ public final class Expression {
 		} else if (!hasLeftExpression && matcher.usePattern(REGEX_PATTERN).lookingAt()) { // Regular expression literal ("nounicode" hack is to support broken Java runtime library implementations)
 			state.operands.push(new Operand(Object.class, new MethodBuilder().pushConstant(Pattern.compile(matcher.group("regex")).pattern()).pushConstant(matcher.group("nounicode") == null ? Pattern.UNICODE_CHARACTER_CLASS : 0).addInvoke(PATTERN_COMPILE)));
 		} else if (matcher.usePattern(OPERATOR_PATTERN).lookingAt()) { // Operator
-			final String token = matcher.group("operator");
-			final Operator operator = Operator.get(token, hasLeftExpression);
-
-			if (operator != null) {
-				// Shunting-yard Algorithm
-				while (!state.operators.isEmpty() && !state.operators.peek().isContainer() && (state.operators.peek().getPrecedence() < operator.getPrecedence() || (state.operators.peek().getPrecedence() == operator.getPrecedence() && operator.isLeftAssociative()))) {
-					processOperation(state);
-				}
-
-				if (!state.operators.isEmpty() && state.operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
-					state.operators.push(state.operators.pop().addRightExpression());
-				} else if (operator.has(Operator.TRAILING_IDENTIFIER)) {
-					if (!matcher.region(matcher.end(), matcher.regionEnd()).usePattern(TRAILING_IDENTIFIER_PATTERN).lookingAt()) {
-						throw new IllegalArgumentException("Missing identifier after \"" + operator + "\" operator (index " + state.getIndex(matcher) + ")");
-					}
-
-					state.operators.push(operator.withLocalBindingIndex(state.createLocalBinding(matcher.group("name"))));
-				} else {
-					state.operators.push(operator);
-				}
-
-				return operator;
-			} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION)) { // Check if this token ends an expression on the stack
-				while (!state.operators.isEmpty()) {
-					Operator closedOperator = state.operators.pop();
-
-					if (closedOperator.has(Operator.X_RIGHT_EXPRESSIONS) && hasLeftExpression) { // Process multi-argument operators
-						closedOperator = closedOperator.addRightExpression();
-					}
-
-					if (closedOperator.getClosingString() != null) {
-						if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
-							throw new IllegalArgumentException("Unexpected \"" + token + "\", expecting \"" + closedOperator.getClosingString() + "\" (index " + state.getIndex(matcher) + ")");
-						}
-
-						state.operators.push(closedOperator);
-						processOperation(state);
-						return closedOperator.getClosingOperator();
-					}
-
-					state.operators.push(closedOperator);
-					processOperation(state);
-				}
-			}
-
-			throw new IllegalArgumentException("Unexpected \"" + token + "\" (index " + state.getIndex(matcher) + ")");
+			return processOperator(state, matcher, lastOperator, hasLeftExpression);
 		} else {
 			final String start = state.trimmedString.length() - matcher.regionStart() > 10 ? state.trimmedString.substring(matcher.regionStart(), matcher.regionStart() + 7) + "..." : state.trimmedString.substring(matcher.regionStart());
 			throw new IllegalArgumentException("Unrecognized operand \"" + start + "\" (index " + state.getIndex(matcher) + ")");
 		}
 
 		return null;
+	}
+
+	/**
+	 * Processes the method call. The operand stack will be updated with the results of evaluating the operator.
+	 *
+	 * @param state the parse state
+	 * @param operator the method call operator
+	 */
+	private static void processMethodCall(final ParseState state, final Operator operator) {
+		final int parameterCount = operator.getRightExpressions();
+		final Expression namedExpression;
+
+		if (operator.has(Operator.KNOWN_OBJECT) || (namedExpression = state.namedExpressions.get(operator.getString())) == null) {
+			// Create the identifier, then get and invoke the appropriate method
+			final int index = state.getIdentifierIndex(new Identifier(operator.getString(), parameterCount));
+			final MethodBuilder methodResult = state.operands.peek(parameterCount).builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).append(state.operands.peek(parameterCount + 1).builder);
+
+			if (parameterCount == 0) {
+				methodResult.addCode(ACONST_NULL);
+			} else {
+				methodResult.pushNewObject(Object.class, parameterCount);
+
+				// Convert all parameters to objects and store them in the array
+				for (int i = 0; i < parameterCount; i++) {
+					methodResult.addCode(DUP).pushConstant(i).append(state.operands.peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
+				}
+			}
+
+			state.operands.push(new Operand(Object.class, methodResult.append(state.operands.pop(parameterCount + 2).pop().builder)));
+			return;
+		}
+
+		// Process the named expression
+		final MethodBuilder expressionResult = new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA);
+		Integer index = state.expressions.get(namedExpression);
+
+		if (index == null) {
+			index = state.expressions.size();
+			state.expressions.put(namedExpression, index);
+		}
+
+		// Load the context
+		if (parameterCount == 0) {
+			expressionResult.addCode(DUP).pushConstant(0).addInvoke(STACK_PEEK);
+		} else {
+			expressionResult.append(state.operands.peek(parameterCount - 1).toObject());
+		}
+
+		expressionResult.addInvoke(STACK_PUSH_OBJECT).addCode(POP).addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT);
+
+		// Load the arguments
+		if (parameterCount > 1) {
+			expressionResult.pushNewObject(Object.class, parameterCount - 1);
+
+			for (int i = 0; i < parameterCount - 1; i++) {
+				expressionResult.addCode(DUP).pushConstant(i).append(state.operands.peek(parameterCount - 2 - i).toObject()).addCode(AASTORE);
+			}
+		} else {
+			expressionResult.addCode(ACONST_NULL);
+		}
+
+		// Evaluate the expression
+		expressionResult.addInvoke(EXPRESSION_EVALUATE).addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_POP).addCode(POP);
+
+		state.operands.pop(parameterCount + 3).push(new Operand(Object.class, expressionResult));
 	}
 
 	/**
@@ -739,8 +763,8 @@ public final class Expression {
 
 		switch (operator.getString()) {
 			// List / Set / Array / Map / String Lookup Operations
-			case "[":
-			case "?[":
+			case  "[": case  "[?":
+			case "?[": case "?[?":
 				if (left != null) {
 					final Operand subject = Entry.class.equals(right.type) ? state.operands.pop() : left;
 
@@ -755,9 +779,9 @@ public final class Expression {
 					}
 
 					if (Entry.class.equals(right.type)) {
-						state.operands.push(new Operand(Object.class, subject.builder.append(left.toObject()).append(right.toObject()).addInvoke(ACCESSOR_LOOKUP_RANGE).updateLabel(end)));
+						state.operands.push(new Operand(Object.class, subject.builder.append(left.toObject()).append(right.toObject()).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(ACCESSOR_LOOKUP_RANGE).updateLabel(end)));
 					} else {
-						state.operands.push(new Operand(Object.class, subject.builder.append(right.toObject()).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
+						state.operands.push(new Operand(Object.class, subject.builder.append(right.toObject()).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(ACCESSOR_LOOKUP).updateLabel(end)));
 					}
 
 					break;
@@ -811,18 +835,10 @@ public final class Expression {
 			case "[:]":
 				state.operands.push(new Operand(Object.class, new MethodBuilder().pushNewObject(LinkedHashMap.class).addCode(DUP).pushConstant(8).addInvoke(LINKED_HASH_MAP_CTOR_INT)));
 				break;
-			case "..": {
-				final Label decreasing = left.builder.newLabel();
-				final Label increasingLoop = left.builder.newLabel();
-				final Label decreasingLoop = left.builder.newLabel();
-				final Label end = left.builder.newLabel();
-
-				state.operands.push(new Operand(Object.class, left.toNumeric(false).addPrimitiveConversion(Number.class, int.class).addCode(DUP).addAccess(ISTORE, Evaluable.FIRST_LOCAL_INDEX).append(right.toNumeric(false).addPrimitiveConversion(Number.class, int.class)).addCode(DUP2).addBranch(IF_ICMPGT, decreasing)
-						.addCode(SWAP, ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(increasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(IADD, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, increasingLoop).addGoto(end, 0)
-						.updateLabel(decreasing).addCode(ISUB, ICONST_1, IADD, NEWARRAY, (byte)10, DUP).addAccess(ASTORE, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ICONST_0).updateLabel(decreasingLoop).addCode(DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(SWAP, DUP).addAccess(ILOAD, Evaluable.FIRST_LOCAL_INDEX).addCode(SWAP, ISUB, IASTORE, ICONST_1, IADD, DUP).addAccess(ALOAD, Evaluable.FIRST_LOCAL_INDEX + 1).addCode(ARRAYLENGTH).addBranch(IF_ICMPLT, decreasingLoop)
-						.updateLabel(end).addCode(POP)));
+			case "..":
+			case "..<":
+				state.operands.push(new Operand(Object.class, left.toNumeric(false).append(right.toNumeric(false)).pushConstant(operator.getString().endsWith("<")).addInvoke(OPERANDS_CREATE_RANGE)));
 				break;
-			}
 
 			// Math Operations
 			case "**":
@@ -1061,68 +1077,61 @@ public final class Expression {
 	}
 
 	/**
-	 * Processes the method call. The operand stack will be updated with the results of evaluating the operator.
+	 * Processes the current operator from the given matcher and returns it.
 	 *
 	 * @param state the parse state
-	 * @param operator the method call operator
+	 * @param matcher the matcher used to match the next token
+	 * @param lastOperator the last operator that was parsed
+	 * @param hasLeftExpression true if the operator being processed has a left expression
+	 * @return the newly processed operator
 	 */
-	private static void processMethodCall(final ParseState state, final Operator operator) {
-		final int parameterCount = operator.getRightExpressions();
-		final Expression namedExpression;
+	private static Operator processOperator(final ParseState state, final Matcher matcher, final Operator lastOperator, final boolean hasLeftExpression) {
+		final String token = matcher.group("operator");
+		final Operator operator = Operator.get(token, hasLeftExpression);
 
-		if (operator.has(Operator.KNOWN_OBJECT) || (namedExpression = state.namedExpressions.get(operator.getString())) == null) {
-			// Create the identifier, then get and invoke the appropriate method
-			final int index = state.getIdentifierIndex(new Identifier(operator.getString(), parameterCount));
-			final MethodBuilder methodResult = state.operands.peek(parameterCount).builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).append(state.operands.peek(parameterCount + 1).builder);
+		if (operator != null) {
+			// Shunting-yard Algorithm
+			while (!state.operators.isEmpty() && !state.operators.peek().isContainer() && (state.operators.peek().getPrecedence() < operator.getPrecedence() || (state.operators.peek().getPrecedence() == operator.getPrecedence() && operator.isLeftAssociative()))) {
+				processOperation(state);
+			}
 
-			if (parameterCount == 0) {
-				methodResult.addCode(ACONST_NULL);
-			} else {
-				methodResult.pushNewObject(Object.class, parameterCount);
-
-				// Convert all parameters to objects and store them in the array
-				for (int i = 0; i < parameterCount; i++) {
-					methodResult.addCode(DUP).pushConstant(i).append(state.operands.peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
+			if (!state.operators.isEmpty() && state.operators.peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
+				state.operators.push(state.operators.pop().addRightExpression());
+			} else if (operator.has(Operator.TRAILING_IDENTIFIER)) {
+				if (!matcher.region(matcher.end(), matcher.regionEnd()).usePattern(TRAILING_IDENTIFIER_PATTERN).lookingAt()) {
+					throw new IllegalArgumentException("Missing identifier after \"" + operator + "\" operator (index " + state.getIndex(matcher) + ")");
 				}
+
+				state.operators.push(operator.withLocalBindingIndex(state.createLocalBinding(matcher.group("name"))));
+			} else {
+				state.operators.push(operator);
 			}
 
-			state.operands.push(new Operand(Object.class, methodResult.append(state.operands.pop(parameterCount + 2).pop().builder)));
-			return;
-		}
+			return operator;
+		} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION)) { // Check if this token ends an expression on the stack
+			while (!state.operators.isEmpty()) {
+				Operator closedOperator = state.operators.pop();
 
-		// Process the named expression
-		final MethodBuilder expressionResult = new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA);
-		Integer index = state.expressions.get(namedExpression);
+				if (closedOperator.has(Operator.X_RIGHT_EXPRESSIONS) && hasLeftExpression) { // Process multi-argument operators
+					closedOperator = closedOperator.addRightExpression();
+				}
 
-		if (index == null) {
-			index = state.expressions.size();
-			state.expressions.put(namedExpression, index);
-		}
+				if (closedOperator.getClosingString() != null) {
+					if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
+						throw new IllegalArgumentException("Unexpected \"" + token + "\", expecting \"" + closedOperator.getClosingString() + "\" (index " + state.getIndex(matcher) + ")");
+					}
 
-		// Load the context
-		if (parameterCount == 0) {
-			expressionResult.addCode(DUP).pushConstant(0).addInvoke(STACK_PEEK);
-		} else {
-			expressionResult.append(state.operands.peek(parameterCount - 1).toObject());
-		}
+					state.operators.push(closedOperator);
+					processOperation(state);
+					return closedOperator.getClosingOperator();
+				}
 
-		expressionResult.addInvoke(STACK_PUSH_OBJECT).addCode(POP).addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT);
-
-		// Load the arguments
-		if (parameterCount > 1) {
-			expressionResult.pushNewObject(Object.class, parameterCount - 1);
-
-			for (int i = 0; i < parameterCount - 1; i++) {
-				expressionResult.addCode(DUP).pushConstant(i).append(state.operands.peek(parameterCount - 2 - i).toObject()).addCode(AASTORE);
+				state.operators.push(closedOperator);
+				processOperation(state);
 			}
-		} else {
-			expressionResult.addCode(ACONST_NULL);
 		}
 
-		// Evaluate the expression
-		expressionResult.addInvoke(EXPRESSION_EVALUATE).addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_POP).addCode(POP);
-
-		state.operands.pop(parameterCount + 3).push(new Operand(Object.class, expressionResult));
+		throw new IllegalArgumentException("Unexpected \"" + token + "\" (index " + state.getIndex(matcher) + ")");
 	}
 
 	/**
@@ -1167,7 +1176,7 @@ public final class Expression {
 
 			// Load the identifiers and invoke identifiers[index].getValue(object)
 			for (int i = 1; i < names.length; i++) {
-				state.operands.peek().builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifierIndex(new Identifier(names[i]))).addCode(AALOAD, SWAP).addInvoke(IDENTIFIER_GET_VALUE);
+				state.operands.peek().builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifierIndex(new Identifier(names[i]))).addCode(AALOAD, SWAP).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE);
 			}
 		} else { // Tokenize the entire expression, using the shunting yard algorithm
 			int initializeBindingsStart = 0;
@@ -1177,7 +1186,7 @@ public final class Expression {
 			if (matcher.lookingAt()) {
 				namedExpressions.put(matcher.group("name"), this);
 				named = true;
-				parseNamedExpressionHeading(state, mb, matcher);
+				parseNamedExpressionSignature(state, mb, matcher);
 				initializeBindingsStart = state.localBindings.size();
 				matcher.region(matcher.end(), end);
 			}
