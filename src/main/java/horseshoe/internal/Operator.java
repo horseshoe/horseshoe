@@ -112,6 +112,7 @@ final class Operator {
 		operators.add(new Operator(">=",     8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Greater Than or Equal"));
 		operators.add(new Operator("<",      8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Less Than"));
 		operators.add(new Operator(">",      8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Greater Than"));
+		operators.add(new Operator("in",     8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Is In"));
 		operators.add(new Operator("==",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Equal"));
 		operators.add(new Operator("!=",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Not Equal"));
 		operators.add(new Operator("=~",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Found Pattern"));
@@ -142,6 +143,7 @@ final class Operator {
 				"?." /* ambiguous with "?" and "." operators; allowed, spaces must be used to disambiguate safe navigation and ternary with internal variable (e.g. "a ? .isFirst : d") */,
 				".." /* ambiguous with "." unary operator; allowed, because the "\" separator must be used when applying "." to the current object (".") */,
 				"..<" /* see line above */,
+				"in" /* doesn't use valid characters */,
 				"=~" /* ambiguous with "~" operator if "=" were an operator; allowed, spaces must be used to disambiguate (e.g. "a = ~1") */,
 				"==~" /* ambiguous with "==" and "~" operators; allowed, spaces must be used to disambiguate (e.g. "0 == ~1") */,
 				"#^" /* ambiguous with section tag; allowed, because the operator would never be used at start of content tag */,

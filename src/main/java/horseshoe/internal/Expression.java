@@ -57,6 +57,7 @@ public final class Expression {
 	private static final Method OPERANDS_EXPONENTIATE;
 	private static final Method OPERANDS_FIND_PATTERN;
 	private static final Method OPERANDS_GET_CLASS;
+	private static final Method OPERANDS_IS_IN;
 	private static final Method OPERANDS_MATCHES_PATTERN;
 	private static final Method OPERANDS_MULTIPLY;
 	private static final Method OPERANDS_MODULO;
@@ -244,6 +245,7 @@ public final class Expression {
 			OPERANDS_EXPONENTIATE = Operands.class.getMethod("exponentiate", Number.class, Number.class);
 			OPERANDS_FIND_PATTERN = Operands.class.getMethod("findPattern", Object.class, Object.class);
 			OPERANDS_GET_CLASS = Operands.class.getMethod("getClass", RenderContext.class, String.class);
+			OPERANDS_IS_IN = Operands.class.getMethod("isIn", Object.class, Object.class);
 			OPERANDS_MATCHES_PATTERN = Operands.class.getMethod("matchesPattern", Object.class, Object.class);
 			OPERANDS_MULTIPLY = Operands.class.getMethod("multiply", Number.class, Number.class);
 			OPERANDS_MODULO = Operands.class.getMethod("modulo", Number.class, Number.class);
@@ -950,6 +952,11 @@ public final class Expression {
 				state.operands.push(new Operand(boolean.class, new MethodBuilder().append(left.toObject()).append(right.toObject()).addInvoke(OPERANDS_MATCHES_PATTERN)));
 				break;
 
+			// Membership Operator
+			case "in":
+				state.operands.push(new Operand(boolean.class, new MethodBuilder().append(left.toObject()).append(right.toObject()).addInvoke(OPERANDS_IS_IN)));
+				break;
+
 			// Ternary Operations
 			case "??":
 			case "?:": {
@@ -1271,6 +1278,15 @@ public final class Expression {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Evaluates the expression using a new default render context.
+	 *
+	 * @return the evaluated expression or null if the expression could not be evaluated
+	 */
+	public Object evaluate() {
+		return evaluate(new RenderContext());
 	}
 
 	/**

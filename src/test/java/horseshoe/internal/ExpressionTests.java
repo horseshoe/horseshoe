@@ -300,6 +300,12 @@ public class ExpressionTests {
 	}
 
 	@Test
+	public void testIn() throws ReflectiveOperationException {
+		assertTrue((Boolean)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "'Test' in ['Test', 'Retest']", Collections.<String, Expression>emptyMap(), true).evaluate());
+		assertFalse((Boolean)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "'test' in ['Test', 'Retest']", Collections.<String, Expression>emptyMap(), true).evaluate());
+	}
+
+	@Test
 	public void testIntegralOperators() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("r", 10, "i2", 2, "bigNum", 9999999999L);
 		assertEquals((((10 | 2) ^ 2) >> 2) << 10, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(((+r | i2) ^ 2) >> 2) << r", Collections.<String, Expression>emptyMap(), true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());

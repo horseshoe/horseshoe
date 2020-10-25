@@ -247,7 +247,7 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 | 5 | a<code>\+</code>b \(Add\), <br>a<code>\-</code>b \(Subtract\) | Left&nbsp;to&nbsp;right |
 | 6 | a<code>&lt;&lt;</code>b \(Bitwise Shift Left\), <br>a<code>&gt;&gt;</code>b \(Bitwise Shift Right Sign Extend\), <br>a<code>&gt;&gt;&gt;</code>b \(Bitwise Shift Right Zero Extend\) | Left&nbsp;to&nbsp;right |
 | 7 | a<code>&lt;=&gt;</code>b \(Three\-way Comparison\) | Left&nbsp;to&nbsp;right |
-| 8 | a<code>&lt;=</code>b \(Less Than or Equal\), <br>a<code>&gt;=</code>b \(Greater Than or Equal\), <br>a<code>&lt;</code>b \(Less Than\), <br>a<code>&gt;</code>b \(Greater Than\) | Left&nbsp;to&nbsp;right |
+| 8 | a<code>&lt;=</code>b \(Less Than or Equal\), <br>a<code>&gt;=</code>b \(Greater Than or Equal\), <br>a<code>&lt;</code>b \(Less Than\), <br>a<code>&gt;</code>b \(Greater Than\), <br>a<code>in</code>b \(Is In\) | Left&nbsp;to&nbsp;right |
 | 9 | a<code>==</code>b \(Equal\), <br>a<code>\!=</code>b \(Not Equal\), <br>a<code>=~</code>b \(Found Pattern\), <br>a<code>==~</code>b \(Matches Pattern\) | Left&nbsp;to&nbsp;right |
 | 10 | a<code>&amp;</code>b \(Bitwise And\) | Left&nbsp;to&nbsp;right |
 | 11 | a<code>^</code>b \(Bitwise Xor\) | Left&nbsp;to&nbsp;right |

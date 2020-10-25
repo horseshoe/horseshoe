@@ -34,6 +34,9 @@ ONBUILD COPY ${JAR_FILE} /usr/lib/
 
 FROM deploy-${DEPLOY:-built-jar} AS deploy
 
+RUN addgroup horseshoe && adduser --gecos Horseshoe --shell /sbin/nologin --ingroup horseshoe --disabled-password --no-create-home horseshoe
+USER horseshoe
+
 RUN java -jar /usr/lib/horseshoe.jar --version
 ENTRYPOINT ["java", "-jar", "/usr/lib/horseshoe.jar"]
 CMD ["--version"]

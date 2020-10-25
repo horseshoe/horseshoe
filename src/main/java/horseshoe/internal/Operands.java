@@ -346,6 +346,23 @@ public final class Operands {
 	}
 
 	/**
+	 * Checks if the item is in the container.
+	 *
+	 * @param item the object being tested for membership
+	 * @param container the container being tested against
+	 * @return true if the item is contained in the container, otherwise false
+	 */
+	public static boolean isIn(final Object item, final Object container) {
+		if (container instanceof Collection) {
+			return ((Collection<?>)container).contains(item);
+		} else if (container instanceof Map) {
+			return ((Map<?, ?>)container).containsKey(item);
+		}
+
+		return false;
+	}
+
+	/**
 	 * Checks if the pattern matches the whole input.
 	 *
 	 * @param input the input being matched against the pattern

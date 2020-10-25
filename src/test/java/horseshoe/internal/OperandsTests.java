@@ -242,6 +242,15 @@ public class OperandsTests {
 	}
 
 	@Test
+	public void testIsIn() {
+		assertTrue(Operands.isIn(4, Arrays.asList(1, 2, 3, 4)));
+		assertFalse(Operands.isIn(4, Arrays.asList(1, 2, 3, 5)));
+		assertTrue(Operands.isIn("key", Collections.singletonMap("key", "value")));
+		assertFalse(Operands.isIn("value", Collections.singletonMap("key", "value")));
+		assertFalse(Operands.isIn(4, new Object()));
+	}
+
+	@Test
 	public void testMultiply() {
 		for (int i = 0; i < numbers.length; i++) {
 			for (int j = 0; j < numbers.length; j++) {
