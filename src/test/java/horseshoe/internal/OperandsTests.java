@@ -36,9 +36,6 @@ public class OperandsTests {
 			assertEquals(numbers[i] + " ", Operands.add(numbers[i], " ").toString());
 			assertEquals(" " + numbers[i], Operands.add(" ", numbers[i]).toString());
 
-			assertEquals(numbers[i] + " ", Operands.add(numbers[i], new StringBuilder(" ")).toString());
-			assertEquals(" " + numbers[i], Operands.add(new StringBuilder(" "), numbers[i]).toString());
-
 			final int k = i;
 
 			assertThrows(IllegalArgumentException.class, () -> Operands.add(numbers[k], new Object()));
@@ -157,7 +154,7 @@ public class OperandsTests {
 		assertTrue(Operands.compare(false, new Date(0), new Date(1)) < 0);
 		assertTrue(Operands.compare(false, new Date(1), new Date(0)) > 0);
 
-		final Object[] stringEquivalents = { new StringBuilder().append("5"), "5", '5' };
+		final Object[] stringEquivalents = { "5", '5' };
 
 		for (int i = 0; i < stringEquivalents.length; i++) {
 			for (int j = 0; j < stringEquivalents.length; j++) {

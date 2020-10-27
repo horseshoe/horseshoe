@@ -31,8 +31,8 @@ public final class Operands {
 			if (right instanceof Number || right instanceof Character) {
 				return add(toNumeric(left), toNumeric(right));
 			}
-		} else if (left instanceof StringBuilder) {
-			return ((StringBuilder)left).append(right);
+		} else if (left instanceof String) {
+			return (String)left + right;
 		} else if (left instanceof Set) {
 			if (right instanceof Collection) {
 				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
@@ -90,15 +90,10 @@ public final class Operands {
 
 				return result;
 			}
-		} else if (left instanceof String) {
-			return new StringBuilder((String)left).append(right);
 		}
 
-		if (right instanceof StringBuilder) {
-			final String leftString = String.valueOf(left);
-			return new StringBuilder(leftString.length() + ((StringBuilder)right).length()).append(leftString).append((StringBuilder)right);
-		} else if (right instanceof String) {
-			return new StringBuilder().append(left).append((String)right);
+		if (right instanceof String) {
+			return left + (String)right;
 		}
 
 		throw new IllegalArgumentException("Invalid objects cannot be added: " + (left == null ? "null" : left.getClass().getName()) + " + " + (right == null ? "null" : right.getClass().getName()));
@@ -167,12 +162,12 @@ public final class Operands {
 		} else if (first instanceof Character) {
 			if (second instanceof Number || second instanceof Character) {
 				return compare(toNumeric(first), toNumeric(second));
-			} else if (second instanceof StringBuilder || second instanceof String) {
-				return first.toString().compareTo(second.toString());
+			} else if (second instanceof String) {
+				return first.toString().compareTo((String)second);
 			}
-		} else if ((first instanceof StringBuilder || first instanceof String) &&
-				(second instanceof StringBuilder || second instanceof String || second instanceof Character)) {
-			return first.toString().compareTo(second.toString());
+		} else if (first instanceof String &&
+				(second instanceof String || second instanceof Character)) {
+			return ((String)first).compareTo(second.toString());
 		} else if (equality) {
 			return first.equals(second) ? 0 : 1;
 		} else if (first instanceof Comparable) {

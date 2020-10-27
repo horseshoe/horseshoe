@@ -97,8 +97,8 @@ final class Operator {
 		operators.add(new Operator("-",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Unary Minus"));
 		operators.add(new Operator("~",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Bitwise Negate"));
 		operators.add(new Operator("!",      2,  RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Logical Negate"));
-		operators.add(new Operator("..",     3,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Range"));
-		operators.add(new Operator("..<",    3,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Exclusive Range"));
+		operators.add(new Operator("..",     3,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Integer Range"));
+		operators.add(new Operator("..<",    3,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Exclusive Integer Range"));
 		operators.add(new Operator("*",      4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Multiply"));
 		operators.add(new Operator("/",      4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Divide"));
 		operators.add(new Operator("%",      4,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Modulus"));
@@ -125,7 +125,8 @@ final class Operator {
 		operators.add(new Operator("?:",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce"));
 		operators.add(new Operator("??",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce - Alternate"));
 		operators.add(new Operator("?",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
-		operators.add(new Operator(":",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair"));
+		operators.add(new Operator(":",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair / Range"));
+		operators.add(new Operator(":<",     15, LEFT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Backward Range"));
 		operators.add(new Operator("=",      16, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind Local Name"));
 		operators.add(new Operator(",",      17, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
 		operators.add(new Operator("\u2620", 18, RIGHT_EXPRESSION, "Die")); // Skull and crossbones

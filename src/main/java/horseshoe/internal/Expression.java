@@ -3,6 +3,7 @@ package horseshoe.internal;
 import static horseshoe.internal.MethodBuilder.*;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,6 +35,8 @@ public final class Expression {
 	private static final Constructor<?> ARRAY_LIST_CTOR_INT;
 	private static final Method ACCESSOR_LOOKUP;
 	private static final Method ACCESSOR_LOOKUP_RANGE;
+	private static final Field ACCESSOR_TO_BEGINNING;
+	private static final Field ACCESSOR_TO_END;
 	private static final Method EXPRESSION_EVALUATE;
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING;
 	private static final Method IDENTIFIER_FIND_VALUE;
@@ -221,7 +224,9 @@ public final class Expression {
 		try {
 			ARRAY_LIST_CTOR_INT = ArrayList.class.getConstructor(int.class);
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class, boolean.class);
-			ACCESSOR_LOOKUP_RANGE = Accessor.class.getMethod("lookupRange", Object.class, Object.class, Object.class, boolean.class);
+			ACCESSOR_LOOKUP_RANGE = Accessor.class.getMethod("lookupRange", Object.class, Comparable.class, Object.class, boolean.class);
+			ACCESSOR_TO_BEGINNING = Accessor.class.getField("TO_BEGINNING");
+			ACCESSOR_TO_END = Accessor.class.getField("TO_END");
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", RenderContext.class, Object[].class);
 			HALT_EXCEPTION_CTOR_STRING = HaltRenderingException.class.getConstructor(String.class);
 			IDENTIFIER_FIND_VALUE = Identifier.class.getMethod("findValue", RenderContext.class, int.class);
@@ -1115,7 +1120,16 @@ public final class Expression {
 			}
 
 			return operator;
-		} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION)) { // Check if this token ends an expression on the stack
+		} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION) || lastOperator.getString().startsWith(":")) { // Check if this token ends an expression on the stack
+			if (lastOperator != null && lastOperator.getString().startsWith(":")) { // ":" can have an optional right expression
+				if (":<".equals(lastOperator.getString())) {
+					state.operands.push(new Operand(Object.class, new MethodBuilder().addFieldAccess(ACCESSOR_TO_BEGINNING, true)));
+					state.operators.pop(1).push(Operator.get(":", true));
+				} else {
+					state.operands.push(new Operand(Object.class, new MethodBuilder().addFieldAccess(ACCESSOR_TO_END, true)));
+				}
+			}
+
 			while (!state.operators.isEmpty()) {
 				Operator closedOperator = state.operators.pop();
 

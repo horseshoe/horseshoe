@@ -1,6 +1,7 @@
 
 ARG JRE_IMAGE=adoptopenjdk/openjdk11:jre
 ARG JRE_IMAGE_X64=adoptopenjdk/openjdk11:alpine-jre
+ARG DEPLOY=built-jar
 
 # Build using Ubuntu JDK
 FROM ubuntu AS build
@@ -32,7 +33,7 @@ FROM jre-base AS deploy-local-jar
 ONBUILD ARG JAR_FILE=build/libs/*.jar
 ONBUILD COPY ${JAR_FILE} /usr/lib/
 
-FROM deploy-${DEPLOY:-built-jar} AS deploy
+FROM deploy-${DEPLOY} AS deploy
 
 RUN addgroup horseshoe && adduser --gecos Horseshoe --shell /sbin/nologin --ingroup horseshoe --disabled-password --no-create-home horseshoe
 USER horseshoe

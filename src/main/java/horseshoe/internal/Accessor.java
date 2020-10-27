@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 public abstract class Accessor {
@@ -21,6 +22,8 @@ public abstract class Accessor {
 	private static final MethodHandles.Lookup LOOKUP = MethodHandles.publicLookup();
 	static final Factory FACTORY = new Factory();
 	static final Object INVALID = new Object();
+	public static final Object TO_END = null;
+	public static final Object TO_BEGINNING = new Object();
 
 	private static final class MethodSignature {
 
@@ -90,9 +93,16 @@ public abstract class Accessor {
 		public final int size;
 		public final int increment;
 
-		public Range(final int start, final int end, final int length) {
+		public Range(final int start, final Object end, final int length) {
 			this.start = calculateIndex(length, start);
-			this.end = calculateIndex(length, end);
+
+			if (end == TO_END) {
+				this.end = length;
+			} else if (end == TO_BEGINNING) {
+				this.end = -1;
+			} else {
+				this.end = calculateIndex(length, ((Number)end).intValue());
+			}
 
 			if (this.end < this.start) {
 				if (this.end < -1) {
@@ -240,7 +250,7 @@ public abstract class Accessor {
 	 * @param end the end of the range to lookup
 	 * @return the result of the lookup
 	 */
-	private static Object lookupArrayRange(final Object context, final int start, final int end) {
+	private static Object lookupArrayRange(final Object context, final int start, final Object end) {
 		final Class<?> componentType = context.getClass().getComponentType();
 
 		if (componentType == null) {
@@ -368,7 +378,7 @@ public abstract class Accessor {
 	 * @param end the end of the range to lookup
 	 * @return the result of the lookup
 	 */
-	private static Object lookupListRange(final List<?> context, final int start, final int end) {
+	private static Object lookupListRange(final List<?> context, final int start, final Object end) {
 		final Range range = new Range(start, end, context.size());
 		final List<Object> newList = new ArrayList<>(range.size);
 
@@ -418,16 +428,48 @@ public abstract class Accessor {
 	 * @param end the end of the range to lookup
 	 * @return the result of the lookup
 	 */
-	private static Object lookupMapRange(final Map<?, ?> context, final int start, final int end) {
-		final Map<Object, Object> map = new LinkedHashMap<>();
-		final int increment = end < start ? -1 : 1;
+	@SuppressWarnings("unchecked")
+	private static <K extends Comparable<K>> Map<K, Object> lookupMapRange(final Map<K, ?> context, final K start, final Object end) {
+		final Map<K, Object> map = new LinkedHashMap<>();
 
-		for (int i = start; i != end; i += increment) {
-			final Integer integer = Integer.valueOf(i);
-			final Object value = context.get(integer);
+		if (end == TO_END) {
+			for (final Entry<K, ?> entry : context.entrySet()) {
+				final K key = entry.getKey();
 
-			if (value != null || context.containsKey(integer)) {
-				map.put(integer, value);
+				if (key != null && start.compareTo(key) <= 0) {
+					map.put(key, entry.getValue());
+				}
+			}
+		} else if (end == TO_BEGINNING) {
+			for (final Entry<K, ?> entry : context.entrySet()) {
+				final K key = entry.getKey();
+
+				if (key != null && start.compareTo(key) >= 0) {
+					map.put(key, entry.getValue());
+				}
+			}
+		} else {
+			final K endKey = (K)end;
+			final int startEnd = start.compareTo(endKey);
+
+			if (startEnd == 0) {
+				return map;
+			} else if (startEnd < 0) {
+				for (final Entry<K, ?> entry : context.entrySet()) {
+					final K key = entry.getKey();
+
+					if (key != null && start.compareTo(key) <= 0 && key.compareTo(endKey) < 0) {
+						map.put(key, entry.getValue());
+					}
+				}
+			} else {
+				for (final Entry<K, ?> entry : context.entrySet()) {
+					final K key = entry.getKey();
+
+					if (key != null && start.compareTo(key) >= 0 && key.compareTo(endKey) > 0) {
+						map.put(key, entry.getValue());
+					}
+				}
 			}
 		}
 
@@ -443,19 +485,20 @@ public abstract class Accessor {
 	 * @param ignoreFailures true to return null for failures, false to throw exceptions
 	 * @return the result of the lookup
 	 */
-	public static Object lookupRange(final Object context, final Object start, final Object end, final boolean ignoreFailures) {
+	@SuppressWarnings("unchecked")
+	public static <T extends Comparable<T>> Object lookupRange(final Object context, final T start, final Object end, final boolean ignoreFailures) {
 		try {
 			if (context instanceof Map) {
-				return lookupMapRange((Map<?, ?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+				return lookupMapRange((Map<T, ?>)context, start, end);
 			} else if (context instanceof List) {
-				return lookupListRange((List<?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+				return lookupListRange((List<?>)context, ((Number)start).intValue(), end);
 			} else if (context instanceof String) {
-				return lookupStringRange((String)context, ((Number)start).intValue(), ((Number)end).intValue());
+				return lookupStringRange((String)context, ((Number)start).intValue(), end);
 			} else if (context instanceof Set) {
-				return lookupSetRange((Set<?>)context, ((Number)start).intValue(), ((Number)end).intValue());
+				return lookupSetRange((Set<T>)context, start, end);
 			}
 
-			return lookupArrayRange(context, ((Number)start).intValue(), ((Number)end).intValue());
+			return lookupArrayRange(context, ((Number)start).intValue(), end);
 		} catch (final IndexOutOfBoundsException | ClassCastException e) {
 			if (!ignoreFailures) {
 				throw e;
@@ -496,15 +539,40 @@ public abstract class Accessor {
 	 * @param end the end of the range to lookup
 	 * @return the result of the lookup
 	 */
-	private static Object lookupSetRange(final Set<?> context, final int start, final int end) {
-		final Set<Object> set = new LinkedHashSet<>();
-		final int increment = end < start ? -1 : 1;
+	@SuppressWarnings("unchecked")
+	private static <T extends Comparable<T>> Set<T> lookupSetRange(final Set<T> context, final T start, final Object end) {
+		final Set<T> set = new LinkedHashSet<>();
 
-		for (int i = start; i != end; i += increment) {
-			final Integer integer = Integer.valueOf(i);
+		if (end == TO_END) {
+			for (final T entry : context) {
+				if (entry != null && start.compareTo(entry) <= 0) {
+					set.add(entry);
+				}
+			}
+		} else if (end == TO_BEGINNING) {
+			for (final T entry : context) {
+				if (entry != null && start.compareTo(entry) >= 0) {
+					set.add(entry);
+				}
+			}
+		} else {
+			final T endValue = (T)end;
+			final int startEnd = start.compareTo(endValue);
 
-			if (context.contains(integer)) {
-				set.add(integer);
+			if (startEnd == 0) {
+				return set;
+			} else if (startEnd < 0) {
+				for (final T entry : context) {
+					if (entry != null && start.compareTo(entry) <= 0 && entry.compareTo(endValue) < 0) {
+						set.add(entry);
+					}
+				}
+			} else {
+				for (final T entry : context) {
+					if (entry != null && start.compareTo(entry) >= 0 && entry.compareTo(endValue) > 0) {
+						set.add(entry);
+					}
+				}
 			}
 		}
 
@@ -541,7 +609,7 @@ public abstract class Accessor {
 	 * @param end the end of the range to lookup
 	 * @return the result of the lookup
 	 */
-	private static Object lookupStringRange(final String context, final int start, final int end) {
+	private static Object lookupStringRange(final String context, final int start, final Object end) {
 		final Range range = new Range(start, end, context.length());
 		final char[] newArray = new char[range.size];
 

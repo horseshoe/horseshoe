@@ -125,9 +125,14 @@ public class AccessorTests {
 		assertNull(Accessor.lookup("I am Sam", Arrays.asList("Test"), true));
 		assertNull(Accessor.lookup("I am Sam", Arrays.asList(100), true));
 		assertNull(Accessor.lookup("I am Sam", Arrays.asList(-100), true));
+	}
 
+	@Test
+	public void testLookupRange() {
 		assertArrayEquals(new int[] {2, 5, 3}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, 4, false));
 		assertArrayEquals(new int[] {1, 3, 5}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 4, 1, false));
+		assertArrayEquals(new int[] {2, 5, 3, 1}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, Accessor.TO_END, false));
+		assertArrayEquals(new int[] {2, 4}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, Accessor.TO_BEGINNING, false));
 		assertEquals(Arrays.asList(2, 5, 3), Accessor.lookupRange(Arrays.asList(4, 2, 5, 3, 1), 1, 4, false));
 		assertEquals(Arrays.asList(1, 3, 5), Accessor.lookupRange(Arrays.asList(4, 2, 5, 3, 1), 4, 1, false));
 		assertEquals(asMap(2, 7, 3, 8, 4, null), Accessor.lookupRange(asMap(14, 9, 2, 7, 4, null, 20, 10, 3, 8, 1, 6), 2, 6, false));
@@ -136,6 +141,20 @@ public class AccessorTests {
 		assertEquals("ma", Accessor.lookupRange("I am Sam!", 3, 1, false));
 		assertEquals(asSet(2, 3), Accessor.lookupRange(asSet(14, 2, 5, 3, 1), 2, 5, false));
 		assertEquals(asSet(2, 3), Accessor.lookupRange(asSet(14, 2, 5, 3, 1), 4, 1, false));
+
+		final Set<?> set = asSet("Alpha", "Bet", "Car", "dog", null);
+		assertEquals(asSet("Car", "dog"), Accessor.lookupRange(set, "Car", Accessor.TO_END, false));
+		assertEquals(asSet("Alpha", "Bet"), Accessor.lookupRange(set, "Cabin", Accessor.TO_BEGINNING, false));
+		assertEquals(asSet("Car"), Accessor.lookupRange(set, "Car", "Cat", false));
+		assertEquals(asSet("Car"), Accessor.lookupRange(set, "Car", "Bet", false));
+		assertEquals(asSet(), Accessor.lookupRange(set, "Car", "Car", false));
+
+		final Map<?, ?> map = asMap("Alpha", "the male", "Bet", "predicting outcome for $", "Car", "automobile", "dog", "canine", null, "undefined");
+		assertEquals(asMap("Car", "automobile", "dog", "canine"), Accessor.lookupRange(map, "Car", Accessor.TO_END, false));
+		assertEquals(asMap("Alpha", "the male", "Bet", "predicting outcome for $"), Accessor.lookupRange(map, "Cabin", Accessor.TO_BEGINNING, false));
+		assertEquals(asMap("Car", "automobile"), Accessor.lookupRange(map, "Car", "Cat", false));
+		assertEquals(asMap("Car", "automobile"), Accessor.lookupRange(map, "Car", "Bet", false));
+		assertEquals(asMap(), Accessor.lookupRange(map, "Car", "Car", false));
 
 		assertThrows(ClassCastException.class, () -> Accessor.lookupRange(new Object(), 0, 1, false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", -10, -1, false));

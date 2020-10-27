@@ -140,7 +140,6 @@ final class Operand {
 	/**
 	 * Converts the operand to an object.
 	 *
-	 * @param generateReturn true to generate return instructions rather than place the object on the stack, otherwise false
 	 * @return the resulting object operand
 	 */
 	MethodBuilder toObject() {

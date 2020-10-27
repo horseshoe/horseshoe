@@ -1517,7 +1517,7 @@ public final class MethodBuilder {
 
 		// Assume field
 		assert member instanceof Field : "Unknown member type " + member.getClass().getName();
-		return Array.newInstance(((Field)member).getType(), 0).getClass().getName().substring(1);
+		return Array.newInstance(((Field)member).getType(), 0).getClass().getName().substring(1).replace('.', '/');
 	}
 
 	/**
