@@ -163,6 +163,19 @@ public class OperandsTests {
 		}
 	}
 
+	enum TestCompareEnum {
+		Apple,
+		Blue
+	}
+
+	@Test
+	public void testCompareEnum() {
+		assertEquals(0, Operands.compare(true, TestCompareEnum.Apple, "Apple"));
+		assertEquals(0, Operands.compare(true, "Apple", TestCompareEnum.Apple));
+		assertNotEquals(0, Operands.compare(true, TestCompareEnum.Blue, "Apple"));
+		assertNotEquals(0, Operands.compare(true, "Apple", TestCompareEnum.Blue));
+	}
+
 	@Test
 	public void testConvertToBoolean() {
 		for (final Object object : new Object[] { true, (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), ' ', new AtomicInteger(33), new AtomicLong(34L), "a", new int[1], Collections.singletonList(0), Collections.singletonMap("key", "value"), new Object() }) {

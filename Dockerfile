@@ -1,5 +1,5 @@
 
-ARG JRE_IMAGE=adoptopenjdk/openjdk11:jre
+ARG JRE_IMAGE=adoptopenjdk:11-jre
 ARG JRE_IMAGE_X64=adoptopenjdk/openjdk11:alpine-jre
 ARG DEPLOY=built-jar
 
