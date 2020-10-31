@@ -27,7 +27,7 @@ FROM jre-${TARGETARCH:-default} AS jre-base
 
 # Deploy from either a local JAR or the built JAR
 FROM jre-base AS deploy-built-jar
-COPY --from=build /usr/src/horseshoe/build/libs/*.jar /usr/lib/horseshoe.jar
+COPY --from=build /usr/src/horseshoe/build/libs/*.jar /usr/lib/
 
 FROM jre-base AS deploy-local-jar
 ONBUILD ARG JAR_FILE=build/libs/*.jar
@@ -35,6 +35,7 @@ ONBUILD COPY ${JAR_FILE} /usr/lib/
 
 FROM deploy-${DEPLOY} AS deploy
 
+RUN cd /usr/lib && ln -s horseshoe-*.jar horseshoe.jar
 RUN addgroup horseshoe && adduser --gecos Horseshoe --shell /sbin/nologin --ingroup horseshoe --disabled-password --no-create-home horseshoe
 USER horseshoe
 
