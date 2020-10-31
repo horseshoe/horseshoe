@@ -39,6 +39,6 @@ RUN cd /usr/lib && ln -s horseshoe-*.jar horseshoe.jar
 RUN addgroup horseshoe && adduser --gecos Horseshoe --shell /sbin/nologin --ingroup horseshoe --disabled-password --no-create-home horseshoe
 USER horseshoe
 
-RUN java -jar /usr/lib/horseshoe.jar --version
+RUN java -jar /usr/lib/horseshoe.jar --version || echo "Could not determine Horseshoe version" >&2
 ENTRYPOINT ["java", "-jar", "/usr/lib/horseshoe.jar"]
 CMD ["--version"]

@@ -33,13 +33,13 @@ jobs:
       run: docker run --rm -t horseshoe-test
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1
+      uses: docker/setup-qemu-action@v1.0.1
       with:
         platforms: all
 
     - name: Set up Docker Buildx
       id: buildx
-      uses: docker/setup-buildx-action@v1
+      uses: docker/setup-buildx-action@v1.0.2
       with:
         version: latest
 
@@ -47,6 +47,6 @@ jobs:
       run: ./gradlew clean jar
 
     - name: Build Docker Images
-      run: echo "$DOCKERHUB_TOKEN" | docker login --username horseshoe --password-stdin && docker buildx build . --file Dockerfile --tag horseshoe/horseshoe --tag horseshoe/horseshoe:${GITHUB_REF/refs\/tags\//} --platform linux/amd64,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/s390x --build-arg DEPLOY=local-jar --build-arg JAR_FILE=build/libs/horseshoe-*.jar --target deploy --push
+      run: echo "$DOCKERHUB_TOKEN" | docker login --username horseshoe --password-stdin && docker buildx build . --file Dockerfile --tag horseshoe/horseshoe --tag horseshoe/horseshoe:${GITHUB_REF/refs\/tags\//} --platform linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x --build-arg DEPLOY=local-jar --build-arg JAR_FILE=build/libs/horseshoe-*.jar --target deploy --push
       env:
         DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
