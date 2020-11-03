@@ -36,7 +36,6 @@ public final class Expression {
 	private static final Method ACCESSOR_LOOKUP;
 	private static final Method ACCESSOR_LOOKUP_RANGE;
 	private static final Field ACCESSOR_TO_BEGINNING;
-	private static final Field ACCESSOR_TO_END;
 	private static final Method EXPRESSION_EVALUATE;
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING;
 	private static final Method IDENTIFIER_FIND_VALUE;
@@ -226,7 +225,6 @@ public final class Expression {
 			ACCESSOR_LOOKUP = Accessor.class.getMethod("lookup", Object.class, Object.class, boolean.class);
 			ACCESSOR_LOOKUP_RANGE = Accessor.class.getMethod("lookupRange", Object.class, Comparable.class, Object.class, boolean.class);
 			ACCESSOR_TO_BEGINNING = Accessor.class.getField("TO_BEGINNING");
-			ACCESSOR_TO_END = Accessor.class.getField("TO_END");
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", RenderContext.class, Object[].class);
 			HALT_EXCEPTION_CTOR_STRING = HaltRenderingException.class.getConstructor(String.class);
 			IDENTIFIER_FIND_VALUE = Identifier.class.getMethod("findValue", RenderContext.class, int.class);
@@ -775,8 +773,8 @@ public final class Expression {
 				if (left != null) {
 					final Operand subject = Entry.class.equals(right.type) ? state.operands.pop() : left;
 
-					if (!Object.class.equals(subject.type)) {
-						throw new IllegalArgumentException("Unexpected \"" + operator + "\" operator applied to " + subject.type.getName() + ", expecting list, map, set, or array type value");
+					if (subject.type.isPrimitive() || Number.class.isAssignableFrom(subject.type)) {
+						throw new IllegalArgumentException("Unexpected \"" + operator + "\" operator applied to " + subject.type.getName() + ", expecting list, map, set, string, or array type value");
 					}
 
 					final Label end = subject.builder.newLabel();
@@ -1126,7 +1124,7 @@ public final class Expression {
 					state.operands.push(new Operand(Object.class, new MethodBuilder().addFieldAccess(ACCESSOR_TO_BEGINNING, true)));
 					state.operators.pop(1).push(Operator.get(":", true));
 				} else {
-					state.operands.push(new Operand(Object.class, new MethodBuilder().addFieldAccess(ACCESSOR_TO_END, true)));
+					state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
 				}
 			}
 

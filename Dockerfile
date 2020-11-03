@@ -27,7 +27,7 @@ FROM jre-${TARGETARCH:-default} AS jre-base
 
 # Deploy from either a local JAR or the built JAR
 FROM jre-base AS deploy-built-jar
-COPY --from=build /usr/src/horseshoe/build/libs/*.jar /usr/lib/
+ONBUILD COPY --from=build /usr/src/horseshoe/build/libs/*.jar /usr/lib/
 
 FROM jre-base AS deploy-local-jar
 ONBUILD ARG JAR_FILE=build/libs/*.jar

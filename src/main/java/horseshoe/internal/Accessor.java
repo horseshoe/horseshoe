@@ -3,26 +3,29 @@ package horseshoe.internal;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public abstract class Accessor {
 
 	private static final MethodHandles.Lookup LOOKUP = MethodHandles.publicLookup();
 	static final Factory FACTORY = new Factory();
 	static final Object INVALID = new Object();
-	public static final Object TO_END = null;
 	public static final Object TO_BEGINNING = new Object();
 
 	private static final class MethodSignature {
@@ -87,6 +90,118 @@ public abstract class Accessor {
 
 	}
 
+	public static final class PatternMatcher implements Iterable<PatternMatcher>, MatchResult {
+		private final Matcher matcher;
+		private final CharSequence input;
+
+		/**
+		 * Creates a pattern matcher from a pattern and character sequence input.
+		 *
+		 * @param pattern the pattern used to create the pattern matcher
+		 * @param input the input used to create the pattern matcher
+		 * @return a new pattern matcher if the pattern is found in the input, otherwise null
+		 */
+		public static PatternMatcher fromInput(final Pattern pattern, final CharSequence input) {
+			final Matcher matcher = pattern.matcher(input);
+
+			if (matcher.find()) {
+				return new PatternMatcher(matcher, input);
+			}
+
+			return null;
+		}
+
+		private PatternMatcher(final Matcher matcher, final CharSequence input) {
+			this.matcher = matcher;
+			this.input = input;
+		}
+
+		@Override
+		public int start() {
+			return matcher.start();
+		}
+
+		@Override
+		public int start(int group) {
+			return matcher.start(group);
+		}
+
+		@Override
+		public int end() {
+			return matcher.end();
+		}
+
+		@Override
+		public int end(int group) {
+			return matcher.end(group);
+		}
+
+		@Override
+		public String group() {
+			return matcher.group();
+		}
+
+		@Override
+		public String group(int group) {
+			return matcher.group(group);
+		}
+
+		/**
+		 * Returns the input subsequence captured by the given named-capturing group during the previous match operation.
+		 *
+		 * @param name the name of a named-capturing group in this matcher's pattern
+		 * @return the subsequence captured by the named group during the previous match, or null if the group failed to match part of the input
+		 */
+		public String group(String name) {
+			return matcher.group(name);
+		}
+
+		@Override
+		public int groupCount() {
+			return matcher.groupCount();
+		}
+
+		@Override
+		public Iterator<PatternMatcher> iterator() {
+			return new Iterator<PatternMatcher>() {
+				PatternMatcher current = null;
+				PatternMatcher next = PatternMatcher.this;
+
+				@Override
+				public boolean hasNext() {
+					if (current != next) {
+						return next != null;
+					}
+
+					final Matcher nextMatcher = current.matcher.pattern().matcher(input);
+
+					if (nextMatcher.find(current.end())) {
+						next = new PatternMatcher(nextMatcher, input);
+						return true;
+					}
+
+					next = null;
+					return false;
+				}
+
+				@Override
+				public PatternMatcher next() {
+					if (!hasNext()) {
+						throw new NoSuchElementException();
+					}
+
+					current = next;
+					return next;
+				}
+			};
+		}
+
+		@Override
+		public String toString() {
+			return matcher.group();
+		}
+	}
+
 	private static final class Range {
 		public final int start;
 		public final int end;
@@ -96,7 +211,7 @@ public abstract class Accessor {
 		public Range(final int start, final Object end, final int length) {
 			this.start = calculateIndex(length, start);
 
-			if (end == TO_END) {
+			if (end == null) {
 				this.end = length;
 			} else if (end == TO_BEGINNING) {
 				this.end = -1;
@@ -432,7 +547,7 @@ public abstract class Accessor {
 	private static <K extends Comparable<K>> Map<K, Object> lookupMapRange(final Map<K, ?> context, final K start, final Object end) {
 		final Map<K, Object> map = new LinkedHashMap<>();
 
-		if (end == TO_END) {
+		if (end == null) {
 			for (final Entry<K, ?> entry : context.entrySet()) {
 				final K key = entry.getKey();
 
@@ -543,7 +658,7 @@ public abstract class Accessor {
 	private static <T extends Comparable<T>> Set<T> lookupSetRange(final Set<T> context, final T start, final Object end) {
 		final Set<T> set = new LinkedHashSet<>();
 
-		if (end == TO_END) {
+		if (end == null) {
 			for (final T entry : context) {
 				if (entry != null && start.compareTo(entry) <= 0) {
 					set.add(entry);
@@ -596,6 +711,8 @@ public abstract class Accessor {
 			}
 
 			return sb.toString();
+		} else if (lookup instanceof Pattern) {
+			return PatternMatcher.fromInput((Pattern)lookup, context);
 		}
 
 		return context.charAt(calculateIndex(context.length(), ((Number)lookup).intValue()));
@@ -641,16 +758,6 @@ public abstract class Accessor {
 	 */
 	public Object tryGet(final Object context, final Object... parameters) throws Throwable {
 		return get(context, parameters);
-	}
-
-	/**
-	 * An array length accessor provides access to the length of an array.
-	 */
-	static class ArrayLengthAccessor extends Accessor {
-		@Override
-		public Object get(final Object context) throws ReflectiveOperationException {
-			return Array.getLength(context);
-		}
 	}
 
 	/**
@@ -907,8 +1014,12 @@ public abstract class Accessor {
 				return createStaticFieldAccessor((Class<?>)context, identifier.getName());
 			} else if (Map.class.isAssignableFrom(contextClass)) {
 				return MapAccessor.FACTORY.create(identifier.getName());
-			} else if (contextClass.isArray() && "length".equals(identifier.getName())) {
-				return new ArrayLengthAccessor();
+			}
+
+			final Accessor accessor = Accessors.get(contextClass, identifier);
+
+			if (accessor != null) {
+				return accessor;
 			}
 
 			// Field

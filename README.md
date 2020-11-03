@@ -239,30 +239,42 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 #### Supported Operators
 | Precedence | Operators | Associativity |
 | ---------- | --------- | ------------- |
-| 0 | <code>\{</code>a\*<code>\}</code> \(Set / Map Literal\), <br><code>\[</code>a\*<code>\]</code> \(List / Map Literal\), <br><code>\[:\]</code> \(Empty Map\), <br>a<code>\[</code>b<code>\]</code> \(Lookup\), <br>a<code>?\[</code>b<code>\]</code> \(Safe Lookup\), <br>a<code>\[?</code>b<code>\]</code> \(Nullable Lookup\), <br>a<code>\(</code>b\*<code>\)</code> \(Call Method\), <br><code>\(</code>a<code>\)</code> \(Parentheses\), <br><code>~@</code>a \(Get Class\), <br>a<code>\.</code>b \(Navigate\), <br>a<code>?\.</code>b \(Safe Navigate\), <br>a<code>\.?</code>b \(Nullable Navigate\) | Left&nbsp;to&nbsp;right |
-| 1 | a<code>\*\*</code>b \(Exponentiate\) | Left&nbsp;to&nbsp;right |
-| 2 | <code>\+</code>a \(Unary Plus\), <br><code>\-</code>a \(Unary Minus\), <br><code>~</code>a \(Bitwise Negate\), <br><code>\!</code>a \(Logical Negate\) | Right&nbsp;to&nbsp;left |
-| 3 | a<code>\.\.</code>b \(Integer Range\), <br>a<code>\.\.&lt;</code>b \(Exclusive Integer Range\) | Left&nbsp;to&nbsp;right |
-| 4 | a<code>\*</code>b \(Multiply\), <br>a<code>/</code>b \(Divide\), <br>a<code>%</code>b \(Modulus\) | Left&nbsp;to&nbsp;right |
-| 5 | a<code>\+</code>b \(Add\), <br>a<code>\-</code>b \(Subtract\) | Left&nbsp;to&nbsp;right |
-| 6 | a<code>&lt;&lt;</code>b \(Bitwise Shift Left\), <br>a<code>&gt;&gt;</code>b \(Bitwise Shift Right Sign Extend\), <br>a<code>&gt;&gt;&gt;</code>b \(Bitwise Shift Right Zero Extend\) | Left&nbsp;to&nbsp;right |
-| 7 | a<code>&lt;=&gt;</code>b \(Three\-way Comparison\) | Left&nbsp;to&nbsp;right |
-| 8 | a<code>&lt;=</code>b \(Less Than or Equal\), <br>a<code>&gt;=</code>b \(Greater Than or Equal\), <br>a<code>&lt;</code>b \(Less Than\), <br>a<code>&gt;</code>b \(Greater Than\), <br>a<code>in</code>b \(Is In\) | Left&nbsp;to&nbsp;right |
-| 9 | a<code>==</code>b \(Equal\), <br>a<code>\!=</code>b \(Not Equal\), <br>a<code>=~</code>b \(Found Pattern\), <br>a<code>==~</code>b \(Matches Pattern\) | Left&nbsp;to&nbsp;right |
-| 10 | a<code>&amp;</code>b \(Bitwise And\) | Left&nbsp;to&nbsp;right |
-| 11 | a<code>^</code>b \(Bitwise Xor\) | Left&nbsp;to&nbsp;right |
-| 12 | a<code>&#124;</code>b \(Bitwise Or\) | Left&nbsp;to&nbsp;right |
-| 13 | a<code>&amp;&amp;</code>b \(Logical And\) | Left&nbsp;to&nbsp;right |
-| 14 | a<code>&#124;&#124;</code>b \(Logical Or\) | Left&nbsp;to&nbsp;right |
-| 15 | a<code>?:</code>b \(Null Coalesce\), <br>a<code>??</code>b \(Null Coalesce \- Alternate\), <br>a<code>?</code>b \(Ternary\), <br>a<code>:</code>b \(Pair / Range\), <br>a<code>:&lt;</code> \(Backward Range\) | Right&nbsp;to&nbsp;left |
-| 16 | a<code>=</code>b \(Bind Local Name\) | Right&nbsp;to&nbsp;left |
-| 17 | a<code>,</code>b\* \(Item Separator\) | Left&nbsp;to&nbsp;right |
-| 18 | <code>☠</code>a \(Die\), <br><code>~:&lt;</code>a \(Die \- Alternate\), <br><code>\#^</code>a \(Return\) | Left&nbsp;to&nbsp;right |
-| 19 | a<code>;</code>b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
-| 20 | a<code>\#&gt;</code>b \(Streaming Remap\), <br>a<code>\#\.</code>b \(Streaming Remap \- Alternate\), <br>a<code>\#&#124;</code>b \(Streaming Flatten Remap\), <br>a<code>\#?</code>b \(Streaming Filter\), <br>a<code>\#&lt;</code>b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
+| 0 | <code>\{</code> a\* <code>\}</code> \(Set / Map Literal\), <br><code>\[</code> a\* <code>\]</code> \(List / Map Literal\), <br><code>\[:\]</code> \(Empty Map\), <br>a <code>\[</code> b <code>\]</code> \(Lookup\), <br>a <code>?\[</code> b <code>\]</code> \(Safe Lookup\), <br>a <code>\[?</code> b <code>\]</code> \(Nullable Lookup\), <br>a <code>\(</code> b\* <code>\)</code> \(Call Method\), <br><code>\(</code> a <code>\)</code> \(Parentheses\), <br><code>~@</code> a \(Get Class\), <br>a <code>\.</code> b \(Navigate\), <br>a <code>?\.</code> b \(Safe Navigate\), <br>a <code>\.?</code> b \(Nullable Navigate\) | Left&nbsp;to&nbsp;right |
+| 1 | a <code>\*\*</code> b \(Exponentiate\) | Left&nbsp;to&nbsp;right |
+| 2 | <code>\+</code> a \(Unary Plus\), <br><code>\-</code> a \(Unary Minus\), <br><code>~</code> a \(Bitwise Negate\), <br><code>\!</code> a \(Logical Negate\) | Right&nbsp;to&nbsp;left |
+| 3 | a <code>\.\.</code> b \(Integer Range\), <br>a <code>\.\.&lt;</code> b \(Exclusive Integer Range\) | Left&nbsp;to&nbsp;right |
+| 4 | a <code>\*</code> b \(Multiply\), <br>a <code>/</code> b \(Divide\), <br>a <code>%</code> b \(Modulus\) | Left&nbsp;to&nbsp;right |
+| 5 | a <code>\+</code> b \(Add\), <br>a <code>\-</code> b \(Subtract\) | Left&nbsp;to&nbsp;right |
+| 6 | a <code>&lt;&lt;</code> b \(Bitwise Shift Left\), <br>a <code>&gt;&gt;</code> b \(Bitwise Shift Right Sign Extend\), <br>a <code>&gt;&gt;&gt;</code> b \(Bitwise Shift Right Zero Extend\) | Left&nbsp;to&nbsp;right |
+| 7 | a <code>&lt;=&gt;</code> b \(Three\-way Comparison\) | Left&nbsp;to&nbsp;right |
+| 8 | a <code>&lt;=</code> b \(Less Than or Equal\), <br>a <code>&gt;=</code> b \(Greater Than or Equal\), <br>a <code>&lt;</code> b \(Less Than\), <br>a <code>&gt;</code> b \(Greater Than\), <br>a <code>in</code> b \(Is In\) | Left&nbsp;to&nbsp;right |
+| 9 | a <code>==</code> b \(Equal\), <br>a <code>\!=</code> b \(Not Equal\), <br>a <code>=~</code> b \(Found Pattern\), <br>a <code>==~</code> b \(Matches Pattern\) | Left&nbsp;to&nbsp;right |
+| 10 | a <code>&amp;</code> b \(Bitwise And\) | Left&nbsp;to&nbsp;right |
+| 11 | a <code>^</code> b \(Bitwise Xor\) | Left&nbsp;to&nbsp;right |
+| 12 | a <code>&#124;</code> b \(Bitwise Or\) | Left&nbsp;to&nbsp;right |
+| 13 | a <code>&amp;&amp;</code> b \(Logical And\) | Left&nbsp;to&nbsp;right |
+| 14 | a <code>&#124;&#124;</code> b \(Logical Or\) | Left&nbsp;to&nbsp;right |
+| 15 | a <code>?:</code> b \(Null Coalesce\), <br>a <code>??</code> b \(Null Coalesce \- Alternate\), <br>a <code>?</code> b \(Ternary\), <br>a <code>:</code> b \(Pair / Range\), <br>a <code>:&lt;</code> \(Backward Range\) | Right&nbsp;to&nbsp;left |
+| 16 | a <code>=</code> b \(Bind Local Name\) | Right&nbsp;to&nbsp;left |
+| 17 | a <code>,</code> b\* \(Item Separator\) | Left&nbsp;to&nbsp;right |
+| 18 | <code>☠</code> a \(Die\), <br><code>~:&lt;</code> a \(Die \- Alternate\), <br><code>\#^</code> a \(Return\) | Left&nbsp;to&nbsp;right |
+| 19 | a <code>;</code> b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
+| 20 | a <code>\#&gt;</code> b \(Streaming Remap\), <br>a <code>\#\.</code> b \(Streaming Remap \- Alternate\), <br>a <code>\#&#124;</code> b \(Streaming Flatten Remap\), <br>a <code>\#?</code> b \(Streaming Filter\), <br>a <code>\#&lt;</code> b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
+
+Many operators support more operand types than traditional programming languages. Addition and subtraction can be applied to lists, maps, and sets as well as numeric primitives. Also, comparison operators can be used to compare enumerations with strings as well as comparing numeric primitives, strings, and any comparable objects.
 
 ##### Nullable Operators
 Nullable operators are similar to safe operators in that they return `null` when an exception would be thrown. However, nullable operators return `null` when failing to resolve interpolated values or methods on the right side of the operator as well as when encountering a `null` value on the left side of an operator. For example, `{{ a.?b() }}` would return `null` if either `a` is `null` or `a` does not contain a method `b()`.
+
+#### Built-In Properties
+Built-in properties are properties that can be accessed via the navigate operator (`.`) for built-in types. For example, `{{# map.entries }}` will access the entries in a map and iterate over them in the section, rather than looking up the key-value pairs in the section. A list of the built-in properties and the applicable types are given in the table below:
+
+| Property | Horseshoe Type |
+|-----------|-------------------|
+| `entries` | `Map` |
+| `key` | `Entry` |
+| `length`, `size` | `List`, `Map`, `Set`, `String` |
+| `value` | `Entry` |
 
 #### Named Expressions
 Named expressions are tags with the form `{{ name -> expression }}` or `{{ name(param1, param2) -> expression }}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags).
@@ -296,7 +308,6 @@ However, named expressions are not exposed to included partial templates. This i
 results in a whitespace-only string, since `func()` is not defined within the partial `a`.
 
 #### Streaming
-
 Streaming operations can be used in expressions to transform, filter, or reduce data within a single expression. They can be used on iterables, arrays, or individual objects. Individual objects with `null` values are treated as absent.
 
 Streaming transformations (`{{ a #> i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator. Flattening transformations (`{{# [[1, 2], [3, 4], null] #| i -> i }}`) allow lists to be combined.

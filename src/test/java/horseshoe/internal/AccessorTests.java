@@ -8,15 +8,19 @@ import static org.junit.Assert.assertThrows;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import horseshoe.Helper;
 import horseshoe.LoadException;
 import horseshoe.Settings;
 import horseshoe.TemplateLoader;
+import horseshoe.internal.Accessor.PatternMatcher;
 
 import org.junit.Test;
 
@@ -131,7 +135,7 @@ public class AccessorTests {
 	public void testLookupRange() {
 		assertArrayEquals(new int[] {2, 5, 3}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, 4, false));
 		assertArrayEquals(new int[] {1, 3, 5}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 4, 1, false));
-		assertArrayEquals(new int[] {2, 5, 3, 1}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, Accessor.TO_END, false));
+		assertArrayEquals(new int[] {2, 5, 3, 1}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, null, false));
 		assertArrayEquals(new int[] {2, 4}, (int[])Accessor.lookupRange(new int[] { 4, 2, 5, 3, 1 }, 1, Accessor.TO_BEGINNING, false));
 		assertEquals(Arrays.asList(2, 5, 3), Accessor.lookupRange(Arrays.asList(4, 2, 5, 3, 1), 1, 4, false));
 		assertEquals(Arrays.asList(1, 3, 5), Accessor.lookupRange(Arrays.asList(4, 2, 5, 3, 1), 4, 1, false));
@@ -143,14 +147,14 @@ public class AccessorTests {
 		assertEquals(asSet(2, 3), Accessor.lookupRange(asSet(14, 2, 5, 3, 1), 4, 1, false));
 
 		final Set<?> set = asSet("Alpha", "Bet", "Car", "dog", null);
-		assertEquals(asSet("Car", "dog"), Accessor.lookupRange(set, "Car", Accessor.TO_END, false));
+		assertEquals(asSet("Car", "dog"), Accessor.lookupRange(set, "Car", null, false));
 		assertEquals(asSet("Alpha", "Bet"), Accessor.lookupRange(set, "Cabin", Accessor.TO_BEGINNING, false));
 		assertEquals(asSet("Car"), Accessor.lookupRange(set, "Car", "Cat", false));
 		assertEquals(asSet("Car"), Accessor.lookupRange(set, "Car", "Bet", false));
 		assertEquals(asSet(), Accessor.lookupRange(set, "Car", "Car", false));
 
 		final Map<?, ?> map = asMap("Alpha", "the male", "Bet", "predicting outcome for $", "Car", "automobile", "dog", "canine", null, "undefined");
-		assertEquals(asMap("Car", "automobile", "dog", "canine"), Accessor.lookupRange(map, "Car", Accessor.TO_END, false));
+		assertEquals(asMap("Car", "automobile", "dog", "canine"), Accessor.lookupRange(map, "Car", null, false));
 		assertEquals(asMap("Alpha", "the male", "Bet", "predicting outcome for $"), Accessor.lookupRange(map, "Cabin", Accessor.TO_BEGINNING, false));
 		assertEquals(asMap("Car", "automobile"), Accessor.lookupRange(map, "Car", "Cat", false));
 		assertEquals(asMap("Car", "automobile"), Accessor.lookupRange(map, "Car", "Bet", false));
@@ -173,6 +177,28 @@ public class AccessorTests {
 	@Test
 	public void testNonexistantMethods() throws IOException, LoadException {
 		assertEquals(", , , , , , , ", new TemplateLoader().load("Nonexistant Methods", "{{Object.nonexistantMethod(5)}}, {{TestMapInstance.test(1)}}, {{TestMapInstance.test(1)}}, {{TestMapInstance.test(TestMapInstance)}}, {{TestMapInstance.test('')}}, {{TestMapInstance.nonexistantMethod(5)}}, {{PrivateClassInstance.testBad(5)}}, {{PrivateClassInstance.testBad()}}").render(new Settings(), Helper.loadMap("Object", ManagementFactory.class, "TestMapInstance", new TestMap(), "PrivateClassInstance", new PrivateClass()), new java.io.StringWriter()).toString());
+	}
+
+	@Test
+	public void testPatternMatcher() throws IOException, LoadException {
+		final PatternMatcher matcher = PatternMatcher.fromInput(Pattern.compile("(?<first>[A-Z])[a-z]+"), "Test One");
+
+		assertEquals(0, matcher.start());
+		assertEquals(0, matcher.start(1));
+		assertEquals(4, matcher.end());
+		assertEquals(1, matcher.end(1));
+		assertEquals("Test", matcher.group());
+		assertEquals("T", matcher.group(1));
+		assertEquals("T", matcher.group("first"));
+		assertEquals(1, matcher.groupCount());
+
+		final Iterator<PatternMatcher> it = matcher.iterator();
+
+		while (it.hasNext()) {
+			it.next();
+		}
+
+		assertThrows(NoSuchElementException.class, () -> it.next());
 	}
 
 	@Test

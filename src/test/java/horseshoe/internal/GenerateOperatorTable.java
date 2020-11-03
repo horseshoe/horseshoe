@@ -45,23 +45,23 @@ public class GenerateOperatorTable {
 				sb.append(separator);
 
 				if (operator.has(LEFT_EXPRESSION) || operator.has(METHOD_CALL)) {
-					sb.append("a").append(operatorOutput);
+					sb.append("a ").append(operatorOutput);
 
 					if (operator.has(X_RIGHT_EXPRESSIONS)) {
-						sb.append("b\\*");
+						sb.append(" b\\*");
 					} else if (operator.has(RIGHT_EXPRESSION)) {
-						sb.append("b");
+						sb.append(" b");
 					}
 				} else if (operator.has(X_RIGHT_EXPRESSIONS)) {
-					sb.append(operatorOutput).append("a\\*");
+					sb.append(operatorOutput).append(" a\\*");
 				} else if (operator.has(RIGHT_EXPRESSION)) {
-					sb.append(operatorOutput).append("a");
+					sb.append(operatorOutput).append(" a");
 				} else {
 					sb.append(operatorOutput);
 				}
 
 				if (operator.getClosingString() != null) {
-					sb.append("<code>").append(escapeMarkdown(operator.getClosingString())).append("</code>");
+					sb.append(" <code>").append(escapeMarkdown(operator.getClosingString())).append("</code>");
 				}
 
 				sb.append(" \\(").append(escapeMarkdown(operator.getDescription())).append("\\)");

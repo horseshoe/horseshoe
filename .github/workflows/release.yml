@@ -26,12 +26,6 @@ jobs:
         GHR_PATH: build/libs
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Test Dockerfile
-      run: rm -rf build && docker build . --file Dockerfile --tag horseshoe-test
-
-    - name: Test Docker Image
-      run: docker run --rm -t horseshoe-test
-
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1.0.1
       with:

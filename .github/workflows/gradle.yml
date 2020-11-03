@@ -15,14 +15,22 @@ jobs:
       with:
         java-version: 11
 
-    - name: Jar Check
-      run: ./gradlew jar && echo '{{ salutation }}, {{ audience }}!' | java -jar build/libs/* -Dsalutation=Hello -Daudience=World
-
     - name: Build with Gradle
-      run: ./gradlew clean build
+      run: ./gradlew build
 
     - name: Upload Code Coverage
       continue-on-error: true
       run: bash <(curl -Ls https://coverage.codacy.com/get.sh)
       env:
         CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_TOKEN }}
+
+    - name: Jar Check
+      run: ./gradlew clean jar && echo '{{ salutation }}, {{ audience }}!' | java -jar build/libs/* -Dsalutation=Hello -Daudience=World
+
+    - name: Test Dockerfile
+      run: docker build . --file Dockerfile --tag horseshoe-test --build-arg DEPLOY=local-jar --build-arg JAR_FILE=build/libs/horseshoe-*.jar --target deploy
+      env:
+        DOCKER_BUILDKIT: 1
+
+    - name: Test Docker Image
+      run: docker run --rm -t horseshoe-test

@@ -166,10 +166,12 @@ public final class Operands {
 				return first.toString().compareTo((String)second);
 			}
 		} else if (first instanceof String &&
-				(second instanceof String || second instanceof Character || second instanceof Enum)) {
+				(second instanceof String || second instanceof Character)) {
 			return ((String)first).compareTo(second.toString());
+		} else if (first instanceof String && second instanceof Enum) {
+			return ((String)first).compareTo(((Enum<?>)second).name());
 		} else if (first instanceof Enum && second instanceof String) {
-			return first.toString().compareTo((String)second);
+			return ((Enum<?>)first).name().compareTo((String)second);
 		} else if (equality) {
 			return first.equals(second) ? 0 : 1;
 		} else if (first instanceof Comparable) {
