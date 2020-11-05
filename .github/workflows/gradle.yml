@@ -34,3 +34,4 @@ jobs:
 
     - name: Test Docker Image
       run: docker run --rm -t horseshoe-test
+

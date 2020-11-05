@@ -41,6 +41,6 @@ jobs:
       run: ./gradlew clean jar
 
     - name: Build Docker Images
-      run: echo "$DOCKERHUB_TOKEN" | docker login --username horseshoe --password-stdin && docker buildx build . --file Dockerfile --tag horseshoe/horseshoe --tag horseshoe/horseshoe:${GITHUB_REF/refs\/tags\//} --platform linux/amd64,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x --build-arg DEPLOY=local-jar --build-arg JAR_FILE=build/libs/horseshoe-*.jar --target deploy --push
+      run: echo "$DOCKERHUB_TOKEN" | docker login --username horseshoe --password-stdin && docker buildx build . --file Dockerfile --tag horseshoe/horseshoe --tag horseshoe/horseshoe:${GITHUB_REF/refs\/tags\//} --platform linux/amd64,linux/arm/v7,linux/arm64 --build-arg DEPLOY=local-jar --build-arg JAR_FILE=build/libs/horseshoe-*.jar --target deploy --push
       env:
         DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
