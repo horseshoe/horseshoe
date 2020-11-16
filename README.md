@@ -55,7 +55,7 @@ Horseshoe supports most non-assignment operators used in common languages. Howev
 Horseshoe supports any file extension for template files. However, convention is to use a capital "U", which resembles a horseshoe.
 
 ### How is whitespace within a template handled by Horseshoe?
-Horseshoe uses the same whitespace paradigm as Mustache. All tags except for content (including unescaped content) qualify for consideration as stand-alone tags. In this case, the entire line is excluded from output and only processed by Horseshoe. More details can be found in the [Tags](#tags) section.
+Horseshoe uses the same whitespace paradigm as Mustache. All tags except for content (including unescaped content) qualify for consideration as stand-alone tags. In this case, the entire line is excluded from output and only the tag is processed by Horseshoe. More details can be found in the [Tags](#tags) section.
 
 ## Code Example
 The following example demonstrates how to use the Horseshoe library from within Java code. [Template examples](#template-examples) are located in a separate section.
@@ -110,7 +110,7 @@ There are a couple major differences from Mustache interpolation tags:
 Unescaped content (`{{{ content }}}`, `{{& content }}`) is the same as normal content in Horseshoe, since content is not escaped by default. It only differs from normal content if content escaping is enabled. The tag can either start with a `{` and end with a `}` or simply start with a `&`.
 
 #### Partials
-Partial tags (`{{> partial }}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++. The partial template is loaded (either from the specified filename or the corresponding template from the template loader) and placed into the current template.
+Partial tags (`{{> partial }}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++ but providing appropriate scoping. The partial template is loaded (either from the specified filename or the corresponding template from the template loader) and placed into the current template.
 
 If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. <b>The double indirection operator can be used on partial tags (`{{>> partial }}`) to avoid applying the indentation to every line yet still ignore trailing whitespace and newline after the partial.</b>
 
@@ -308,13 +308,13 @@ However, named expressions are not exposed to included partial templates. This i
 results in a whitespace-only string, since `func()` is not defined within the partial `a`.
 
 #### Streaming
-Streaming operations can be used in expressions to transform, filter, or reduce data within a single expression. They can be used on iterables, arrays, or individual objects. Individual objects with `null` values are treated as absent.
+Streaming operations can be used in expressions to transform (`#>`, `#.`, `#|`), filter (`#?`), or reduce (`#<`) data within a single expression. They can be used on iterables, arrays, or individual objects. Individual objects with `null` values are treated as absent.
 
-Streaming transformations (`{{ a #> i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator. Flattening transformations (`{{# [[1, 2], [3, 4], null] #| i -> i }}`) allow lists to be combined.
+Streaming transformations (`{{ a `<b>`#>`</b>` i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator. Flattening transformations (`{{# [[1, 2], [3, 4], null] `<b>`#|`</b>` i -> i }}`) allow lists to be combined.
 
-Streaming filters (`{{# names #? name -> /* Find names with initials. */ ~/\b.[.]/.matcher(name).find() }}`) are used to filter out unneeded items. The new list is the result of the operator.
+Streaming filters (`{{# names `<b>`#?`</b>` name -> /* Find names with initials. */ ~/\b.[.]/.matcher(name).find() }}`) are used to filter out unneeded items. The new list is the result of the operator.
 
-Streaming reductions (`{{ sum = 0; values #< value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.
+Streaming reductions (`{{ sum = 0; values `<b>`#<`</b>` value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.
 
 ## Docker Image
 The Horseshoe docker image executes the runner using the given run arguments. Files can be mounted into the container using the `--volume` option. For example, `docker run -v ~/horseshoe_data:/data horseshoe/horseshoe /data/input.U -o /data/output.cxx` reads the file `~/horseshoe_data/input.U` and writes the results to the file `~/horseshoe_data/output.cxx`.

@@ -3,6 +3,7 @@ package horseshoe.internal;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -265,7 +266,7 @@ public final class MethodBuilder {
 		private int length = 0;
 
 		@Override
-		ConstantPoolEntry add(final Object object, final byte... data) {
+		public ConstantPoolEntry add(final Object object, final byte... data) {
 			final ConstantPoolEntry info = new ConstantPoolEntry((short)(constants.size() + 1));
 			constants.put(object, info);
 
@@ -282,39 +283,39 @@ public final class MethodBuilder {
 		}
 
 		@Override
-		ConstantPool clear() {
+		public ConstantPool clear() {
 			constants.clear();
 			length = 0;
 			return this;
 		}
 
 		@Override
-		int count() {
+		public int count() {
 			return constants.size() + 1;
 		}
 
 		@Override
-		ConstantPoolEntry get(final Object object) {
+		public ConstantPoolEntry get(final Object object) {
 			return constants.get(object);
 		}
 
 		@Override
-		byte[] getData() {
+		public byte[] getData() {
 			return constantData;
 		}
 
 		@Override
-		Set<Entry<Object, ConstantPoolEntry>> getEntries() {
+		public Set<Entry<Object, ConstantPoolEntry>> getEntries() {
 			return constants.entrySet();
 		}
 
 		@Override
-		int getLength() {
+		public int getLength() {
 			return length;
 		}
 
 		@Override
-		ConstantPool populate() {
+		public ConstantPool populate() {
 			for (final ConstantPoolEntry entry : constants.values()) {
 				for (final Location location : entry.locations) {
 					final byte[] containerData = (location.container == this ? constantData : ((MethodBuilder)location.container).bytes);
@@ -472,7 +473,7 @@ public final class MethodBuilder {
 		}
 	}
 
-	private abstract static class ConstantPool {
+	private static interface ConstantPool {
 		/**
 		 * Adds data to the constant pool. The constant pool length is automatically extended.
 		 *
@@ -480,21 +481,21 @@ public final class MethodBuilder {
 		 * @param data the data to append to the constant pool
 		 * @return the newly created data
 		 */
-		abstract ConstantPoolEntry add(final Object object, final byte... data);
+		public ConstantPoolEntry add(final Object object, final byte... data);
 
 		/**
 		 * Clears the constant pool.
 		 *
 		 * @return this constant pool
 		 */
-		abstract ConstantPool clear();
+		public ConstantPool clear();
 
 		/**
 		 * Gets the constant pool count.
 		 *
 		 * @return the constant pool count
 		 */
-		abstract int count();
+		public int count();
 
 		/**
 		 * Gets data from the constant pool.
@@ -502,21 +503,21 @@ public final class MethodBuilder {
 		 * @param object the object to lookup in the constant pool
 		 * @return the data in the constant pool, or null if it does not exist
 		 */
-		abstract ConstantPoolEntry get(final Object object);
+		public ConstantPoolEntry get(final Object object);
 
 		/**
 		 * Gets the byte data for the constant pool.
 		 *
 		 * @return the byte data for the constant pool
 		 */
-		abstract byte[] getData();
+		public byte[] getData();
 
 		/**
 		 * Gets the set of all entries in the constant pool.
 		 *
 		 * @return the set of all entries in the constant pool
 		 */
-		abstract Set<Entry<Object, ConstantPoolEntry>> getEntries();
+		public Set<Entry<Object, ConstantPoolEntry>> getEntries();
 
 		/**
 		 * Gets the length of the constant pool.
@@ -530,7 +531,7 @@ public final class MethodBuilder {
 		 *
 		 * @return this constant pool
 		 */
-		abstract ConstantPool populate();
+		public ConstantPool populate();
 	}
 
 	public static class Label {
@@ -666,7 +667,7 @@ public final class MethodBuilder {
 			final String mnemonic = (opcode == null ? "0x" + Integer.toHexString(instruction & 0xFF) : opcode.mnemonic);
 			throw new IllegalArgumentException("Unexpected bytecode instruction: " + mnemonic + ", expecting a branch instruction");
 		} else if (opcode.has(Opcode.PROP_BREAKS_FLOW)) {
-			throw new IllegalArgumentException("Illegal branch instruction " + opcode.mnemonic + ", instuction cannot be added as a branch instruction");
+			throw new IllegalArgumentException("Illegal branch instruction " + opcode.mnemonic + ", instruction cannot be added as a branch instruction");
 		}
 
 		label.addReference(this, length, length + 1);
@@ -726,7 +727,7 @@ public final class MethodBuilder {
 		if (opcode == null) {
 			throw new IllegalArgumentException("Invalid bytecode instruction 0x" + Integer.toHexString(code[start] & 0xFF) + " at index " + start);
 		} else if (!opcode.has(Opcode.PROP_IS_STANDALONE_VALID) || opcode.has(Opcode.PROP_BREAKS_FLOW)) {
-			throw new IllegalArgumentException("Illegal bytecode instruction " + opcode.mnemonic + " at index " + start + ", instuction cannot be added directly");
+			throw new IllegalArgumentException("Illegal bytecode instruction " + opcode.mnemonic + " at index " + start + ", instruction cannot be added directly");
 		} else if (code[start] == WIDE) {
 			if (start + 1 >= code.length) {
 				throw new IllegalArgumentException("Incomplete bytecode instruction " + opcode.mnemonic + " at index " + start);
@@ -804,7 +805,7 @@ public final class MethodBuilder {
 		if (opcode == null) {
 			throw new IllegalArgumentException("Invalid bytecode instruction 0x" + Integer.toHexString(code & 0xFF));
 		} else if (!opcode.has(Opcode.PROP_IS_STANDALONE_VALID) || !opcode.has(Opcode.PROP_BREAKS_FLOW)) {
-			throw new IllegalArgumentException("Illegal bytecode instruction " + opcode.mnemonic + ", instuction cannot be added directly");
+			throw new IllegalArgumentException("Illegal bytecode instruction " + opcode.mnemonic + ", instruction cannot be added directly");
 		}
 
 		append(new byte[] { code }, 1);
@@ -1136,13 +1137,13 @@ public final class MethodBuilder {
 
 			// Only pull in constants that modify the buffer
 			for (final Location location : entry.getValue().locations) {
-				if (location.container == other) {
-					if (newLocations == null) {
-						newLocations = getConstant(entry.getKey()).locations;
-					}
-
-					newLocations.add(location.update(this, oldLength));
+				if (location.container != other) {
+					continue;
+				} else if (newLocations == null) {
+					newLocations = getConstant(entry.getKey()).locations;
 				}
+
+				newLocations.add(location.update(this, oldLength));
 			}
 		}
 
@@ -1181,16 +1182,18 @@ public final class MethodBuilder {
 	}
 
 	/**
-	 * Builds the method by loading the bytecode of the method builder into a new class.
+	 * Builds the method by creating the bytecode of a new class containing the method.
 	 *
-	 * @param <T> the type of the base class
 	 * @param name the name of the new class
-	 * @param base the base class of the new class
-	 * @param loader the class loader used to load the new class
-	 * @return the new class
-	 * @throws ReflectiveOperationException if the loader throws an exception while loading the bytecode
+	 * @param base the base class or interface of the new class
+	 * @param isStatic true to generate a static method, false to generate an instance method
+	 * @param methodName the constant pool entry for the method name
+	 * @param returnType the return type of the method
+	 * @param parameterTypes the parameter types of the method
+	 * @return the bytecode of the new class
+	 * @throws ReflectiveOperationException if an exception is thrown while generating the bytecode
 	 */
-	public <T> Class<T> build(final String name, final Class<T> base, final ClassLoader loader) throws ReflectiveOperationException {
+	private byte[] build(final String name, final Class<?> base, final boolean isStatic, final String methodName, final Class<?> returnType, final Class<?>... parameterTypes) throws ReflectiveOperationException {
 		if (stackSize != 0) {
 			throw new IllegalStateException("Stack size is not zero: " + stackSize);
 		}
@@ -1198,69 +1201,36 @@ public final class MethodBuilder {
 		// Add this class
 		getConstant(new UTF8String(name.replace('.', '/'))).locations.add(new Location(constantPool, constantPool.getLength() + 1));
 		final ConstantPoolEntry classNameInfo = constantPool.add(this, CLASS_CONSTANT, B0, B0);
+		final ConstantPoolEntry codeAttributeInfo = getConstant(new UTF8String("Code"));
+		final ConstantPoolEntry methodNameInfo = getConstant(new UTF8String(methodName));
+		final ConstantPoolEntry methodSignatureInfo = getConstant(new UTF8String(getSignature(returnType, parameterTypes)));
 
-		Method method = null;
+		ConstantPoolEntry ctorNameInfo = null;
+		ConstantPoolEntry ctorSignatureInfo = null;
+
+		if (!isStatic) {
+			ctorNameInfo = getConstant(new UTF8String("<init>"));
+			ctorSignatureInfo = getConstant(new UTF8String("()V"));
+		}
+
 		final ConstantPoolEntry baseClassInfo;
 		final ConstantPoolEntry baseConstructorInfo;
-		final ConstantPoolEntry interfaceClassInfo;
+		ConstantPoolEntry interfaceClassInfo = null;
+		final int fieldIndex; // The offset of the field start
 
-		if (base.isInterface()) { // This method is implementing an interface
-			for (final Method check : base.getMethods()) {
-				if (!Modifier.isStatic(check.getModifiers())) {
-					if (method != null) {
-						throw new IllegalArgumentException("Base interface " + base.getName() + " must have exactly 1 non-static method (contains multiple)");
-					}
-
-					method = check;
-				}
-			}
-
+		if (base.isInterface()) {
 			baseClassInfo = getConstant(Object.class);
 			baseConstructorInfo = getConstant(Object.class.getDeclaredConstructor());
 			interfaceClassInfo = getConstant(base);
-		} else if (!Modifier.isFinal(base.getModifiers())) { // This method is extending a class
-			for (final Method check : base.getMethods()) {
-				if (Modifier.isAbstract(check.getModifiers())) {
-					if (method != null) {
-						throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method (contains multiple)");
-					}
-
-					method = check;
-				}
-			}
-
-			if (method == null) {
-				for (final Method check : base.getDeclaredMethods()) {
-					if ((check.getModifiers() & (Modifier.FINAL | Modifier.NATIVE | Modifier.PRIVATE | Modifier.PROTECTED | Modifier.STATIC)) == 0 && !check.isSynthetic()) {
-						if (method != null) {
-							throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method (contains none) or 1 public declared non-static, non-final, non-native method (contains multiple)");
-						}
-
-						method = check;
-					}
-				}
-			}
-
-			baseClassInfo = interfaceClassInfo = getConstant(base);
-			baseConstructorInfo = getConstant(base.getDeclaredConstructor());
+			fieldIndex = constantPool.getLength() + 20;
 		} else {
-			throw new IllegalArgumentException("Base class " + base.getName() + " must not be marked final");
+			baseClassInfo = getConstant(base);
+			baseConstructorInfo = getConstant(base.getDeclaredConstructor());
+			fieldIndex = constantPool.getLength() + 18;
 		}
 
-		if (method == null) {
-			throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method or 1 public declared non-static, non-final, non-native method (contains none)");
-		}
-
-		final ConstantPoolEntry ctorNameInfo = getConstant(new UTF8String("<init>"));
-		final ConstantPoolEntry ctorSignatureInfo = getConstant(new UTF8String("()V"));
-		final ConstantPoolEntry codeAttributeInfo = getConstant(new UTF8String("Code"));
-
-		final ConstantPoolEntry methodNameInfo = getConstant(new UTF8String(method.getName()));
-		final ConstantPoolEntry methodSignatureInfo = getConstant(new UTF8String(getSignature(method)));
-
-		final int fieldIndex = 10 + constantPool.getLength() + (base.isInterface() ? 10 : 8); // The offset of the field start
 		final int ctorIndex = fieldIndex + 4; // The offset of the constructor start
-		final int methodIndex = ctorIndex + 31; // The offset of the method start
+		final int methodIndex = (isStatic ? ctorIndex : ctorIndex + 31); // The offset of the method start
 		final int attributeIndex = methodIndex + length + 26;
 		final int endIndex = attributeIndex + 2;
 
@@ -1275,128 +1245,213 @@ public final class MethodBuilder {
 
 		constantPool.populate();
 
-		final byte[] classBytecode = new byte[endIndex];
+		final byte[] bytecode = new byte[endIndex];
 
 		// Magic number
-		classBytecode[0] = (byte)0xCA;
-		classBytecode[1] = (byte)0xFE;
-		classBytecode[2] = (byte)0xBA;
-		classBytecode[3] = (byte)0xBE;
+		bytecode[0] = (byte)0xCA;
+		bytecode[1] = (byte)0xFE;
+		bytecode[2] = (byte)0xBA;
+		bytecode[3] = (byte)0xBE;
 
 		// Version number [4 - 6] = 0
-		classBytecode[7] = (byte)0x31; // Use Java 1.5, so we don't have to generate stackmaps
+		bytecode[7] = (byte)0x31; // Use Java 1.5, so we don't have to generate stackmaps
 
 		// Constants count
-		classBytecode[8] = (byte)(constantPool.count() >>> 8);
-		classBytecode[9] = (byte)(constantPool.count());
+		bytecode[8] = (byte)(constantPool.count() >>> 8);
+		bytecode[9] = (byte)(constantPool.count());
 
-		System.arraycopy(constantPool.getData(), 0, classBytecode, 10, constantPool.getLength());
+		System.arraycopy(constantPool.getData(), 0, bytecode, 10, constantPool.getLength());
 
 		// Access flags (public final super)
 		final int SUPER = 0x20; // Internal flag
 		final int accessFlags = Modifier.PUBLIC | Modifier.FINAL | SUPER;
-		classBytecode[10 + constantPool.getLength()]     = (byte)(accessFlags >>> 8);
-		classBytecode[10 + constantPool.getLength() + 1] = (byte)(accessFlags);
+		bytecode[10 + constantPool.getLength()]     = (byte)(accessFlags >>> 8);
+		bytecode[10 + constantPool.getLength() + 1] = (byte)(accessFlags);
 
 		// This class and super class index
-		classBytecode[10 + constantPool.getLength() + 2] = (byte)(classNameInfo.index >>> 8);
-		classBytecode[10 + constantPool.getLength() + 3] = (byte)(classNameInfo.index);
-		classBytecode[10 + constantPool.getLength() + 4] = (byte)(baseClassInfo.index >>> 8);
-		classBytecode[10 + constantPool.getLength() + 5] = (byte)(baseClassInfo.index);
+		bytecode[10 + constantPool.getLength() + 2] = (byte)(classNameInfo.index >>> 8);
+		bytecode[10 + constantPool.getLength() + 3] = (byte)(classNameInfo.index);
+		bytecode[10 + constantPool.getLength() + 4] = (byte)(baseClassInfo.index >>> 8);
+		bytecode[10 + constantPool.getLength() + 5] = (byte)(baseClassInfo.index);
 
 		// Add the interface we are implementing (ignore if class; [6 - 7] = 0)
 		if (base.isInterface()) {
-			classBytecode[10 + constantPool.getLength() + 7] = 0x01; // [6] = 0
-			classBytecode[10 + constantPool.getLength() + 8] = (byte)(interfaceClassInfo.index >>> 8);
-			classBytecode[10 + constantPool.getLength() + 9] = (byte)(interfaceClassInfo.index);
+			bytecode[10 + constantPool.getLength() + 7] = 1; // [6] = 0
+			bytecode[10 + constantPool.getLength() + 8] = (byte)(interfaceClassInfo.index >>> 8);
+			bytecode[10 + constantPool.getLength() + 9] = (byte)(interfaceClassInfo.index);
 		}
 
 		// Fields (none) [0 - 1] = 0
 
-		// Methods (constructor and interface method) [2] = 0
-		classBytecode[fieldIndex + 3] = 0x02;
+		// Methods [2] = 0
+		if (isStatic) { // Only 1 method
+			bytecode[fieldIndex + 3] = 1;
+		} else { // Constructor + method = 2 methods
+			bytecode[fieldIndex + 3] = 2;
 
-		{ // Constructor
 			final int ctorAccessFlags = Modifier.PUBLIC;
 
-			classBytecode[ctorIndex]     = (byte)(ctorAccessFlags >>> 8);
-			classBytecode[ctorIndex + 1] = (byte)(ctorAccessFlags);
+			bytecode[ctorIndex]     = (byte)(ctorAccessFlags >>> 8);
+			bytecode[ctorIndex + 1] = (byte)(ctorAccessFlags);
 
-			classBytecode[ctorIndex + 2] = (byte)(ctorNameInfo.index >>> 8);
-			classBytecode[ctorIndex + 3] = (byte)(ctorNameInfo.index);
-			classBytecode[ctorIndex + 4] = (byte)(ctorSignatureInfo.index >>> 8);
-			classBytecode[ctorIndex + 5] = (byte)(ctorSignatureInfo.index);
+			bytecode[ctorIndex + 2] = (byte)(ctorNameInfo.index >>> 8);
+			bytecode[ctorIndex + 3] = (byte)(ctorNameInfo.index);
+			bytecode[ctorIndex + 4] = (byte)(ctorSignatureInfo.index >>> 8);
+			bytecode[ctorIndex + 5] = (byte)(ctorSignatureInfo.index);
 
-			classBytecode[ctorIndex + 7] = 0x01; // [6] = 0
-			classBytecode[ctorIndex + 8] = (byte)(codeAttributeInfo.index >>> 8);
-			classBytecode[ctorIndex + 9] = (byte)(codeAttributeInfo.index);
+			bytecode[ctorIndex + 7] = 0x01; // [6] = 0
+			bytecode[ctorIndex + 8] = (byte)(codeAttributeInfo.index >>> 8);
+			bytecode[ctorIndex + 9] = (byte)(codeAttributeInfo.index);
 
-			classBytecode[ctorIndex + 13] = 0x11; // [10 - 12] = 0
+			bytecode[ctorIndex + 13] = 0x11; // [10 - 12] = 0
 
 			// Code
-			classBytecode[ctorIndex + 15] = 0x01; // [14] = 0
-			classBytecode[ctorIndex + 17] = 0x01; // [16] = 0
+			bytecode[ctorIndex + 15] = 0x01; // [14] = 0
+			bytecode[ctorIndex + 17] = 0x01; // [16] = 0
 
-			classBytecode[ctorIndex + 21] = 0x05; // [18 - 20] = 0
+			bytecode[ctorIndex + 21] = 0x05; // [18 - 20] = 0
 
-			classBytecode[ctorIndex + 22] = ALOAD_0;
-			classBytecode[ctorIndex + 23] = INVOKESPECIAL;
-			classBytecode[ctorIndex + 24] = (byte)(baseConstructorInfo.index >>> 8);
-			classBytecode[ctorIndex + 25] = (byte)(baseConstructorInfo.index);
-			classBytecode[ctorIndex + 26] = RETURN;
+			bytecode[ctorIndex + 22] = ALOAD_0;
+			bytecode[ctorIndex + 23] = INVOKESPECIAL;
+			bytecode[ctorIndex + 24] = (byte)(baseConstructorInfo.index >>> 8);
+			bytecode[ctorIndex + 25] = (byte)(baseConstructorInfo.index);
+			bytecode[ctorIndex + 26] = RETURN;
 
 			// [27 - 30] = 0
 		}
 
 		int maxLocalVariableSize = maxLocalVariableIndex + 1;
 
-		for (final Class<?> parameterType : method.getParameterTypes()) {
+		for (final Class<?> parameterType : parameterTypes) {
 			maxLocalVariableSize += getStackSize(parameterType);
 		}
 
 		{ // Add the custom method
-			final int methodAccessFlags = Modifier.PUBLIC | Modifier.FINAL;
+			final int methodAccessFlags = isStatic ?
+					Modifier.PUBLIC | Modifier.STATIC :
+					Modifier.PUBLIC | Modifier.FINAL;
 
-			classBytecode[methodIndex]     = (byte)(methodAccessFlags >>> 8);
-			classBytecode[methodIndex + 1] = (byte)(methodAccessFlags);
+			bytecode[methodIndex]     = (byte)(methodAccessFlags >>> 8);
+			bytecode[methodIndex + 1] = (byte)(methodAccessFlags);
 
-			classBytecode[methodIndex + 2] = (byte)(methodNameInfo.index >>> 8);
-			classBytecode[methodIndex + 3] = (byte)(methodNameInfo.index);
-			classBytecode[methodIndex + 4] = (byte)(methodSignatureInfo.index >>> 8);
-			classBytecode[methodIndex + 5] = (byte)(methodSignatureInfo.index);
+			bytecode[methodIndex + 2] = (byte)(methodNameInfo.index >>> 8);
+			bytecode[methodIndex + 3] = (byte)(methodNameInfo.index);
+			bytecode[methodIndex + 4] = (byte)(methodSignatureInfo.index >>> 8);
+			bytecode[methodIndex + 5] = (byte)(methodSignatureInfo.index);
 
-			classBytecode[methodIndex + 7] = 0x01; // [6] = 0
-			classBytecode[methodIndex + 8] = (byte)(codeAttributeInfo.index >>> 8);
-			classBytecode[methodIndex + 9] = (byte)(codeAttributeInfo.index);
+			bytecode[methodIndex + 7] = 0x01; // [6] = 0
+			bytecode[methodIndex + 8] = (byte)(codeAttributeInfo.index >>> 8);
+			bytecode[methodIndex + 9] = (byte)(codeAttributeInfo.index);
 
 			final int attributeLength = length + 12;
 
-			classBytecode[methodIndex + 10] = (byte)(attributeLength >>> 24);
-			classBytecode[methodIndex + 11] = (byte)(attributeLength >>> 16);
-			classBytecode[methodIndex + 12] = (byte)(attributeLength >>> 8);
-			classBytecode[methodIndex + 13] = (byte)(attributeLength);
+			bytecode[methodIndex + 10] = (byte)(attributeLength >>> 24);
+			bytecode[methodIndex + 11] = (byte)(attributeLength >>> 16);
+			bytecode[methodIndex + 12] = (byte)(attributeLength >>> 8);
+			bytecode[methodIndex + 13] = (byte)(attributeLength);
 
 			// Code
-			classBytecode[methodIndex + 14] = (byte)(maxStackSize >>> 8);
-			classBytecode[methodIndex + 15] = (byte)(maxStackSize);
-			classBytecode[methodIndex + 16] = (byte)(maxLocalVariableSize >>> 8);
-			classBytecode[methodIndex + 17] = (byte)(maxLocalVariableSize);
+			bytecode[methodIndex + 14] = (byte)(maxStackSize >>> 8);
+			bytecode[methodIndex + 15] = (byte)(maxStackSize);
+			bytecode[methodIndex + 16] = (byte)(maxLocalVariableSize >>> 8);
+			bytecode[methodIndex + 17] = (byte)(maxLocalVariableSize);
 
-			classBytecode[methodIndex + 18] = (byte)(length >>> 24);
-			classBytecode[methodIndex + 19] = (byte)(length >>> 16);
-			classBytecode[methodIndex + 20] = (byte)(length >>> 8);
-			classBytecode[methodIndex + 21] = (byte)(length);
+			bytecode[methodIndex + 18] = (byte)(length >>> 24);
+			bytecode[methodIndex + 19] = (byte)(length >>> 16);
+			bytecode[methodIndex + 20] = (byte)(length >>> 8);
+			bytecode[methodIndex + 21] = (byte)(length);
 
-			System.arraycopy(bytes, 0, classBytecode, methodIndex + 22, length);
+			System.arraycopy(bytes, 0, bytecode, methodIndex + 22, length);
 		}
 
 		// Attributes [0 - 1] = 0
+
+		return bytecode;
+	}
+
+	/**
+	 * Builds the method by loading the bytecode of the method builder into a new class.
+	 *
+	 * @param <T> the type of the base class
+	 * @param name the name of the new class
+	 * @param base the base class of the new class
+	 * @param loader the class loader used to load the new class
+	 * @return the new class
+	 * @throws ReflectiveOperationException if an exception is thrown while loading the bytecode
+	 */
+	public <T> Class<T> build(final String name, final Class<T> base, final ClassLoader loader) throws ReflectiveOperationException {
+		Method method = null;
+
+		if (base.isInterface()) { // This method is implementing an interface
+			for (final Method check : base.getMethods()) {
+				if (check.isSynthetic()) {
+					continue;
+				} else if (method != null) {
+					throw new IllegalArgumentException("Base interface " + base.getName() + " must have exactly 1 non-static method (contains multiple)");
+				}
+
+				method = check;
+			}
+		} else if (Modifier.isFinal(base.getModifiers())) { // This method is extending a class
+			throw new IllegalArgumentException("Base class " + base.getName() + " must not be marked final");
+		} else {
+			for (final Method check : base.getMethods()) {
+				if (!Modifier.isAbstract(check.getModifiers())) {
+					continue;
+				} else if (method != null) {
+					throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method (contains multiple)");
+				}
+
+				method = check;
+			}
+
+			if (method == null) {
+				for (final Method check : base.getDeclaredMethods()) {
+					if ((check.getModifiers() & (Modifier.FINAL | Modifier.NATIVE | Modifier.PRIVATE | Modifier.PROTECTED | Modifier.STATIC)) != 0 || check.isSynthetic()) {
+						continue;
+					} else if (method != null) {
+						throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method or 1 public declared non-static, non-final, non-native method (contains multiple)");
+					}
+
+					method = check;
+				}
+			}
+		}
+
+		if (method == null) {
+			throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method or 1 public declared non-static, non-final, non-native method (contains none)");
+		}
+
+		final byte[] bytecode = build(name, base, false, method.getName(), method.getReturnType(), method.getParameterTypes());
 
 		return AccessController.doPrivileged(
 			new PrivilegedAction<Class<T>>() {
 				@Override
 				public Class<T> run() {
-					return new BytecodeLoader<T>(loader).defineClass(name, classBytecode);
+					return new BytecodeLoader<T>(loader).defineClass(name, bytecode);
+				}
+			}
+		);
+	}
+
+	/**
+	 * Builds the method by loading the bytecode of the method builder into a new class.
+	 *
+	 * @param name the name of the new class
+	 * @param methodName the name of the method
+	 * @param type the type signature of the method
+	 * @param loader the class loader used to load the new class
+	 * @return the created method
+	 * @throws ReflectiveOperationException if an exception is thrown while loading the bytecode
+	 */
+	public Method build(final String name, final String methodName, final MethodType type, final ClassLoader loader) throws ReflectiveOperationException {
+		final byte[] bytecode = build(name, Object.class, true, methodName, type.returnType(), type.parameterArray());
+
+		return AccessController.doPrivileged(
+			new PrivilegedAction<Method>() {
+				@Override
+				public Method run() {
+					return new BytecodeLoader<Object>(loader).defineClass(name, bytecode).getMethods()[0];
 				}
 			}
 		);

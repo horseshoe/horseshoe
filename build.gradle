@@ -17,8 +17,13 @@ checkstyle {
 }
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_1_7
-	targetCompatibility = JavaVersion.VERSION_1_7
+	sourceCompatibility = JavaVersion.VERSION_1_8
+	targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+compileJava {
+	sourceCompatibility = 1.7
+	targetCompatibility = 1.7
 }
 
 test {
@@ -33,11 +38,6 @@ dependencies {
 
 tasks.withType(JavaCompile) {
 	options.encoding = 'UTF-8'
-}
-
-compileTestJava {
-	sourceCompatibility = 1.8
-	targetCompatibility = 1.8
 }
 
 java {

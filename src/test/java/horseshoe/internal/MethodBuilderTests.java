@@ -4,8 +4,9 @@ import static horseshoe.internal.MethodBuilder.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertThrows;
 
+import java.lang.invoke.MethodType;
 import java.util.Arrays;
 import java.util.List;
 import java.util.SortedMap;
@@ -213,12 +214,8 @@ public class MethodBuilderTests {
 		}
 
 		for (final Class<?> to : allPrimitives) {
-			try {
-				final MethodBuilder mb = new MethodBuilder().addPrimitiveConversion(Object.class, to);
-				fail("Unexpected conversion from Object.class to " + to.getName() + ": " + mb.toString());
-			} catch (final RuntimeException e) {
-				// Failures expected
-			}
+			final MethodBuilder mb = new MethodBuilder();
+			assertThrows(IllegalArgumentException.class, () -> mb.addPrimitiveConversion(Object.class, to));
 		}
 
 		// Test Number.class to Boolean.class
@@ -246,10 +243,6 @@ public class MethodBuilderTests {
 	}
 
 	public static interface MultipleMethodInterface {
-		public static void staticMethod() {
-			/* Empty test method */
-		}
-
 		public void method1();
 
 		public void method2();
@@ -257,7 +250,7 @@ public class MethodBuilderTests {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase() throws ReflectiveOperationException {
-		new MethodBuilder().addCode(RETURN).build("BadBase", MultipleMethodInterface.class, MethodBuilderTests.class.getClassLoader());
+		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase", MultipleMethodInterface.class, MethodBuilderTests.class.getClassLoader());
 	}
 
 	public abstract static class MultipleAbstractMethodClass {
@@ -268,7 +261,7 @@ public class MethodBuilderTests {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase2() throws ReflectiveOperationException {
-		new MethodBuilder().addCode(RETURN).build("BadBase2", MultipleAbstractMethodClass.class, MethodBuilderTests.class.getClassLoader());
+		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase2", MultipleAbstractMethodClass.class, MethodBuilderTests.class.getClassLoader());
 	}
 
 	public static class MultipleMethodClass {
@@ -283,7 +276,7 @@ public class MethodBuilderTests {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase3() throws ReflectiveOperationException {
-		new MethodBuilder().addCode(RETURN).build("BadBase3", MultipleMethodClass.class, MethodBuilderTests.class.getClassLoader());
+		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase3", MultipleMethodClass.class, MethodBuilderTests.class.getClassLoader());
 	}
 
 	public static class NoMethodClass {
@@ -291,7 +284,7 @@ public class MethodBuilderTests {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase4() throws ReflectiveOperationException {
-		new MethodBuilder().addCode(RETURN).build("BadBase4", NoMethodClass.class, MethodBuilderTests.class.getClassLoader());
+		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase4", NoMethodClass.class, MethodBuilderTests.class.getClassLoader());
 	}
 
 	public static final class FinalClass {
@@ -302,7 +295,7 @@ public class MethodBuilderTests {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testBadBase5() throws ReflectiveOperationException {
-		new MethodBuilder().addCode(RETURN).build("BadBase5", FinalClass.class, MethodBuilderTests.class.getClassLoader());
+		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase5", FinalClass.class, MethodBuilderTests.class.getClassLoader());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -327,7 +320,12 @@ public class MethodBuilderTests {
 
 	@Test(expected = IllegalStateException.class)
 	public void testBadStack() throws ReflectiveOperationException {
-		new MethodBuilder().addCode(ACONST_NULL).build("BadStack", FinalClass.class, MethodBuilderTests.class.getClassLoader());
+		new MethodBuilder().addCode(ACONST_NULL).build("BadStack", SimpleInterface.class, MethodBuilderTests.class.getClassLoader());
+	}
+
+	@Test
+	public void testStaticAdd() throws ReflectiveOperationException {
+		assertEquals(5, ((Integer)new MethodBuilder().addCode(ILOAD_0, ILOAD_1, IADD).addFlowBreakingCode(IRETURN, 0).build("StaticAdd", "add", MethodType.methodType(int.class, int.class, int.class), MethodBuilderTests.class.getClassLoader()).invoke(null, 2, 3)).intValue());
 	}
 
 }

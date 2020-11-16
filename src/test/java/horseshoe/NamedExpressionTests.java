@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 import org.junit.Test;
 
-public class NamedExprTests {
+public class NamedExpressionTests {
 
 	private static final String LS = System.lineSeparator();
 
@@ -44,8 +44,8 @@ public class NamedExprTests {
 				"	{" + LS +
 				"		printf(\"Hello, World!\\n\");" + LS +
 				"	}" + LS,
-				new TemplateLoader().load("Test", "{{< makeFunction }}\n{{ Comment -> '// ' + ~@'String'.join(\"" + LS + "\" + .indentation + '// ', ~@'" + NamedExprTests.class.getName() + "'.split(~/\\S(?:.{0,73}\\S)?(?=\\s|$)|\\S.{49}\\S{25}/, .)) }}\n" +
-					"{{ Comment('This is a test comment that is super long, so the regular expression splitter can be tested to determine whether or not it works. ThisIsAReallyLongSingleWordThatWillHelpTestIfSplittingASingleWordAcrossMultipleLinesWorks.') }}\nvoid myFunc()\n{\n\tprintf(\"Hello, World!\\n\");\n}\n{{/}}\n\t{{> makeFunction }}\n").render(new Settings().addLoadableClasses(NamedExprTests.class), Collections.emptyMap(), new StringWriter()).toString());
+				new TemplateLoader().load("Test", "{{< makeFunction }}\n{{ Comment -> '// ' + ~@'String'.join(\"" + LS + "\" + .indentation + '// ', ~@'" + NamedExpressionTests.class.getName() + "'.split(~/\\S(?:.{0,73}\\S)?(?=\\s|$)|\\S.{49}\\S{25}/, .)) }}\n" +
+					"{{ Comment('This is a test comment that is super long, so the regular expression splitter can be tested to determine whether or not it works. ThisIsAReallyLongSingleWordThatWillHelpTestIfSplittingASingleWordAcrossMultipleLinesWorks.') }}\nvoid myFunc()\n{\n\tprintf(\"Hello, World!\\n\");\n}\n{{/}}\n\t{{> makeFunction }}\n").render(new Settings().addLoadableClasses(NamedExpressionTests.class), Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
@@ -56,7 +56,7 @@ public class NamedExprTests {
 	@Test
 	public void testNamedExprMethodCall() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
-		final Template template = new TemplateLoader().load("Test", "{{returnArg -> .}}{{(returnArg(\"123\") + \"4\").replace(\"1\", \"2\")}}");
+		final Template template = new TemplateLoader().load("Test", "{{ returnArg -> . }}{{ (returnArg('123') + '4').replace('1', '2') }}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, Collections.emptyMap(), writer);
 		assertEquals("2234", writer.toString());
