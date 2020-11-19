@@ -1,20 +1,20 @@
 package horseshoe;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.EnumSet;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class LoadExceptionTests {
+class LoadExceptionTests {
 
 	private static final String LS = System.lineSeparator();
 
 	@Test
-	public void testAnnotationError() throws IOException {
+	void testAnnotationError() throws IOException {
 		try {
 			new TemplateLoader().load("Annotation", "{{#@Good}}\n test\n{{/}}\n{{#@Bad!}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
@@ -26,7 +26,7 @@ public class LoadExceptionTests {
 	}
 
 	@Test
-	public void testInvertedSectionError() throws IOException {
+	void testInvertedSectionError() throws IOException {
 		try {
 			new TemplateLoader().load("Inverted Section", "{{#Test}}\n test\n{{^}}\n{{/}}\n{{^}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
@@ -38,7 +38,7 @@ public class LoadExceptionTests {
 	}
 
 	@Test
-	public void testLoadUnclosedTag() throws IOException {
+	void testLoadUnclosedTag() throws IOException {
 		try {
 			new TemplateLoader().load("Unclosed Tag", "This is a {{#Test}} test template {{/}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
@@ -50,7 +50,7 @@ public class LoadExceptionTests {
 	}
 
 	@Test
-	public void testLoadUnrecognizedTag() throws IOException {
+	void testLoadUnrecognizedTag() throws IOException {
 		try {
 			new TemplateLoader().load("Unrecognized Tag", "This is a" + LS + " {{#Test}} " + LS + "test template" + LS + " {{" + LS + LS + "/}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
@@ -62,7 +62,7 @@ public class LoadExceptionTests {
 	}
 
 	@Test
-	public void testRepeatSectionError() throws IOException {
+	void testRepeatSectionError() throws IOException {
 		try {
 			new TemplateLoader().load("Repeat Section", "{{#Test}}\n test\n{{/}}\n{{#}}\n  {{#}}\n  {{/}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
@@ -74,7 +74,7 @@ public class LoadExceptionTests {
 	}
 
 	@Test
-	public void testSectionCloseError() throws IOException {
+	void testSectionCloseError() throws IOException {
 		try {
 			new TemplateLoader().setExtensions(EnumSet.complementOf(EnumSet.of(Extension.SMART_END_TAGS))).load("Close Section", "{{#Test}}\n test\n{{/Bad}}\n{{#}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
@@ -86,7 +86,7 @@ public class LoadExceptionTests {
 	}
 
 	@Test
-	public void testSectionCloseError2() throws IOException {
+	void testSectionCloseError2() throws IOException {
 		try {
 			new TemplateLoader().load("Close Section", " test\n{{/}}\n{{#Test}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
@@ -98,7 +98,7 @@ public class LoadExceptionTests {
 	}
 
 	@Test
-	public void testSetDelimiterError() throws IOException {
+	void testSetDelimiterError() throws IOException {
 		try {
 			new TemplateLoader().load("Set Delimiter", " test\n{{=^^^ ^^^}}\n^^^#Test^^^\n^^^/^^^").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
@@ -110,7 +110,7 @@ public class LoadExceptionTests {
 	}
 
 	@Test
-	public void testTagError() throws IOException {
+	void testTagError() throws IOException {
 		try {
 			new TemplateLoader().load("Bad Tag", " test\n{{%}}\n{{#Test}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();
@@ -122,7 +122,7 @@ public class LoadExceptionTests {
 	}
 
 	@Test
-	public void testUnmatchedSection() throws IOException {
+	void testUnmatchedSection() throws IOException {
 		try {
 			new TemplateLoader().load("Unmatched Section", "{{#Test}} test\n{{#Test}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
 			fail();

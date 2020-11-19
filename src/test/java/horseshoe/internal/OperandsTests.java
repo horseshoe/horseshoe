@@ -1,48 +1,52 @@
 package horseshoe.internal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class OperandsTests {
+class OperandsTests {
 
 	private final Number[] numbers = { (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), new AtomicInteger(33), new AtomicLong(34L) };
 
 	@Test
-	public void testAdd() {
+	void testAdd() {
+		final Object object = new Object();
+
 		for (int i = 0; i < numbers.length; i++) {
+			final Number testNumber = numbers[i];
+
 			for (int j = 0; j < numbers.length; j++) {
-				assertEquals(numbers[i].doubleValue() + numbers[j].doubleValue(), ((Number)Operands.add(numbers[i], numbers[j])).doubleValue(), 0.0001);
+				assertEquals(testNumber.doubleValue() + numbers[j].doubleValue(), ((Number)Operands.add(testNumber, numbers[j])).doubleValue(), 0.0001);
 			}
 
-			assertEquals(numbers[i].doubleValue() + ' ', ((Number)Operands.add(numbers[i], ' ')).doubleValue(), 0.0001);
-			assertEquals(' ' + numbers[i].doubleValue(), ((Number)Operands.add(' ', numbers[i])).doubleValue(), 0.0001);
+			assertEquals(testNumber.doubleValue() + ' ', ((Number)Operands.add(testNumber, ' ')).doubleValue(), 0.0001);
+			assertEquals(' ' + testNumber.doubleValue(), ((Number)Operands.add(' ', testNumber)).doubleValue(), 0.0001);
 
-			assertEquals(numbers[i] + " ", Operands.add(numbers[i], " ").toString());
-			assertEquals(" " + numbers[i], Operands.add(" ", numbers[i]).toString());
+			assertEquals(testNumber + " ", Operands.add(testNumber, " ").toString());
+			assertEquals(" " + testNumber, Operands.add(" ", testNumber).toString());
 
-			final int k = i;
+			assertThrows(IllegalArgumentException.class, () -> Operands.add(testNumber, object));
+			assertThrows(IllegalArgumentException.class, () -> Operands.add(object, testNumber));
 
-			assertThrows(IllegalArgumentException.class, () -> Operands.add(numbers[k], new Object()));
-			assertThrows(IllegalArgumentException.class, () -> Operands.add(new Object(), numbers[k]));
-
-			assertThrows(IllegalArgumentException.class, () -> Operands.add(numbers[k], null));
-			assertThrows(IllegalArgumentException.class, () -> Operands.add(null, numbers[k]));
+			assertThrows(IllegalArgumentException.class, () -> Operands.add(testNumber, null));
+			assertThrows(IllegalArgumentException.class, () -> Operands.add(null, testNumber));
 		}
 
 		assertEquals(' ' + ' ', ((Number)Operands.add(' ', ' ')).intValue());
@@ -62,37 +66,40 @@ public class OperandsTests {
 		assertEquals(expectedMap, Operands.add(Collections.singletonMap(1, 1), Collections.singletonMap(2, 3)));
 		assertEquals(expectedMap, Operands.add(Collections.singletonMap(2, 3), Arrays.asList(1)));
 
-		assertThrows(IllegalArgumentException.class, () -> Operands.add(Arrays.asList(1, 2, 3), null));
-		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, Arrays.asList(1, 2, 3)));
+		final List<Integer> testList = Arrays.asList(1, 2, 3);
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(testList, null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, testList));
 
-		assertThrows(IllegalArgumentException.class, () -> Operands.add(Collections.singleton(1), null));
-		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, Collections.singleton(1)));
+		final Collection<Integer> testCollection = Collections.singleton(1);
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(testCollection, null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, testCollection));
 
-		assertThrows(IllegalArgumentException.class, () -> Operands.add(Collections.singletonMap(1, 2), null));
-		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, Collections.singletonMap(1, 2)));
+		final Map<Integer, Integer> testMap = Collections.singletonMap(1, 2);
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(testMap, null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, testMap));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadCompare() throws ReflectiveOperationException {
-		assertNotEquals(0, Operands.compare(false, 5, "5"));
+	@Test
+	void testBadCompare() throws ReflectiveOperationException {
+		assertThrows(IllegalArgumentException.class, () -> Operands.compare(false, 5, "5"));
 	}
 
-	@Test(expected = ClassCastException.class)
-	public void testBadCompare2() throws ReflectiveOperationException {
-		assertNotEquals(0, Operands.compare(false, "5", 5));
+	@Test
+	void testBadCompare2() throws ReflectiveOperationException {
+		assertThrows(ClassCastException.class, () -> Operands.compare(false, "5", 5));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadCompare3() throws ReflectiveOperationException {
-		assertNotEquals(0, Operands.compare(false, new Object(), new Object()));
+	@Test
+	void testBadCompare3() throws ReflectiveOperationException {
+		final Object object1 = new Object();
+		final Object object2 = new Object();
+		assertThrows(IllegalArgumentException.class, () -> Operands.compare(false, object1, object2));
 	}
 
 	@SuppressWarnings("serial")
 	@Test
-	public void testBadNumbers() throws ReflectiveOperationException {
-		assertThrows(IllegalArgumentException.class, () -> Operands.toNumeric(null));
-		assertThrows(IllegalArgumentException.class, () -> Operands.toNumeric("Bad"));
-		assertThrows(IllegalArgumentException.class, () -> Operands.toNumeric(new Number() {
+	void testBadNumbers() throws ReflectiveOperationException {
+		final Number badNumber = new Number() {
 			@Override
 			public int intValue() {
 				return 0;
@@ -112,13 +119,17 @@ public class OperandsTests {
 			public double doubleValue() {
 				return 0;
 			}
-		}));
+		};
+
+		assertThrows(IllegalArgumentException.class, () -> Operands.toNumeric(null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.toNumeric("Bad"));
+		assertThrows(IllegalArgumentException.class, () -> Operands.toNumeric(badNumber));
 		assertThrows(IllegalArgumentException.class, () -> Operands.toIntegral(null));
 		assertThrows(IllegalArgumentException.class, () -> Operands.toIntegral(5.6));
 	}
 
 	@Test
-	public void testCompare() {
+	void testCompare() {
 		final Object[] notEqual = { (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), ' ', new AtomicInteger(33), new AtomicLong(34L) };
 
 		for (int i = 0; i < notEqual.length; i++) {
@@ -169,7 +180,7 @@ public class OperandsTests {
 	}
 
 	@Test
-	public void testCompareEnum() {
+	void testCompareEnum() {
 		assertEquals(0, Operands.compare(true, TestCompareEnum.Apple, "Apple"));
 		assertEquals(0, Operands.compare(true, "Apple", TestCompareEnum.Apple));
 		assertNotEquals(0, Operands.compare(true, TestCompareEnum.Blue, "Apple"));
@@ -177,7 +188,7 @@ public class OperandsTests {
 	}
 
 	@Test
-	public void testConvertToBoolean() {
+	void testConvertToBoolean() {
 		for (final Object object : new Object[] { true, (byte)1, (short)2, 3, 4L, 5.0f, 6.0, BigDecimal.valueOf(7.0), BigInteger.valueOf(8), ' ', new AtomicInteger(33), new AtomicLong(34L), "a", new int[1], Collections.singletonList(0), Collections.singletonMap("key", "value"), new Object() }) {
 			assertTrue(Operands.convertToBoolean(object));
 		}
@@ -188,21 +199,23 @@ public class OperandsTests {
 	}
 
 	@Test
-	public void testDivide() {
+	void testDivide() {
 		for (int i = 0; i < numbers.length; i++) {
+			final Number testNumber = numbers[i];
+
 			for (int j = 0; j < numbers.length; j++) {
-				assertEquals(numbers[i].doubleValue() / numbers[j].doubleValue(), Operands.divide(Operands.toNumeric(numbers[i]), Operands.toNumeric(numbers[j])).doubleValue(), Math.abs(numbers[i].doubleValue() / numbers[j].doubleValue() - numbers[i].longValue() / numbers[j].longValue()) + 0.0001);
+				assertEquals(testNumber.doubleValue() / numbers[j].doubleValue(), Operands.divide(Operands.toNumeric(testNumber), Operands.toNumeric(numbers[j])).doubleValue(), Math.abs(testNumber.doubleValue() / numbers[j].doubleValue() - testNumber.longValue() / numbers[j].longValue()) + 0.0001);
 			}
 
-			assertEquals(numbers[i].doubleValue() / ' ', Operands.divide(Operands.toNumeric(numbers[i]), Operands.toNumeric(' ')).doubleValue(), Math.abs((numbers[i].doubleValue() / ' ') % 1.0) + 0.0001);
-			assertEquals(' ' / numbers[i].doubleValue(), Operands.divide(Operands.toNumeric(' '), Operands.toNumeric(numbers[i])).doubleValue(), Math.abs((' ' / numbers[i].doubleValue()) % 1.0) + 0.0001);
+			assertEquals(testNumber.doubleValue() / ' ', Operands.divide(Operands.toNumeric(testNumber), Operands.toNumeric(' ')).doubleValue(), Math.abs((testNumber.doubleValue() / ' ') % 1.0) + 0.0001);
+			assertEquals(' ' / testNumber.doubleValue(), Operands.divide(Operands.toNumeric(' '), Operands.toNumeric(testNumber)).doubleValue(), Math.abs((' ' / testNumber.doubleValue()) % 1.0) + 0.0001);
 		}
 
 		assertEquals(' ' / ' ', Operands.divide(Operands.toNumeric(' '), Operands.toNumeric(' ')).intValue());
 	}
 
 	@Test
-	public void testFloatingPointUnaryOperations() {
+	void testFloatingPointUnaryOperations() {
 		for (int i = 0; i < numbers.length; i++) {
 			assertEquals(-numbers[i].doubleValue(), Operands.negate(Operands.toNumeric(numbers[i])).doubleValue(), 0.0);
 		}
@@ -213,7 +226,7 @@ public class OperandsTests {
 	}
 
 	@Test
-	public void testIntegralOperations() {
+	void testIntegralOperations() {
 		for (final Number number : new Number[] { (byte)1, (short)2, 3, 4L, BigInteger.valueOf(8), new AtomicInteger(33), new AtomicLong(34L) }) {
 			assertEquals(number.intValue(), Operands.toIntegral(number).longValue());
 			assertEquals(~number.intValue(), Operands.not(Operands.toIntegral(number)).intValue());
@@ -246,13 +259,12 @@ public class OperandsTests {
 		assertEquals(Operands.toIntegral(5), Operands.toNumeric(5));
 		assertNotEquals(Operands.toIntegral(5), Operands.toNumeric(5.6));
 		assertNotEquals(Operands.toIntegral(5), Operands.toNumeric(4));
-		assertNotEquals(Operands.toIntegral(5), "5");
 		assertTrue(Operands.convertToBoolean(Operands.toIntegral(1L)));
 		assertFalse(Operands.convertToBoolean(Operands.toIntegral(0)));
 	}
 
 	@Test
-	public void testIsIn() {
+	void testIsIn() {
 		assertTrue(Operands.isIn(4, Arrays.asList(1, 2, 3, 4)));
 		assertFalse(Operands.isIn(4, Arrays.asList(1, 2, 3, 5)));
 		assertTrue(Operands.isIn("key", Collections.singletonMap("key", "value")));
@@ -261,62 +273,69 @@ public class OperandsTests {
 	}
 
 	@Test
-	public void testMultiply() {
+	void testMultiply() {
 		for (int i = 0; i < numbers.length; i++) {
+			final Number testNumber = numbers[i];
+
 			for (int j = 0; j < numbers.length; j++) {
-				assertEquals(numbers[i].doubleValue() * numbers[j].doubleValue(), Operands.multiply(Operands.toNumeric(numbers[i]), Operands.toNumeric(numbers[j])).doubleValue(), 0.0001);
+				assertEquals(testNumber.doubleValue() * numbers[j].doubleValue(), Operands.multiply(Operands.toNumeric(testNumber), Operands.toNumeric(numbers[j])).doubleValue(), 0.0001);
 			}
 
-			assertEquals(numbers[i].doubleValue() * ' ', Operands.multiply(Operands.toNumeric(numbers[i]), Operands.toNumeric(' ')).doubleValue(), 0.0001);
-			assertEquals(' ' * numbers[i].doubleValue(), Operands.multiply(Operands.toNumeric(' '), Operands.toNumeric(numbers[i])).doubleValue(), 0.0001);
+			assertEquals(testNumber.doubleValue() * ' ', Operands.multiply(Operands.toNumeric(testNumber), Operands.toNumeric(' ')).doubleValue(), 0.0001);
+			assertEquals(' ' * testNumber.doubleValue(), Operands.multiply(Operands.toNumeric(' '), Operands.toNumeric(testNumber)).doubleValue(), 0.0001);
 		}
 
 		assertEquals(' ' * ' ', Operands.multiply(Operands.toNumeric(' '), Operands.toNumeric(' ')).intValue());
 	}
 
 	@Test
-	public void testModulo() {
+	void testModulo() {
 		for (int i = 0; i < numbers.length; i++) {
+			final Number testNumber = numbers[i];
+
 			for (int j = 0; j < numbers.length; j++) {
-				assertEquals(numbers[i].doubleValue() % numbers[j].doubleValue(), Operands.modulo(Operands.toNumeric(numbers[i]), Operands.toNumeric(numbers[j])).doubleValue(), 0.0001);
+				assertEquals(testNumber.doubleValue() % numbers[j].doubleValue(), Operands.modulo(Operands.toNumeric(testNumber), Operands.toNumeric(numbers[j])).doubleValue(), 0.0001);
 			}
 
-			assertEquals(numbers[i].doubleValue() % ' ', Operands.modulo(Operands.toNumeric(numbers[i]), Operands.toNumeric(' ')).doubleValue(), 0.0001);
-			assertEquals(' ' % numbers[i].doubleValue(), Operands.modulo(Operands.toNumeric(' '), Operands.toNumeric(numbers[i])).doubleValue(), 0.0001);
+			assertEquals(testNumber.doubleValue() % ' ', Operands.modulo(Operands.toNumeric(testNumber), Operands.toNumeric(' ')).doubleValue(), 0.0001);
+			assertEquals(' ' % testNumber.doubleValue(), Operands.modulo(Operands.toNumeric(' '), Operands.toNumeric(testNumber)).doubleValue(), 0.0001);
 		}
 
 		assertEquals(' ' % ' ', Operands.modulo(Operands.toNumeric(' '), Operands.toNumeric(' ')).intValue());
 	}
 
 	@Test
-	public void testOperatorMethods() {
-		assertThrows(UnsupportedOperationException.class, () -> Operator.get("+", true).withLocalBindingIndex(-1));
-		assertThrows(UnsupportedOperationException.class, () -> Operator.get("+", true).withRightExpressions(2));
+	void testOperatorMethods() {
+		final Operator plus = Operator.get("+", true);
+		assertThrows(UnsupportedOperationException.class, () -> plus.withLocalBindingIndex(-1));
+		assertThrows(UnsupportedOperationException.class, () -> plus.withRightExpressions(2));
 		assertEquals("m: 2", Operator.createMethod("m", true).withRightExpressions(2).toString());
 	}
 
 	@Test
-	public void testSubtract() {
+	void testSubtract() {
+		final Object testObject = new Object();
+
 		for (int i = 0; i < numbers.length; i++) {
+			final Number testNumber = numbers[i];
+
 			for (int j = 0; j < numbers.length; j++) {
-				assertEquals(numbers[i].doubleValue() - numbers[j].doubleValue(), ((Number)Operands.subtract(numbers[i], numbers[j])).doubleValue(), 0.0001);
+				assertEquals(testNumber.doubleValue() - numbers[j].doubleValue(), ((Number)Operands.subtract(testNumber, numbers[j])).doubleValue(), 0.0001);
 			}
 
-			assertEquals(numbers[i].doubleValue() - ' ', ((Number)Operands.subtract(numbers[i], ' ')).doubleValue(), 0.0001);
-			assertEquals(' ' - numbers[i].doubleValue(), ((Number)Operands.subtract(' ', numbers[i])).doubleValue(), 0.0001);
+			assertEquals(testNumber.doubleValue() - ' ', ((Number)Operands.subtract(testNumber, ' ')).doubleValue(), 0.0001);
+			assertEquals(' ' - testNumber.doubleValue(), ((Number)Operands.subtract(' ', testNumber)).doubleValue(), 0.0001);
 
-			final int k = i;
+			assertThrows(IllegalArgumentException.class, () -> Operands.subtract(testNumber, testObject));
+			assertThrows(IllegalArgumentException.class, () -> Operands.subtract(testObject, testNumber));
 
-			assertThrows(IllegalArgumentException.class, () -> Operands.subtract(numbers[k], new Object()));
-			assertThrows(IllegalArgumentException.class, () -> Operands.subtract(new Object(), numbers[k]));
-
-			assertThrows(IllegalArgumentException.class, () -> Operands.subtract(numbers[k], null));
-			assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, numbers[k]));
+			assertThrows(IllegalArgumentException.class, () -> Operands.subtract(testNumber, null));
+			assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, testNumber));
 		}
 
 		assertEquals(' ' - ' ', ((Number)Operands.subtract(' ', ' ')).intValue());
 
-		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(' ', new Object()));
+		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(' ', testObject));
 
 		final Map<Integer, Integer> startingMap = new LinkedHashMap<>();
 
@@ -330,14 +349,17 @@ public class OperandsTests {
 		assertEquals(Collections.singletonMap(1, 1), Operands.subtract(startingMap, Collections.singletonMap(2, 5)));
 		assertEquals(Collections.singletonMap(2, 3), Operands.subtract(startingMap, Arrays.asList(1, 3)));
 
-		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(Arrays.asList(1, 2, 3), null));
-		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, Arrays.asList(1, 2, 3)));
+		final List<Integer> testList = Arrays.asList(1, 2, 3);
+		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(testList, null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, testList));
 
-		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(Collections.singleton(1), null));
-		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, Collections.singleton(1)));
+		final Collection<Integer> testCollection = Collections.singleton(1);
+		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(testCollection, null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, testCollection));
 
-		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(Collections.singletonMap(1, 2), null));
-		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, Collections.singletonMap(1, 2)));
+		final Map<Integer, Integer> testMap = Collections.singletonMap(1, 2);
+		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(testMap, null));
+		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(null, testMap));
 	}
 
 }

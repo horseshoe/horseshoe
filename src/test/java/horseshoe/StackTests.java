@@ -1,19 +1,20 @@
 package horseshoe;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class StackTests {
+class StackTests {
 
 	@Test
-	public void testClear() {
+	void testClear() {
 		final Stack<Object> objects = new Stack<>();
 
 		objects.push("Test");
@@ -22,7 +23,7 @@ public class StackTests {
 	}
 
 	@Test
-	public void testIsEmpty() {
+	void testIsEmpty() {
 		final Stack<Object> objects = new Stack<>();
 
 		assertTrue(objects.isEmpty());
@@ -30,8 +31,8 @@ public class StackTests {
 		assertFalse(objects.isEmpty());
 	}
 
-	@Test (expected = NoSuchElementException.class)
-	public void testIteratorNext() {
+	@Test
+	void testIteratorNext() {
 		final Stack<Object> objects = new Stack<>();
 
 		objects.push("Test");
@@ -42,23 +43,23 @@ public class StackTests {
 			assertEquals("Test", it.next());
 		}
 
-		assertEquals("Test", it.next());
+		assertThrows(NoSuchElementException.class, () -> it.next());
 	}
 
-	@Test (expected = UnsupportedOperationException.class)
-	public void testIteratorRemove() {
+	@Test
+	void testIteratorRemove() {
 		final Stack<Object> objects = new Stack<>();
 
 		objects.push("Test");
 
 		for (final Iterator<Object> it = objects.iterator(); it.hasNext(); ) {
 			assertEquals("Test", it.next());
-			it.remove();
+			assertThrows(UnsupportedOperationException.class, () -> it.remove());
 		}
 	}
 
 	@Test
-	public void testPeek() {
+	void testPeek() {
 		final Stack<Object> objects = new Stack<>();
 
 		assertNotNull(objects.toString());
@@ -74,7 +75,7 @@ public class StackTests {
 	}
 
 	@Test
-	public void testSize() {
+	void testSize() {
 		final Stack<Object> objects = new Stack<>();
 
 		assertEquals(0, objects.size());

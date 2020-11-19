@@ -1,5 +1,11 @@
 package horseshoe;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
@@ -18,10 +24,9 @@ import java.util.Map;
 
 import horseshoe.BufferedFileUpdateStream.Update;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class AnnotationTests {
+class AnnotationTests {
 
 	private static final String LS = System.lineSeparator();
 
@@ -96,33 +101,33 @@ public class AnnotationTests {
 	}
 
 	@Test
-	public void testAnnotationEmptySection() throws LoadException, IOException, InterruptedException {
+	void testAnnotationEmptySection() throws LoadException, IOException, InterruptedException {
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final TemplateLoader loader = new TemplateLoader();
 		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}{{/@Test}}cd");
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
-		Assert.assertEquals("value123", mapAnnotation.map.keySet().stream().findFirst().get());
-		Assert.assertEquals("", mapAnnotation.map.values().stream().findFirst().get());
-		Assert.assertEquals("abcd", writer.toString());
+		assertEquals("value123", mapAnnotation.map.keySet().stream().findFirst().get());
+		assertEquals("", mapAnnotation.map.values().stream().findFirst().get());
+		assertEquals("abcd", writer.toString());
 	}
 
 	@Test
-	public void testAnnotationSection() throws LoadException, IOException {
+	void testAnnotationSection() throws LoadException, IOException {
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final TemplateLoader loader = new TemplateLoader();
 		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}456{{^}}789{{/}}cd");
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
-		Assert.assertEquals("456", mapAnnotation.map.get("value123"));
-		Assert.assertEquals("ab456cd", writer.toString());
+		assertEquals("456", mapAnnotation.map.get("value123"));
+		assertEquals("ab456cd", writer.toString());
 	}
 
-	@Test (expected = Test.None.class) // No exception expected
-	public void testCloseException() throws IOException, LoadException {
-		new TemplateLoader().load("Exception Writer", "a{{#@Test}}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
+	@Test
+	void testCloseException() throws IOException, LoadException {
+		assertDoesNotThrow(() -> new TemplateLoader().load("Exception Writer", "a{{#@Test}}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
 				return new TestWriter() {
@@ -132,12 +137,13 @@ public class AnnotationTests {
 					}
 				};
 			}
-		}));
+		})));
 	}
 
-	@Test (expected = IOException.class)
-	public void testException() throws IOException, LoadException {
-		new TemplateLoader().load("Exception Writer", "a{{#@Test}}{{#true}}b{{/}}{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
+	@Test
+	void testException() throws IOException, LoadException {
+		final Template template = new TemplateLoader().load("Exception Writer", "a{{#@Test}}{{#true}}b{{/}}{{^}}d{{/}}c");
+		final AnnotationHandler handler = new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
 				return new TestWriter() {
@@ -147,12 +153,15 @@ public class AnnotationTests {
 					}
 				};
 			}
-		}));
+		};
+
+		assertThrows(IOException.class, () -> template.render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", handler)));
 	}
 
-	@Test (expected = IOException.class)
-	public void testExceptionWithCloseException() throws IOException, LoadException {
-		new TemplateLoader().load("Exception Writer", "a{{#true}}{{#@Test}}b{{^}}d{{/}}{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
+	@Test
+	void testExceptionWithCloseException() throws IOException, LoadException {
+		final Template template = new TemplateLoader().load("Exception Writer", "a{{#true}}{{#@Test}}b{{^}}d{{/}}{{/}}c");
+		final AnnotationHandler handler = new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object value) throws IOException {
 				return new TestWriter() {
@@ -167,7 +176,9 @@ public class AnnotationTests {
 					}
 				};
 			}
-		}));
+		};
+
+		assertThrows(IOException.class, () -> template.render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", handler)));
 	}
 
 	private static final class FileTest {
@@ -189,7 +200,7 @@ public class AnnotationTests {
 	}
 
 	@Test
-	public void testFileUpdate() throws IOException, LoadException {
+	void testFileUpdate() throws IOException, LoadException {
 		final Path path = Paths.get("DELETE_ME.test");
 
 		try {
@@ -207,21 +218,21 @@ public class AnnotationTests {
 				os.write(bigBuf.getBytes(StandardCharsets.UTF_8));
 			}
 
-			Assert.assertEquals("Test 1" + LS + "Test 2" + bigBuf, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			assertEquals("Test 1" + LS + "Test 2" + bigBuf, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), Update.OVERWRITE, bigBuf.length())) {
 				os.write(("Test" + LS).getBytes(StandardCharsets.UTF_8));
 				os.write(bigBuf.getBytes(StandardCharsets.UTF_8));
 			}
 
-			Assert.assertEquals("Test" + LS + bigBuf, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			assertEquals("Test" + LS + bigBuf, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), Update.OVERWRITE, bigBuf.length())) {
 				os.write(bigBuf.getBytes(StandardCharsets.UTF_8));
 				os.write('1');
 			}
 
-			Assert.assertEquals(bigBuf + "1", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			assertEquals(bigBuf + "1", new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			for (final FileTest test : new FileTest[] {
 					new FileTest("Test" + LS, ""),
@@ -238,7 +249,7 @@ public class AnnotationTests {
 					}
 				}
 
-				Assert.assertEquals(test.result, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+				assertEquals(test.result, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 			}
 		} finally {
 			Files.delete(path);
@@ -246,7 +257,7 @@ public class AnnotationTests {
 	}
 
 	@Test
-	public void testFileUpdateAnnotation() throws IOException, LoadException, InterruptedException {
+	void testFileUpdateAnnotation() throws IOException, LoadException, InterruptedException {
 		final Path path = Paths.get("DELETE_ME.test");
 		final Path path2 = Paths.get("TEMP_DIR", "DELETE_ME.test");
 		final Path pathNull = Paths.get("null");
@@ -254,36 +265,36 @@ public class AnnotationTests {
 		try (final WatchService watcher = FileSystems.getDefault().newWatchService()) {
 			Files.write(path, "T ".getBytes(StandardCharsets.UTF_8));
 			new TemplateLoader().load("File Update", "{{#@File('" + path.toAbsolutePath() + "', { })}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			Files.write(path, "Test".getBytes(StandardCharsets.UTF_8));
 			new TemplateLoader().load("File Update", "{{#@File(\"" + path + "\", { 'append': false })}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
+			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
 
 			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
+			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
 
 			new TemplateLoader().load("File Update", "{{#@File([])}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(pathNull), StandardCharsets.UTF_8));
+			assertEquals("Test 1" + LS, new String(Files.readAllBytes(pathNull), StandardCharsets.UTF_8));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 			final WatchKey watchKey1 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
-			Assert.assertFalse(watchKey1.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
+			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			assertFalse(watchKey1.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 			final WatchKey watchKey2 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'overwrite': true})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
-			Assert.assertTrue(watchKey2.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
+			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			assertTrue(watchKey2.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
 
 			Files.write(path, ("Test 1" + LS + "Test 2").getBytes(StandardCharsets.UTF_8));
 			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
+			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 		} finally {
 			Files.deleteIfExists(path);
 			Files.deleteIfExists(path2);
@@ -293,19 +304,19 @@ public class AnnotationTests {
 	}
 
 	@Test
-	public void testMissingAnnotation() throws IOException, LoadException {
+	void testMissingAnnotation() throws IOException, LoadException {
 		final Template template = new TemplateLoader().load("Missing Annotation", "{{#@Missing(\"blah\")}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@Test}}\nEngine does not support @missing.\n{{/}}\n{{/@Missing}}\n");
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 
 		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
-		Assert.assertEquals("Engine does not support @missing." + LS, mapAnnotation.map.get(null));
-		Assert.assertEquals("Engine does not support @missing." + LS, writer.toString());
+		assertEquals("Engine does not support @missing." + LS, mapAnnotation.map.get(null));
+		assertEquals("Engine does not support @missing." + LS, writer.toString());
 	}
 
 	@Test
-	public void testNestedAnnotations() throws LoadException, IOException {
+	void testNestedAnnotations() throws LoadException, IOException {
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final TemplateLoader loader = new TemplateLoader();
@@ -316,13 +327,13 @@ public class AnnotationTests {
 		annotations.put("Test", testMapAnnotation);
 		annotations.put("Inner", innerMapAnnotation);
 		template.render(settings, Collections.emptyMap(), writer, annotations);
-		Assert.assertEquals("789", innerMapAnnotation.map.get(null));
-		Assert.assertEquals("789456", testMapAnnotation.map.get("value123"));
-		Assert.assertEquals("ab789456cd", writer.toString());
+		assertEquals("789", innerMapAnnotation.map.get(null));
+		assertEquals("789456", testMapAnnotation.map.get("value123"));
+		assertEquals("ab789456cd", writer.toString());
 	}
 
 	@Test
-	public void testNullWriter() throws IOException, LoadException {
+	void testNullWriter() throws IOException, LoadException {
 		final Template template = new TemplateLoader().load("Null Writer", "a{{#@Test}}b{{^}}d{{/}}c");
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
@@ -333,11 +344,11 @@ public class AnnotationTests {
 				return null;
 			}
 		}));
-		Assert.assertEquals("abc", writer.toString());
+		assertEquals("abc", writer.toString());
 	}
 
 	@Test
-	public void testOutputMapping() throws IOException, LoadException {
+	void testOutputMapping() throws IOException, LoadException {
 		final Template template = new TemplateLoader().load("Output Mapping", "Good things are happening!\n{{#@Test}}\nThis should output to map annotation.\n{{/}}\nGood things are happening again!\n");
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
@@ -345,25 +356,25 @@ public class AnnotationTests {
 
 		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
 
-		Assert.assertEquals("This should output to map annotation." + LS, mapAnnotation.map.get(null));
-		Assert.assertEquals("Good things are happening!" + LS + "This should output to map annotation." + LS + "Good things are happening again!" + LS, writer.toString());
+		assertEquals("This should output to map annotation." + LS, mapAnnotation.map.get(null));
+		assertEquals("Good things are happening!" + LS + "This should output to map annotation." + LS + "Good things are happening again!" + LS, writer.toString());
 	}
 
 	@Test
-	public void testOutputRemapping() throws IOException, LoadException {
+	void testOutputRemapping() throws IOException, LoadException {
 		final Path path = Paths.get("DELETE_ME.test");
 
 		try {
 			final Template template = new TemplateLoader().load("Output Remapping", "{{#@File(\"" + path + "\")}}\nTest 1\n{{/}}\n{{#@File({\"name\":\"" + path + "\", \"encoding\": \"ASCII\", 'append': true})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n{{#@StdErr}}\nThis should print to stderr\n{{/}}\n");
 			template.render(new Settings(), Collections.emptyMap(), new StringWriter());
-			Assert.assertEquals("Test 1" + LS + "Good things are happening!" + LS + "More good things!" + LS, new String(Files.readAllBytes(path), StandardCharsets.US_ASCII));
+			assertEquals("Test 1" + LS + "Good things are happening!" + LS + "More good things!" + LS, new String(Files.readAllBytes(path), StandardCharsets.US_ASCII));
 		} finally {
 			Files.delete(path);
 		}
 	}
 
 	@Test
-	public void testSameWriter() throws IOException, LoadException {
+	void testSameWriter() throws IOException, LoadException {
 		final Template template = new TemplateLoader().load("Same Writer", "a{{#@Test}}b{{^}}d{{/}}c");
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
@@ -374,7 +385,7 @@ public class AnnotationTests {
 				return writer;
 			}
 		}));
-		Assert.assertEquals("abc", writer.toString());
+		assertEquals("abc", writer.toString());
 	}
 
 }

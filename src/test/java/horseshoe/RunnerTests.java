@@ -1,34 +1,86 @@
 package horseshoe;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Permission;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.contrib.java.lang.system.ExpectedSystemExit;
-import org.junit.contrib.java.lang.system.SystemOutRule;
-import org.junit.contrib.java.lang.system.TextFromStandardInputStream;
+import org.junit.jupiter.api.Test;
 
-public class RunnerTests {
+class RunnerTests {
 
-	@Rule
-	public final ExpectedSystemExit exit = ExpectedSystemExit.none();
+	interface ThrowingExecutable<T extends Throwable> {
+		void run() throws T;
+	}
 
-	@Rule
-	public final TextFromStandardInputStream systemInMock = TextFromStandardInputStream.emptyStandardInputStream();
+	private static class ExitException extends SecurityException {
+		private static final long serialVersionUID = 1L;
 
-	@Rule
-	public final SystemOutRule systemOutRule = new SystemOutRule().enableLog();
+		final int status;
 
-	@Test (expected = Test.None.class) // No exception expected
-	public void generateExampleResults() throws IOException {
+		private ExitException(final int status) {
+			this.status = status;
+		}
+	}
+
+	/**
+	 * Asserts that System.exit() is called with the specified value.
+	 *
+	 * @param <T> the type of throwable allowed by the executable
+	 * @param expectedStatus the expected status the System.exit() will be called using
+	 * @param executable the executable that will call System.exit()
+	 * @throws T if the executable throws a throwable
+	 */
+	public static <T extends Throwable> void assertExits(final int expectedStatus, final ThrowingExecutable<T> executable) throws T {
+		final SecurityManager originalSecurityManager = System.getSecurityManager();
+
+		System.setSecurityManager(new SecurityManager() {
+			@Override
+			public void checkPermission(final Permission perm) {
+				if (originalSecurityManager != null) {
+					originalSecurityManager.checkPermission(perm);
+				}
+			}
+
+			@Override
+			public void checkPermission(final Permission perm, final Object context) {
+				if (originalSecurityManager != null) {
+					originalSecurityManager.checkPermission(perm, context);
+				}
+			}
+
+			@Override
+			public void checkExit(final int status) {
+				super.checkExit(status);
+				throw new ExitException(status);
+			}
+		});
+
+		try {
+			executable.run();
+			fail("Expected System.exit(" + expectedStatus + "), but System.exit() wasn't called");
+		} catch (final ExitException e) {
+			assertEquals(expectedStatus, e.status, "Expected System.exit(" + expectedStatus + "), but System.exit(" + e.status + ") was called");
+		} finally {
+			System.setSecurityManager(originalSecurityManager);
+		}
+	}
+
+	@Test
+	void generateExampleResults() throws IOException {
 		Files.walk(Paths.get("samples/data"), 1)
 				.filter(path -> path.toString().endsWith(".U"))
 				.forEach(path -> {
@@ -44,67 +96,74 @@ public class RunnerTests {
 						args.add(dataFile.toString());
 					}
 
-					Runner.main(args.toArray(new String[0]));
+					assertDoesNotThrow(() -> Runner.main(args.toArray(new String[0])));
 				});
 	}
 
 	@Test
-	public void testBadArgument() {
-		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);
-		Runner.main(new String[] { "arg1", "arg2", "arg3", "arg4", "arg5", "arg6", "arg7", "arg8", "arg9" });
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadDataMap1() {
-		new Runner.DataParser("    ").parseAsMap();
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadDataMap2() {
-		new Runner.DataParser(" ] ").parseAsMap();
+	void testBadArgument() {
+		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "arg1", "arg2", "arg3", "arg4", "arg5", "arg6", "arg7", "arg8", "arg9" }));
 	}
 
 	@Test
-	public void testBadOption() {
-		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);
-		Runner.main(new String[] { "--bad-option" });
+	void testBadDataMap1() {
+		Runner.DataParser parser = new Runner.DataParser("    ");
+		assertThrows(RuntimeException.class, () -> parser.parseAsMap());
 	}
 
 	@Test
-	public void testBadOption2() {
-		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);
-		Runner.main(new String[] { "-9" });
+	void testBadDataMap2() {
+		Runner.DataParser parser = new Runner.DataParser(" ] ");
+		assertThrows(RuntimeException.class, () -> parser.parseAsMap());
 	}
 
 	@Test
-	public void testBadOptionArgument() {
-		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);
-		Runner.main(new String[] { "--help=yes" });
+	void testBadOption() {
+		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "--bad-option" }));
 	}
 
 	@Test
-	public void testBadOptionArgument2() {
-		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);
-		Runner.main(new String[] { "--log-level" });
+	void testBadOption2() {
+		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "-9" }));
 	}
 
 	@Test
-	public void testBadOptionArgument3() {
-		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);
-		Runner.main(new String[] { "-l" });
+	void testBadOptionArgument() {
+		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "--help=yes" }));
 	}
 
 	@Test
-	public void testBadOutputArgument() throws IOException {
-		systemInMock.provideLines("{{test}}");
-		exit.expectSystemExitWithStatus(Runner.ERROR_EXIT_CODE);
-		Runner.main(new String[] { "-oa/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z.out" });
+	void testBadOptionArgument2() {
+		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "--log-level" }));
 	}
 
 	@Test
-	public void testCurrentContext() throws IOException {
-		systemInMock.provideLines("{{#['blue', 'red']}}", "{{.}}{{#a}}: {{blah}}{{/}}{{#.hasNext}},{{/}}", "{{/}}");
-		Runner.main(new String[] { "--output", "out2.test", "-Da=true", "-Dblah=blah", "--output-charset=UTF-16BE", "--access=CURRENT", "-" });
+	void testBadOptionArgument3() {
+		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "-l" }));
+	}
+
+	@Test
+	void testBadOutputArgument() throws IOException {
+		final InputStream originalIn = System.in;
+
+		try (final ByteArrayInputStream in = new ByteArrayInputStream("{{ test }}\n".getBytes(StandardCharsets.UTF_8))) {
+			System.setIn(in);
+			assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "-oa/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z.out" }));
+		} finally {
+			System.setIn(originalIn);
+		}
+	}
+
+	@Test
+	void testCurrentContext() throws IOException {
+		final InputStream originalIn = System.in;
+
+		try (final ByteArrayInputStream in = new ByteArrayInputStream("{{# ['blue', 'red'] }}\n{{.}}{{# a }}: {{ blah }}{{/}}{{# .hasNext }},{{/}}\n{{/}}\n".getBytes(StandardCharsets.UTF_8))) {
+			System.setIn(in);
+			Runner.main(new String[] { "--output", "out2.test", "-Da=true", "-Dblah=blah", "--output-charset=UTF-16BE", "--access=CURRENT", "-" });
+		} finally {
+			System.setIn(originalIn);
+		}
 
 		final Path path = Paths.get("out2.test");
 		final String renderedContent = new String(Files.readAllBytes(path), StandardCharsets.UTF_16BE);
@@ -113,7 +172,8 @@ public class RunnerTests {
 	}
 
 	@Test
-	public void testCurrentAndRootContext() throws IOException {
+	void testCurrentAndRootContext() throws IOException {
+		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 		final Path path = Paths.get("in.test");
 		Files.write(path, ("{{#a}}\n" +
 				"<html{{#['<red>', '<blue>']}} attr=\"{{.}}\"{{/}}/>\n" +
@@ -125,18 +185,27 @@ public class RunnerTests {
 				"{{/}}\n" +
 				"{{/}}").getBytes(StandardCharsets.UTF_16LE));
 
+		final PrintStream originalOut = System.out;
+		System.setOut(new PrintStream(out));
 		Runner.main(new String[] { "-I", "includeDir", "--html", "--input-charset=UTF-16LE", "-Da=true", "-Dblah=blah", "--add-class=System", "--access=CURRENT_AND_ROOT", "in.test" });
+		System.setOut(originalOut);
 
 		Files.delete(path);
 		assertEquals("<html attr=\"&lt;red&gt;\" attr=\"&lt;blue&gt;\"/>" + System.lineSeparator() +
 				"true" + System.lineSeparator() +
-				"override" + System.lineSeparator(), systemOutRule.getLog());
+				"override" + System.lineSeparator(), out.toString());
 	}
 
 	@Test
-	public void testFullContext() throws IOException {
-		systemInMock.provideLines("{{#['<blue>', '<red>']}}", "{{.}}{{#a}}: {{blah}}{{/}}{{#.hasNext}},{{/}}", "{{/}}");
-		Runner.main(new String[] { "-oout.test", "-lOFF", "-Da=true", "-Dblah=2 words ", "--access=FULL", "--", "-" });
+	void testFullContext() throws IOException {
+		final InputStream originalIn = System.in;
+
+		try (final ByteArrayInputStream in = new ByteArrayInputStream("{{# ['<blue>', '<red>'] }}\n{{.}}{{# a }}: {{ blah }}{{/}}{{# .hasNext }},{{/}}\n{{/}}\n".getBytes(StandardCharsets.UTF_8))) {
+			System.setIn(in);
+			Runner.main(new String[] { "-oout.test", "-lOFF", "-Da=true", "-Dblah=2 words ", "--access=FULL", "--", "-" });
+		} finally {
+			System.setIn(originalIn);
+		}
 
 		final Path path = Paths.get("out.test");
 		final String renderedContent = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
@@ -144,13 +213,13 @@ public class RunnerTests {
 		assertEquals("<blue>: 2 words ," + System.lineSeparator() + "<red>: 2 words " + System.lineSeparator(), renderedContent);
 	}
 
-	@Test (expected = Test.None.class) // No exception expected
-	public void testHelp() throws IOException {
-		Runner.main(new String[] { "--help" });
+	@Test
+	void testHelp() throws IOException {
+		assertDoesNotThrow(() -> Runner.main(new String[] { "--help" }));
 	}
 
-	@Test (expected = Test.None.class) // No exception expected
-	public void testJson() throws IOException {
+	@Test
+	void testJson() throws IOException {
 		assertEquals(0L, Files.walk(Paths.get("samples/data/json"))
 				.filter(path -> path.toString().endsWith(".json"))
 				.filter(path -> {
@@ -180,16 +249,26 @@ public class RunnerTests {
 	}
 
 	@Test
-	public void testValues() throws IOException {
-		systemInMock.provideLines("{{t}}, {{f}}, {{d}}, {{d+1}}, {{l}}, {{i}}, {{n}}");
-		Runner.main(new String[] { "--disable-extensions", "-Dt", "-Df=false", "-Dd=1.5", "-Dd+1=-0.5", "-Dl=12345678901234", "-Di=123456789", "-Dn=null" });
+	void testValues() throws IOException {
+		final ByteArrayOutputStream out = new ByteArrayOutputStream();
+		final InputStream originalIn = System.in;
+		final PrintStream originalOut = System.out;
 
-		assertEquals("true, false, 1.5, -0.5, 12345678901234, 123456789, " + System.lineSeparator(), systemOutRule.getLog());
+		try (final ByteArrayInputStream in = new ByteArrayInputStream("{{ t }}, {{ f }}, {{ d }}, {{ d+1 }}, {{ l }}, {{ i }}, {{ n }}\n".getBytes(StandardCharsets.UTF_8))) {
+			System.setIn(in);
+			System.setOut(new PrintStream(out));
+			Runner.main(new String[] { "--disable-extensions", "-Dt", "-Df=false", "-Dd=1.5", "-Dd+1=-0.5", "-Dl=12345678901234", "-Di=123456789", "-Dn=null" });
+		} finally {
+			System.setIn(originalIn);
+			System.setOut(originalOut);
+		}
+
+		assertEquals("true, false, 1.5, -0.5, 12345678901234, 123456789, " + System.lineSeparator(), out.toString());
 	}
 
-	@Test (expected = Test.None.class) // No exception expected
-	public void testVersion() throws IOException {
-		Runner.main(new String[] { "--version" });
+	@Test
+	void testVersion() throws IOException {
+		assertDoesNotThrow(() -> Runner.main(new String[] { "--version" }));
 	}
 
 }

@@ -2,9 +2,9 @@ package horseshoe.internal;
 
 import static horseshoe.internal.MethodBuilder.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.invoke.MethodType;
 import java.util.Arrays;
@@ -15,12 +15,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import horseshoe.internal.MethodBuilder.Label;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class MethodBuilderTests {
+class MethodBuilderTests {
 
 	private static final byte B0 = 0;
 	private static final AtomicInteger CLASS_COUNTER = new AtomicInteger(10);
+	private static final ClassLoader classLoader = MethodBuilderTests.class.getClassLoader();
 
 	public static class SwitchClass {
 		public String run(final int a) {
@@ -29,7 +30,7 @@ public class MethodBuilderTests {
 	}
 
 	@Test
-	public void switchTest() throws ReflectiveOperationException {
+	void switchTest() throws ReflectiveOperationException {
 		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 		final SortedMap<Integer, Label> labels = new TreeMap<>();
@@ -46,7 +47,7 @@ public class MethodBuilderTests {
 				.updateLabel(labels.get(10)).pushNewObject(float.class, 1).pushConstant(10.0f).addPrimitiveConversion(float.class, Integer.class).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 1);
 		assertNotNull(mb.toString());
 
-		final SwitchClass switchTest = mb.build(name, SwitchClass.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
+		final SwitchClass switchTest = mb.build(name, SwitchClass.class, classLoader).getConstructor().newInstance();
 
 		assertEquals("[I", switchTest.run(1));
 		assertEquals("01", switchTest.run(2));
@@ -60,7 +61,7 @@ public class MethodBuilderTests {
 	}
 
 	@Test
-	public void simpleTest() throws ReflectiveOperationException {
+	void simpleTest() throws ReflectiveOperationException {
 		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 
@@ -70,12 +71,12 @@ public class MethodBuilderTests {
 		System.out.println(mb);
 		assertEquals("", new MethodBuilder().toString());
 
-		final SimpleInterface instance = mb.build(name, SimpleInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
+		final SimpleInterface instance = mb.build(name, SimpleInterface.class, classLoader).getConstructor().newInstance();
 		assertEquals("Hello, world!", instance.run());
 	}
 
 	@Test
-	public void methodTest() throws ReflectiveOperationException {
+	void methodTest() throws ReflectiveOperationException {
 		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 
@@ -83,7 +84,7 @@ public class MethodBuilderTests {
 		mb.addCode(ALOAD_0).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addFlowBreakingCode(ARETURN, 0);
 		assertNotNull(mb.toString());
 
-		final SimpleInterface instance = mb.build(name, SimpleInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
+		final SimpleInterface instance = mb.build(name, SimpleInterface.class, classLoader).getConstructor().newInstance();
 		assertEquals(name, instance.run());
 	}
 
@@ -92,7 +93,7 @@ public class MethodBuilderTests {
 	}
 
 	@Test
-	public void complexTest() throws ReflectiveOperationException {
+	void complexTest() throws ReflectiveOperationException {
 		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 
@@ -108,7 +109,7 @@ public class MethodBuilderTests {
 		assertNotNull(mb.toString());
 		System.out.println(mb);
 
-		final ComplexInterface instance = mb.build(name, ComplexInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
+		final ComplexInterface instance = mb.build(name, ComplexInterface.class, classLoader).getConstructor().newInstance();
 
 		assertEquals(3.14159 + 5 + 6 + 15.4 + 1.0, instance.calculate(new SimpleInterface() {
 			@Override
@@ -129,7 +130,7 @@ public class MethodBuilderTests {
 	}
 
 	@Test
-	public void fieldTest() throws ReflectiveOperationException {
+	void fieldTest() throws ReflectiveOperationException {
 		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
 		final MethodBuilder mb = new MethodBuilder();
 
@@ -148,14 +149,14 @@ public class MethodBuilderTests {
 		assertNotNull(mb.toString());
 		System.out.println(mb);
 
-		final FieldClass instance = mb.build(name, FieldClass.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
+		final FieldClass instance = mb.build(name, FieldClass.class, classLoader).getConstructor().newInstance();
 
 		assertEquals(3.2 + 3.2 + 5, instance.calculate(), 0.0001);
 		assertEquals(11, FieldClass.testB);
 	}
 
 	@Test
-	public void allOpcodes() throws ReflectiveOperationException {
+	void allOpcodes() throws ReflectiveOperationException {
 		for (int i = 0; i < 256; i++) {
 			try {
 				final MethodBuilder mb = new MethodBuilder().addCode((byte)i, B0, B0, B0, B0, B0);
@@ -198,7 +199,7 @@ public class MethodBuilderTests {
 	}
 
 	@Test
-	public void allPrimitiveConversions() throws ReflectiveOperationException {
+	void allPrimitiveConversions() throws ReflectiveOperationException {
 		final List<Class<?>> allPrimitives = Arrays.asList(Number.class, Boolean.class, Character.class, Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class, boolean.class, char.class, byte.class, short.class, int.class, long.class, float.class, double.class);
 
 		for (final Class<?> from : allPrimitives) {
@@ -232,25 +233,26 @@ public class MethodBuilderTests {
 				.pushConstant(0).addPrimitiveConversion(int.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFNE, fail)
 				.pushConstant(0L).addPrimitiveConversion(long.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFNE, fail)
 				.pushConstant("success").addFlowBreakingCode(ARETURN, 0).updateLabel(fail).addThrow(RuntimeException.class, null, 0);
-		final SimpleInterface instance = mb.build(name, SimpleInterface.class, MethodBuilderTests.class.getClassLoader()).getConstructor().newInstance();
+		final SimpleInterface instance = mb.build(name, SimpleInterface.class, classLoader).getConstructor().newInstance();
 		assertEquals("success", instance.run());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testAppendSelf() {
+	@Test
+	void testAppendSelf() {
 		final MethodBuilder mb = new MethodBuilder();
-		mb.append(mb);
+		assertThrows(IllegalArgumentException.class, () -> mb.append(mb));
 	}
 
-	public static interface MultipleMethodInterface {
+	public interface MultipleMethodInterface {
 		public void method1();
 
 		public void method2();
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadBase() throws ReflectiveOperationException {
-		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase", MultipleMethodInterface.class, MethodBuilderTests.class.getClassLoader());
+	@Test
+	void testBadBase() throws ReflectiveOperationException {
+		final MethodBuilder mb = new MethodBuilder().addFlowBreakingCode(RETURN, 0);
+		assertThrows(IllegalArgumentException.class, () -> mb.build("BadBase", MultipleMethodInterface.class, classLoader));
 	}
 
 	public abstract static class MultipleAbstractMethodClass {
@@ -259,9 +261,10 @@ public class MethodBuilderTests {
 		public abstract void method2();
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadBase2() throws ReflectiveOperationException {
-		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase2", MultipleAbstractMethodClass.class, MethodBuilderTests.class.getClassLoader());
+	@Test
+	void testBadBase2() throws ReflectiveOperationException {
+		final MethodBuilder mb = new MethodBuilder().addFlowBreakingCode(RETURN, 0);
+		assertThrows(IllegalArgumentException.class, () -> mb.build("BadBase2", MultipleAbstractMethodClass.class, classLoader));
 	}
 
 	public static class MultipleMethodClass {
@@ -274,17 +277,19 @@ public class MethodBuilderTests {
 		}
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadBase3() throws ReflectiveOperationException {
-		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase3", MultipleMethodClass.class, MethodBuilderTests.class.getClassLoader());
+	@Test
+	void testBadBase3() throws ReflectiveOperationException {
+		final MethodBuilder mb = new MethodBuilder().addFlowBreakingCode(RETURN, 0);
+		assertThrows(IllegalArgumentException.class, () -> mb.build("BadBase3", MultipleMethodClass.class, classLoader));
 	}
 
 	public static class NoMethodClass {
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadBase4() throws ReflectiveOperationException {
-		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase4", NoMethodClass.class, MethodBuilderTests.class.getClassLoader());
+	@Test
+	void testBadBase4() throws ReflectiveOperationException {
+		final MethodBuilder mb = new MethodBuilder().addFlowBreakingCode(RETURN, 0);
+		assertThrows(IllegalArgumentException.class, () -> mb.build("BadBase4", NoMethodClass.class, classLoader));
 	}
 
 	public static final class FinalClass {
@@ -293,39 +298,45 @@ public class MethodBuilderTests {
 		}
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadBase5() throws ReflectiveOperationException {
-		new MethodBuilder().addFlowBreakingCode(RETURN, 0).build("BadBase5", FinalClass.class, MethodBuilderTests.class.getClassLoader());
-	}
-
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadIndex() {
-		new MethodBuilder().addAccess(ALOAD, 65536);
-	}
-
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadIndex2() {
-		new MethodBuilder().addAccess(ALOAD, -1);
-	}
-
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadNewObject() {
-		new MethodBuilder().pushNewObject(Object.class, new int[256]);
-	}
-
-	@Test(expected = IllegalArgumentException.class)
-	public void testBadNewObject2() {
-		new MethodBuilder().pushNewObject(int.class);
-	}
-
-	@Test(expected = IllegalStateException.class)
-	public void testBadStack() throws ReflectiveOperationException {
-		new MethodBuilder().addCode(ACONST_NULL).build("BadStack", SimpleInterface.class, MethodBuilderTests.class.getClassLoader());
+	@Test
+	void testBadBase5() throws ReflectiveOperationException {
+		final MethodBuilder mb = new MethodBuilder().addFlowBreakingCode(RETURN, 0);
+		assertThrows(IllegalArgumentException.class, () -> mb.build("BadBase5", FinalClass.class, classLoader));
 	}
 
 	@Test
-	public void testStaticAdd() throws ReflectiveOperationException {
-		assertEquals(5, ((Integer)new MethodBuilder().addCode(ILOAD_0, ILOAD_1, IADD).addFlowBreakingCode(IRETURN, 0).build("StaticAdd", "add", MethodType.methodType(int.class, int.class, int.class), MethodBuilderTests.class.getClassLoader()).invoke(null, 2, 3)).intValue());
+	void testBadIndex() {
+		final MethodBuilder mb = new MethodBuilder();
+		assertThrows(IllegalArgumentException.class, () -> mb.addAccess(ALOAD, 65536));
+	}
+
+	@Test
+	void testBadIndex2() {
+		final MethodBuilder mb = new MethodBuilder();
+		assertThrows(IllegalArgumentException.class, () -> mb.addAccess(ALOAD, -1));
+	}
+
+	@Test
+	void testBadNewObject() {
+		final MethodBuilder mb = new MethodBuilder();
+		assertThrows(IllegalArgumentException.class, () -> mb.pushNewObject(Object.class, new int[256]));
+	}
+
+	@Test
+	void testBadNewObject2() {
+		final MethodBuilder mb = new MethodBuilder();
+		assertThrows(IllegalArgumentException.class, () -> mb.pushNewObject(int.class));
+	}
+
+	@Test
+	void testBadStack() throws ReflectiveOperationException {
+		final MethodBuilder mb = new MethodBuilder().addCode(ACONST_NULL);
+		assertThrows(IllegalStateException.class, () -> mb.build("BadStack", SimpleInterface.class, classLoader));
+	}
+
+	@Test
+	void testStaticAdd() throws ReflectiveOperationException {
+		assertEquals(5, ((Integer)new MethodBuilder().addCode(ILOAD_0, ILOAD_1, IADD).addFlowBreakingCode(IRETURN, 0).build("StaticAdd", "add", MethodType.methodType(int.class, int.class, int.class), classLoader).invoke(null, 2, 3)).intValue());
 	}
 
 }

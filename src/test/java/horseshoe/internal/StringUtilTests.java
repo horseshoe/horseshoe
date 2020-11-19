@@ -1,30 +1,32 @@
 package horseshoe.internal;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class StringUtilTests {
+import org.junit.jupiter.api.Test;
+
+class StringUtilTests {
 
 	@Test
-	public void testTrim() {
+	void testTrim() {
 		final String allWhitespaceString = " \t\n\r \u0085\u00A0\u202F"; // Escapes are space characters
 
-		Assert.assertEquals("", StringUtils.trim(allWhitespaceString, 0).string);
-		Assert.assertEquals("a", StringUtils.trim("\u202F\u202Fa\u202F\u202F", 0).string); // Escapes are space characters
+		assertEquals("", StringUtils.trim(allWhitespaceString, 0).string);
+		assertEquals("a", StringUtils.trim("\u202F\u202Fa\u202F\u202F", 0).string); // Escapes are space characters
 	}
 
 	private static void testNewLine(final String value, final int start, final int end) {
 		final StringUtils.Range range = StringUtils.findNewLine(value, 0, value.length());
 
-		Assert.assertEquals(start, range.start);
-		Assert.assertEquals(end, range.end);
+		assertEquals(start, range.start);
+		assertEquals(end, range.end);
 	}
 
 	@Test
-	public void testNewLine() {
-		Assert.assertNull(StringUtils.findNewLine("aa", 0, 2));
-		Assert.assertNull(StringUtils.findNewLine("a\u2027a", 0, 2)); // Escape is a non-newline character
-		Assert.assertNull(StringUtils.findNewLine("a\u202Aa", 0, 2)); // Escape is a non-newline character
+	void testNewLine() {
+		assertNull(StringUtils.findNewLine("aa", 0, 2));
+		assertNull(StringUtils.findNewLine("a\u2027a", 0, 2)); // Escape is a non-newline character
+		assertNull(StringUtils.findNewLine("a\u202Aa", 0, 2)); // Escape is a non-newline character
 
 		testNewLine("a\na", 1, 2);
 		testNewLine("a\n\na", 1, 2);

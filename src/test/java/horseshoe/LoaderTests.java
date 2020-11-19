@@ -1,9 +1,9 @@
 package horseshoe;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -14,9 +14,9 @@ import java.util.Random;
 import horseshoe.internal.Buffer;
 import horseshoe.internal.ParsedLine;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class LoaderTests {
+class LoaderTests {
 
 	private static final String LS = System.lineSeparator();
 	private static final Random RAND = new Random(0);
@@ -73,7 +73,7 @@ public class LoaderTests {
 	}
 
 	@Test
-	public void readerTest() throws IOException {
+	void readerTest() throws IOException {
 		final StringPartReader reader = new StringPartReader();
 
 		try (final Loader loader = new Loader("ReaderTest", reader)) {
@@ -104,12 +104,12 @@ public class LoaderTests {
 	}
 
 	@Test
-	public void testBufferToString() throws IOException {
+	void testBufferToString() throws IOException {
 		assertEquals("", new Buffer(10).toString());
 	}
 
 	@Test
-	public void testIgnoreCloseException() throws IOException {
+	void testIgnoreCloseException() throws IOException {
 		try (final Loader loader = new Loader("IgnoreCloseExceptionTest", new Reader() {
 			@Override
 			public int read(char[] cbuf, int off, int len) throws IOException {
@@ -127,7 +127,7 @@ public class LoaderTests {
 	}
 
 	@Test
-	public void testNewLineDelimiters() throws IOException {
+	void testNewLineDelimiters() throws IOException {
 		try (final Loader loader = new Loader("NewLineDelimitersTest", "a\r\n\r\n\ra")) {
 			final List<ParsedLine> lines = loader.nextLines("\n\r\n\r");
 
@@ -166,7 +166,7 @@ public class LoaderTests {
 	}
 
 	@Test
-	public void testOverlappedLines() throws IOException {
+	void testOverlappedLines() throws IOException {
 		try (final Loader loader = new Loader("OverlappedLinesTest", "a" + LS + "a" + LS)) {
 			assertEquals("a", loader.next(LS + "a" + LS));
 		}

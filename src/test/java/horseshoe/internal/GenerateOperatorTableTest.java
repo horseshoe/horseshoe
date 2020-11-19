@@ -5,6 +5,8 @@ import static horseshoe.internal.Operator.METHOD_CALL;
 import static horseshoe.internal.Operator.RIGHT_EXPRESSION;
 import static horseshoe.internal.Operator.X_RIGHT_EXPRESSIONS;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,10 +15,9 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class GenerateOperatorTable {
+class GenerateOperatorTableTest {
 
 	private static String escapeHTML(final String value) {
 		return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("|", "&#124;");
@@ -27,7 +28,7 @@ public class GenerateOperatorTable {
 	}
 
 	@Test
-	public void generateOperationTable() throws Exception {
+	void generateOperationTable() throws Exception {
 		final String tableHeader = "| Precedence | Operators | Associativity |";
 		final StringBuilder operationTable = new StringBuilder(tableHeader).append(System.lineSeparator())
 				.append(tableHeader.replaceAll("[A-za-z]", "-")).append(System.lineSeparator());
@@ -91,7 +92,7 @@ public class GenerateOperatorTable {
 		final int tableStart = oldReadme.indexOf(tableHeader);
 
 		if (tableStart < 0) {
-			Assert.fail("Operation table not found in " + readmeFile);
+			fail("Operation table not found in " + readmeFile);
 		}
 
 		final Matcher tableMatcher = Pattern.compile("(?<=[\\n\\r])[^\\n\\r|]").matcher(oldReadme);
@@ -100,7 +101,7 @@ public class GenerateOperatorTable {
 
 		if (!tableText.equals(oldReadme.substring(tableStart, endOfTable).replaceAll("\\r?\\n", System.lineSeparator()))) {
 			Files.write(readmeFile, newReadme.getBytes(StandardCharsets.UTF_8));
-			Assert.fail("Operation table updated, rerun to verify");
+			fail("Operation table updated, rerun to verify");
 		}
 	}
 

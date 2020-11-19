@@ -1,7 +1,8 @@
 package horseshoe;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -17,30 +18,28 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Optional;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class TemplateTests {
+class TemplateTests {
 
 	private static final String LS = System.lineSeparator();
 
 	@Test
-	public void testBackreach() throws IOException, LoadException {
+	void testBackreach() throws IOException, LoadException {
 		assertEquals("Original String" + LS, new TemplateLoader().load("Backreach", "{{#\"Original String\"}}\n{{#charAt(1)}}\n{{..}}\n{{/}}\n{{/}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals("Original String" + LS, new TemplateLoader().load("Backreach", "{{#\"Original String\"}}\n{{#charAt(1)}}\n{{../toString()}}\n{{/}}\n{{/}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 	@Test
-	public void testClassLoading() throws IOException, LoadException {
+	void testClassLoading() throws IOException, LoadException {
 		assertEquals("Good, Good, 73.7", new TemplateLoader().load("ClassLoading", "{{#classes}}{{^~@./getName()}}Bad, {{/}}{{/}}{{#~@'Blah'}}Bad, {{/}}{{#~@'NonExistantClass'}}Bad, {{/}}{{#~@'java.lang.System'}}Bad, {{/}}{{#~@'System'}}Bad, {{/}}{{#~@'ClassLoader'}}Good, {{/}}{{#~@'" + TemplateTests.class.getName() + "'}}Good, {{/}}{{~@'Integer'.parseInt('67') + ~@'Double'.parseDouble('6.7')}}").render(new Settings().addLoadableClasses(TemplateTests.class).addLoadableClasses(Arrays.asList(ClassLoader.class)), Collections.<String, Object>singletonMap("classes", new Settings().getLoadableClasses()), new java.io.StringWriter()).toString());
 	}
 
-	@Test (expected = Test.None.class) // No exception expected
-	public void testCloseException() throws LoadException, IOException {
+	@Test
+	void testCloseException() throws LoadException, IOException {
 		final String templateName = "Duplicate Template Close Exception";
 		final TemplateLoader loader = new TemplateLoader().put(templateName, new StringReader(""));
-
-		loader.load(templateName);
-		loader.load(templateName, new Reader() {
+		final Reader reader = new Reader() {
 			@Override
 			public int read(final char[] cbuf, final int off, final int len) {
 				return -1;
@@ -50,16 +49,18 @@ public class TemplateTests {
 			public void close() throws IOException {
 				throw new IOException("Logged-only close IOException");
 			}
-		});
+		};
+
+		assertAll(() -> loader.load(templateName), () -> loader.load(templateName, reader));
 	}
 
 	@Test
-	public void testDie() throws IOException, LoadException {
+	void testDie() throws IOException, LoadException {
 		assertEquals("String 1" + LS + "String 2" + LS, new TemplateLoader().load("Die", "{{#'String 1', 'String 2', \"String 3\"}}\n{{^.hasNext}}\n{{☠\"Should print out as a severe log statement\"; 'Did not die'}}\n{{/}}\n{{.}}\n{{/}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 	@Test
-	public void testEmpty() throws IOException, LoadException {
+	void testEmpty() throws IOException, LoadException {
 		assertEquals("", new TemplateLoader().load("Empty", "{{}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
@@ -67,7 +68,7 @@ public class TemplateTests {
 	 * This test evaluates the example code given in the {@link Template} javadoc and the README markdown file. Any changes to this code should be updated in those locations as well.
 	 */
 	@Test
-	public void testExample() throws IOException, LoadException {
+	void testExample() throws IOException, LoadException {
 		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!");
 		// final horseshoe.Template mustacheTemplate = horseshoe.TemplateLoader.newMustacheLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!");
 
@@ -84,21 +85,22 @@ public class TemplateTests {
 	}
 
 	@Test
-	public void testMapLiteral() throws IOException, LoadException {
+	void testMapLiteral() throws IOException, LoadException {
 		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS + "Jim is 80 years old." + LS, new TemplateLoader().load("Map Test", "{{#{\"Bob\": 45, \"Alice\": 31, \"Jim\": 80}.entrySet() }}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS + "Jim is 80 years old." + LS, new TemplateLoader().load("Map Test", "{{#\"Bob\": 45, \"Alice\": 31, \"Jim\": 80}}\n{{#./entrySet()}}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}\n{{/}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals("Bob is 45 years old." + LS + "Alice is 31 years old." + LS + "Jim is 80 years old." + LS, new TemplateLoader().load("Map Test", new StringReader("{{#(\"Bob\": 45, \"Alice\": 31, \"Jim\": 80)}}\n{{#./entrySet()}}\n{{./getKey()}} is {{./getValue()}} years old.\n{{/}}\n{{/}}")).render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 	@Test
-	public void testPatternLookup() throws IOException, LoadException {
+	void testPatternLookup() throws IOException, LoadException {
 		assertEquals("One, Two, Three, One", new TemplateLoader().load("Pattern Lookup Test", "{{# 'One Two Three'[~/[A-Z][a-z]+/] }}{{.}}{{# .hasNext }}, {{/}}{{/}}, {{ 'One Two Three'[~/[A-Z][a-z]+/] }}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals(", ", new TemplateLoader().load("Pattern Lookup Test", "{{# 'One Two Three'[~/[A-Z][a-z]+[A-Z]/] }}{{.}}{{# .hasNext }}, {{/}}{{/}}, {{ 'One Two Three'[~/[A-Z][a-z]+[A-Z]/] }}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
-	@Test (expected = IOException.class)
-	public void testRenderException() throws IOException, LoadException {
-		new TemplateLoader().load("Exception Test", " ").render(new Settings(), Collections.<String, Object>emptyMap(), new Writer() {
+	@Test
+	void testRenderException() throws IOException, LoadException {
+		final Template template = new TemplateLoader().load("Exception Test", " ");
+		final Writer writer = new Writer() {
 			@Override
 			public void close() {
 			}
@@ -111,11 +113,13 @@ public class TemplateTests {
 			public void write(final char[] arg0, final int arg1, final int arg2) throws IOException {
 				throw new IOException();
 			}
-		});
+		};
+
+		assertThrows(IOException.class, () -> template.render(new Settings(), Collections.<String, Object>emptyMap(), writer));
 	}
 
 	@Test
-	public void testRepeatedSection() throws IOException, LoadException {
+	void testRepeatedSection() throws IOException, LoadException {
 		final Template template = new TemplateLoader().load("Repeated Section", "Names:\n{{#people}}\n - {{lastName}}, {{firstName}}{{#deceased}} (deceased){{/}}\n{{/}}\n\nMailing Labels:\n{{#}}\n{{#}}Family of {{/}}{{firstName}} {{lastName}}\n{{address}}\n{{city}}, {{state}} {{zip}}\n{{#.hasNext}}\n\n{{/}}\n{{/}}\n");
 
 		final Settings settings = new Settings();
@@ -126,17 +130,17 @@ public class TemplateTests {
 	}
 
 	@Test
-	public void testRepeatedSection2() throws IOException, LoadException {
+	void testRepeatedSection2() throws IOException, LoadException {
 		assertEquals("Names:" + LS + " - John Doe" + LS + " - Jane Doey" + LS + LS + "All:" + LS + " - John Doe, Jane Doey" + LS, new TemplateLoader().load("Repeated Section", "Names:\n{{#people}}\n{{#['first':firstName, 'last':lastname, 'full':firstName + ' ' + lastName]}}\n - {{full}}\n{{/}}\n{{/}}\n\nAll:\n - {{#}}{{#}}{{full}}{{/}}{{#.hasNext}}, {{/}}{{/}}\n").render(new Settings(), Helper.loadMap("people", Helper.loadList(Helper.loadMap("firstName", "John", "lastName", "Doe"), Helper.loadMap("firstName", "Jane", "lastName", "Doey"))), new java.io.StringWriter()).toString());
 	}
 
 	@Test
-	public void testRootIdentifiers() throws IOException, LoadException {
+	void testRootIdentifiers() throws IOException, LoadException {
 		assertEquals("Root Local Root Root", new TemplateLoader().load("Root", "{{#[\"Value\":\"Local\"]}}{{\\Value}} {{Value}} {{/Value}}{{#/.}} {{Value}}{{/}}{{/}}").render(new Settings(), Collections.<String, Object>singletonMap("Value", "Root"), new java.io.StringWriter()).toString());
 	}
 
 	@Test
-	public void testSections() throws IOException, LoadException {
+	void testSections() throws IOException, LoadException {
 		assertEquals("nil, String, String2, nil, true, false, nil, -128, 127, nil, -, :, nil, -32768, 32767, nil, -2147483648, 2147483647, nil, -9223372036854775808, 9223372036854775807, nil, 1.2, -1.2, nil, 5.6, -5.6", new TemplateLoader().load("Array Test", "{{#arrays}}{{#.}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.<String, Object>singletonMap("arrays", new Object[] { new Object[0], new Object[] { "String", "String2" }, new boolean[0], new boolean[] { true, false }, new byte[0], new byte[] { -128, 127 }, new char[0], new char[] { '-', ':' }, new short[0], new short[] { -32768, 32767 }, new int[0], new int[] { -2147483648, 2147483647 }, new long[0], new long[] { -9223372036854775808L, 9223372036854775807L }, new float[0], new float[] { 1.2f, -1.2f }, new double[0], new double[] { 5.6, -5.6 } }), new java.io.StringWriter()).toString());
 		assertEquals("String, 1.6, 1234", new TemplateLoader().load("Stream Test", "{{#stream}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}}").render(new Settings(), Collections.<String, Object>singletonMap("stream", Arrays.asList("String", 1.6, 1234).stream()), new java.io.StringWriter()).toString());
 		assertEquals("nil", new TemplateLoader().load("Empty Stream Test", "{{#stream}}{{.}}{{#.hasNext}}, {{/}}{{^}}nil{{/}}").render(new Settings(), Collections.<String, Object>singletonMap("stream", Arrays.asList().stream()), new java.io.StringWriter()).toString());
@@ -146,23 +150,23 @@ public class TemplateTests {
 		assertEquals("Big, Medium, Small, Zero, ", new TemplateLoader().load("Else If Test", "{{# [1_000_000, 1_000, 1, 0, -1] }}{{# .index }}, {{/}}{{# . > 65_536 }}Big{{^# . > 64 }}Medium{{^# . > 0 }}Small{{^# . == 0 }}Zero{{/}}{{/}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
-	@Test (expected = LoadException.class)
-	public void testSectionError1() throws IOException, LoadException {
-		assertEquals("String, 1.6, 1234 -> String, 1.6, 1234", new TemplateLoader().load("Bad Repeat Test", "{{#}}{{/}}").render(new Settings(), Collections.<String, Object>singletonMap("stream", Arrays.asList("String", 1.6, 1234).stream()), new java.io.StringWriter()).toString());
-	}
-
-	@Test (expected = LoadException.class)
-	public void testSectionError2() throws IOException, LoadException {
-		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}} -> {{#}}{{#}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.<String, Object>singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
-	}
-
-	@Test (expected = LoadException.class)
-	public void testSectionError3() throws IOException, LoadException {
-		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{/}} -> {{#}}{{#}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.<String, Object>singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
+	@Test
+	void testSectionError1() throws IOException, LoadException {
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Repeat Test", "{{#}}{{/}}"));
 	}
 
 	@Test
-	public void testStreamingSections() throws IOException, LoadException {
+	void testSectionError2() throws IOException, LoadException {
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Optional Test", "{{#optionals}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}} -> {{#}}{{#}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}"));
+	}
+
+	@Test
+	void testSectionError3() throws IOException, LoadException {
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Optional Test", "{{#optionals}}{{/}} -> {{#}}{{#}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}"));
+	}
+
+	@Test
+	void testStreamingSections() throws IOException, LoadException {
 		assertEquals("3, 4, 5", new TemplateLoader().load("Remap Test", "{{#[1,2,3] #> i -> i + 2}}{{.}}{{#.hasNext}}, {{/}}{{/}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals("-1", new TemplateLoader().load("Min Test", "{{ min = ~@'Integer'.MAX_VALUE; [1,-1,1000] #< i -> min=i<min?i:min}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals("2", new TemplateLoader().load("Filter Test", "{{min = ~@'Integer'.MAX_VALUE;[1,-1,1000] #. v-> v+1 #? j-> j>0 #< j => min=j<min?j:min}}").render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
@@ -174,7 +178,7 @@ public class TemplateTests {
 	}
 
 	@Test
-	public void testTemplateLoader() throws IOException, LoadException {
+	void testTemplateLoader() throws IOException, LoadException {
 		assertEquals(StandardCharsets.UTF_8, new TemplateLoader().setCharset(StandardCharsets.UTF_8).getCharset());
 		assertEquals(StandardCharsets.UTF_16, new TemplateLoader().setCharset(StandardCharsets.UTF_16).getCharset());
 		assertEquals(true, new TemplateLoader().setPreventPartialPathTraversal(true).getPreventPartialPathTraversal());
@@ -202,23 +206,25 @@ public class TemplateTests {
 		assertEquals("It works!" + LS, new TemplateLoader().put(fakePath, reloadTemplate).load("Test 3", "{{>" + fakePath + "}}" + LS).render(new Settings(), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
-	@Test (expected = IOException.class)
-	public void testTemplateLoaderException1() throws LoadException, IOException {
-		new TemplateLoader().load("Exception Test", new StringReader(" ") {
+	@Test
+	void testTemplateLoaderException1() throws LoadException, IOException {
+		final StringReader reader = new StringReader(" ") {
 			@Override
 			public int read(final char[] cbuf, final int off, final int len) throws IOException {
 				throw new IOException();
 			}
-		});
-	}
-
-	@Test (expected = LoadException.class)
-	public void testTemplateLoaderException2() throws LoadException, IOException {
-		new TemplateLoader().load("Exception Test", new StringReader("{{>" + Paths.get("non-existant-file").toAbsolutePath() + "}}"));
+		};
+		assertThrows(IOException.class, () -> new TemplateLoader().load("Exception Test", reader));
 	}
 
 	@Test
-	public void testTemplateLoaderException3() throws LoadException, IOException {
+	void testTemplateLoaderException2() throws LoadException, IOException {
+		final StringReader reader = new StringReader("{{>" + Paths.get("non-existant-file").toAbsolutePath() + "}}");
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Exception Test", reader));
+	}
+
+	@Test
+	void testTemplateLoaderException3() throws LoadException, IOException {
 		assertThrows(IllegalArgumentException.class, () -> new TemplateLoader().load());
 		assertThrows(IllegalArgumentException.class, () -> new TemplateLoader().load(null, new Object()));
 		assertThrows(IllegalArgumentException.class, () -> new TemplateLoader().load(new Object(), new Object()));

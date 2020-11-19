@@ -1,8 +1,10 @@
 package horseshoe;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -10,16 +12,17 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import horseshoe.CommandLineOption.ArgumentPair;
 import horseshoe.CommandLineOption.OptionSet;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class CommandLineOptionTests {
+class CommandLineOptionTests {
 
-	@Test (expected = Test.None.class) // No exception expected
-	public void testAllOptionTypes() throws UnsupportedEncodingException {
+	@Test
+	void testAllOptionTypes() throws UnsupportedEncodingException {
 		try (final PrintStream stream = new PrintStream(new OutputStream() {
 				@Override
 				public void write(final int b) throws IOException {
@@ -35,7 +38,7 @@ public class CommandLineOptionTests {
 					CommandLineOption.ofNameWithOptionalArgument("g-long", "g-arg", "")
 			);
 
-			options.print(stream);
+			assertDoesNotThrow(() -> options.print(stream));
 
 			for (final CommandLineOption option : options) {
 				option.toOptionString(stream);
@@ -44,58 +47,62 @@ public class CommandLineOptionTests {
 		}
 	}
 
-	@Test (expected = RuntimeException.class)
-	public void testBadLongOption() {
+	@Test
+	void testBadLongOption() {
 		for (final Iterator<ArgumentPair> it = new OptionSet(CommandLineOption.ofNameWithArgument("a-long", "a-arg", "Test a 2")).parse("--a-long"); it.hasNext(); ) {
-			it.next();
-		}
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadOptions() {
-		new OptionSet(
-				CommandLineOption.ofName('a', "Test a"),
-				CommandLineOption.ofName('a', "a-long", "Test a 2")
-		);
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadOptions2() {
-		new OptionSet(
-				CommandLineOption.ofName("a-long", "Test a"),
-				CommandLineOption.ofName('a', "a-long", "Test a 2")
-		);
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadSet() {
-		new OptionSet().iterator().next();
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadSet2() {
-		new OptionSet().iterator().remove();
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadSet3() {
-		new OptionSet().parse().next();
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadSet4() {
-		new OptionSet().parse().remove();
-	}
-
-	@Test (expected = RuntimeException.class)
-	public void testBadShortOption() {
-		for (final Iterator<ArgumentPair> it = new OptionSet(CommandLineOption.ofNameWithArgument('a', "a-arg", "Test a 2")).parse("-a"); it.hasNext(); ) {
-			it.next();
+			assertThrows(RuntimeException.class, () -> it.next());
 		}
 	}
 
 	@Test
-	public void testLongOption() {
+	void testBadOptions() {
+		final CommandLineOption option1 = CommandLineOption.ofName('a', "Test a");
+		final CommandLineOption option2 = CommandLineOption.ofName('a', "a-long", "Test a 2");
+
+		assertThrows(RuntimeException.class, () -> new OptionSet(option1, option2));
+	}
+
+	@Test
+	void testBadOptions2() {
+		final CommandLineOption option1 = CommandLineOption.ofName("a-long", "Test a");
+		final CommandLineOption option2 = CommandLineOption.ofName('a', "a-long", "Test a 2");
+
+		assertThrows(RuntimeException.class, () -> new OptionSet(option1, option2));
+	}
+
+	@Test
+	void testBadSet() {
+		final Iterator<?> it = new OptionSet().iterator();
+		assertThrows(NoSuchElementException.class, () -> it.next());
+	}
+
+	@Test
+	void testBadSet2() {
+		final Iterator<?> it = new OptionSet().iterator();
+		assertThrows(RuntimeException.class, () -> it.remove());
+	}
+
+	@Test
+	void testBadSet3() {
+		final Iterator<?> it = new OptionSet().parse();
+		assertThrows(NoSuchElementException.class, () -> it.next());
+	}
+
+	@Test
+	void testBadSet4() {
+		final Iterator<?> it = new OptionSet().parse();
+		assertThrows(RuntimeException.class, () -> it.remove());
+	}
+
+	@Test
+	void testBadShortOption() {
+		for (final Iterator<ArgumentPair> it = new OptionSet(CommandLineOption.ofNameWithArgument('a', "a-arg", "Test a 2")).parse("-a"); it.hasNext(); ) {
+			assertThrows(RuntimeException.class, () -> it.next());
+		}
+	}
+
+	@Test
+	void testLongOption() {
 		for (final Iterator<ArgumentPair> it = new OptionSet(CommandLineOption.ofNameWithArgument("a-long", "a-arg", "Test a 2"), CommandLineOption.ofName("b-long", "")).parse("--a-long=56", "--a-long", "56", "--b-long"); it.hasNext(); ) {
 			final ArgumentPair pair = it.next();
 
@@ -110,7 +117,7 @@ public class CommandLineOptionTests {
 	}
 
 	@Test
-	public void testLongOptionalArgument() {
+	void testLongOptionalArgument() {
 		for (final Iterator<ArgumentPair> it = new OptionSet(CommandLineOption.ofNameWithOptionalArgument("a-long", "a-arg", "Test a 2")).parse("--a-long=56"); it.hasNext(); ) {
 			final ArgumentPair pair = it.next();
 
@@ -123,7 +130,7 @@ public class CommandLineOptionTests {
 	}
 
 	@Test
-	public void testLongOptionalArgument2() {
+	void testLongOptionalArgument2() {
 		for (final Iterator<ArgumentPair> it = new OptionSet(CommandLineOption.ofNameWithOptionalArgument("a-long", "a-arg", "Test a 2")).parse("--a-long", "56"); it.hasNext(); ) {
 			final ArgumentPair pair = it.next();
 
@@ -137,7 +144,7 @@ public class CommandLineOptionTests {
 	}
 
 	@Test
-	public void testShortOption() {
+	void testShortOption() {
 		for (final Iterator<ArgumentPair> it = new OptionSet(CommandLineOption.ofNameWithArgument('a', "a-arg", "Test a 2"), CommandLineOption.ofName('b', "")).parse("-a56", "-a", "56", "-bb", "-ba56"); it.hasNext(); ) {
 			final ArgumentPair pair = it.next();
 

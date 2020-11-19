@@ -107,23 +107,25 @@ public class TestImporter {
 					System.out.println("Loading " + path.toString() + "...");
 
 					try (final InputStream in = new FileInputStream(path.toString());
-							final PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(destination.resolve(className + ".java").toString()), StandardCharsets.UTF_8))) {
+							final PrintWriter out = new PrintWriter(new OutputStreamWriter(new FileOutputStream(destination.resolve(className + "Tests.java").toString()), StandardCharsets.UTF_8))) {
 						out.print("package horseshoe.mustache;" + System.lineSeparator() +
+								System.lineSeparator() +
+								"import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;" + System.lineSeparator() +
 								System.lineSeparator() +
 								"import horseshoe.Helper;" + System.lineSeparator() +
 								System.lineSeparator() +
-								"import org.junit.Test;" + System.lineSeparator() +
+								"import org.junit.jupiter.api.Test;" + System.lineSeparator() +
 								System.lineSeparator() +
-								"public class " + className + " {" + System.lineSeparator() +
+								"class " + className + "Tests {" + System.lineSeparator() +
 								System.lineSeparator() +
 								"	@Test" + System.lineSeparator() +
-								"	public void test() throws horseshoe.LoadException, java.io.IOException {");
+								"	void test() throws horseshoe.LoadException, java.io.IOException {");
 
 						for (final Object obj : (List<Object>)((Map<String, Object>)yaml.load(in)).get("tests")) {
 							final Map<String, Object> test = (Map<String, Object>)obj;
 
 							out.println(System.lineSeparator() + "\t\t/* " + test.get("name").toString() + " - " + test.get("desc").toString() + " */");
-							out.println("\t\tHelper.executeMustacheTest(\"" + escapeCodeString(test.get("template").toString()) + "\", Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("data")) + "), Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("partials")) + "), \"" + escapeCodeString(test.get("expected").toString()) + "\");");
+							out.println("\t\tassertDoesNotThrow(() -> Helper.executeMustacheTest(\"" + escapeCodeString(test.get("template").toString()) + "\", Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("data")) + "), Helper.loadMap(" + loadMapString(new StringBuilder(), (Map<String, Object>)test.get("partials")) + "), \"" + escapeCodeString(test.get("expected").toString()) + "\"));");
 						}
 
 						out.println("	}" + System.lineSeparator() +

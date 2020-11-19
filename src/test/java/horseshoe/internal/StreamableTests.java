@@ -1,16 +1,17 @@
 package horseshoe.internal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class StreamableTests {
+class StreamableTests {
 
 	private static <T> int count(final Streamable<T> streamable) {
 		int i = 0;
@@ -31,47 +32,47 @@ public class StreamableTests {
 	}
 
 	@Test
-	public void testArray() {
+	void testArray() {
 		assertEquals(1, count(remap(Streamable.ofUnknown(new String[] { "Test" }))));
 	}
 
 	@Test
-	public void testArray2() {
+	void testArray2() {
 		assertEquals(2, count(remap(Streamable.of("Test", null))));
 	}
 
 	@Test
-	public void testArray3() {
+	void testArray3() {
 		assertEquals(2, count(remap(Streamable.ofUnknown(new int[] { 0, 1 }))));
 	}
 
-	@Test(expected = NoSuchElementException.class)
-	public void testBadIterator() {
+	@Test
+	void testBadIterator() {
 		final Iterator<Object> it = remap(Streamable.of(Arrays.asList("Test", "Test 2", 5, (Object)null))).iterator();
 
 		while (it.hasNext()) {
 			it.next();
 		}
 
-		it.next();
+		assertThrows(NoSuchElementException.class, () -> it.next());
 	}
 
-	@Test(expected = NoSuchElementException.class)
-	public void testBadIterator2() {
+	@Test
+	void testBadIterator2() {
 		final Iterator<?> it = Streamable.ofUnknown("Test").iterator();
 
 		it.next();
 		it.remove();
-		it.next();
+		assertThrows(NoSuchElementException.class, () -> it.next());
 	}
 
 	@Test
-	public void testCollection() {
+	void testCollection() {
 		assertEquals(4, count(remap(Streamable.ofUnknown(Arrays.asList("Test", "Test 2", 5, (Object)null)))));
 	}
 
 	@Test
-	public void testIterable() {
+	void testIterable() {
 		assertEquals(4, count(remap(Streamable.ofUnknown(new Iterable<Object>() {
 			@Override
 			public Iterator<Object> iterator() {
@@ -82,7 +83,7 @@ public class StreamableTests {
 
 	@SuppressWarnings("unchecked")
 	@Test
-	public void testFlatMap() {
+	void testFlatMap() {
 		final Streamable<Object> streamable = (Streamable<Object>)Streamable.ofUnknown(Arrays.asList(Arrays.asList(1, 2), new Object[] { 3, 4 }));
 
 		streamable.forEach(a -> {
@@ -106,17 +107,17 @@ public class StreamableTests {
 	}
 
 	@Test
-	public void testNull() {
+	void testNull() {
 		assertEquals(0, count(remap(Streamable.ofUnknown(null))));
 	}
 
 	@Test
-	public void testOptional() {
+	void testOptional() {
 		assertEquals(1, count(remap(Streamable.ofUnknown(Optional.of("Test")))));
 	}
 
 	@Test
-	public void testOveradd() {
+	void testOveradd() {
 		final Streamable<Object> streamable = remap(Streamable.of(Arrays.asList("Test", "Test 2", 5, (Object)null)));
 
 		for (final Iterator<Object> it = streamable.iterator(); it.hasNext(); it.remove()) {
@@ -128,17 +129,17 @@ public class StreamableTests {
 	}
 
 	@Test
-	public void testStream() {
+	void testStream() {
 		assertEquals(4, count(remap(Streamable.ofUnknown(Arrays.asList("Test", "Test 2", 5, (Object)null).stream()))));
 	}
 
 	@Test
-	public void testStreamable() {
+	void testStreamable() {
 		assertEquals(4, count(remap(Streamable.ofUnknown(Streamable.ofUnknown(Arrays.asList("Test", "Test 2", 5, (Object)null))))));
 	}
 
 	@Test
-	public void testString() {
+	void testString() {
 		assertEquals(1, count(remap(Streamable.ofUnknown("Test"))));
 	}
 

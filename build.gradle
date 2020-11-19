@@ -28,11 +28,12 @@ compileJava {
 
 test {
 	finalizedBy jacocoTestReport
+	useJUnitPlatform()
 }
 
 dependencies {
-	testImplementation 'junit:junit:[4.13,5)'
-	testImplementation 'com.github.stefanbirkner:system-rules:1.+'
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.+'
+	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.+'
 	testImplementation 'org.yaml:snakeyaml:1.+'
 }
 
