@@ -186,14 +186,14 @@ class RunnerTests {
 				"{{/}}").getBytes(StandardCharsets.UTF_16LE));
 
 		final PrintStream originalOut = System.out;
-		System.setOut(new PrintStream(out));
+		System.setOut(new PrintStream(out, true, StandardCharsets.UTF_8.name()));
 		Runner.main(new String[] { "-I", "includeDir", "--html", "--input-charset=UTF-16LE", "-Da=true", "-Dblah=blah", "--add-class=System", "--access=CURRENT_AND_ROOT", "in.test" });
 		System.setOut(originalOut);
 
 		Files.delete(path);
 		assertEquals("<html attr=\"&lt;red&gt;\" attr=\"&lt;blue&gt;\"/>" + System.lineSeparator() +
 				"true" + System.lineSeparator() +
-				"override" + System.lineSeparator(), out.toString());
+				"override" + System.lineSeparator(), out.toString(StandardCharsets.UTF_8.name()));
 	}
 
 	@Test
@@ -256,14 +256,14 @@ class RunnerTests {
 
 		try (final ByteArrayInputStream in = new ByteArrayInputStream("{{ t }}, {{ f }}, {{ d }}, {{ d+1 }}, {{ l }}, {{ i }}, {{ n }}\n".getBytes(StandardCharsets.UTF_8))) {
 			System.setIn(in);
-			System.setOut(new PrintStream(out));
+			System.setOut(new PrintStream(out, true, StandardCharsets.UTF_8.name()));
 			Runner.main(new String[] { "--disable-extensions", "-Dt", "-Df=false", "-Dd=1.5", "-Dd+1=-0.5", "-Dl=12345678901234", "-Di=123456789", "-Dn=null" });
 		} finally {
 			System.setIn(originalIn);
 			System.setOut(originalOut);
 		}
 
-		assertEquals("true, false, 1.5, -0.5, 12345678901234, 123456789, " + System.lineSeparator(), out.toString());
+		assertEquals("true, false, 1.5, -0.5, 12345678901234, 123456789, " + System.lineSeparator(), out.toString(StandardCharsets.UTF_8.name()));
 	}
 
 	@Test

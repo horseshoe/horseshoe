@@ -1,7 +1,9 @@
 package horseshoe;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.io.Writer;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,41 @@ public class Template {
 	private final Object identifier;
 	private final Section section;
 	private final List<Renderer> renderList = new ArrayList<>();
+
+	/**
+	 * Loads a template from a file.
+	 *
+	 * @param file the file to load as a template
+	 * @return the loaded template
+	 * @throws IOException if an I/O exception is encountered while opening or reading the file
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public static Template load(final Path file) throws IOException, LoadException {
+		return new TemplateLoader().load(file);
+	}
+
+	/**
+	 * Loads a template from a string.
+	 *
+	 * @param value the string value to load as a template, not a filename
+	 * @return the loaded template
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public static Template load(final String value) throws LoadException {
+		return new TemplateLoader().load(value);
+	}
+
+	/**
+	 * Loads a template using a reader.
+	 *
+	 * @param reader the reader to use to load as a template
+	 * @return the loaded template
+	 * @throws IOException if an I/O exception is encountered while reading from the reader
+	 * @throws LoadException if a Horseshoe error is encountered while loading the template
+	 */
+	public static Template load(final Reader reader) throws IOException, LoadException {
+		return new TemplateLoader().load(reader);
+	}
 
 	/**
 	 * Creates an empty template with the specified name.
@@ -76,18 +113,18 @@ public class Template {
 	}
 
 	/**
-	 * Renders the template to the specified writer using the specified context and global data. The global data is copied and will not be modified while rendering the template. The writer is not closed, so that chaining can be used, if desired.
+	 * Renders the template to the specified writer using the specified settings, global data, and annotation handlers. The writer is not closed, so that chaining can be used, if desired.
 	 *
 	 * @param settings the settings used while rendering
 	 * @param globalData the global data used while rendering
 	 * @param writer the writer used to render the template
-	 * @param annotationMap the map used to process annotations
+	 * @param annotations the map of annotation handlers used to process annotations
 	 * @return the writer passed to the render method
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	public Writer render(final Settings settings, final Map<String, Object> globalData, final Writer writer, final Map<String, AnnotationHandler> annotationMap) throws IOException {
+	public Writer render(final Settings settings, final Object globalData, final Writer writer, final Map<String, AnnotationHandler> annotations) throws IOException {
 		try {
-			final RenderContext renderContext = new RenderContext(settings, globalData, annotationMap);
+			final RenderContext renderContext = new RenderContext(settings, globalData, annotations);
 
 			renderContext.getIndentation().push("");
 
@@ -102,7 +139,7 @@ public class Template {
 	}
 
 	/**
-	 * Renders the template to the specified writer using the specified context and global data. The global data is copied and will not be modified while rendering the template. The writer is not closed, so that chaining can be used, if desired.
+	 * Renders the template to the specified writer using the specified settings and global data. The default annotation handlers will be used. The writer is not closed, so that chaining can be used, if desired.
 	 *
 	 * @param settings the settings used while rendering
 	 * @param globalData the global data used while rendering
@@ -110,8 +147,20 @@ public class Template {
 	 * @return the writer passed to the render method
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	public Writer render(final Settings settings, final Map<String, Object> globalData, final Writer writer) throws IOException {
+	public Writer render(final Settings settings, final Object globalData, final Writer writer) throws IOException {
 		return render(settings, globalData, writer, AnnotationHandlers.DEFAULT_ANNOTATIONS);
+	}
+
+	/**
+	 * Renders the template to the specified writer using the specified global data. The default settings and annotation handlers will be used. The writer is not closed, so that chaining can be used, if desired.
+	 *
+	 * @param globalData the global data used while rendering
+	 * @param writer the writer used to render the template
+	 * @return the writer passed to the render method
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	public Writer render(final Object globalData, final Writer writer) throws IOException {
+		return render(new Settings(), globalData, writer);
 	}
 
 }

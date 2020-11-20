@@ -1,11 +1,31 @@
 package horseshoe;
 
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 
 /**
  * The Logger interface is used to log messages during the {@link Template} rendering process.
  */
 public abstract class Logger {
+
+	/**
+	 * Wraps a {@link java.util.logging.Logger} in a Horseshoe {@link Logger}.
+	 *
+	 * @param logger the logger to wrap
+	 * @return the wrapped logger
+	 */
+	public static Logger wrap(final java.util.logging.Logger logger) {
+		return new Logger() {
+			@Override
+			public void log(Level level, Throwable error, String message, Object... params) {
+				final LogRecord record = new LogRecord(level, message);
+
+				record.setThrown(error);
+				record.setParameters(params);
+				logger.log(record);
+			}
+		};
+	}
 
 	/**
 	 * Log a message, with no arguments.

@@ -16,7 +16,7 @@ class LoadExceptionTests {
 	@Test
 	void testAnnotationError() throws IOException {
 		try {
-			new TemplateLoader().load("Annotation", "{{#@Good}}\n test\n{{/}}\n{{#@Bad!}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().load("Annotation", "{{#@Good}}\n test\n{{/}}\n{{#@Bad!}}\n{{/}}").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
@@ -28,7 +28,7 @@ class LoadExceptionTests {
 	@Test
 	void testInvertedSectionError() throws IOException {
 		try {
-			new TemplateLoader().load("Inverted Section", "{{#Test}}\n test\n{{^}}\n{{/}}\n{{^}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().load("Inverted Section", "{{#Test}}\n test\n{{^}}\n{{/}}\n{{^}}\n{{/}}").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
@@ -40,7 +40,7 @@ class LoadExceptionTests {
 	@Test
 	void testLoadUnclosedTag() throws IOException {
 		try {
-			new TemplateLoader().load("Unclosed Tag", "This is a {{#Test}} test template {{/}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().load("Unclosed Tag", "This is a {{#Test}} test template {{/}").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
@@ -52,7 +52,7 @@ class LoadExceptionTests {
 	@Test
 	void testLoadUnrecognizedTag() throws IOException {
 		try {
-			new TemplateLoader().load("Unrecognized Tag", "This is a" + LS + " {{#Test}} " + LS + "test template" + LS + " {{" + LS + LS + "/}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().load("Unrecognized Tag", "This is a" + LS + " {{#Test}} " + LS + "test template" + LS + " {{" + LS + LS + "/}").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
@@ -64,7 +64,7 @@ class LoadExceptionTests {
 	@Test
 	void testRepeatSectionError() throws IOException {
 		try {
-			new TemplateLoader().load("Repeat Section", "{{#Test}}\n test\n{{/}}\n{{#}}\n  {{#}}\n  {{/}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().load("Repeat Section", "{{#Test}}\n test\n{{/}}\n{{#}}\n  {{#}}\n  {{/}}\n{{/}}").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
@@ -76,7 +76,7 @@ class LoadExceptionTests {
 	@Test
 	void testSectionCloseError() throws IOException {
 		try {
-			new TemplateLoader().setExtensions(EnumSet.complementOf(EnumSet.of(Extension.SMART_END_TAGS))).load("Close Section", "{{#Test}}\n test\n{{/Bad}}\n{{#}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().setExtensions(EnumSet.complementOf(EnumSet.of(Extension.SMART_END_TAGS))).load("Close Section", "{{#Test}}\n test\n{{/Bad}}\n{{#}}\n{{/}}").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
@@ -88,7 +88,7 @@ class LoadExceptionTests {
 	@Test
 	void testSectionCloseError2() throws IOException {
 		try {
-			new TemplateLoader().load("Close Section", " test\n{{/}}\n{{#Test}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().load("Close Section", " test\n{{/}}\n{{#Test}}\n{{/}}").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
@@ -100,7 +100,7 @@ class LoadExceptionTests {
 	@Test
 	void testSetDelimiterError() throws IOException {
 		try {
-			new TemplateLoader().load("Set Delimiter", " test\n{{=^^^ ^^^}}\n^^^#Test^^^\n^^^/^^^").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().load("Set Delimiter", " test\n{{=^^^ ^^^}}\n^^^#Test^^^\n^^^/^^^").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
@@ -112,7 +112,7 @@ class LoadExceptionTests {
 	@Test
 	void testTagError() throws IOException {
 		try {
-			new TemplateLoader().load("Bad Tag", " test\n{{%}}\n{{#Test}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().load("Bad Tag", " test\n{{%}}\n{{#Test}}\n{{/}}").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
@@ -124,7 +124,7 @@ class LoadExceptionTests {
 	@Test
 	void testUnmatchedSection() throws IOException {
 		try {
-			new TemplateLoader().load("Unmatched Section", "{{#Test}} test\n{{#Test}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new java.io.StringWriter());
+			new TemplateLoader().load("Unmatched Section", "{{#Test}} test\n{{#Test}}\n{{/}}").render(Collections.emptyMap(), new java.io.StringWriter());
 			fail();
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());

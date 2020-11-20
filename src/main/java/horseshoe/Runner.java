@@ -587,7 +587,7 @@ public class Runner {
 			} else if ("-".equals(pair.argument)) {
 				templates.add(loadTemplateFromStdIn(loader, stdInCharset));
 			} else if (!"--".equals(pair.argument)) {
-				templates.add(loader.load(Paths.get(pair.argument), loader.getCharset()));
+				templates.add(loader.load(Paths.get(pair.argument)));
 			}
 		}
 

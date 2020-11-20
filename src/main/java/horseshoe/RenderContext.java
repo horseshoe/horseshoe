@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -29,11 +28,11 @@ public final class RenderContext {
 	 * @param globalData the global data that will be used as part of the render context
 	 * @param annotationMap the map used to process annotations
 	 */
-	public RenderContext(final Settings settings, final Map<String, Object> globalData, final Map<String, AnnotationHandler> annotationMap) {
+	public RenderContext(final Settings settings, final Object globalData, final Map<String, AnnotationHandler> annotationMap) {
 		this.settings = settings;
 		this.annotationMap = annotationMap;
 
-		sectionData.push(new LinkedHashMap<>(globalData));
+		sectionData.push(globalData);
 		sectionPartials.push(new Template("[Null Partial Section]", "null"));
 	}
 

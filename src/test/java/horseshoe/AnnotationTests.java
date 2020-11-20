@@ -264,36 +264,36 @@ class AnnotationTests {
 
 		try (final WatchService watcher = FileSystems.getDefault().newWatchService()) {
 			Files.write(path, "T ".getBytes(StandardCharsets.UTF_8));
-			new TemplateLoader().load("File Update", "{{#@File('" + path.toAbsolutePath() + "', { })}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File('" + path.toAbsolutePath() + "', { })}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			Files.write(path, "Test".getBytes(StandardCharsets.UTF_8));
-			new TemplateLoader().load("File Update", "{{#@File(\"" + path + "\", { 'append': false })}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File(\"" + path + "\", { 'append': false })}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
-			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
 
-			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
 
-			new TemplateLoader().load("File Update", "{{#@File([])}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File([])}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(pathNull), StandardCharsets.UTF_8));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 			final WatchKey watchKey1 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
-			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 			assertFalse(watchKey1.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 			final WatchKey watchKey2 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
-			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'overwrite': true})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'overwrite': true})}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 			assertTrue(watchKey2.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
 
 			Files.write(path, ("Test 1" + LS + "Test 2").getBytes(StandardCharsets.UTF_8));
-			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(new Settings(), Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 		} finally {
 			Files.deleteIfExists(path);
@@ -366,7 +366,7 @@ class AnnotationTests {
 
 		try {
 			final Template template = new TemplateLoader().load("Output Remapping", "{{#@File(\"" + path + "\")}}\nTest 1\n{{/}}\n{{#@File({\"name\":\"" + path + "\", \"encoding\": \"ASCII\", 'append': true})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n{{#@StdErr}}\nThis should print to stderr\n{{/}}\n");
-			template.render(new Settings(), Collections.emptyMap(), new StringWriter());
+			template.render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS + "Good things are happening!" + LS + "More good things!" + LS, new String(Files.readAllBytes(path), StandardCharsets.US_ASCII));
 		} finally {
 			Files.delete(path);

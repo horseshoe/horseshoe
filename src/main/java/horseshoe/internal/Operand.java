@@ -28,7 +28,7 @@ final class Operand {
 
 	/**
 	 * The type associated with the operand.
-	 * NOTE: A class of {@code Double} indicates any potential floating-point {@code Number}, and a class of {@code Integer} indicates any potential integral {@code Number} (including {@code Long}).
+	 * NOTE: A class of {@link Double} indicates any potential floating-point {@link Number}, and a class of {@link Integer} indicates any potential integral {@link Number} (including {@link Long}).
 	 */
 	public final Class<?> type;
 

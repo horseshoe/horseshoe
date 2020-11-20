@@ -14,7 +14,6 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
-import java.util.logging.LogRecord;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,16 +27,7 @@ public class Settings {
 	/**
 	 * The logger that sends messages to the {@link Template} class logger.
 	 */
-	public static final Logger DEFAULT_LOGGER = new Logger() {
-		@Override
-		public void log(final Level level, final Throwable error, final String message, final Object... params) {
-			final LogRecord record = new LogRecord(level, message);
-
-			record.setThrown(error);
-			record.setParameters(params);
-			Template.LOGGER.log(record);
-		}
-	};
+	public static final Logger DEFAULT_LOGGER = Logger.wrap(Template.LOGGER);
 
 	/**
 	 * The logger that consumes all messages without reporting them.

@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * A {@code BufferedFileUpdateStream} may not modify the underlying file if the contents written are the same as the current file contents depending on the update settings. It is a single threaded buffered stream.
+ * A {@link BufferedFileUpdateStream} may not modify the underlying file if the contents written are the same as the current file contents depending on the update settings. It is a single threaded buffered stream.
  *
  * <p>It is not necessary to wrap the output stream in a buffered stream or writer, as it is already buffered. For example:
  *

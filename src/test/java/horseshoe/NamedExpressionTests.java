@@ -70,12 +70,12 @@ public class NamedExpressionTests {
 
 	@Test
 	void testNamedExpressions() throws IOException, LoadException {
-		assertEquals("  " + LS, new TemplateLoader().load("Upper", "{{func()->\"Hello!\"}}" + LS + "{{<a}}" + LS + "  {{func()}}" + LS + "{{/a}}" + LS + "{{>a}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("ORIGINAL STRING-Original string" + LS, new TemplateLoader().load("Upper", "{{upper->toUpperCase()}}\n{{capitalize=>substring(0, 1).toUpperCase() + substring(1).toLowerCase()}}\n{{#\"orIgInal StrIng\"}}\n{{#charAt(1)}}\n{{upper(..)}}-{{capitalize(..)}}\n{{/}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("    ORIGINAL STRING-Original String" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{>a}}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | * }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower , lower ( ) }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("  " + LS, new TemplateLoader().load("Upper", "{{func()->\"Hello!\"}}" + LS + "{{<a}}" + LS + "  {{func()}}" + LS + "{{/a}}" + LS + "{{>a}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("ORIGINAL STRING-Original string" + LS, new TemplateLoader().load("Upper", "{{upper->toUpperCase()}}\n{{capitalize=>substring(0, 1).toUpperCase() + substring(1).toLowerCase()}}\n{{#\"orIgInal StrIng\"}}\n{{#charAt(1)}}\n{{upper(..)}}-{{capitalize(..)}}\n{{/}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("    ORIGINAL STRING-Original String" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{>a}}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | * }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower , lower ( ) }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 		assertThrows(LoadException.class, () -> new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | badNamedExpression }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
 		assertThrows(LoadException.class, () -> new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) , badNamedExpression }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
 		assertThrows(LoadException.class, () -> new TemplateLoader().load("Upper-Lower", "{{<a}}{{lower->toLowerCase()}}{{/}}\n{{lower->toString()}}\n{{upper->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) lower }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
@@ -83,8 +83,8 @@ public class NamedExpressionTests {
 
 	@Test
 	void testNamedExpressionsWithArgs() throws IOException, LoadException {
-		assertEquals(", , , c, c", new TemplateLoader().load("Multi-Arguments", "{{func(., /*no-arg*/ ,c)->c}}" + LS + "{{func()}}, {{func('a')}}, {{func('a','b')}}, {{func('a','b','c')}}, {{func('a','b','c','d')}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("abc:abc, abc:abc, a:abc, a:abc", new TemplateLoader().load("Multi-Arguments", "{{func(,,)->.+':'+..}}" + LS + "{{func2(a,b,c)->a+':'+..}}" + LS + "{{#a}}{{func()}}, {{func2()}}, {{func('a')}}, {{func2('a')}}{{/}}").render(new Settings(), Collections.singletonMap("a", "abc"), new StringWriter()).toString());
+		assertEquals(", , , c, c", new TemplateLoader().load("Multi-Arguments", "{{func(., /*no-arg*/ ,c)->c}}" + LS + "{{func()}}, {{func('a')}}, {{func('a','b')}}, {{func('a','b','c')}}, {{func('a','b','c','d')}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("abc:abc, abc:abc, a:abc, a:abc", new TemplateLoader().load("Multi-Arguments", "{{func(,,)->.+':'+..}}" + LS + "{{func2(a,b,c)->a+':'+..}}" + LS + "{{#a}}{{func()}}, {{func2()}}, {{func('a')}}, {{func2('a')}}{{/}}").render(Collections.singletonMap("a", "abc"), new StringWriter()).toString());
 	}
 
 	@Test
@@ -94,7 +94,7 @@ public class NamedExpressionTests {
 
 	@Test
 	void testRecursiveFibonacci() throws IOException, LoadException {
-		assertEquals("011235", new TemplateLoader().load("Test", "{{fib -> . > 1 ? fib(. - 1) + fib(. - 2) : .}}{{fib(0)}}{{fib(1)}}{{fib(2)}}{{fib(3)}}{{fib(4)}}{{fib(5)}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("011235", new TemplateLoader().load("Test", "{{fib -> . > 1 ? fib(. - 1) + fib(. - 2) : .}}{{fib(0)}}{{fib(1)}}{{fib(2)}}{{fib(3)}}{{fib(4)}}{{fib(5)}}").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 }

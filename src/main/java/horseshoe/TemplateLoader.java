@@ -222,7 +222,7 @@ public class TemplateLoader {
 	 * Loads a named template from a string. The template is loaded and cached in the loader.
 	 *
 	 * @param name the name of the template
-	 * @param value the string value to load as a template
+	 * @param value the string value to load as a template, not a filename
 	 * @return the loaded template
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */

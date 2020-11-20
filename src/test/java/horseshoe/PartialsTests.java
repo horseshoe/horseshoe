@@ -56,7 +56,7 @@ class PartialsTests {
 			Files.write(path2, ("It Works!" + LS).getBytes(StandardCharsets.UTF_8));
 			final TemplateLoader loader = new TemplateLoader();
 			loader.put(loader.load(path.toAbsolutePath().normalize(), StandardCharsets.UTF_16BE));
-			assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16BE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16BE).render(Collections.emptyMap(), new StringWriter()).toString());
 		} finally {
 			Files.delete(path);
 			Files.delete(path2);
@@ -77,15 +77,15 @@ class PartialsTests {
 
 			final TemplateLoader loader = new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get(".")));
 
-			assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-			assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-			assertEquals("It Works!" + LS, loader.load(pathReload, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16LE).render(Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16LE).render(Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("It Works!" + LS, loader.load(pathReload, StandardCharsets.UTF_16LE).render(Collections.emptyMap(), new StringWriter()).toString());
 
 			final TemplateLoader loader2 = new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get(".")))
 					.put(path2);
 
-			assertEquals("It Works!" + LS, loader2.load(path, StandardCharsets.UTF_16LE).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
-			assertEquals("It Works!" + LS, new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get("."))).load("Inline Test", "{{>DELETE_ME2.test}}" + LS).render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("It Works!" + LS, loader2.load(path, StandardCharsets.UTF_16LE).render(Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("It Works!" + LS, new TemplateLoader(Arrays.asList(Paths.get("bad-directory"), Paths.get("."))).load("Inline Test", "{{>DELETE_ME2.test}}" + LS).render(Collections.emptyMap(), new StringWriter()).toString());
 		} finally {
 			Files.delete(path);
 			Files.delete(path2);
@@ -103,6 +103,7 @@ class PartialsTests {
 		try {
 			Files.write(path, ("{{> ../DELETE_ME2.test }}" + LS).getBytes(StandardCharsets.UTF_16LE));
 			Files.write(path2, ("It Doesn't Work" + LS).getBytes(StandardCharsets.UTF_8));
+			assertEquals("It Doesn't Work" + LS, Template.load(path2).render(null, new StringWriter()).toString());
 			assertThrows(LoadException.class, () -> new TemplateLoader().load(path, StandardCharsets.UTF_16LE));
 		} finally {
 			Files.delete(path);
@@ -136,22 +137,22 @@ class PartialsTests {
 
 	@Test
 	void testSectionPartial() throws IOException, LoadException {
-		assertEquals("-a--b--c-", new TemplateLoader().load("f", "-{{>}}-", "Test", "{{#> f }}a{{/ f }}{{#> f }}b{{/}}{{#> f }}c{{/}}").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("-a--b--c-", new TemplateLoader().load("f", "-{{>}}-", "Test", "{{#> f }}a{{/ f }}{{#> f }}b{{/}}{{#> f }}c{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
 	void testSectionPartial2() throws IOException, LoadException {
-		assertEquals("<p>" + LS + "\tTest" + LS + "paragraph </p>", new TemplateLoader().load("p", "<p>\n\t{{>>}}\n</p>", "{{#> p }}\nTest\nparagraph {{/ p }}\n").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("<p>" + LS + "\tTest" + LS + "paragraph </p>", new TemplateLoader().load("p", "<p>\n\t{{>>}}\n</p>", "{{#> p }}\nTest\nparagraph {{/ p }}\n").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
 	void testSectionPartial3() throws IOException, LoadException {
-		assertEquals("<p>" + LS + "\tTest" + LS + "\tparagraph" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}<ul><li>Item</li></ul>\n").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("<p>" + LS + "\tTest" + LS + "\tparagraph" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}<ul><li>Item</li></ul>\n").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
 	void testSectionPartial4() throws IOException, LoadException {
-		assertEquals("<p>" + LS + "\tTest" + LS + "paragraph" + LS + "1" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}1\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}<ul><li>Item</li></ul>\n").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("<p>" + LS + "\tTest" + LS + "paragraph" + LS + "1" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}1\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}<ul><li>Item</li></ul>\n").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
@@ -181,7 +182,7 @@ class PartialsTests {
 
 	@Test
 	void testInlinePartials3() throws IOException, LoadException {
-		assertEquals("Allow an inline partial without a newline", new TemplateLoader().load("{{< a }}\n an{{/}}\nAllow{{> a }} inline partial without a newline").render(new Settings(), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("Allow an inline partial without a newline", Template.load("{{< a }}\n an{{/}}\nAllow{{> a }} inline partial without a newline").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
@@ -226,7 +227,7 @@ class PartialsTests {
 
 	@Test
 	void testInlineBadPartial() throws IOException, LoadException {
-		assertThrows(LoadException.class, () -> new TemplateLoader().load("Test", "{{#a}}{{<f}}\n{{b}}{{>Test}}\n{{/f}}{{/a}}\n{{>f}}"));
+		assertThrows(LoadException.class, () -> Template.load(new StringReader("{{#a}}{{<f}}\n{{b}}{{>Test}}\n{{/f}}{{/a}}\n{{>f}}")));
 	}
 
 	@Test
