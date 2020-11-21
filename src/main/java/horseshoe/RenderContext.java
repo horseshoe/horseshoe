@@ -1,16 +1,10 @@
 package horseshoe;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public final class RenderContext {
-
-	private static final Set<Package> UNQUALIFIED_PACKAGES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-			System.class.getPackage())));
 
 	private final Settings settings;
 	private final Map<String, AnnotationHandler> annotationMap;
@@ -73,7 +67,7 @@ public final class RenderContext {
 			for (final Class<?> loadableClass : settings.getLoadableClasses()) {
 				loadableClasses.put(loadableClass.getName(), loadableClass);
 
-				if (UNQUALIFIED_PACKAGES.contains(loadableClass.getPackage())) {
+				if (settings.allowUnqualifiedClassNames()) {
 					loadableClasses.put(loadableClass.getSimpleName(), loadableClass);
 				}
 			}

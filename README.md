@@ -175,9 +175,9 @@ An inverted section tag may start with a `#` (`{{^# condition }}`) to indicate a
 ```
 
 #### Inline Partials
-Inline partial tags (`{{< partial }}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a string or template file.
+Inline partial tags (`{{< partial }}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a Horseshoe file. Inline partials inherit the context of the template in which they are declared, so named expressions and other inline partials can be used within the inline partial.
 
-Inline partials can only be included (using a partial tag) in the scope of the template in which they are declared. They cannot be included in any other template other than inline partials. This prevents naming collisions of inline partials with external partials. Inline partials may be overridden later in a template or in a nested scope.
+Inline partials can only be included (using a partial tag) in the scope of the template in which they are declared. Additionally, they cannot be included from other templates (except other inline partials in the appropriate scope). This prevents naming collisions of inline partials with external partials. Inline partials may be overridden later in a template or in a nested scope.
 
 <b>Closing tags for inline partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows inline partials to end without a trailing newline and not cause an output line in the current template.
 

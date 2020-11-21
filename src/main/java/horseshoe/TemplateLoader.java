@@ -596,6 +596,7 @@ public class TemplateLoader {
 
 					state.sections.peek().getLocalPartials().put(name, partial);
 					partial.getSection().getLocalPartials().putAll(state.sections.peek().getLocalPartials());
+					partial.getSection().getNamedExpressions().putAll(state.sections.peek().getNamedExpressions());
 					state.sections.push(partial.getSection());
 					state.renderLists.push(partial.getRenderList());
 					return;

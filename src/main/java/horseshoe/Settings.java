@@ -10,7 +10,7 @@ import java.util.Currency;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.GregorianCalendar;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
@@ -131,10 +131,11 @@ public class Settings {
 	private Logger logger = DEFAULT_LOGGER;
 	private EscapeFunction escapeFunction = EMPTY_ESCAPE_FUNCTION;
 	private String lineEndings = DEFAULT_LINE_ENDINGS;
-	private final Set<Class<?>> loadableClasses = new HashSet<>(DEFAULT_LOADABLE_CLASSES);
+	private boolean allowUnqualifiedClassNames = true;
+	private final Set<Class<?>> loadableClasses = new LinkedHashSet<>(DEFAULT_LOADABLE_CLASSES);
 
 	static {
-		final Set<Class<?>> defaultLoadableClasses = new HashSet<>(Arrays.asList(
+		final Set<Class<?>> defaultLoadableClasses = new LinkedHashSet<>(Arrays.asList(
 				Integer.class,
 				Byte.class,
 				Short.class,
@@ -260,6 +261,15 @@ public class Settings {
 	}
 
 	/**
+	 * Gets whether or not unqualified class names can be used to load classes by the rendering process.
+	 *
+	 * @return true if unqualified class names can be used to load classes by the rendering process, otherwise false
+	 */
+	public boolean allowUnqualifiedClassNames() {
+		return allowUnqualifiedClassNames;
+	}
+
+	/**
 	 * Gets the type of access to the context stack allowed during rendering.
 	 *
 	 * @return true the type of access to the context stack allowed during rendering
@@ -302,6 +312,17 @@ public class Settings {
 	 */
 	public Set<Class<?>> getLoadableClasses() {
 		return loadableClasses;
+	}
+
+	/**
+	 * Sets whether or not unqualified class names can be used to load classes by the rendering process.
+	 *
+	 * @param allowUnqualifiedClassNames true if unqualified class names can be used to load classes by the rendering process, otherwise false
+	 * @return this object
+	 */
+	public Settings setAllowUnqualifiedClassNames(final boolean allowUnqualifiedClassNames) {
+		this.allowUnqualifiedClassNames = allowUnqualifiedClassNames;
+		return this;
 	}
 
 	/**
