@@ -47,7 +47,7 @@ class MethodBuilderTests {
 				.updateLabel(labels.get(10)).pushNewObject(float.class, 1).pushConstant(10.0f).addPrimitiveConversion(float.class, Integer.class).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 1);
 		assertNotNull(mb.toString());
 
-		final SwitchClass switchTest = mb.build(name, SwitchClass.class, classLoader).getConstructor().newInstance();
+		final SwitchClass switchTest = new MethodBuilder().addCode(NOP).append(mb).build(name, SwitchClass.class, classLoader).getConstructor().newInstance();
 
 		assertEquals("[I", switchTest.run(1));
 		assertEquals("01", switchTest.run(2));

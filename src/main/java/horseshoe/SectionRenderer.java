@@ -313,6 +313,8 @@ public class SectionRenderer implements Renderer {
 			renderInverted(context, writer);
 		} else if (data instanceof Iterable<?>) {
 			dispatchIteratorData(context, ((Iterable<?>)data).iterator(), writer);
+		} else if (data instanceof Iterator<?>) {
+			dispatchIteratorData(context, (Iterator<?>)data, writer);
 		} else if (data.getClass().isArray()) {
 			dispatchArray(context, data, writer);
 		} else if (!dispatchPrimitiveData(context, data, writer)) {

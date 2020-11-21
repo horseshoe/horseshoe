@@ -258,6 +258,7 @@ public final class MethodBuilder {
 	private int maxStackSize = 0;
 	private int stackSize = 0;
 	private int maxLocalVariableIndex = 0; // Always include index 0 to support "this" pointer to support non-static methods
+	private boolean requiresAlignment = false;
 	private final Set<Label> labels = new LinkedHashSet<>();
 
 	private final ConstantPool constantPool = new ConstantPool() {
@@ -1036,6 +1037,8 @@ public final class MethodBuilder {
 			append(NOP);
 		}
 
+		requiresAlignment = true;
+
 		final int count = labels.size();
 		final int start = length;
 
@@ -1088,8 +1091,12 @@ public final class MethodBuilder {
 		maxLocalVariableIndex = Math.max(maxLocalVariableIndex, other.maxLocalVariableIndex);
 
 		// Align the buffer (to support switch instructions), then append the other builder's buffer
-		while (length % 4 != 0) {
-			append(NOP);
+		if (other.requiresAlignment) {
+			requiresAlignment = true;
+
+			while (length % 4 != 0) {
+				append(NOP);
+			}
 		}
 
 		final int oldLength = length;

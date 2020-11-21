@@ -759,7 +759,6 @@ public final class Expression {
 			return;
 		} else if (operator.has(Operator.RIGHT_EXPRESSION)) {
 			right = state.operands.pop();
-			assert !Entry.class.equals(right.type) || operator.has(Operator.ALLOW_PAIRS) : Entry.class + " cannot be passed to operator";
 		} else {
 			right = null;
 		}
@@ -973,7 +972,6 @@ public final class Expression {
 					throw new IllegalArgumentException("Incomplete ternary operator, missing \":\"");
 				}
 
-				assert Entry.class.equals(left.type);
 				assert !state.operands.isEmpty();
 
 				final Label isFalse = left.builder.newLabel();
@@ -984,10 +982,33 @@ public final class Expression {
 			}
 
 			case ":":
-				state.operands.push(new Operand(Entry.class, left.toObject())).push(new Operand(Entry.class, right.toObject()));
+				state.operands.push(new Operand(Entry.class, left.toObject()));
 
-				if (state.operators.isEmpty() || !state.operators.peek().has(Operator.ALLOW_PAIRS)) {
-					state.operators.push(Operator.get(",", true).withRightExpressions(-1));
+				int ternaries = 0;
+
+				for (final Operator stackOperator : state.operators) {
+					if (stackOperator.getPrecedence() != operator.getPrecedence()) {
+						break;
+					} else if ("?".equals(stackOperator.getString())) {
+						ternaries++;
+					} else if (":".equals(stackOperator.getString())) {
+						ternaries--;
+					}
+				}
+
+				if (ternaries > 0) { // Process everything up to the ternary
+					while (!"?".equals(state.operators.peek().getString())) {
+						processOperation(state);
+					}
+
+					state.operands.push(new Operand(Entry.class, right.toObject()));
+					processOperation(state);
+				} else { // Check if the colon should be part of a pair or a map
+					state.operands.push(new Operand(Entry.class, right.toObject()));
+
+					if (state.operators.isEmpty() || !state.operators.peek().has(Operator.ALLOW_PAIRS)) {
+						state.operators.push(Operator.get(",", true).withRightExpressions(-1));
+					}
 				}
 
 				break;
@@ -1101,7 +1122,9 @@ public final class Expression {
 
 		if (operator != null) {
 			// Shunting-yard Algorithm
-			while (!state.operators.isEmpty() && !state.operators.peek().isContainer() && (state.operators.peek().getPrecedence() < operator.getPrecedence() || (state.operators.peek().getPrecedence() == operator.getPrecedence() && operator.isLeftAssociative()))) {
+			while (!state.operators.isEmpty() && !state.operators.peek().isContainer() &&
+					((hasLeftExpression && state.operators.peek().getPrecedence() < operator.getPrecedence()) ||
+						(state.operators.peek().getPrecedence() == operator.getPrecedence() && operator.isLeftAssociative()))) {
 				processOperation(state);
 			}
 

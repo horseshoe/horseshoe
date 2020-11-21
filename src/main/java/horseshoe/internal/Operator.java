@@ -124,11 +124,11 @@ final class Operator {
 		operators.add(new Operator("||",     14, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical Or"));
 		operators.add(new Operator("?:",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce"));
 		operators.add(new Operator("??",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce - Alternate"));
-		operators.add(new Operator("?",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ALLOW_PAIRS, "Ternary"));
+		operators.add(new Operator("?",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Ternary"));
 		operators.add(new Operator(":",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair / Range"));
 		operators.add(new Operator(":<",     15, LEFT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Backward Range"));
-		operators.add(new Operator("=",      16, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind Local Name"));
-		operators.add(new Operator(",",      17, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
+		operators.add(new Operator(",",      16, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
+		operators.add(new Operator("=",      17, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind Local Name"));
 		operators.add(new Operator("\u2620", 18, RIGHT_EXPRESSION, "Die")); // Skull and crossbones
 		operators.add(new Operator("~:<",    18, RIGHT_EXPRESSION, "Die - Alternate"));
 		operators.add(new Operator("#^",     18, RIGHT_EXPRESSION, "Return"));

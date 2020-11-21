@@ -563,7 +563,7 @@ public class TemplateLoader {
 		final Section topSection = state.sections.pop();
 
 		if (!state.sections.isEmpty()) {
-			throw new LoadException(loaders, "Unmatched section tag " + topSection + " at end of input");
+			throw new LoadException(loaders, "Missing section close tag for section " + topSection + " at end of input");
 		}
 
 		Template.LOGGER.log(Level.FINE, "Loaded template {0} containing {1} tags", new Object[] { template.getSection(), state.tagCount });
@@ -702,7 +702,7 @@ public class TemplateLoader {
 						break;
 					}
 
-					throw new LoadException(loaders, "Unclosed section, expecting close tag for section " + section);
+					throw new LoadException(loaders, "Section close tag mismatch, expecting close tag for section " + section);
 				}
 
 				if (state.sections.pop().getParent() == null) { // Null parent means top-level, which indicates an inline partial

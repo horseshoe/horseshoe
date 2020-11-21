@@ -22,6 +22,8 @@ import horseshoe.Settings;
 import horseshoe.Settings.ContextAccess;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ExpressionTests {
 
@@ -48,255 +50,16 @@ class ExpressionTests {
 	}
 
 	@Test
-	void testBadArrayClose() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "[5)", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadArrayClose2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "[5", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadArrayClose3() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a, b[5", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadArrayEmpty() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "[,,]", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadArrayEmpty2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, ",,", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadArrayOperation() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "5[5]", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadArrayReference() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a[]", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadArrayReference2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a[,]", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadArrayReference3() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a[b,,]", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadAssignment() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a =", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadAssignment2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a ; = 2", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadBackreachAfterVar() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a../", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadBackreachTooFar() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "../", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadEmpty() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadEmptyParentheses() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "()", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadEmptyParentheses2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "(,)", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadEmptyParentheses3() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "(a,,)", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadIdentifier() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "#", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadIdentifier2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a #", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadIdentifier3() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a b", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadIdentifier4() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a 1", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadIdentifier5() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "1 b", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadLiteral() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "\"blah\" a", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadLiteral2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "\"blah\" 3.5", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadLiteralAfterNav() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "blah.3.5", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadLiteralWithBackreach() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "..\\3.5", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadLocal() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a += 5", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadLocal2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "./a = 5", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadLocal3() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "./a++", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadLocal4() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a--", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadLocal5() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a = 0; a-- = 1", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadMethodEmpty() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a(,)", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadOperator() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "a +", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadPrefix() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "call(/..)", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadPrefix2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "call(/.a)", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadPrefix3() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "call(/a())", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
 	void testBadRegularExpression() throws ReflectiveOperationException {
 		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
 		assertThrows(PatternSyntaxException.class, () -> new Expression(name, "~/^abc(.\\u0065/.matcher('abcde').matches()", EMPTY_EXPRESSIONS_MAP, true));
 	}
 
-	@Test
-	void testBadStringLiteral() throws ReflectiveOperationException {
+	@ParameterizedTest
+	@ValueSource(strings = { "[5)", "[5", "a, b[5", "[,,]", ",,", "5[5]", "a[]", "a[,]", "a[b,,]", "a =", "a ; = 2", "a../", "../", "", "()", "(,)", "(a,,)", "#", "a #", "a b", "a 1", "1 b", "\"blah\" a", "\"blah\" 3.5", "blah.3.5", "..\\3.5", "a += 5", "./a = 5", "./a++", "a--", "a = 0; a-- = 1", "a(,)", "a +", "call(/..)", "call(/.a)", "call(/a())", "\"bad\\\"", "\"\\q\"", "\"\\u000\"", "\"\\U0000000\"", "true ? false" })
+	void testBadSyntax(final String expression) throws ReflectiveOperationException {
 		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "\"bad\\\"", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadStringLiteral2() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "\"\\q\"", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadStringLiteral3() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "\"\\u000\"", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadStringLiteral4() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "\"\\U0000000\"", EMPTY_EXPRESSIONS_MAP, true));
-	}
-
-	@Test
-	void testBadTernary() throws ReflectiveOperationException {
-		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
-		assertThrows(IllegalArgumentException.class, () -> new Expression(name, "true ? false", EMPTY_EXPRESSIONS_MAP, true));
+		assertThrows(IllegalArgumentException.class, () -> new Expression(name, expression, EMPTY_EXPRESSIONS_MAP, true));
 	}
 
 	@Test
@@ -363,19 +126,15 @@ class ExpressionTests {
 	}
 
 	@Test
-	void testListsMaps() throws ReflectiveOperationException {
+	void testLists() throws ReflectiveOperationException {
 		assertFalse((Boolean)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "{\"1\", \"2\"}.getClass().isArray()", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertNull(new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "{\"1\", \"2\"}[1]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "{\"1\", \"2\"}['2']", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[\"1\", \"2\",][1]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals(Arrays.asList(3, 4), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[\"1\", 2, 3, 4,][2:]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertEquals(Arrays.asList(3, 2, "1"), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[\"1\", 2, 3, 4,][2:<]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
-		assertEquals("1", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "{7: \"1\", \"2\"}[7]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
-		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "{\"1\", \"blah\": \"2\"}[\"blah\"]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertFalse((Boolean)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[\"1\", \"2\"].getClass().isArray()", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[\"1\", \"2\"][1]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
-		assertEquals("1", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[7: \"1\", \"2\",][7]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
-		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[\"1\", \"blah\": \"2\"][\"blah\"]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "null?[1] ?? \"2\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("4", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(1..5)[3]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("7", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(5..<10)[2]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
@@ -386,12 +145,6 @@ class ExpressionTests {
 
 		assertEquals("blah", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[5, 6.7, \"string-1\", \"blah\"][1 + 2]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("string-1", ((List<?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\", \"blah\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).get(2).toString());
-		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
-		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\",", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
-		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(5, 6.7, \"string-1\": 7, \"blah\",)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
-		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "7:5,", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
-		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "7:5", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
-		assertTrue(((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[:]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).isEmpty());
 		assertTrue(((List<?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).isEmpty());
 		assertEquals(1, ((List<?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5,", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
 	}
@@ -462,6 +215,21 @@ class ExpressionTests {
 		assertEquals((int)(0x10000000L * 5280), ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000 * 5280", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).intValue());
 		assertEquals(0x10000000L * 5280, ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0x10000000L * 5280", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).longValue());
 		assertEquals(-Math.pow(2, 6), ((Number)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "-i2 ** 6", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context))).doubleValue(), 0);
+	}
+
+	@Test
+	void testMaps() throws ReflectiveOperationException {
+		assertEquals("1", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "{7: \"1\", \"2\"}[7]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "{\"1\", \"blah\": \"2\"}[\"blah\"]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+		assertEquals("1", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[7: \"1\", \"2\",][7]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+		assertEquals("2", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[\"1\", \"blah\": \"2\"][\"blah\"]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "5, 6.7, \"string-1\": 7, \"blah\",", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
+		assertEquals(4, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "(5, 6.7, \"string-1\": 7, \"blah\",)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
+		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "7:5,", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
+		assertEquals(1, ((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "7:5", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).size());
+		assertTrue(((Map<?, ?>)new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "[:]", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap()))).isEmpty());
 	}
 
 	@Test
@@ -550,6 +318,12 @@ class ExpressionTests {
 		assertEquals("4", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "false ? \"b\" : (1.0; 4)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("isZero", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0L * 5.6 ? \"notZero\" : \"isZero\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("12345678901234", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "0 ? 0 : (912345678901235; 12345678901234)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+		assertEquals(1, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "pain > 2 ? 'moderate' : #^pain", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("pain", 1))));
+		assertEquals(Collections.singletonMap(1, 2), new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "test == 0 ? null ?: 'zero' : test : 2", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("test", 1))));
+		assertEquals("extreme", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "pain > 5 ? pain > 8 ? 'extreme' : 'bad' : pain < 2 ? 'good' : 'moderate'", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("pain", 10))).toString());
+		assertEquals("bad", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "pain > 5 ? pain > 8 ? 'extreme' : 'bad' : pain < 2 ? 'good' : 'moderate'", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("pain", 7))).toString());
+		assertEquals("moderate", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "pain > 5 ? pain > 8 ? 'extreme' : 'bad' : pain < 2 ? 'good' : 'moderate'", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("pain", 4))).toString());
+		assertEquals("low", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "pain > 5 ? pain > 8 ? 'extreme' : 'bad' : pain < 2 ? 'low' : 'moderate'", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("pain", 0))).toString());
 	}
 
 }
