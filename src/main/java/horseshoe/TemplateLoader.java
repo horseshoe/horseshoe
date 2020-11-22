@@ -136,9 +136,13 @@ public class TemplateLoader {
 			final int size = priorStaticText.size();
 			final String removedWhitespace;
 
-			if ((size > 1 || tagCount == 1) && StringUtils.isWhitespace(removedWhitespace = priorStaticText.get(size - 1).getLine())) {
-				priorStaticText.set(size - 1, new ParsedLine(null, ""));
-				return removedWhitespace;
+			if (size > 1 || tagCount == 1) {
+				removedWhitespace = priorStaticText.get(size - 1).getLine();
+
+				if (StringUtils.isWhitespace(removedWhitespace)) {
+					priorStaticText.set(size - 1, new ParsedLine(null, ""));
+					return removedWhitespace;
+				}
 			}
 
 			return null;

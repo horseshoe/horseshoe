@@ -1,0 +1,13 @@
+{{# // Iterating through the list of maps below will result in each item being pushed onto the context stack.
+	[['name': 'Esau', 'hairy': true, 'birthOrder': 'first'], ['name': 'Jacob', 'hairy': false, 'birthOrder': 'last'], ['name': 'Rebekah']] }}
+	{{# hairy /* Booleans will NOT be pushed onto the context stack. */ }}
+{{ name }} was hairy.
+	{{^}}
+{{ name }} was not hairy.
+	{{/}}
+	{{# birthOrder /* Non-Booleans WILL be pushed onto the context stack. */ }}
+{{ ../name }} was born {{.}}.
+	{{^}}
+Birth order of {{ name }} is not given.
+	{{/}}
+{{/}}
