@@ -3,6 +3,7 @@ package horseshoe;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -13,10 +14,13 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
 
 import org.junit.jupiter.api.Test;
 
@@ -24,10 +28,23 @@ class TemplateTests {
 
 	private static final String LS = System.lineSeparator();
 
+	private static final class ErrorLogger extends Logger {
+		private final List<Throwable> errors = new ArrayList<>();
+
+		@Override
+		public void log(Level level, Throwable error, String message, Object... params) {
+			errors.add(error);
+		}
+	}
+
 	@Test
 	void testBackreach() throws IOException, LoadException {
 		assertEquals("Original String" + LS, new TemplateLoader().load("Backreach", "{{#\"Original String\"}}\n{{#charAt(1)}}\n{{..}}\n{{/}}\n{{/}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals("Original String" + LS, new TemplateLoader().load("Backreach", "{{#\"Original String\"}}\n{{#charAt(1)}}\n{{../toString()}}\n{{/}}\n{{/}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+
+		final ErrorLogger errorLogger = new ErrorLogger();
+		Template.load("{{#\"Original String\"}}\n{{../../toString()}}\n{{/}}").render(new Settings().setLogger(errorLogger), null, new java.io.StringWriter());
+		assertTrue(errorLogger.errors.stream().anyMatch(t -> t instanceof IndexOutOfBoundsException));
 	}
 
 	@Test

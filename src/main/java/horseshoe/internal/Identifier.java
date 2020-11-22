@@ -104,14 +104,13 @@ public final class Identifier {
 	 * @param context the context object used to get the value of the identifier
 	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
 	 * @return the value of the identifier
-	 * @throws ReflectiveOperationException if an error occurs while trying to access the value of the identifier
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object findValue(final RenderContext context, final int backreach) throws Throwable {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
-		Object object = context.getSectionData().peek(Math.max(backreach, 0));
-		Accessor accessor = getOrAddAccessor(object);
+		final Object object = Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name);
+		final Accessor accessor = getOrAddAccessor(object);
 
 		if (accessor != null) {
 			final Object result = accessor.tryGet(object);
@@ -127,11 +126,11 @@ public final class Identifier {
 		if (backreach < 0) {
 			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
 				for (int i = 1; i < context.getSectionData().size(); i++) {
-					object = context.getSectionData().peek(i);
-					accessor = getOrAddAccessor(object);
+					final Object backreachObject = context.getSectionData().peek(i);
+					final Accessor backreachAccessor = getOrAddAccessor(backreachObject);
 
-					if (accessor != null) {
-						final Object result = accessor.tryGet(object);
+					if (backreachAccessor != null) {
+						final Object result = backreachAccessor.tryGet(backreachObject);
 
 						if (Accessor.isValid(result)) {
 							return result;
@@ -149,7 +148,7 @@ public final class Identifier {
 			return null;
 		}
 
-		throw new NoSuchFieldException("Field \"" + name + "\" not found");
+		throw new NoSuchFieldException("Field \"" + name + "\" not found in object of type " + object.getClass().getName());
 	}
 
 	/**
@@ -159,14 +158,13 @@ public final class Identifier {
 	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
 	 * @param parameters the parameters used to evaluate the object
 	 * @return the value of the identifier
-	 * @throws ReflectiveOperationException if an error occurs while trying to access the value of the identifier
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object findValue(final RenderContext context, final int backreach, final Object... parameters) throws Throwable {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
-		Object object = context.getSectionData().peek(Math.max(backreach, 0));
-		Accessor accessor = getOrAddAccessor(object);
+		final Object object = Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name);
+		final Accessor accessor = getOrAddAccessor(object);
 
 		if (accessor != null) {
 			final Object result = accessor.tryGet(object, parameters);
@@ -182,11 +180,11 @@ public final class Identifier {
 		if (backreach < 0) {
 			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
 				for (int i = 1; i < context.getSectionData().size(); i++) {
-					object = context.getSectionData().peek(i);
-					accessor = getOrAddAccessor(object);
+					final Object backreachObject = context.getSectionData().peek(i);
+					final Accessor backreachAccessor = getOrAddAccessor(backreachObject);
 
-					if (accessor != null) {
-						final Object result = accessor.tryGet(object, parameters);
+					if (backreachAccessor != null) {
+						final Object result = backreachAccessor.tryGet(backreachObject, parameters);
 
 						if (Accessor.isValid(result)) {
 							return result;
@@ -204,7 +202,7 @@ public final class Identifier {
 			return null;
 		}
 
-		throw new NoSuchMethodException("Method \"" + name + "\" not found");
+		throw new NoSuchMethodException("Method \"" + name + "\" not found in object of type " + object.getClass().getName());
 	}
 
 	/**
@@ -242,15 +240,22 @@ public final class Identifier {
 	 *
 	 * @param context the context object used to get the value of the identifier
 	 * @return the value of the identifier
-	 * @throws ReflectiveOperationException if an error occurs while trying to access the value of the identifier
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object getRootValue(final RenderContext context) throws Throwable {
-		if (context.getSettings().getContextAccess() == ContextAccess.FULL || context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT || context.getSectionData().size() == 1) {
-			return getValue(context.getSectionData().peekBase(), false);
-		}
+		return getValue(context.getSectionData().peekBase(), false);
+	}
 
-		throw new NoSuchFieldException("Root field \"" + name + "\" could not be accessed due to insufficient permissions");
+	/**
+	 * Gets the value of the identifier from the root context object.
+	 *
+	 * @param context the context object used to get the value of the identifier
+	 * @param parameters the parameters used to evaluate the object
+	 * @return the value of the identifier
+	 * @throws Throwable if accessing the value throws
+	 */
+	public Object getRootValue(final RenderContext context, final Object... parameters) throws Throwable {
+		return getValue(context.getSectionData().peekBase(), false, parameters);
 	}
 
 	/**
@@ -259,7 +264,6 @@ public final class Identifier {
 	 * @param context the context object to evaluate
 	 * @param ignoreFailures true to return null for failures, false to throw exceptions
 	 * @return the result of the evaluation
-	 * @throws ReflectiveOperationException if an error occurs while trying to access the value of the identifier
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object getValue(final Object context, final boolean ignoreFailures) throws Throwable {
@@ -275,7 +279,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
-				return throwNoSuchFieldException(ignoreFailures, "Field \"" + name + "\" not found");
+				return throwNoSuchFieldException(ignoreFailures, "Field \"" + name + "\" not found in object of type " + objectClass.getName());
 			}
 
 			accessorDatabase.put(lookupClass, accessor);
@@ -288,10 +292,9 @@ public final class Identifier {
 	 * Evaluates the method identifier given the context object and parameters.
 	 *
 	 * @param context the context object to evaluate
-	 * @param parameters the parameters used to evaluate the object
 	 * @param ignoreFailures true to return null for failures, false to throw exceptions
+	 * @param parameters the parameters used to evaluate the object
 	 * @return the result of the evaluation
-	 * @throws ReflectiveOperationException if an error occurs while trying to access the value of the identifier
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object getValue(final Object context, final boolean ignoreFailures, final Object... parameters) throws Throwable {
@@ -307,7 +310,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
-				return throwNoSuchMethodException(ignoreFailures, "Method \"" + name + "\" not found");
+				return throwNoSuchMethodException(ignoreFailures, "Method \"" + name + "\" not found in object of type " + objectClass.getName());
 			}
 
 			accessorDatabase.put(lookupClass, accessor);
@@ -318,7 +321,7 @@ public final class Identifier {
 
 	@Override
 	public int hashCode() {
-		return name.hashCode() + parameterCount;
+		return parameterCount * 0x1010101 + name.hashCode();
 	}
 
 	/**

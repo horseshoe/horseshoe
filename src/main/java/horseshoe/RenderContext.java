@@ -36,7 +36,7 @@ public final class RenderContext {
 	 * @param settings the settings that will be used as part of the render context
 	 * @param globalData the global data that will be used as part of the render context
 	 */
-	public RenderContext(final Settings settings, final Map<String, Object> globalData) {
+	public RenderContext(final Settings settings, final Object globalData) {
 		this(settings, globalData, AnnotationHandlers.DEFAULT_ANNOTATIONS);
 	}
 

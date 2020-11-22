@@ -37,10 +37,12 @@ public final class Expression {
 	private static final Method ACCESSOR_LOOKUP_RANGE;
 	private static final Field ACCESSOR_TO_BEGINNING;
 	private static final Method EXPRESSION_EVALUATE;
+	private static final Method EXPRESSION_PEEK_STACK;
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING;
 	private static final Method IDENTIFIER_FIND_VALUE;
 	private static final Method IDENTIFIER_FIND_VALUE_METHOD;
 	private static final Method IDENTIFIER_GET_ROOT_VALUE;
+	private static final Method IDENTIFIER_GET_ROOT_VALUE_METHOD;
 	private static final Method IDENTIFIER_GET_VALUE;
 	private static final Method IDENTIFIER_GET_VALUE_METHOD;
 	private static final Method ITERABLE_ITERATOR;
@@ -226,10 +228,12 @@ public final class Expression {
 			ACCESSOR_LOOKUP_RANGE = Accessor.class.getMethod("lookupRange", Object.class, Comparable.class, Object.class, boolean.class);
 			ACCESSOR_TO_BEGINNING = Accessor.class.getField("TO_BEGINNING");
 			EXPRESSION_EVALUATE = Expression.class.getMethod("evaluate", RenderContext.class, Object[].class);
+			EXPRESSION_PEEK_STACK = Expression.class.getMethod("peekStack", Stack.class, int.class, String.class);
 			HALT_EXCEPTION_CTOR_STRING = HaltRenderingException.class.getConstructor(String.class);
 			IDENTIFIER_FIND_VALUE = Identifier.class.getMethod("findValue", RenderContext.class, int.class);
 			IDENTIFIER_FIND_VALUE_METHOD = Identifier.class.getMethod("findValue", RenderContext.class, int.class, Object[].class);
 			IDENTIFIER_GET_ROOT_VALUE = Identifier.class.getMethod("getRootValue", RenderContext.class);
+			IDENTIFIER_GET_ROOT_VALUE_METHOD = Identifier.class.getMethod("getRootValue", RenderContext.class, Object[].class);
 			IDENTIFIER_GET_VALUE = Identifier.class.getMethod("getValue", Object.class, boolean.class);
 			IDENTIFIER_GET_VALUE_METHOD = Identifier.class.getMethod("getValue", Object.class, boolean.class, Object[].class);
 			ITERABLE_ITERATOR = Iterable.class.getMethod("iterator");
@@ -313,7 +317,7 @@ public final class Expression {
 		}
 
 		// Add comma as a separator
-		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<prefix>[/\\\\])|(?<backreach>(?:[.][.][/\\\\])+)|(?<current>[.][/\\\\])?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?=" + COMMENT_PATTERN + "*(?<assignment>" + assignmentOperators.substring(1) + ")(?:[^=]|$))?", Pattern.UNICODE_CHARACTER_CLASS);
+		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<backreach>[.]?[/\\\\]|(?:[.][.][/\\\\])+)?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?=" + COMMENT_PATTERN + "*(?<assignment>" + assignmentOperators.substring(1) + ")(?:[^=]|$))?", Pattern.UNICODE_CHARACTER_CLASS);
 		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + allOperators.append(",)\\s*").toString(), Pattern.UNICODE_CHARACTER_CLASS);
 	}
 
@@ -360,26 +364,15 @@ public final class Expression {
 		final boolean isMethod = matcher.group("isMethod") != null;
 		int backreach = 0;
 		boolean isRoot = false;
-		boolean unstatedBackreach = false;
 		boolean isInternal = false;
 
 		// Check for additional identifier properties
 		if (!lastNavigation) {
+			final String backreachString = matcher.group("backreach");
 			isInternal = matcher.group("internal") != null;
-			final String prefixString = matcher.group("prefix");
 
-			if (prefixString != null) { // Currently only '/' and '\' are allowed as prefixes
-				isRoot = true;
-
-				if (isInternal || isMethod || (identifierText.startsWith(".") && !".".equals(identifierText))) {
-					throw new IllegalArgumentException("Invalid identifier with prefix \"" + prefixString + "\" (index " + state.getIndex(matcher) + ")");
-				}
-			} else {
-				final String backreachString = matcher.group("backreach");
-
-				if (backreachString != null) {
-					backreach = backreachString.length() / 3;
-				} else if (matcher.group("current") == null) {
+			if (backreachString == null) {
+				if (!isInternal) {
 					// Check for literals
 					switch (identifierText) {
 						case "true":
@@ -391,11 +384,22 @@ public final class Expression {
 						case "null":
 							state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(ACONST_NULL)));
 							return null;
+						case ".": // Skip the unstated backreach for these
+						case "..":
+							break;
 						default:
-							unstatedBackreach = true;
+							backreach = Identifier.UNSTATED_BACKREACH;
 							break;
 					}
 				}
+			} else if (backreachString.length() == 1) { // Check for root ('/', '\')
+				isRoot = true;
+
+				if (isInternal || (identifierText.length() > 1 && identifierText.charAt(0) == '.')) {
+					throw new IllegalArgumentException("Invalid identifier with prefix \"" + backreachString + "\" (index " + state.getIndex(matcher) + ")");
+				}
+			} else { // All other backreach ('./', '../', '../../', etc.)
+				backreach = backreachString.length() / 3;
 			}
 		}
 
@@ -404,23 +408,25 @@ public final class Expression {
 			if (isRoot) {
 				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE)));
 			} else {
-				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).addInvoke(STACK_PEEK)));
+				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(identifierText).addInvoke(EXPRESSION_PEEK_STACK)));
 			}
 		} else if ("..".equals(identifierText)) {
-			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).addInvoke(STACK_PEEK)));
+			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).pushConstant(identifierText).addInvoke(EXPRESSION_PEEK_STACK)));
 		} else if (isInternal) { // Everything that starts with "." is considered internal
-			switch (identifierText) {
-				case "hasNext":
-					state.operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).addInvoke(STACK_PEEK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_HAS_NEXT)));
+			final String internalIdentifier = "." + identifierText;
+
+			switch (internalIdentifier) {
+				case ".hasNext":
+					state.operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_HAS_NEXT)));
 					break;
-				case "indentation":
-					state.operands.push(new Operand(String.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDENTATION).pushConstant(backreach).addInvoke(STACK_PEEK)));
+				case ".indentation":
+					state.operands.push(new Operand(String.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDENTATION).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK)));
 					break;
-				case "index":
-					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).addInvoke(STACK_PEEK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_GET_INDEX)));
+				case ".index":
+					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_GET_INDEX)));
 					break;
-				case "isFirst":
-					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).addInvoke(STACK_PEEK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_GET_INDEX)));
+				case ".isFirst":
+					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_GET_INDEX)));
 					state.operators.push(Operator.get("!", false));
 					processOperation(state);
 					break;
@@ -448,12 +454,17 @@ public final class Expression {
 
 				return state.operators.push(Operator.createMethod(name, true)).peek();
 			} else {
-				// Create a new output formed by invoking identifiers[index].findValue(context, backreach, ...)
-				state.operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_FIND_VALUE_METHOD)));
-				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(unstatedBackreach ? Identifier.UNSTATED_BACKREACH : backreach)));
-				state.operands.push(new Operand(Object.class, new MethodBuilder()));
+				// Create a new output formed by invoking identifiers[index].getRootValue(context, ...) or identifiers[index].findValue(context, backreach, ...)
+				if (isRoot) {
+					state.operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_ROOT_VALUE_METHOD)));
+					state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT)));
+				} else {
+					state.operands.push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_FIND_VALUE_METHOD)));
+					state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach)));
+				}
 
-				return state.operators.push(Operator.createMethod(name, !unstatedBackreach)).peek();
+				state.operands.push(new Operand(Object.class, new MethodBuilder()));
+				return state.operators.push(Operator.createMethod(name, backreach >= 0)).peek();
 			}
 		} else { // Process the identifier
 			final String name = identifierText.startsWith("`") ? identifierText.substring(1, identifierText.length() - 1).replace("``", "`") : identifierText;
@@ -471,12 +482,12 @@ public final class Expression {
 					state.operands.push(new Operand(Object.class, identifier, state.operands.pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE)));
 				}
 			} else {
-				final Integer localBindingIndex = unstatedBackreach ? state.getLocalBinding(name) : null;
+				final Integer localBindingIndex = backreach >= 0 ? null : state.getLocalBinding(name);
 				final Operator operator = Operator.get(matcher.group("assignment"), true);
 
 				// Look-ahead for an assignment operation
 				if (operator != null && operator.has(Operator.ASSIGNMENT)) {
-					if (!unstatedBackreach) {
+					if (backreach >= 0) {
 						throw new IllegalArgumentException("Invalid assignment to non-local variable (index " + state.getIndex(matcher) + ")");
 					}
 
@@ -487,11 +498,11 @@ public final class Expression {
 					final Identifier identifier = new Identifier(name);
 					final int index = state.getIdentifierIndex(identifier);
 
-					// Create a new output formed by invoking identifiers[index].getRootValue(context, access) or identifiers[index].findValue(context, backreach, access)
+					// Create a new output formed by invoking identifiers[index].getRootValue(context) or identifiers[index].findValue(context, backreach)
 					if (isRoot) {
 						state.operands.push(new Operand(Object.class, identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_GET_ROOT_VALUE)));
 					} else {
-						state.operands.push(new Operand(Object.class, identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(unstatedBackreach ? Identifier.UNSTATED_BACKREACH : backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
+						state.operands.push(new Operand(Object.class, identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
 					}
 				}
 			}
@@ -676,6 +687,23 @@ public final class Expression {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Peeks into a stack, but throws a human-readable exception if the depth is out-of-range.
+	 *
+	 * @param <T> the type of items in the stack
+	 * @param stack the stack to peek into
+	 * @param depth the depth to peek into the stack
+	 * @param name the name of the identifier to report in the string
+	 * @return the item at the specified point in the stack
+	 */
+	public static <T> T peekStack(final Stack<T> stack, final int depth, final String name) {
+		if (depth >= stack.size()) {
+			throw new IndexOutOfBoundsException("Failed to get \"" + name + "\" at depth " + depth + ", max depth available in current scope is " + (stack.size() - 1));
+		}
+
+		return stack.peek(depth);
 	}
 
 	/**

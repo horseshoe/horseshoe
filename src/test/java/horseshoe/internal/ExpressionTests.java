@@ -56,7 +56,7 @@ class ExpressionTests {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = { "[5)", "[5", "a, b[5", "[,,]", ",,", "5[5]", "a[]", "a[,]", "a[b,,]", "a =", "a ; = 2", "a../", "../", "", "()", "(,)", "(a,,)", "#", "a #", "a b", "a 1", "1 b", "\"blah\" a", "\"blah\" 3.5", "blah.3.5", "..\\3.5", "a += 5", "./a = 5", "./a++", "a--", "a = 0; a-- = 1", "a(,)", "a +", "call(/..)", "call(/.a)", "call(/a())", "\"bad\\\"", "\"\\q\"", "\"\\u000\"", "\"\\U0000000\"", "true ? false" })
+	@ValueSource(strings = { "[5)", "[5", "a, b[5", "[,,]", ",,", "5[5]", "a[]", "a[,]", "a[b,,]", "a =", "a ; = 2", "a../", "../", "", "()", "(,)", "(a,,)", "#", "a #", "a b", "a 1", "1 b", "\"blah\" a", "\"blah\" 3.5", "blah.3.5", "..\\3.5", "a += 5", "./a = 5", "./a++", "a--", "a = 0; a-- = 1", "a(,)", "a +", "call(/..)", "call(/.a)", "\"bad\\\"", "\"\\q\"", "\"\\u000\"", "\"\\U0000000\"", "true ? false" })
 	void testBadSyntax(final String expression) throws ReflectiveOperationException {
 		final String name = FILENAME + new Throwable().getStackTrace()[0].getLineNumber();
 		assertThrows(IllegalArgumentException.class, () -> new Expression(name, expression, EMPTY_EXPRESSIONS_MAP, true));
@@ -278,6 +278,12 @@ class ExpressionTests {
 	@Test
 	void testReturn() throws ReflectiveOperationException {
 		assertEquals("BlueGreen", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "#^'Blue' + 'Green'; 'Yellow'", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+	}
+
+	@Test
+	void testRootIdentifiers() throws ReflectiveOperationException {
+		assertEquals(String.class, new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "/getClass()", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), "")));
+		assertEquals("Test String", new Expression(FILENAME + new Throwable().getStackTrace()[0].getLineNumber(), "/. ", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), "Test String")));
 	}
 
 	@Test

@@ -24,7 +24,7 @@ Horseshoe for Java is a templating system used to generate source code and other
 Horseshoe is a templating system used to generate content from a template and organized data. It was primarily designed around the use case of quickly generating source code for languages like C++ and Java. It is written in Java with a heavy emphasis on minimizing dependencies. It uses a Mustache-like syntax with extended expressions supporting method calls and operators that can be used to dynamically manipulate data.
 
 ### How is Horseshoe similar to Mustache?
-Horseshoe uses the same tags as Mustache. These tags have the same meaning as they do in Mustache. Due to the extended expression syntax, it is difficult to gauge whether or not it is Mustache-compliant. However, when a Mustache-compliant context object is used, Horseshoe passes all required tests in the Mustache specification v1.1.2.
+Horseshoe uses the same tags as Mustache. These tags have the same meaning as they do in Mustache. Due to the extended expression syntax, it is difficult to gauge whether or not it is Mustache-compliant. However, when Mustache-compliant settings are used, Horseshoe passes all required tests in the Mustache specification v1.1.3.
 
 ### How is Horseshoe different from Mustache?
 Horseshoe does not have the same design goals as Mustache, resulting in many different decisions when creating the specification. For example, Horseshoe was designed for generation of source code, not HTML. For this reason, content is not HTML-escaped by default (the settings can be created with `horseshoe.Settings.newMustacheSettings()` to support this feature). Other differences include a more complex expression syntax ("interpolation" in Mustache-speak) and support for method calls in expressions.
@@ -106,6 +106,8 @@ There are a couple major differences from Mustache interpolation tags:
 1. The printed values are not HTML-escaped by default, since Horseshoe is designed for generating source code rather than HTML. Horseshoe can be configured to escape HTML if desired.
 2. The value specified inside the content tag represents a [Horseshoe expression](#expressions). Note that values such as `some-content` will be interpreted as the value `some` minus the value `content` rather than the value of `some-content`. This setting can be changed to match the Mustache interpolation tag if desired. Or the value can be quoted by wrapping the value in backticks (`` `some-content` ``).
 
+Explicit levels within the context stack can be referenced by prefixing an identifier with `./`, `.\`, `../` or `..\`. For example, `{{ ../content }}` will render the value of `content` from one level up in the context stack. Leaving off the prefix informs Horseshoe to use the render settings when performing a lookup for an identifier. The default settings will search for an identifier in the current level of the context stack, followed by the root level of the context stack. See  [Sections](#sections) for more details.
+
 #### Unescaped Content
 Unescaped content (`{{{ content }}}`, `{{& content }}`) is the same as normal content in Horseshoe, since content is not escaped by default. It only differs from normal content if content escaping is enabled. The tag can either start with a `{` and end with a `}` or simply start with a `&`.
 
@@ -175,9 +177,9 @@ An inverted section tag may start with a `#` (`{{^# condition }}`) to indicate a
 ```
 
 #### Inline Partials
-Inline partial tags (`{{< partial }}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a Horseshoe file. Inline partials inherit the context of the template in which they are declared, so named expressions and other inline partials can be used within the inline partial.
+Inline partial tags (`{{< partial }}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a Horseshoe template file. Inline partials inherit the scope of the template in which they are declared, so named expressions and other inline partials can be used within the inline partial.
 
-Inline partials can only be included (using a partial tag) in the scope of the template in which they are declared. Additionally, they cannot be included from other templates (except other inline partials in the appropriate scope). This prevents naming collisions of inline partials with external partials. Inline partials may be overridden later in a template or in a nested scope.
+Inline partials can only be included (using a partial tag) from within their declared scope in the template. Additionally, they cannot be included from other templates (except other inline partials in the appropriate scope). This prevents naming collisions of inline partials with external partials. Inline partials may be overridden later in a template or in a nested scope.
 
 <b>Closing tags for inline partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows inline partials to end without a trailing newline and not cause an output line in the current template.
 

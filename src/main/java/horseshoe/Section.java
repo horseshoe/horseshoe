@@ -187,6 +187,18 @@ final class Section {
 	}
 
 	/**
+	 * Sets up the section to inherit from the other section. This is used to set up this section when it is nested in the other.
+	 *
+	 * @param other the section to inherit from
+	 * @return this section
+	 */
+	Section inheritFrom(final Section other) {
+		getNamedExpressions().putAll(other.getNamedExpressions());
+		getLocalPartials().putAll(other.getLocalPartials());
+		return this;
+	}
+
+	/**
 	 * Checks the invisibility of the section.
 	 *
 	 * @return true if the section is invisible, otherwise false
