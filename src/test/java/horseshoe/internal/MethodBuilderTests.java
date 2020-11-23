@@ -41,10 +41,10 @@ class MethodBuilderTests {
 		labels.put(10, mb.newLabel());
 
 		mb.addCode(ILOAD_1).addSwitch(labels, labels.get(2))
-				.updateLabel(labels.get(1)).pushNewObject(boolean.class, 1).pushNewObject(char.class, 1).pushNewObject(byte.class, 1).pushNewObject(short.class, 1).pushNewObject(long.class, 1).pushNewObject(int.class, 1).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addFlowBreakingCode(ARETURN, 6)
-				.updateLabel(labels.get(2)).pushNewObject(String.class, 2, 3).addCode(DUP, DUP).pushConstant(0).addCode(AALOAD).pushConstant(1).pushConstant("01").addCode(AASTORE).pushConstant(1).addCode(AALOAD).pushConstant(0).pushConstant("10").addCode(AASTORE).pushConstant(0).addCode(AALOAD).pushConstant(1).addCode(AALOAD).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 0)
-				.updateLabel(labels.get(5)).pushNewObject(double.class, 1).addCode(DUP).pushConstant(0).pushConstant(2.0).addCode(DASTORE).pushConstant(0).addCode(DALOAD).addPrimitiveConversion(double.class, Double.class).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 0)
-				.updateLabel(labels.get(10)).pushNewObject(float.class, 1).pushConstant(10.0f).addPrimitiveConversion(float.class, Integer.class).addInvoke(Object.class.getMethod("toString")).addFlowBreakingCode(ARETURN, 1);
+				.updateLabel(labels.get(1)).pushNewObject(boolean.class, 1).pushNewObject(char.class, 1).pushNewObject(byte.class, 1).pushNewObject(short.class, 1).pushNewObject(long.class, 1).pushNewObject(int.class, 1).addInvoke(getMethod(Object.class, "getClass")).addInvoke(getMethod(Class.class, "getName")).addFlowBreakingCode(ARETURN, 6)
+				.updateLabel(labels.get(2)).pushNewObject(String.class, 2, 3).addCode(DUP, DUP).pushConstant(0).addCode(AALOAD).pushConstant(1).pushConstant("01").addCode(AASTORE).pushConstant(1).addCode(AALOAD).pushConstant(0).pushConstant("10").addCode(AASTORE).pushConstant(0).addCode(AALOAD).pushConstant(1).addCode(AALOAD).addInvoke(getMethod(Object.class, "toString")).addFlowBreakingCode(ARETURN, 0)
+				.updateLabel(labels.get(5)).pushNewObject(double.class, 1).addCode(DUP).pushConstant(0).pushConstant(2.0).addCode(DASTORE).pushConstant(0).addCode(DALOAD).addPrimitiveConversion(double.class, Double.class).addInvoke(getMethod(Object.class, "toString")).addFlowBreakingCode(ARETURN, 0)
+				.updateLabel(labels.get(10)).pushNewObject(float.class, 1).pushConstant(10.0f).addPrimitiveConversion(float.class, Integer.class).addInvoke(getMethod(Object.class, "toString")).addFlowBreakingCode(ARETURN, 1);
 		assertNotNull(mb.toString());
 
 		final SwitchClass switchTest = new MethodBuilder().addCode(NOP).append(mb).build(name, SwitchClass.class, classLoader).getConstructor().newInstance();
@@ -81,7 +81,7 @@ class MethodBuilderTests {
 		final MethodBuilder mb = new MethodBuilder();
 
 		// Test method calls
-		mb.addCode(ALOAD_0).addInvoke(Object.class.getMethod("getClass")).addInvoke(Class.class.getMethod("getName")).addFlowBreakingCode(ARETURN, 0);
+		mb.addCode(ALOAD_0).addInvoke(getMethod(Object.class, "getClass")).addInvoke(getMethod(Class.class, "getName")).addFlowBreakingCode(ARETURN, 0);
 		assertNotNull(mb.toString());
 
 		final SimpleInterface instance = mb.build(name, SimpleInterface.class, classLoader).getConstructor().newInstance();
@@ -104,7 +104,7 @@ class MethodBuilderTests {
 				.addCode(ALOAD_2, ICONST_1, IALOAD, I2D, DADD)                          // double + (double)extra[1] -> double
 				.addCode(ALOAD_3, ICONST_0).addInvoke(List.class.getDeclaredMethod("get", int.class))
 				.addCast(Double.class)
-				.addInvoke(Double.class.getMethod("doubleValue"))
+				.addInvoke(getMethod(Double.class, "doubleValue"))
 				.addCode(DADD, DLOAD, (byte)4, DADD).addFlowBreakingCode(DRETURN, 0);
 		assertNotNull(mb.toString());
 		System.out.println(mb);
@@ -337,6 +337,13 @@ class MethodBuilderTests {
 	@Test
 	void testStaticAdd() throws ReflectiveOperationException {
 		assertEquals(5, ((Integer)new MethodBuilder().addCode(ILOAD_0, ILOAD_1, IADD).addFlowBreakingCode(IRETURN, 0).build("StaticAdd", "add", MethodType.methodType(int.class, int.class, int.class), classLoader).invoke(null, 2, 3)).intValue());
+	}
+
+	@Test
+	void testNonexistantMembers() {
+		assertThrows(NoSuchMethodError.class, () -> getConstructor(MethodBuilder.class, NoSuchMethodError.class));
+		assertThrows(NoSuchFieldError.class, () -> getField(MethodBuilder.class, "NON_EXISTANT_FIELD"));
+		assertThrows(NoSuchMethodError.class, () -> getMethod(MethodBuilder.class, "nonexistantMethod", NoSuchMethodError.class));
 	}
 
 }

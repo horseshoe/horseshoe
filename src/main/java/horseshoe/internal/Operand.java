@@ -20,11 +20,11 @@ final class Operand {
 			boolean.class, int.class, long.class, double.class, Double.class, Integer.class, Object.class, String.class, StringBuilder.class, Entry.class)));
 
 	// Reflected Methods
-	private static final Method COMPARE;
-	private static final Method CONVERT_TO_BOOLEAN;
-	private static final Method TO_INTEGRAL;
-	private static final Method TO_NUMERIC;
-	private static final Method TO_STRING;
+	private static final Method COMPARE = MethodBuilder.getMethod(Operands.class, "compare", boolean.class, Object.class, Object.class);
+	private static final Method CONVERT_TO_BOOLEAN = MethodBuilder.getMethod(Operands.class, "convertToBoolean", Object.class);
+	private static final Method TO_INTEGRAL = MethodBuilder.getMethod(Operands.class, "toIntegral", Object.class);
+	private static final Method TO_NUMERIC = MethodBuilder.getMethod(Operands.class, "toNumeric", Object.class);
+	private static final Method TO_STRING = MethodBuilder.getMethod(Object.class, "toString");
 
 	/**
 	 * The type associated with the operand.
@@ -38,18 +38,6 @@ final class Operand {
 	public final Identifier identifier;
 
 	public final MethodBuilder builder;
-
-	static {
-		try {
-			COMPARE = Operands.class.getMethod("compare", boolean.class, Object.class, Object.class);
-			CONVERT_TO_BOOLEAN = Operands.class.getMethod("convertToBoolean", Object.class);
-			TO_INTEGRAL = Operands.class.getMethod("toIntegral", Object.class);
-			TO_NUMERIC = Operands.class.getMethod("toNumeric", Object.class);
-			TO_STRING = Object.class.getMethod("toString");
-		} catch (final ReflectiveOperationException e) {
-			throw new ExceptionInInitializerError("Failed to get required class member: " + e.getMessage());
-		}
-	}
 
 	/**
 	 * Creates a new operand of the specified type using the builder.

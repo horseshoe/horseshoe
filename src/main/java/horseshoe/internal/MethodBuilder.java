@@ -39,6 +39,25 @@ public final class MethodBuilder {
 	private static final byte IMETHOD_CONSTANT = (byte)11;
 	private static final byte NAME_AND_TYPE_CONSTANT = (byte)12;
 
+	// Unboxing and boxing methods
+	private static final Method UNBOX_BOOLEAN = getMethod(Boolean.class, "booleanValue");
+	private static final Method UNBOX_CHARACTER = getMethod(Character.class, "charValue");
+	private static final Method UNBOX_INTEGER = getMethod(Number.class, "intValue");
+	private static final Method UNBOX_LONG = getMethod(Number.class, "longValue");
+	private static final Method UNBOX_DOUBLE = getMethod(Number.class, "doubleValue");
+	private static final Method UNBOX_FLOAT = getMethod(Number.class, "floatValue");
+	private static final Method UNBOX_SHORT = getMethod(Number.class, "shortValue");
+	private static final Method UNBOX_BYTE = getMethod(Number.class, "byteValue");
+
+	private static final Method BOX_BOOLEAN = getMethod(Boolean.class, "valueOf", boolean.class);
+	private static final Method BOX_CHARACTER = getMethod(Character.class, "valueOf", char.class);
+	private static final Method BOX_INTEGER = getMethod(Integer.class, "valueOf", int.class);
+	private static final Method BOX_LONG = getMethod(Long.class, "valueOf", long.class);
+	private static final Method BOX_DOUBLE = getMethod(Double.class, "valueOf", double.class);
+	private static final Method BOX_FLOAT = getMethod(Float.class, "valueOf", float.class);
+	private static final Method BOX_SHORT = getMethod(Short.class, "valueOf", short.class);
+	private static final Method BOX_BYTE = getMethod(Byte.class, "valueOf", byte.class);
+
 	// Instructions that must be added through function calls
 	private static final byte ANEWARRAY       = new Opcode("anewarray",       0xBD, 3,  0, Opcode.PROP_CONST_POOL_INDEX).id; // 2: indexbyte1, indexbyte2 (stack: count -> arrayref)
 	private static final byte CHECKCAST       = new Opcode("checkcast",       0xC0, 3,  0, Opcode.PROP_CONST_POOL_INDEX).id; // 2: indexbyte1, indexbyte2 (stack: objectref -> objectref)
@@ -904,122 +923,118 @@ public final class MethodBuilder {
 	 * @return this builder
 	 */
 	public MethodBuilder addPrimitiveConversion(final Class<?> from, final Class<?> to) {
-		try {
-			if (to.isAssignableFrom(from)) {
-				return this;
-			} else if (!from.isPrimitive()) { // Step 1: Unbox if needed
-				if (Character.class.equals(from)) {
-					return addInvoke(Character.class.getMethod("charValue")).addPrimitiveConversion(char.class, to);
-				} else if (Boolean.class.equals(from)) {
-					return addInvoke(Boolean.class.getMethod("booleanValue")).addPrimitiveConversion(boolean.class, to);
-				} else if (Number.class.isAssignableFrom(from)) {
-					if (boolean.class.equals(to) || Boolean.class.equals(to)) {
-						return addCode(DUP).addInvoke(Number.class.getMethod("doubleValue")).addCode(DCONST_0, DCMPG, SWAP).addInvoke(Number.class.getMethod("longValue")).addCode(DUP2).pushConstant(32).addCode(LUSHR, L2I, DUP_X2, POP, L2I, IOR, IOR).addPrimitiveConversion(int.class, to);
-					} else if (char.class.equals(to) || Character.class.equals(to) || int.class.equals(to) || Integer.class.equals(to)) {
-						return addInvoke(Number.class.getMethod("intValue")).addPrimitiveConversion(int.class, to);
-					} else if (long.class.equals(to) || Long.class.equals(to)) {
-						return addInvoke(Number.class.getMethod("longValue")).addPrimitiveConversion(long.class, to);
-					} else if (double.class.equals(to) || Double.class.equals(to)) {
-						return addInvoke(Number.class.getMethod("doubleValue")).addPrimitiveConversion(double.class, to);
-					} else if (float.class.equals(to) || Float.class.equals(to)) {
-						return addInvoke(Number.class.getMethod("floatValue")).addPrimitiveConversion(float.class, to);
-					} else if (short.class.equals(to) || Short.class.equals(to)) {
-						return addInvoke(Number.class.getMethod("shortValue")).addPrimitiveConversion(short.class, to);
-					} else if (byte.class.equals(to) || Byte.class.equals(to)) {
-						return addInvoke(Number.class.getMethod("byteValue")).addPrimitiveConversion(byte.class, to);
-					}
-				}
-			} else if (to.isPrimitive()) { // Step 2: Convert primitive if needed
-				if (boolean.class.equals(from) || char.class.equals(from) || int.class.equals(from) || short.class.equals(from) || byte.class.equals(from)) {
-					if (boolean.class.equals(to) || int.class.equals(to)) {
-						return this;
-					} else if (short.class.equals(to)) {
-						return addCode(I2S);
-					} else if (byte.class.equals(to)) {
-						return addCode(I2B);
-					} else if (char.class.equals(to)) {
-						return addCode(I2C);
-					} else if (long.class.equals(to)) {
-						return addCode(I2L);
-					} else if (float.class.equals(to)) {
-						return addCode(I2F);
-					} else if (double.class.equals(to)) {
-						return addCode(I2D);
-					}
-				} else if (long.class.equals(from)) {
-					if (char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
-						return addCode(L2I).addPrimitiveConversion(int.class, to);
-					} else if (float.class.equals(to)) {
-						return addCode(L2F);
-					} else if (double.class.equals(to)) {
-						return addCode(L2D);
-					} else if (boolean.class.equals(to)) {
-						return addCode(LCONST_0, LCMP);
-					}
-				} else if (float.class.equals(from)) {
-					if (char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
-						return addCode(F2I).addPrimitiveConversion(int.class, to);
-					} else if (long.class.equals(to)) {
-						return addCode(F2L);
-					} else if (double.class.equals(to)) {
-						return addCode(F2D);
-					} else if (boolean.class.equals(to)) {
-						return addCode(FCONST_0, FCMPG);
-					}
-				} else if (double.class.equals(from)) {
-					if (char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
-						return addCode(D2I).addPrimitiveConversion(int.class, to);
-					} else if (long.class.equals(to)) {
-						return addCode(D2L);
-					} else if (float.class.equals(to)) {
-						return addCode(D2F);
-					} else if (boolean.class.equals(to)) {
-						return addCode(DCONST_0, DCMPG);
-					}
-				}
-			} else { // Step 3: Box primitive if needed
-				if (Boolean.class.equals(to)) {
-					return addPrimitiveConversion(from, boolean.class).addInvoke(Boolean.class.getMethod("valueOf", boolean.class));
-				} else if (Character.class.equals(to)) {
-					return addPrimitiveConversion(from, char.class).addInvoke(Character.class.getMethod("valueOf", char.class));
-				} else if (Integer.class.equals(to)) {
-					return addPrimitiveConversion(from, int.class).addInvoke(Integer.class.getMethod("valueOf", int.class));
-				} else if (Long.class.equals(to)) {
-					return addPrimitiveConversion(from, long.class).addInvoke(Long.class.getMethod("valueOf", long.class));
-				} else if (Double.class.equals(to)) {
-					return addPrimitiveConversion(from, double.class).addInvoke(Double.class.getMethod("valueOf", double.class));
-				} else if (Float.class.equals(to)) {
-					return addPrimitiveConversion(from, float.class).addInvoke(Float.class.getMethod("valueOf", float.class));
-				} else if (Short.class.equals(to)) {
-					return addPrimitiveConversion(from, short.class).addInvoke(Short.class.getMethod("valueOf", short.class));
-				} else if (Byte.class.equals(to)) {
-					return addPrimitiveConversion(from, byte.class).addInvoke(Byte.class.getMethod("valueOf", byte.class));
-				} else if (Object.class.equals(to) || Number.class.equals(to)) {
-					if (Object.class.equals(to) && boolean.class.equals(from)) {
-						return addInvoke(Boolean.class.getMethod("valueOf", boolean.class));
-					} else if (Object.class.equals(to) && char.class.equals(from)) {
-						return addInvoke(Character.class.getMethod("valueOf", char.class));
-					} else if (int.class.equals(from)) {
-						return addInvoke(Integer.class.getMethod("valueOf", int.class));
-					} else if (long.class.equals(from)) {
-						return addInvoke(Long.class.getMethod("valueOf", long.class));
-					} else if (double.class.equals(from)) {
-						return addInvoke(Double.class.getMethod("valueOf", double.class));
-					} else if (float.class.equals(from)) {
-						return addInvoke(Float.class.getMethod("valueOf", float.class));
-					} else if (short.class.equals(from)) {
-						return addInvoke(Short.class.getMethod("valueOf", short.class));
-					} else if (byte.class.equals(from)) {
-						return addInvoke(Byte.class.getMethod("valueOf", byte.class));
-					} else if (boolean.class.equals(from)) {
-						return addInvoke(Integer.class.getMethod("valueOf", int.class));
-					} else if (char.class.equals(from)) {
-						return addInvoke(Integer.class.getMethod("valueOf", int.class));
-					}
+		if (to.isAssignableFrom(from)) {
+			return this;
+		} else if (!from.isPrimitive()) { // Step 1: Unbox if needed
+			if (Character.class.equals(from)) {
+				return addInvoke(UNBOX_CHARACTER).addPrimitiveConversion(char.class, to);
+			} else if (Boolean.class.equals(from)) {
+				return addInvoke(UNBOX_BOOLEAN).addPrimitiveConversion(boolean.class, to);
+			} else if (Number.class.isAssignableFrom(from)) {
+				if (boolean.class.equals(to) || Boolean.class.equals(to)) {
+					return addCode(DUP).addInvoke(UNBOX_DOUBLE).addCode(DCONST_0, DCMPG, SWAP).addInvoke(UNBOX_LONG).addCode(DUP2).pushConstant(32).addCode(LUSHR, L2I, DUP_X2, POP, L2I, IOR, IOR).addPrimitiveConversion(int.class, to);
+				} else if (char.class.equals(to) || Character.class.equals(to) || int.class.equals(to) || Integer.class.equals(to)) {
+					return addInvoke(UNBOX_INTEGER).addPrimitiveConversion(int.class, to);
+				} else if (long.class.equals(to) || Long.class.equals(to)) {
+					return addInvoke(UNBOX_LONG).addPrimitiveConversion(long.class, to);
+				} else if (double.class.equals(to) || Double.class.equals(to)) {
+					return addInvoke(UNBOX_DOUBLE).addPrimitiveConversion(double.class, to);
+				} else if (float.class.equals(to) || Float.class.equals(to)) {
+					return addInvoke(UNBOX_FLOAT).addPrimitiveConversion(float.class, to);
+				} else if (short.class.equals(to) || Short.class.equals(to)) {
+					return addInvoke(UNBOX_SHORT).addPrimitiveConversion(short.class, to);
+				} else if (byte.class.equals(to) || Byte.class.equals(to)) {
+					return addInvoke(UNBOX_BYTE).addPrimitiveConversion(byte.class, to);
 				}
 			}
-		} catch (final ReflectiveOperationException e) {
-			throw new NoSuchMethodError("Failed to get required class member: " + e.getMessage());
+		} else if (to.isPrimitive()) { // Step 2: Convert primitive if needed
+			if (boolean.class.equals(from) || char.class.equals(from) || int.class.equals(from) || short.class.equals(from) || byte.class.equals(from)) {
+				if (boolean.class.equals(to) || int.class.equals(to)) {
+					return this;
+				} else if (short.class.equals(to)) {
+					return addCode(I2S);
+				} else if (byte.class.equals(to)) {
+					return addCode(I2B);
+				} else if (char.class.equals(to)) {
+					return addCode(I2C);
+				} else if (long.class.equals(to)) {
+					return addCode(I2L);
+				} else if (float.class.equals(to)) {
+					return addCode(I2F);
+				} else if (double.class.equals(to)) {
+					return addCode(I2D);
+				}
+			} else if (long.class.equals(from)) {
+				if (char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
+					return addCode(L2I).addPrimitiveConversion(int.class, to);
+				} else if (float.class.equals(to)) {
+					return addCode(L2F);
+				} else if (double.class.equals(to)) {
+					return addCode(L2D);
+				} else if (boolean.class.equals(to)) {
+					return addCode(LCONST_0, LCMP);
+				}
+			} else if (float.class.equals(from)) {
+				if (char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
+					return addCode(F2I).addPrimitiveConversion(int.class, to);
+				} else if (long.class.equals(to)) {
+					return addCode(F2L);
+				} else if (double.class.equals(to)) {
+					return addCode(F2D);
+				} else if (boolean.class.equals(to)) {
+					return addCode(FCONST_0, FCMPG);
+				}
+			} else if (double.class.equals(from)) {
+				if (char.class.equals(to) || int.class.equals(to) || short.class.equals(to) || byte.class.equals(to)) {
+					return addCode(D2I).addPrimitiveConversion(int.class, to);
+				} else if (long.class.equals(to)) {
+					return addCode(D2L);
+				} else if (float.class.equals(to)) {
+					return addCode(D2F);
+				} else if (boolean.class.equals(to)) {
+					return addCode(DCONST_0, DCMPG);
+				}
+			}
+		} else { // Step 3: Box primitive if needed
+			if (Boolean.class.equals(to)) {
+				return addPrimitiveConversion(from, boolean.class).addInvoke(BOX_BOOLEAN);
+			} else if (Character.class.equals(to)) {
+				return addPrimitiveConversion(from, char.class).addInvoke(BOX_CHARACTER);
+			} else if (Integer.class.equals(to)) {
+				return addPrimitiveConversion(from, int.class).addInvoke(BOX_INTEGER);
+			} else if (Long.class.equals(to)) {
+				return addPrimitiveConversion(from, long.class).addInvoke(BOX_LONG);
+			} else if (Double.class.equals(to)) {
+				return addPrimitiveConversion(from, double.class).addInvoke(BOX_DOUBLE);
+			} else if (Float.class.equals(to)) {
+				return addPrimitiveConversion(from, float.class).addInvoke(BOX_FLOAT);
+			} else if (Short.class.equals(to)) {
+				return addPrimitiveConversion(from, short.class).addInvoke(BOX_SHORT);
+			} else if (Byte.class.equals(to)) {
+				return addPrimitiveConversion(from, byte.class).addInvoke(BOX_BYTE);
+			} else if (Object.class.equals(to) || Number.class.equals(to)) {
+				if (Object.class.equals(to) && boolean.class.equals(from)) {
+					return addInvoke(BOX_BOOLEAN);
+				} else if (Object.class.equals(to) && char.class.equals(from)) {
+					return addInvoke(BOX_CHARACTER);
+				} else if (int.class.equals(from)) {
+					return addInvoke(BOX_INTEGER);
+				} else if (long.class.equals(from)) {
+					return addInvoke(BOX_LONG);
+				} else if (double.class.equals(from)) {
+					return addInvoke(BOX_DOUBLE);
+				} else if (float.class.equals(from)) {
+					return addInvoke(BOX_FLOAT);
+				} else if (short.class.equals(from)) {
+					return addInvoke(BOX_SHORT);
+				} else if (byte.class.equals(from)) {
+					return addInvoke(BOX_BYTE);
+				} else if (boolean.class.equals(from)) {
+					return addInvoke(BOX_INTEGER);
+				} else if (char.class.equals(from)) {
+					return addInvoke(BOX_INTEGER);
+				}
+			}
 		}
 
 		throw new IllegalArgumentException("The \"from\" type (" + from.getName() + ") must be convertible to the \"to\" type (" + to.getName() + ")");
@@ -1062,17 +1077,14 @@ public final class MethodBuilder {
 	 * @param message the message to use for constructing the throwable
 	 * @param stackPop the number of times the stack should be popped after the throw, assuming it did not break the flow of the code
 	 * @return this builder
+	 * @throws NoSuchMethodError if the appropriate constructor for the throwable does not exist
 	 */
-	public MethodBuilder addThrow(final Class<? extends Throwable> throwable, final String message, final int stackPop) {
-		try {
-			if (message == null) {
-				return pushNewObject(throwable).addCode(DUP).addInvoke(throwable.getConstructor()).addFlowBreakingCode(ATHROW, stackPop);
-			}
-
-			return pushNewObject(throwable).addCode(DUP).pushConstant(message).addInvoke(throwable.getConstructor(String.class)).addFlowBreakingCode(ATHROW, stackPop);
-		} catch (final ReflectiveOperationException e) {
-			throw new IncompatibleClassChangeError("Failed to get required class constructor: " + e.getMessage());
+	public MethodBuilder addThrow(final Class<? extends Throwable> throwable, final String message, final int stackPop) throws NoSuchMethodError {
+		if (message == null) {
+			return pushNewObject(throwable).addCode(DUP).addInvoke(getConstructor(throwable)).addFlowBreakingCode(ATHROW, stackPop);
 		}
+
+		return pushNewObject(throwable).addCode(DUP).pushConstant(message).addInvoke(getConstructor(throwable, String.class)).addFlowBreakingCode(ATHROW, stackPop);
 	}
 
 	/**
@@ -1099,42 +1111,14 @@ public final class MethodBuilder {
 			}
 		}
 
-		final int oldLength = length;
-		append(other.bytes, other.length);
-
 		// Update all labels to point to this buffer
 		for (final Label label : labels) {
-			final Location target = label.getTarget();
-
-			// Update the target if needed
-			if (target.container == other) {
-				target.update(this, oldLength);
-			}
-
-			// Update each location if needed
-			for (final Location location : label.getReferences()) {
-				if (location.container == other) {
-					location.update(this, oldLength);
-				}
-			}
+			updateLabel(label, other);
 		}
 
 		// Update all labels for the other builder to point to this buffer
 		for (final Label label : other.labels) {
-			final Location target = label.getTarget();
-
-			// Update the target if needed
-			if (target.container == other) {
-				target.update(this, oldLength);
-			}
-
-			// Update each location if needed
-			for (final Location location : label.getReferences()) {
-				if (location.container == other) {
-					location.update(this, oldLength);
-				}
-			}
-
+			updateLabel(label, other);
 			labels.add(label);
 		}
 
@@ -1150,11 +1134,12 @@ public final class MethodBuilder {
 					newLocations = getConstant(entry.getKey()).locations;
 				}
 
-				newLocations.add(location.update(this, oldLength));
+				newLocations.add(location.update(this, length));
 			}
 		}
 
-		// Reset the other builder to avoid issues with updating labels and constant entries
+		// Copy the data and reset the other builder
+		append(other.bytes, other.length);
 		other.reset();
 		return this;
 	}
@@ -1565,6 +1550,55 @@ public final class MethodBuilder {
 	}
 
 	/**
+	 * Gets the specified constructor on the specified class without throwing a checked exception.
+	 *
+	 * @param type the type
+	 * @param parameterTypes the type of the parameters
+	 * @return the constructor
+	 * @throws NoSuchMethodError if the constructor does not exist
+	 */
+	public static <T> Constructor<T> getConstructor(final Class<T> type, final Class<?>... parameterTypes) throws NoSuchMethodError {
+		try {
+			return type.getConstructor(parameterTypes);
+		} catch (final NoSuchMethodException e) {
+			throw new NoSuchMethodError("Constructor does not exist: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Gets the specified field of the specified class without throwing a checked exception.
+	 *
+	 * @param type the type
+	 * @param name the name of the field
+	 * @return the field
+	 * @throws NoSuchFieldError if the field does not exist
+	 */
+	public static Field getField(final Class<?> type, final String name) throws NoSuchFieldError {
+		try {
+			return type.getField(name);
+		} catch (final NoSuchFieldException e) {
+			throw new NoSuchFieldError("Field does not exist: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Gets the specified method on the specified class without throwing a checked exception.
+	 *
+	 * @param type the type
+	 * @param name the name of the method
+	 * @param parameterTypes the type of the parameters
+	 * @return the method
+	 * @throws NoSuchMethodError if the method does not exist
+	 */
+	public static Method getMethod(final Class<?> type, final String name, final Class<?>... parameterTypes) throws NoSuchMethodError {
+		try {
+			return type.getMethod(name, parameterTypes);
+		} catch (final NoSuchMethodException e) {
+			throw new NoSuchMethodError("Method does not exist: " + e.getMessage());
+		}
+	}
+
+	/**
 	 * Gets the string signature of a member (constructor or method).
 	 *
 	 * @param member the member used to create the signature
@@ -1943,6 +1977,28 @@ public final class MethodBuilder {
 			sb.append(' ').append(((Class<?>)constant).getName()).append(extra).append("; ");
 		} else {
 			sb.append(' ').append(constant).append(extra).append("; ");
+		}
+	}
+
+	/**
+	 * Updates any references that point to the specified container to point to this builder.
+	 *
+	 * @param label the label to update
+	 * @param container any references to the container will be transfered to this builder
+	 */
+	private void updateLabel(final Label label, final MethodBuilder container) {
+		final Location target = label.getTarget();
+
+		// Update the target if needed
+		if (target.container == container) {
+			target.update(this, length);
+		}
+
+		// Update each location if needed
+		for (final Location location : label.getReferences()) {
+			if (location.container == container) {
+				location.update(this, length);
+			}
 		}
 	}
 
