@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.logging.Level;
 
@@ -26,6 +27,39 @@ public class SectionRenderer implements Renderer {
 		 */
 		SectionRenderer create(final Section section) {
 			return new SectionRenderer(section);
+		}
+	}
+
+	static class Reiterable<T> implements Iterable<T>, Iterator<T> {
+		private final ArrayList<T> reiterableList = new ArrayList<>();
+		private final Iterator<T> iterator;
+
+		public Reiterable(final Iterator<T> iterator) {
+			this.iterator = iterator;
+		}
+
+		@Override
+		public boolean hasNext() {
+			return iterator.hasNext();
+		}
+
+		@Override
+		public T next() {
+			final T item = iterator.next();
+
+			reiterableList.add(item);
+			return item;
+		}
+
+		@Override
+		public void remove() {
+			iterator.remove();
+			reiterableList.remove(reiterableList.size() - 1);
+		}
+
+		@Override
+		public Iterator<T> iterator() {
+			return reiterableList.iterator();
 		}
 	}
 
@@ -309,12 +343,20 @@ public class SectionRenderer implements Renderer {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
+		Object cache = data;
+
 		if (data == null) {
 			renderInverted(context, writer);
-		} else if (data instanceof Iterable<?>) {
+		} else if (data instanceof Iterable) {
 			dispatchIteratorData(context, ((Iterable<?>)data).iterator(), writer);
-		} else if (data instanceof Iterator<?>) {
-			dispatchIteratorData(context, (Iterator<?>)data, writer);
+		} else if (data instanceof Iterator) {
+			if (section.cacheResult()) {
+				final Iterator<?> reiterator = new Reiterable<>((Iterator<?>)data);
+				dispatchIteratorData(context, reiterator, writer);
+				cache = reiterator;
+			} else {
+				dispatchIteratorData(context, (Iterator<?>)data, writer);
+			}
 		} else if (data.getClass().isArray()) {
 			dispatchArray(context, data, writer);
 		} else if (!dispatchPrimitiveData(context, data, writer)) {
@@ -322,7 +364,7 @@ public class SectionRenderer implements Renderer {
 		}
 
 		if (section.cacheResult()) {
-			context.setRepeatedSectionData(data);
+			context.setRepeatedSectionData(cache);
 		}
 	}
 

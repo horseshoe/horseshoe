@@ -145,6 +145,7 @@ class TemplateTests {
 		template.render(settings, Helper.loadMap("people", Helper.loadList(Helper.loadMap("firstName", "John", "lastName", "Doe", "address", "101 1st St", "city", "Seattle", "state", "WA", "zip", 98101, "deceased", true), Helper.loadMap("firstName", "Jane", "lastName", "Doey", "address", "202 2nd St", "city", "Miami", "state", "FL", "zip", 33255, "deceased", false))), writer);
 
 		assertEquals("Names:" + LS + " - Doe, John (deceased)" + LS + " - Doey, Jane" + LS + LS + "Mailing Labels:" + LS + "Family of John Doe" + LS + "101 1st St" + LS + "Seattle, WA 98101" + LS + LS + "Jane Doey" + LS + "202 2nd St" + LS + "Miami, FL 33255" + LS, writer.toString());
+		assertEquals("1, 2, 3, 4", Template.load("{{# [1, 2].iterator() }}{{.}}{{# .hasNext }}, {{/}}{{/}}{{#}}, {{ . + 2 }}{{/}}").render(null, new java.io.StringWriter()).toString());
 	}
 
 	@Test

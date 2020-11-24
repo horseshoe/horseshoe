@@ -43,6 +43,7 @@ The following table summarizes the literals supported by Horseshoe. A more detai
 | `boolean` | `true` / `false` |
 | `Object` | `null` |
 | `String` | `"a \"string\""` / `'a ''string'''` |
+| `Class` | `~@name` |
 | `Regular Expression` | `~/pattern/` |
 | `List` | `[1,2,3,4]` |
 | `Set` | `{1,2,3,4}` |
@@ -228,7 +229,7 @@ Horseshoe expressions look a lot like expressions in modern programming language
 
 Multiple statements can be chained together inside an expression, using a semicolon (`;`) as a separator. A trailing semicolon at the end of the expression is not needed. A comma (`,`) is used to separate method parameters and list or map entries.
 
-#### Lists, Maps, and Sets
+#### List, Map, and Set Literals
 Horseshoe expressions use `[]` for list / map literals or `{}` for set / map literals. Any list or set that contains a colon (`:`) separator is treated as a map. Entries in a map literal without a colon are treated as if the given item is used as both the key and the value.
 
 Commas can be used anywhere within an expression. If a comma is used in a context where it would otherwise not be allowed (`{{ 4, 5 }}`), the result is interpreted as if it were wrapped in `[]` to form a list or map. These are considered auto-converted lists and maps.
@@ -261,6 +262,11 @@ String literals are sequences of characters wrapped in either single quotes or d
 - `\xh...` - Unicode character with hex code point `h...`
 - `\uhhhh` - Unicode character with hex code point `hhhh`
 - `\Uhhhhhhhh` - Unicode character with hex code point `hhhhhhhh`
+
+#### Class Literals
+Class literals (`~@[ClassName]`) can be used to reference a class. For example, `~@Integer.MAX_VALUE` can be used to get the max value of a 32-bit signed int. Class literals are closely related to the "Get Class" operator. The only difference being that the operator takes a string as its operand.
+
+By default, only a limited number of classes can be loaded. Additional classes can be added to the Horseshoe settings, so that they can be loaded as well. Another setting can be modified to only allow loading a class by its fully-qualified name, which disables the use of class literals.
 
 #### Regular Expression Literals
 Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a valid `java.util.regex.Pattern`. Unicode character classes are enabled by default, but may be disabled by beginning the pattern with `(?-U)`. Literal forward slashes can be escaped using a preceding backslash (`~/."\/'\./` matches `a"/'.`).
