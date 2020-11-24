@@ -45,6 +45,8 @@ public abstract class Streamable<T> implements Iterable<T> {
 				return Streamable.of((Collection<Object>)value);
 			} else if (value instanceof Iterable) {
 				return Streamable.of((Iterable<Object>)value);
+			} else if (value instanceof Iterator) {
+				return Streamable.of((Iterator<Object>)value);
 			} else if (value.getClass().isArray()) {
 				if (value.getClass().getComponentType().isPrimitive()) {
 					final Object[] array = new Object[Array.getLength(value)];
@@ -225,7 +227,18 @@ public abstract class Streamable<T> implements Iterable<T> {
 	 * @return a streamable of the specified type
 	 */
 	public static <T> Streamable<T> of(final Iterable<T> iterable) {
-		return new StreamableList<>(8, iterable.iterator());
+		return of(iterable.iterator());
+	}
+
+	/**
+	 * Returns a streamable of the specified iterator.
+	 *
+	 * @param <T> the type of streamable item
+	 * @param iterator the iterator
+	 * @return a streamable of the specified type
+	 */
+	public static <T> Streamable<T> of(final Iterator<T> iterator) {
+		return new StreamableList<>(8, iterator);
 	}
 
 	/**

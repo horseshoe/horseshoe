@@ -434,9 +434,9 @@ public final class Expression {
 
 					// Create a new output formed by invoking identifiers[index].getRootValue(context) or identifiers[index].findValue(context, backreach)
 					if (isRoot) {
-						state.operands.push(new Operand(Object.class, identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_GET_ROOT_VALUE)));
+						state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_GET_ROOT_VALUE)));
 					} else {
-						state.operands.push(new Operand(Object.class, identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
+						state.operands.push(new Operand(Object.class, backreach >= 0 ? null : identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
 					}
 				}
 			}
@@ -1051,18 +1051,15 @@ public final class Expression {
 				state.operands.push(new Operand(Object.class, right.toObject().addInvoke(STRING_VALUE_OF).pushNewObject(HaltRenderingException.class).addCode(DUP_X1, SWAP).addInvoke(HALT_EXCEPTION_CTOR_STRING).addFlowBreakingCode(ATHROW, 0).addCode(ACONST_NULL)));
 				break;
 
-			case "~@": { // Get class
-				final Label isNull = right.builder.newLabel();
-
+			case "~@": // Get class
 				if (right.identifier != null) {
-					final Label notNull = right.builder.newLabel();
-					state.operands.push(new Operand(Object.class, right.toObject().addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addGoto(notNull, 0).updateLabel(isNull).addCode(POP).pushConstant(right.identifier.getName()).updateLabel(notNull).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS)));
+					state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(right.identifier.getName()).addInvoke(OPERANDS_GET_CLASS)));
 				} else {
+					final Label isNull = right.builder.newLabel();
 					state.operands.push(new Operand(Object.class, right.toObject().addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS).updateLabel(isNull)));
 				}
 
 				break;
-			}
 
 			default:
 				throw new IllegalStateException("Unrecognized operator \"" + operator + "\"");

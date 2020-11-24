@@ -81,6 +81,11 @@ class StreamableTests {
 		}))));
 	}
 
+	@Test
+	void testIterator() {
+		assertEquals(4, count(remap(Streamable.ofUnknown(Arrays.asList("Test", "Test 2", 5, (Object)null).iterator()))));
+	}
+
 	@SuppressWarnings("unchecked")
 	@Test
 	void testFlatMap() {
