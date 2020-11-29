@@ -109,7 +109,7 @@ public final class Identifier {
 	public Object findValue(final RenderContext context, final int backreach) throws Throwable {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
-		final Object object = Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name);
+		final Object object = Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name).data;
 		final Accessor accessor = getOrAddAccessor(object);
 
 		if (accessor != null) {
@@ -126,7 +126,7 @@ public final class Identifier {
 		if (backreach < 0) {
 			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
 				for (int i = 1; i < context.getSectionData().size(); i++) {
-					final Object backreachObject = context.getSectionData().peek(i);
+					final Object backreachObject = context.getSectionData().peek(i).data;
 					final Accessor backreachAccessor = getOrAddAccessor(backreachObject);
 
 					if (backreachAccessor != null) {
@@ -140,7 +140,7 @@ public final class Identifier {
 					}
 				}
 			} else if (context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT) {
-				return getValue(context.getSectionData().peekBase(), false);
+				return getValue(context.getSectionData().peekBase().data, false);
 			}
 		}
 
@@ -163,7 +163,7 @@ public final class Identifier {
 	public Object findValue(final RenderContext context, final int backreach, final Object... parameters) throws Throwable {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
-		final Object object = Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name);
+		final Object object = Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name).data;
 		final Accessor accessor = getOrAddAccessor(object);
 
 		if (accessor != null) {
@@ -180,7 +180,7 @@ public final class Identifier {
 		if (backreach < 0) {
 			if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
 				for (int i = 1; i < context.getSectionData().size(); i++) {
-					final Object backreachObject = context.getSectionData().peek(i);
+					final Object backreachObject = context.getSectionData().peek(i).data;
 					final Accessor backreachAccessor = getOrAddAccessor(backreachObject);
 
 					if (backreachAccessor != null) {
@@ -194,7 +194,7 @@ public final class Identifier {
 					}
 				}
 			} else if (context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT) {
-				return getValue(context.getSectionData().peekBase(), false, parameters);
+				return getValue(context.getSectionData().peekBase().data, false, parameters);
 			}
 		}
 
@@ -243,7 +243,7 @@ public final class Identifier {
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object getRootValue(final RenderContext context) throws Throwable {
-		return getValue(context.getSectionData().peekBase(), false);
+		return getValue(context.getSectionData().peekBase().data, false);
 	}
 
 	/**
@@ -255,7 +255,7 @@ public final class Identifier {
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object getRootValue(final RenderContext context, final Object... parameters) throws Throwable {
-		return getValue(context.getSectionData().peekBase(), false, parameters);
+		return getValue(context.getSectionData().peekBase().data, false, parameters);
 	}
 
 	/**

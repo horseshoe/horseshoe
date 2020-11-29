@@ -22,6 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import horseshoe.RenderContext;
+import horseshoe.SectionRenderData;
 import horseshoe.SectionRenderer;
 import horseshoe.Stack;
 import horseshoe.internal.MethodBuilder.Label;
@@ -76,9 +77,10 @@ public final class Expression {
 	private static final Method PATTERN_COMPILE = getMethod(Pattern.class, "compile", String.class, int.class);
 	private static final Method RENDER_CONTEXT_GET_INDENTATION = getMethod(RenderContext.class, "getIndentation");
 	private static final Method RENDER_CONTEXT_GET_SECTION_DATA = getMethod(RenderContext.class, "getSectionData");
-	private static final Method RENDER_CONTEXT_GET_SECTION_RENDERERS = getMethod(RenderContext.class, "getSectionRenderers");
-	private static final Method SECTION_RENDERER_GET_INDEX = getMethod(SectionRenderer.class, "getIndex");
-	private static final Method SECTION_RENDERER_HAS_NEXT = getMethod(SectionRenderer.class, "hasNext");
+	private static final Constructor<SectionRenderData> SECTION_RENDER_DATA_CTOR_DATA = getConstructor(SectionRenderData.class, Object.class);
+	private static final Field SECTION_RENDER_DATA_DATA = getField(SectionRenderData.class, "data");
+	private static final Field SECTION_RENDER_DATA_HAS_NEXT = getField(SectionRenderData.class, "hasNext");
+	private static final Field SECTION_RENDER_DATA_INDEX = getField(SectionRenderData.class, "index");
 	private static final Method SET_ADD = getMethod(Set.class, "add", Object.class);
 	private static final Method STACK_PEEK = getMethod(Stack.class, "peek", int.class);
 	private static final Method STACK_PEEK_BASE = getMethod(Stack.class, "peekBase");
@@ -340,27 +342,27 @@ public final class Expression {
 		// Process the identifier
 		if (".".equals(identifierText)) {
 			if (isRoot) {
-				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE)));
+				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 			} else {
-				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(identifierText).addInvoke(EXPRESSION_PEEK_STACK)));
+				state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(identifierText).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 			}
 		} else if ("..".equals(identifierText)) {
-			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).pushConstant(identifierText).addInvoke(EXPRESSION_PEEK_STACK)));
+			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).pushConstant(identifierText).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 		} else if (isInternal) { // Everything that starts with "." is considered internal
 			final String internalIdentifier = "." + identifierText;
 
 			switch (internalIdentifier) {
 				case ".hasNext":
-					state.operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_HAS_NEXT)));
+					state.operands.push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_HAS_NEXT, true)));
 					break;
 				case ".indentation":
 					state.operands.push(new Operand(String.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDENTATION).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK)));
 					break;
 				case ".index":
-					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_GET_INDEX)));
+					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_INDEX, true)));
 					break;
 				case ".isFirst":
-					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_RENDERERS).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderer.class).addInvoke(SECTION_RENDERER_GET_INDEX)));
+					state.operands.push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_INDEX, true)));
 					state.operators.push(Operator.get("!", false));
 					processOperation(state);
 					break;
@@ -457,7 +459,7 @@ public final class Expression {
 		final String remainingParameters = matcher.group("remainingParameters");
 
 		if (firstParameter != null && !".".equals(firstParameter)) {
-			initializeLocalBindings.addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK).addAccess(ASTORE, state.createLocalBinding(firstParameter));
+			initializeLocalBindings.addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addAccess(ASTORE, state.createLocalBinding(firstParameter));
 		}
 
 		if (remainingParameters == null) {
@@ -681,12 +683,12 @@ public final class Expression {
 
 		// Load the context
 		if (parameterCount == 0) {
-			expressionResult.addCode(DUP).pushConstant(0).addInvoke(STACK_PEEK);
+			expressionResult.addCode(DUP).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true);
 		} else {
 			expressionResult.append(state.operands.peek(parameterCount - 1).toObject());
 		}
 
-		expressionResult.addInvoke(STACK_PUSH_OBJECT).addCode(POP).addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT);
+		expressionResult.pushNewObject(SectionRenderData.class).addCode(DUP_X1, SWAP).addInvoke(SECTION_RENDER_DATA_CTOR_DATA).addInvoke(STACK_PUSH_OBJECT).addCode(POP).addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT);
 
 		// Load the arguments
 		if (parameterCount > 1) {
@@ -1168,7 +1170,7 @@ public final class Expression {
 		this.originalString = expression;
 
 		if (".".equals(originalString)) {
-			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK)));
+			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 		} else if (!horseshoeExpressions) {
 			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(originalString, -1);
 

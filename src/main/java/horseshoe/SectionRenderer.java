@@ -15,8 +15,6 @@ public class SectionRenderer implements Renderer {
 	static final Factory FACTORY;
 
 	private final Section section;
-	private boolean hasNext;
-	private int index;
 
 	static class Factory {
 		/**
@@ -130,15 +128,15 @@ public class SectionRenderer implements Renderer {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getSectionRenderers().push(this);
+			final SectionRenderData renderData = new SectionRenderData();
+			context.getSectionData().push(renderData);
 
 			for (int i = 0; i < array.length; i++) {
-				index = i;
-				hasNext = i + 1 < array.length;
-				render(context, array[index], writer);
+				renderData.update(array[i], i, i + 1 < array.length);
+				renderSection(context, writer);
 			}
 
-			context.getSectionRenderers().pop();
+			context.getSectionData().pop();
 		}
 	}
 
@@ -154,15 +152,15 @@ public class SectionRenderer implements Renderer {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getSectionRenderers().push(this);
+			final SectionRenderData renderData = new SectionRenderData();
+			context.getSectionData().push(renderData);
 
 			for (int i = 0; i < array.length; i++) {
-				index = i;
-				hasNext = i + 1 < array.length;
-				render(context, array[index], writer);
+				renderData.update(array[i], i, i + 1 < array.length);
+				renderSection(context, writer);
 			}
 
-			context.getSectionRenderers().pop();
+			context.getSectionData().pop();
 		}
 	}
 
@@ -178,15 +176,15 @@ public class SectionRenderer implements Renderer {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getSectionRenderers().push(this);
+			final SectionRenderData renderData = new SectionRenderData();
+			context.getSectionData().push(renderData);
 
 			for (int i = 0; i < array.length; i++) {
-				index = i;
-				hasNext = i + 1 < array.length;
-				render(context, array[index], writer);
+				renderData.update(array[i], i, i + 1 < array.length);
+				renderSection(context, writer);
 			}
 
-			context.getSectionRenderers().pop();
+			context.getSectionData().pop();
 		}
 	}
 
@@ -202,15 +200,15 @@ public class SectionRenderer implements Renderer {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getSectionRenderers().push(this);
+			final SectionRenderData renderData = new SectionRenderData();
+			context.getSectionData().push(renderData);
 
 			for (int i = 0; i < array.length; i++) {
-				index = i;
-				hasNext = i + 1 < array.length;
-				render(context, array[index], writer);
+				renderData.update(array[i], i, i + 1 < array.length);
+				renderSection(context, writer);
 			}
 
-			context.getSectionRenderers().pop();
+			context.getSectionData().pop();
 		}
 	}
 
@@ -226,15 +224,15 @@ public class SectionRenderer implements Renderer {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getSectionRenderers().push(this);
+			final SectionRenderData renderData = new SectionRenderData();
+			context.getSectionData().push(renderData);
 
 			for (int i = 0; i < array.length; i++) {
-				index = i;
-				hasNext = i + 1 < array.length;
-				render(context, array[index], writer);
+				renderData.update(array[i], i, i + 1 < array.length);
+				renderSection(context, writer);
 			}
 
-			context.getSectionRenderers().pop();
+			context.getSectionData().pop();
 		}
 	}
 
@@ -250,15 +248,15 @@ public class SectionRenderer implements Renderer {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getSectionRenderers().push(this);
+			final SectionRenderData renderData = new SectionRenderData();
+			context.getSectionData().push(renderData);
 
 			for (int i = 0; i < array.length; i++) {
-				index = i;
-				hasNext = i + 1 < array.length;
-				render(context, array[index], writer);
+				renderData.update(array[i], i, i + 1 < array.length);
+				renderSection(context, writer);
 			}
 
-			context.getSectionRenderers().pop();
+			context.getSectionData().pop();
 		}
 	}
 
@@ -274,15 +272,15 @@ public class SectionRenderer implements Renderer {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getSectionRenderers().push(this);
+			final SectionRenderData renderData = new SectionRenderData();
+			context.getSectionData().push(renderData);
 
 			for (int i = 0; i < array.length; i++) {
-				index = i;
-				hasNext = i + 1 < array.length;
-				render(context, array[index], writer);
+				renderData.update(array[i], i, i + 1 < array.length);
+				renderSection(context, writer);
 			}
 
-			context.getSectionRenderers().pop();
+			context.getSectionData().pop();
 		}
 	}
 
@@ -298,15 +296,15 @@ public class SectionRenderer implements Renderer {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getSectionRenderers().push(this);
+			final SectionRenderData renderData = new SectionRenderData();
+			context.getSectionData().push(renderData);
 
 			for (int i = 0; i < array.length; i++) {
-				index = i;
-				hasNext = i + 1 < array.length;
-				render(context, array[index], writer);
+				renderData.update(array[i], i, i + 1 < array.length);
+				renderSection(context, writer);
 			}
 
-			context.getSectionRenderers().pop();
+			context.getSectionData().pop();
 		}
 	}
 
@@ -322,15 +320,15 @@ public class SectionRenderer implements Renderer {
 		if (array.length == 0) {
 			renderInverted(context, writer);
 		} else {
-			context.getSectionRenderers().push(this);
+			final SectionRenderData renderData = new SectionRenderData();
+			context.getSectionData().push(renderData);
 
 			for (int i = 0; i < array.length; i++) {
-				index = i;
-				hasNext = i + 1 < array.length;
-				render(context, array[index], writer);
+				renderData.update(array[i], i, i + 1 < array.length);
+				renderSection(context, writer);
 			}
 
-			context.getSectionRenderers().pop();
+			context.getSectionData().pop();
 		}
 	}
 
@@ -360,7 +358,9 @@ public class SectionRenderer implements Renderer {
 		} else if (data.getClass().isArray()) {
 			dispatchArray(context, data, writer);
 		} else if (!dispatchPrimitiveData(context, data, writer)) {
-			render(context, data, writer);
+			context.getSectionData().push(new SectionRenderData(data));
+			renderSection(context, writer);
+			context.getSectionData().pop();
 		}
 
 		if (section.cacheResult()) {
@@ -382,21 +382,22 @@ public class SectionRenderer implements Renderer {
 			return;
 		}
 
-		context.getSectionRenderers().push(this);
+		final SectionRenderData renderData = new SectionRenderData();
+		context.getSectionData().push(renderData);
 
-		for (hasNext = true, index = 0; true; index++) {
-			final Object object = it.next();
+		for (renderData.hasNext = true; true; renderData.index++) {
+			renderData.data = it.next();
 
 			if (!it.hasNext()) {
-				hasNext = false;
-				render(context, object, writer);
+				renderData.hasNext = false;
+				renderSection(context, writer);
 				break;
 			}
 
-			render(context, object, writer);
+			renderSection(context, writer);
 		}
 
-		context.getSectionRenderers().pop();
+		context.getSectionData().pop();
 	}
 
 	/**
@@ -411,7 +412,7 @@ public class SectionRenderer implements Renderer {
 	private boolean dispatchPrimitiveData(final RenderContext context, final Object data, final Writer writer) throws IOException {
 		if (data instanceof Boolean) {
 			if (((Boolean)data).booleanValue()) {
-				renderWithoutData(context, writer);
+				renderSection(context, writer);
 			} else {
 				renderInverted(context, writer);
 			}
@@ -440,19 +441,12 @@ public class SectionRenderer implements Renderer {
 		if (isZero) {
 			renderInverted(context, writer);
 		} else {
-			render(context, data, writer);
+			context.getSectionData().push(new SectionRenderData(data));
+			renderSection(context, writer);
+			context.getSectionData().pop();
 		}
 
 		return true;
-	}
-
-	/**
-	 * Gets the index being iterated over.
-	 *
-	 * @return The index being iterated over
-	 */
-	public final int getIndex() {
-		return index;
 	}
 
 	/**
@@ -462,15 +456,6 @@ public class SectionRenderer implements Renderer {
 	 */
 	final Section getSection() {
 		return section;
-	}
-
-	/**
-	 * Gets whether or not another item exists after the current item being iterated over.
-	 *
-	 * @return true if another item exists after the current item being iterated over, otherwise false
-	 */
-	public final boolean hasNext() {
-		return hasNext;
 	}
 
 	@Override
@@ -493,7 +478,7 @@ public class SectionRenderer implements Renderer {
 			final Writer annotationWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context));
 
 			if (annotationWriter == null || annotationWriter == writer) { // If the writer is not changed then render the actions using the current writer
-				renderWithoutData(context, writer);
+				renderSection(context, writer);
 			} else { // Otherwise, render the actions using the new writer and close it when finished
 				renderAndCloseWriter(context, annotationWriter);
 			}
@@ -507,20 +492,6 @@ public class SectionRenderer implements Renderer {
 	}
 
 	/**
-	 * Renders the section using the specified context, data, and writer.
-	 *
-	 * @param context the render context
-	 * @param data the data to render
-	 * @param writer the writer used for rendering
-	 * @throws IOException if an error occurs while writing to the writer
-	 */
-	private void render(final RenderContext context, final Object data, final Writer writer) throws IOException {
-		context.getSectionData().push(data);
-		renderWithoutData(context, writer);
-		context.getSectionData().pop();
-	}
-
-	/**
 	 * Renders the section using the specified writer and then closes it. The writer is guaranteed to be closed even if an exception is thrown. This method implements similar functionality to try-with-resources, but uses the exception to determine if we should log a failed close.
 	 *
 	 * @param context the render context
@@ -531,7 +502,7 @@ public class SectionRenderer implements Renderer {
 		Exception renderException = null;
 
 		try {
-			renderWithoutData(context, writer);
+			renderSection(context, writer);
 		} catch (final IOException e) {
 			renderException = e;
 			throw e;
@@ -568,7 +539,7 @@ public class SectionRenderer implements Renderer {
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	private void renderWithoutData(final RenderContext context, final Writer writer) throws IOException {
+	private void renderSection(final RenderContext context, final Writer writer) throws IOException {
 		for (final Renderer action : section.getRenderList()) {
 			action.render(context, writer);
 		}
