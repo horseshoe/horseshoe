@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -49,8 +50,22 @@ class TemplateTests {
 
 	@Test
 	void testClassLoading() throws IOException, LoadException {
-		assertEquals("Good, Good, 73.7", new TemplateLoader().load("ClassLoading", "{{#classes}}{{^~@./getName()}}Bad, {{/}}{{/}}{{#~@'Blah'}}Bad, {{/}}{{#~@'NonExistantClass'}}Bad, {{/}}{{#~@'java.lang.System'}}Bad, {{/}}{{#~@'System'}}Bad, {{/}}{{#~@'ClassLoader'}}Good, {{/}}{{#~@'" + TemplateTests.class.getName() + "'}}Good, {{/}}{{~@Integer.parseInt('67') + ~@'Double'.parseDouble('6.7')}}").render(new Settings().addLoadableClasses(TemplateTests.class).addLoadableClasses(Arrays.asList(ClassLoader.class)), Collections.<String, Object>singletonMap("classes", new Settings().getLoadableClasses()), new java.io.StringWriter()).toString());
+		assertEquals("Good, Good, 73.7", new TemplateLoader().load("ClassLoading", "{{#classes}}{{^~@./getName()}}Bad, {{/}}{{/}}{{#~@'Blah'}}Bad, {{/}}{{#~@'NonExistantClass'}}Bad, {{/}}{{#~@'java.lang.System'}}Bad, {{/}}{{#~@'System'}}Bad, {{/}}{{#~@'ClassLoader'}}Good, {{/}}{{#~@'" + TemplateTests.class.getName() + "'}}Good, {{/}}{{~@Integer.parseInt('67') + ~@'Double'.parseDouble('6.7')}}").render(new Settings().addLoadableClasses(Integer.class, TemplateTests.class).addLoadableClasses(Arrays.asList(ClassLoader.class)), Collections.<String, Object>singletonMap("classes", new Settings().getLoadableClasses()), new java.io.StringWriter()).toString());
 		assertEquals(", Good", new TemplateLoader().load("ClassLoading", "{{ ~@'String'?.valueOf('Good') }}, {{ ~@'java.lang.String'?.valueOf('Good') }}").render(new Settings().setAllowUnqualifiedClassNames(false), null, new java.io.StringWriter()).toString());
+
+		final Settings settings = new Settings();
+		settings.getLoadableClasses().removeAll(Arrays.asList(String.class, String.class));
+
+		for (final Iterator<Class<?>> it = settings.getLoadableClasses().iterator(); it.hasNext(); ) {
+			if (Math.class.equals(it.next())) {
+				it.remove();
+			}
+		}
+
+		assertEquals(", Good", new TemplateLoader().load("ClassLoading", "{{# ~@String }}Bad{{/}}{{# ~@'Integer' }}, Good{{/}}{{# ~@'java.lang.Math' }}, Bad{{/}}").render(settings, null, new java.io.StringWriter()).toString());
+
+		settings.getLoadableClasses().clear();
+		assertEquals("", new TemplateLoader().load("ClassLoading", "{{# ~@String }}Bad{{/}}{{# ~@'Integer' }}, Good{{/}}{{# ~@'java.lang.Math' }}, Bad{{/}}").render(settings, null, new java.io.StringWriter()).toString());
 	}
 
 	@Test

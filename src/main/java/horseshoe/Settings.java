@@ -5,14 +5,18 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Currency;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.GregorianCalendar;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -132,10 +136,10 @@ public class Settings {
 	private EscapeFunction escapeFunction = EMPTY_ESCAPE_FUNCTION;
 	private String lineEndings = DEFAULT_LINE_ENDINGS;
 	private boolean allowUnqualifiedClassNames = true;
-	private final Set<Class<?>> loadableClasses = new LinkedHashSet<>(DEFAULT_LOADABLE_CLASSES);
+	private final ClassMap loadableClasses = new ClassMap(DEFAULT_LOADABLE_CLASSES);
 
 	static {
-		final Set<Class<?>> defaultLoadableClasses = new LinkedHashSet<>(Arrays.asList(
+		final Set<Class<?>> defaultLoadableClasses = new HashSet<>(Arrays.asList(
 				Integer.class,
 				Byte.class,
 				Short.class,
@@ -190,6 +194,87 @@ public class Settings {
 		DEFAULT_LOADABLE_CLASSES = Collections.unmodifiableSet(defaultLoadableClasses);
 	}
 
+	private final class ClassMap extends HashSet<Class<?>> {
+		private final Map<String, Class<?>> qualifiedNameLookup = new ConcurrentHashMap<>();
+		private final Map<String, Class<?>> unqualifiedNameLookup = new ConcurrentHashMap<>();
+
+		public ClassMap() {
+		}
+
+		public ClassMap(final Collection<? extends Class<?>> collection) {
+			this();
+			addAll(collection);
+		}
+
+		@Override
+		public synchronized boolean add(final Class<?> type) {
+			if (super.add(type)) {
+				qualifiedNameLookup.put(type.getName(), type);
+				unqualifiedNameLookup.put(type.getSimpleName(), type);
+				return true;
+			}
+
+			return false;
+		}
+
+		@Override
+		public synchronized void clear() {
+			qualifiedNameLookup.clear();
+			unqualifiedNameLookup.clear();
+			super.clear();
+		}
+
+		public Class<?> get(final String name) {
+			if (allowUnqualifiedClassNames()) {
+				final Class<?> type = unqualifiedNameLookup.get(name);
+
+				if (type != null) {
+					return type;
+				}
+			}
+
+			return qualifiedNameLookup.get(name);
+		}
+
+		@Override
+		public Iterator<Class<?>> iterator() {
+			final Iterator<Class<?>> iterator = super.iterator();
+
+			return new Iterator<Class<?>>() {
+				private Class<?> currentItem;
+
+				@Override
+				public boolean hasNext() {
+					return iterator.hasNext();
+				}
+
+				@Override
+				public Class<?> next() {
+					currentItem = iterator.next();
+					return currentItem;
+				}
+
+				@Override
+				public synchronized void remove() {
+					iterator.remove();
+					qualifiedNameLookup.remove(currentItem.getName());
+					unqualifiedNameLookup.remove(currentItem.getSimpleName());
+				}
+			};
+		}
+
+		@Override
+		public synchronized boolean remove(final Object object) {
+			if (super.remove(object)) {
+				qualifiedNameLookup.remove(((Class<?>)object).getName());
+				unqualifiedNameLookup.remove(((Class<?>)object).getSimpleName());
+				return true;
+			}
+
+			return false;
+		}
+	}
+
 	/**
 	 * An enumeration used to control access when checking identifiers in expressions.
 	 */
@@ -239,10 +324,7 @@ public class Settings {
 	 * @return this object
 	 */
 	public Settings addLoadableClasses(final Class<?>... classes) {
-		for (final Class<?> loadableClass : classes) {
-			loadableClasses.add(loadableClass);
-		}
-
+		loadableClasses.addAll(Arrays.asList(classes));
 		return this;
 	}
 
@@ -279,15 +361,6 @@ public class Settings {
 	}
 
 	/**
-	 * Gets the logger used by the rendering process.
-	 *
-	 * @return the logger used by the rendering process
-	 */
-	public Logger getLogger() {
-		return logger;
-	}
-
-	/**
 	 * Gets the escape function used by the rendering process.
 	 *
 	 * @return the escape function used by the rendering process.
@@ -306,12 +379,31 @@ public class Settings {
 	}
 
 	/**
-	 * Gets the classes that can be loaded by the template during the rendering process.
+	 * Gets a loadable class by name for use during the rendering process.
+	 *
+	 * @param className the name of the class to be used during the rendering process
+	 * @return the class with the specified name, or null if no class could be found
+	 */
+	public Class<?> getLoadableClass(final String className) {
+		return loadableClasses.get(className);
+	}
+
+	/**
+	 * Gets the set of classes that can be loaded by the template during the rendering process.
 	 *
 	 * @return the set of classes that can be loaded by the template during the rendering process
 	 */
 	public Set<Class<?>> getLoadableClasses() {
 		return loadableClasses;
+	}
+
+	/**
+	 * Gets the logger used by the rendering process.
+	 *
+	 * @return the logger used by the rendering process
+	 */
+	public Logger getLogger() {
+		return logger;
 	}
 
 	/**
@@ -337,17 +429,6 @@ public class Settings {
 	}
 
 	/**
-	 * Sets the logger used by the rendering process.
-	 *
-	 * @param logger the logger used by the rendering process. If null, the logger will be set to the empty logger.
-	 * @return this object
-	 */
-	public Settings setLogger(final Logger logger) {
-		this.logger = (logger == null ? EMPTY_LOGGER : logger);
-		return this;
-	}
-
-	/**
 	 * Sets the escape function used by the rendering process.
 	 *
 	 * @param escapeFunction the escape function used by the rendering process. If null, the escape function will be set to the empty escape function.
@@ -366,6 +447,17 @@ public class Settings {
 	 */
 	public Settings setLineEndings(final String lineEndings) {
 		this.lineEndings = lineEndings;
+		return this;
+	}
+
+	/**
+	 * Sets the logger used by the rendering process.
+	 *
+	 * @param logger the logger used by the rendering process. If null, the logger will be set to the empty logger.
+	 * @return this object
+	 */
+	public Settings setLogger(final Logger logger) {
+		this.logger = (logger == null ? EMPTY_LOGGER : logger);
 		return this;
 	}
 

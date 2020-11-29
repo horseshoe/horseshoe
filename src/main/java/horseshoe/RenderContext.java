@@ -1,7 +1,6 @@
 package horseshoe;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 public final class RenderContext {
@@ -13,7 +12,6 @@ public final class RenderContext {
 	private final Stack<SectionRenderer> sectionRenderers = new Stack<>();
 	private final Stack<String> indentation = new Stack<>();
 	private final Stack<Template> sectionPartials = new Stack<>();
-	private final Map<String, Class<?>> loadableClasses = new HashMap<>();
 
 	/**
 	 * Creates a render context.
@@ -63,17 +61,7 @@ public final class RenderContext {
 	 * @return the class that corresponds to the specified name
 	 */
 	public Class<?> getClass(final String name) {
-		if (loadableClasses.isEmpty()) {
-			for (final Class<?> loadableClass : settings.getLoadableClasses()) {
-				loadableClasses.put(loadableClass.getName(), loadableClass);
-
-				if (settings.allowUnqualifiedClassNames()) {
-					loadableClasses.put(loadableClass.getSimpleName(), loadableClass);
-				}
-			}
-		}
-
-		return loadableClasses.get(name);
+		return settings.getLoadableClass(name);
 	}
 
 	/**

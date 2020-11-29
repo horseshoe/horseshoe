@@ -558,7 +558,7 @@ public class Runner {
 						settings.setEscapeFunction(Settings.HTML_ESCAPE_FUNCTION);
 						break;
 					case "add-class":
-						settings.getLoadableClasses().add(Class.forName(!pair.argument.contains(".") ? "java.lang." + pair.argument : pair.argument));
+						settings.addLoadableClasses(Class.forName(!pair.argument.contains(".") ? "java.lang." + pair.argument : pair.argument));
 						break;
 					case "access":
 						settings.setContextAccess(ContextAccess.valueOf(pair.argument));
