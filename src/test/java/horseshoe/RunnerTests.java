@@ -177,21 +177,23 @@ class RunnerTests {
 		final Path path = Paths.get("in.test");
 		Files.write(path, ("{{#a}}\n" +
 				"<html{{#['<red>', '<blue>']}} attr=\"{{.}}\"{{/}}/>\n" +
-				"{{#['a': false, 'b': 'c']}}\n" +
-				"{{#['blah': 'override']}}\n" +
-				"{{a}}{{~@'System'.lineSeparator()}}" +
-				"{{blah}}\n" +
+				"{{ ~@UUID.fromString('01234567-89AB-CDEF-fedc-ba9876543210') }}\n" +
+				"{{# ['a': false, 'b': 'c'] }}\n" +
+				"{{# ['blah': 'override'] }}\n" +
+				"{{ a }}{{ ~@'System'.lineSeparator() }}" +
+				"{{ blah }}\n" +
 				"{{/}}\n" +
 				"{{/}}\n" +
 				"{{/}}").getBytes(StandardCharsets.UTF_16LE));
 
 		final PrintStream originalOut = System.out;
 		System.setOut(new PrintStream(out, true, StandardCharsets.UTF_8.name()));
-		Runner.main(new String[] { "-I", "includeDir", "--html", "--input-charset=UTF-16LE", "-Da=true", "-Dblah=blah", "--add-class=System", "--access=CURRENT_AND_ROOT", "in.test" });
+		Runner.main(new String[] { "-I", "includeDir", "--html", "--input-charset=UTF-16LE", "-Da=true", "-Dblah=blah", "--add-class=System", "--add-class=java.util.UUID", "--access=CURRENT_AND_ROOT", "in.test" });
 		System.setOut(originalOut);
 
 		Files.delete(path);
 		assertEquals("<html attr=\"&lt;red&gt;\" attr=\"&lt;blue&gt;\"/>" + System.lineSeparator() +
+				"01234567-89ab-cdef-fedc-ba9876543210" + System.lineSeparator() +
 				"true" + System.lineSeparator() +
 				"override" + System.lineSeparator(), out.toString(StandardCharsets.UTF_8.name()));
 	}

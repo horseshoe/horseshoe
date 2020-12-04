@@ -29,6 +29,10 @@ compileJava {
 test {
 	finalizedBy jacocoTestReport
 	useJUnitPlatform()
+
+	testLogging {
+		exceptionFormat "full"
+	}
 }
 
 dependencies {

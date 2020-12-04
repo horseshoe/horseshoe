@@ -2,6 +2,7 @@ package horseshoe.internal;
 
 import static horseshoe.internal.MethodBuilder.*;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -23,7 +24,6 @@ import java.util.regex.Pattern;
 
 import horseshoe.RenderContext;
 import horseshoe.SectionRenderData;
-import horseshoe.SectionRenderer;
 import horseshoe.Stack;
 import horseshoe.internal.MethodBuilder.Label;
 
@@ -114,6 +114,9 @@ public final class Expression {
 			127,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35, 127, 127, 127, 127, 127
 	};
 
+	private static final Expression[] EMPTY_EXPRESSIONS = { };
+	private static final Identifier[] EMPTY_IDENTIFIERS = { };
+
 	private final Object location;
 	private final String originalString;
 	private final Expression[] expressions;
@@ -125,11 +128,46 @@ public final class Expression {
 		final int startIndex;
 		final String trimmedString;
 		final Map<String, Expression> namedExpressions;
-		final Map<Expression, Integer> expressions = new LinkedHashMap<>();
-		final Map<Identifier, Integer> identifiers = new LinkedHashMap<>();
-		final Map<String, Integer> localBindings = new LinkedHashMap<>();
+		final MapCollection<Expression> expressions = new MapCollection<>();
+		final MapCollection<Identifier> identifiers = new MapCollection<>();
+		final MapCollection<String> localBindings = new MapCollection<>();
 		final Stack<Operand> operands = new Stack<>();
 		final Stack<Operator> operators = new Stack<>();
+
+		private static final class MapCollection<T> extends LinkedHashMap<T, Integer> {
+			/**
+			 * Gets the index for the specified item. If the item does not exist, a new entry will be created and that index will be returned.
+			 *
+			 * @param item the item to get the index of
+			 * @return the index of the specified item
+			 */
+			public int getOrAdd(final T item) {
+				Integer index = get(item);
+
+				if (index == null) {
+					index = size();
+					put(item, index);
+				}
+
+				return index;
+			}
+
+			/**
+			 * Creates an array of all the items.
+			 *
+			 * @return an array of all the items
+			 */
+			@SuppressWarnings("unchecked")
+			public T[] toArray(final Class<T> type) {
+				final T[] array = (T[])Array.newInstance(type, size());
+
+				for (final Entry<T, Integer> entry : entrySet()) {
+					array[entry.getValue()] = entry.getKey();
+				}
+
+				return array;
+			}
+		}
 
 		private ParseState(final int startIndex, final String trimmedString, final Map<String, Expression> namedExpressions) {
 			this.startIndex = startIndex;
@@ -144,31 +182,7 @@ public final class Expression {
 		 * @return the local index of the binding
 		 */
 		int createLocalBinding(final String name) {
-			Integer index = localBindings.get(name);
-
-			if (index == null) {
-				index = FIRST_LOCAL_BINDING_INDEX + localBindings.size();
-				localBindings.put(name, index);
-			}
-
-			return index;
-		}
-
-		/**
-		 * Gets the index for the specified identifier. If the identifier does not exist in the map, a new entry will be created and that index will be returned.
-		 *
-		 * @param identifier the identifier to locate
-		 * @return the index of the specified identifier
-		 */
-		int getIdentifierIndex(final Identifier identifier) {
-			Integer index = identifiers.get(identifier);
-
-			if (index == null) {
-				index = identifiers.size();
-				identifiers.put(identifier, index);
-			}
-
-			return index;
+			return FIRST_LOCAL_BINDING_INDEX + localBindings.getOrAdd(name);
 		}
 
 		/**
@@ -178,7 +192,8 @@ public final class Expression {
 		 * @return the local index of the binding, or null if one does not exist
 		 */
 		Integer getLocalBinding(final String name) {
-			return localBindings.get(name);
+			final Integer index = localBindings.get(name);
+			return index == null ? null : FIRST_LOCAL_BINDING_INDEX + index.intValue();
 		}
 
 		/**
@@ -407,7 +422,7 @@ public final class Expression {
 
 			if (lastNavigation) {
 				final Identifier identifier = new Identifier(name);
-				final int index = state.getIdentifierIndex(identifier);
+				final int index = state.identifiers.getOrAdd(identifier);
 				final Operator operator = state.operators.pop();
 
 				if (operator.has(Operator.SAFE)) {
@@ -432,7 +447,7 @@ public final class Expression {
 					state.operands.push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, localBindingIndex)));
 				} else { // Resolve the identifier
 					final Identifier identifier = new Identifier(name);
-					final int index = state.getIdentifierIndex(identifier);
+					final int index = state.identifiers.getOrAdd(identifier);
 
 					// Create a new output formed by invoking identifiers[index].getRootValue(context) or identifiers[index].findValue(context, backreach)
 					if (isRoot) {
@@ -654,7 +669,7 @@ public final class Expression {
 
 		if (operator.has(Operator.KNOWN_OBJECT) || (namedExpression = state.namedExpressions.get(operator.getString())) == null) {
 			// Create the identifier, then get and invoke the appropriate method
-			final int index = state.getIdentifierIndex(new Identifier(operator.getString(), parameterCount));
+			final int index = state.identifiers.getOrAdd(new Identifier(operator.getString(), parameterCount));
 			final MethodBuilder methodResult = state.operands.peek(parameterCount).builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).append(state.operands.peek(parameterCount + 1).builder);
 
 			if (parameterCount == 0) {
@@ -1175,11 +1190,11 @@ public final class Expression {
 			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(originalString, -1);
 
 			// Push a new operand formed by invoking identifiers[index].getValue(context, backreach, access)
-			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifierIndex(new Identifier(names[0]))).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
+			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.identifiers.getOrAdd(new Identifier(names[0]))).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
 
 			// Load the identifiers and invoke identifiers[index].getValue(object)
 			for (int i = 1; i < names.length; i++) {
-				state.operands.peek().builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifierIndex(new Identifier(names[i]))).addCode(AALOAD, SWAP).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE);
+				state.operands.peek().builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.identifiers.getOrAdd(new Identifier(names[i]))).addCode(AALOAD, SWAP).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE);
 			}
 		} else { // Tokenize the entire expression, using the shunting yard algorithm
 			int initializeBindingsStart = 0;
@@ -1239,29 +1254,9 @@ public final class Expression {
 			return;
 		}
 
-		// Populate all the expressions
-		if (state.expressions.isEmpty()) {
-			this.expressions = null;
-		} else {
-			this.expressions = new Expression[state.expressions.size()];
-
-			for (final Entry<Expression, Integer> entry : state.expressions.entrySet()) {
-				this.expressions[entry.getValue()] = entry.getKey();
-			}
-		}
-
-		// Populate all the identifiers
-		if (state.identifiers.isEmpty()) {
-			this.identifiers = null;
-		} else {
-			this.identifiers = new Identifier[state.identifiers.size()];
-
-			for (final Entry<Identifier, Integer> entry : state.identifiers.entrySet()) {
-				this.identifiers[entry.getValue()] = entry.getKey();
-			}
-		}
-
-		// Create the evaluator
+		// Populate all the class data
+		this.expressions = state.expressions.isEmpty() ? EMPTY_EXPRESSIONS : state.expressions.toArray(Expression.class);
+		this.identifiers = state.identifiers.isEmpty() ? EMPTY_IDENTIFIERS : state.identifiers.toArray(Identifier.class);
 		this.evaluable = mb.append(state.operands.pop().toObject()).addFlowBreakingCode(ARETURN, 0).build(Expression.class.getPackage().getName() + ".Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		this.isNamed = named;
 		assert state.operands.isEmpty();
@@ -1286,23 +1281,13 @@ public final class Expression {
 	}
 
 	/**
-	 * Evaluates the expression using the given render context.
-	 *
-	 * @param context the render context used to evaluate the object
-	 * @return the evaluated expression or null if the expression could not be evaluated
-	 */
-	public Object evaluate(final RenderContext context) {
-		return evaluate(context, null);
-	}
-
-	/**
 	 * Evaluates the expression using the given render context and the specified arguments.
 	 *
 	 * @param context the render context used to evaluate the object
 	 * @param arguments the arguments used to evaluate the object
 	 * @return the evaluated expression or null if the expression could not be evaluated
 	 */
-	public Object evaluate(final RenderContext context, final Object[] arguments) {
+	public Object evaluate(final RenderContext context, final Object... arguments) {
 		try {
 			return evaluable.evaluate(expressions, identifiers, context, arguments);
 		} catch (final HaltRenderingException e) {
