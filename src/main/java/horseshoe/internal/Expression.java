@@ -7,7 +7,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -130,11 +129,66 @@ public final class Expression {
 		final Map<String, Expression> namedExpressions;
 		final MapCollection<Expression> expressions = new MapCollection<>();
 		final MapCollection<Identifier> identifiers = new MapCollection<>();
-		final MapCollection<String> localBindings = new MapCollection<>();
+		private final MapCollection<String> localBindings = new MapCollection<>();
 		final Stack<Operand> operands = new Stack<>();
 		final Stack<Operator> operators = new Stack<>();
 
-		private static final class MapCollection<T> extends LinkedHashMap<T, Integer> {
+		private static final class MapCollection<T> {
+			private final Set<T> backingSet;
+			private final Map<T, Integer> map = new LinkedHashMap<>();
+
+			/**
+			 * Creates a map collection using the specified backing set.
+			 *
+			 * @param backingSet the backing set for the map collection
+			 */
+			public MapCollection(final Set<T> backingSet) {
+				this.backingSet = backingSet;
+			}
+
+			/**
+			 * Creates a map collection with no backing set.
+			 */
+			public MapCollection() {
+				this(null);
+			}
+
+			/**
+			 * Checks if this collection contains the same items as the list.
+			 *
+			 * @param list the array of items to compare
+			 * @return true if this collection is empty and list is null or if they both contain the same items in the same order, otherwise false
+			 */
+			public boolean equalsArray(final T[] list) {
+				if (list == null) {
+					return map.isEmpty();
+				}
+
+				if (map.size() != list.length) {
+					return false;
+				}
+
+				int i = 0;
+
+				for (final Iterator<T> it = map.keySet().iterator(); it.hasNext(); i++) {
+					if (!it.next().equals(list[i])) {
+						return false;
+					}
+				}
+
+				return true;
+			}
+
+			/**
+			 * Gets the index for the specified item. If the item does not exist, null is returned.
+			 *
+			 * @param item the item to get the index of
+			 * @return the index of the specified item
+			 */
+			public Integer get(final T item) {
+				return map.get(item);
+			}
+
 			/**
 			 * Gets the index for the specified item. If the item does not exist, a new entry will be created and that index will be returned.
 			 *
@@ -142,14 +196,36 @@ public final class Expression {
 			 * @return the index of the specified item
 			 */
 			public int getOrAdd(final T item) {
-				Integer index = get(item);
+				Integer index = map.get(item);
 
 				if (index == null) {
-					index = size();
-					put(item, index);
+					index = map.size();
+					map.put(item, index);
+
+					if (backingSet != null) {
+						backingSet.add(item);
+					}
 				}
 
 				return index;
+			}
+
+			/**
+			 * Checks if the collection is empty.
+			 *
+			 * @return true if the collection is empty, otherwise false
+			 */
+			public boolean isEmpty() {
+				return map.isEmpty();
+			}
+
+			/**
+			 * Gets the size of the collection.
+			 *
+			 * @return the size of the collection
+			 */
+			public int size() {
+				return map.size();
 			}
 
 			/**
@@ -159,9 +235,9 @@ public final class Expression {
 			 */
 			@SuppressWarnings("unchecked")
 			public T[] toArray(final Class<T> type) {
-				final T[] array = (T[])Array.newInstance(type, size());
+				final T[] array = (T[])Array.newInstance(type, map.size());
 
-				for (final Entry<T, Integer> entry : entrySet()) {
+				for (final Entry<T, Integer> entry : map.entrySet()) {
 					array[entry.getValue()] = entry.getKey();
 				}
 
@@ -270,35 +346,6 @@ public final class Expression {
 		// Add comma as a separator
 		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<backreach>[.]?[/\\\\]|(?:[.][.][/\\\\])+)?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?=" + COMMENT_PATTERN + "*(?<assignment>" + assignmentOperators.substring(1) + ")(?:[^=]|$))?", Pattern.UNICODE_CHARACTER_CLASS);
 		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + allOperators.append(",)\\s*").toString(), Pattern.UNICODE_CHARACTER_CLASS);
-	}
-
-	/**
-	 * Checks if a collection contains the same items as an array.
-	 *
-	 * @param <T> the type of item being compared
-	 * @param list1 the collection of items to compare
-	 * @param list2 the array of items to compare
-	 * @return true if list1 is empty and list2 is null or if the lists contain the same items in the same order, otherwise false
-	 */
-	private static <T> boolean equalLists(final Collection<T> list1, final T[] list2) {
-		if (list2 == null) {
-			return list1.isEmpty();
-		}
-
-		final int size = list1.size();
-		int i = 0;
-
-		if (size != list2.length) {
-			return false;
-		}
-
-		for (final Iterator<T> it = list1.iterator(); it.hasNext(); i++) {
-			if (!it.next().equals(list2[i])) {
-				return false;
-			}
-		}
-
-		return true;
 	}
 
 	/**
@@ -689,12 +736,7 @@ public final class Expression {
 
 		// Process the named expression
 		final MethodBuilder expressionResult = new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA);
-		Integer index = state.expressions.get(namedExpression);
-
-		if (index == null) {
-			index = state.expressions.size();
-			state.expressions.put(namedExpression, index);
-		}
+		final int index = state.expressions.getOrAdd(namedExpression);
 
 		// Load the context
 		if (parameterCount == 0) {
@@ -1182,7 +1224,7 @@ public final class Expression {
 		boolean named = false;
 
 		this.location = location;
-		this.originalString = expression;
+		this.originalString = state.trimmedString;
 
 		if (".".equals(originalString)) {
 			state.operands.push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
@@ -1198,11 +1240,11 @@ public final class Expression {
 			}
 		} else { // Tokenize the entire expression, using the shunting yard algorithm
 			int initializeBindingsStart = 0;
-			final int end = expression.length();
-			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(expression);
+			final int end = state.trimmedString.length();
+			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(state.trimmedString);
 
 			if (matcher.lookingAt()) {
-				namedExpressions.put(matcher.group("name"), this);
+				state.namedExpressions.put(matcher.group("name"), this);
 				named = true;
 				parseNamedExpressionSignature(state, mb, matcher);
 				initializeBindingsStart = state.localBindings.size();
@@ -1245,7 +1287,7 @@ public final class Expression {
 		}
 
 		// Check for match to the cached expression
-		if (cachedExpression != null && equalLists(state.expressions.keySet(), cachedExpression.expressions) && equalLists(state.identifiers.keySet(), cachedExpression.identifiers)) {
+		if (cachedExpression != null && state.expressions.equalsArray(cachedExpression.expressions) && state.identifiers.equalsArray(cachedExpression.identifiers)) {
 			assert cachedExpression.originalString.equals(originalString) : "Invalid cached expression \"" + cachedExpression + "\" does not match parsed expression \"" + originalString + "\"";
 			this.expressions = cachedExpression.expressions;
 			this.identifiers = cachedExpression.identifiers;
