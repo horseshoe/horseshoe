@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 /**
  * A streamable enables chaining of operations. Both individual items and groups of items can be iterated using a streamable. Each iteration of the streamable clears all items in the streamable, so they must be readded to the streamable.
@@ -145,6 +146,19 @@ public abstract class Streamable<T> implements Iterable<T> {
 			return it;
 		}
 
+		@Override
+		public String toString() {
+			final StringBuilder builder = new StringBuilder("[");
+			final Iterator<T> iter = iterator();
+			if (iter.hasNext()) {
+				builder.append(' ').append(iter.next());
+				while (iter.hasNext()) {
+					builder.append(", ").append(iter.next());
+				}
+			}
+			return builder.append(" ]").toString();
+		}
+
 	}
 
 	/**
@@ -193,6 +207,11 @@ public abstract class Streamable<T> implements Iterable<T> {
 					// All values are automatically removed and must be re-added manually on every iteration
 				}
 			};
+		}
+
+		@Override
+		public String toString() {
+			return Objects.toString(value);
 		}
 
 	}

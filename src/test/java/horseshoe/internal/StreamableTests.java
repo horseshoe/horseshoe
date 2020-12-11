@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -146,6 +147,15 @@ class StreamableTests {
 	@Test
 	void testString() {
 		assertEquals(1, count(remap(Streamable.ofUnknown("Test"))));
+	}
+
+	@Test
+	void testToString() {
+		assertEquals("[ 1, 2, null ]", Streamable.of(Arrays.asList("1", 2, null)).toString());
+		assertEquals("[ ]", Streamable.of(Arrays.asList()).toString());
+		assertEquals("[ 1 ]", Streamable.of(Arrays.asList("1")).toString());
+		assertEquals("Test", Streamable.of("Test").toString());
+		assertEquals(Objects.toString(null), Streamable.of((Object)null).toString());
 	}
 
 }
