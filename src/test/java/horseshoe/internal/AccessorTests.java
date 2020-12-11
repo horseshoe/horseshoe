@@ -122,10 +122,12 @@ class AccessorTests {
 		assertEquals('I', Accessor.lookup("I am Sam", 0, false));
 		assertEquals(asSet(2, 3), Accessor.lookup(asSet(14, 2, 5, 3, 1), Arrays.asList(2, 3, 4), false));
 
+		assertThrows(NullPointerException.class, () -> Accessor.lookup(null, Arrays.asList(2, 3, 4), false));
 		assertThrows(ClassCastException.class, () -> Accessor.lookup(new Object(), Arrays.asList(2, 3, 4), false));
 		assertThrows(ClassCastException.class, () -> Accessor.lookup("I am Sam", Arrays.asList("Test"), false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookup("I am Sam", Arrays.asList(100), false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookup("I am Sam", Arrays.asList(-100), false));
+		assertNull(Accessor.lookup(null, Arrays.asList("Test"), true));
 		assertNull(Accessor.lookup("I am Sam", Arrays.asList("Test"), true));
 		assertNull(Accessor.lookup("I am Sam", Arrays.asList(100), true));
 		assertNull(Accessor.lookup("I am Sam", Arrays.asList(-100), true));
@@ -160,11 +162,13 @@ class AccessorTests {
 		assertEquals(asMap("Car", "automobile"), Accessor.lookupRange(map, "Car", "Bet", false));
 		assertEquals(asMap(), Accessor.lookupRange(map, "Car", "Car", false));
 
+		assertThrows(NullPointerException.class, () -> Accessor.lookupRange(null, 0, 1, false));
 		assertThrows(ClassCastException.class, () -> Accessor.lookupRange(new Object(), 0, 1, false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", -10, -1, false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", 0, -11, false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", 9, -1, false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", 0, 10, false));
+		assertNull(Accessor.lookupRange(null, 0, 10, true));
 		assertNull(Accessor.lookupRange("I am Sam!", 0, 10, true));
 		assertEquals("Sam", Accessor.lookupRange("I am Sam!", -4, -1, false));
 	}

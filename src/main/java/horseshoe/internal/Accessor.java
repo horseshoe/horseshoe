@@ -293,7 +293,11 @@ public abstract class Accessor {
 	 */
 	public static Object lookup(final Object context, final Object lookup, boolean ignoreFailures) {
 		try {
-			if (context instanceof Map) {
+			if (context == null) {
+				if (!ignoreFailures) {
+					throw new NullPointerException();
+				}
+			} else if (context instanceof Map) {
 				return lookupMap((Map<?, ?>)context, lookup);
 			} else if (context instanceof List) {
 				return lookupList((List<?>)context, lookup);
@@ -301,9 +305,9 @@ public abstract class Accessor {
 				return lookupString((String)context, lookup);
 			} else if (context instanceof Set) {
 				return lookupSet((Set<?>)context, lookup);
+			} else {
+				return lookupArray(context, lookup);
 			}
-
-			return lookupArray(context, lookup);
 		} catch (final IndexOutOfBoundsException | ClassCastException e) {
 			if (!ignoreFailures) {
 				throw e;
@@ -320,13 +324,12 @@ public abstract class Accessor {
 	 * @param lookup the value to lookup
 	 * @return the result of the lookup
 	 */
-	@SuppressWarnings("unchecked")
 	private static Object lookupArray(final Object context, final Object lookup) {
 		if (lookup instanceof Iterable) {
 			final List<Object> list = (lookup instanceof Collection ? new ArrayList<>(((Collection<?>)lookup).size()) : new ArrayList<>());
 
-			for (final Number number : (Iterable<Number>)lookup) {
-				list.add(lookupArray(context, number.intValue()));
+			for (final Object object : (Iterable<?>)lookup) {
+				list.add(lookupArray(context, object));
 			}
 
 			return list;
@@ -335,7 +338,7 @@ public abstract class Accessor {
 		final Class<?> componentType = context.getClass().getComponentType();
 
 		if (componentType == null) {
-			throw new ClassCastException(context.getClass().getName() + " cannot be cast to an array type");
+			throw new ClassCastException(context.getClass().getName() + " cannot be used with the lookup operator");
 		} else if (!componentType.isPrimitive()) {
 			return ((Object[])context)[((Number)lookup).intValue()];
 		} else if (int.class.equals(componentType)) {
@@ -369,7 +372,7 @@ public abstract class Accessor {
 		final Class<?> componentType = context.getClass().getComponentType();
 
 		if (componentType == null) {
-			throw new ClassCastException(context.getClass().getName() + " cannot be cast to an array type");
+			throw new ClassCastException(context.getClass().getName() + " cannot be used with the lookup operator");
 		} else if (!componentType.isPrimitive()) {
 			final Object[] array = (Object[])context;
 			final Range range = new Range(start, end, array.length);
@@ -603,7 +606,11 @@ public abstract class Accessor {
 	@SuppressWarnings("unchecked")
 	public static <T extends Comparable<T>> Object lookupRange(final Object context, final T start, final Object end, final boolean ignoreFailures) {
 		try {
-			if (context instanceof Map) {
+			if (context == null) {
+				if (!ignoreFailures) {
+					throw new NullPointerException();
+				}
+			} else if (context instanceof Map) {
 				return lookupMapRange((Map<T, ?>)context, start, end);
 			} else if (context instanceof List) {
 				return lookupListRange((List<?>)context, ((Number)start).intValue(), end);
@@ -611,9 +618,9 @@ public abstract class Accessor {
 				return lookupStringRange((String)context, ((Number)start).intValue(), end);
 			} else if (context instanceof Set) {
 				return lookupSetRange((Set<T>)context, start, end);
+			} else {
+				return lookupArrayRange(context, ((Number)start).intValue(), end);
 			}
-
-			return lookupArrayRange(context, ((Number)start).intValue(), end);
 		} catch (final IndexOutOfBoundsException | ClassCastException e) {
 			if (!ignoreFailures) {
 				throw e;
