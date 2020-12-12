@@ -28,7 +28,6 @@ import horseshoe.internal.MethodBuilder.Label;
 public final class Expression {
 
 	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
-	private static final int FIRST_LOCAL_BINDING_INDEX = Evaluable.FIRST_LOCAL_INDEX + 2; // The first few indices are reserved for use internally by this class
 
 	// Reflected Methods
 	private static final Constructor<?> ARRAY_LIST_CTOR_INT = getConstructor(ArrayList.class, int.class);
@@ -103,7 +102,7 @@ public final class Expression {
 	private static final Pattern OPERATOR_PATTERN;
 	private static final Pattern REGEX_PATTERN = Pattern.compile("~/(?<nounicode>\\(\\?-U\\))?(?<regex>(?:[^/\\\\]|\\\\.)*)/\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr{}0]|\\\\x[0-9A-Fa-f]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>(?:[^']|'')*)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern TRAILING_IDENTIFIER_PATTERN = Pattern.compile(COMMENT_PATTERN + "*(?<name>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*[-=]>\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern TRAILING_IDENTIFIER_PATTERN = Pattern.compile(COMMENT_PATTERN + "*(((?<name>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*)?[-=]>\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private static final byte[] CHAR_VALUE = new byte[] {
 			127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
@@ -127,7 +126,7 @@ public final class Expression {
 		private static final byte LOAD_IDENTIFIERS = ALOAD_2;
 		private static final byte LOAD_CONTEXT = ALOAD_3;
 		private static final byte[] LOAD_ARGUMENTS = new byte[] { ALOAD, 4 };
-		private static final int FIRST_LOCAL_INDEX = 5;
+		private static final int FIRST_LOCAL = 5;
 
 		/**
 		 * Evaluates the object using the specified parameters.
@@ -317,9 +316,9 @@ public final class Expression {
 						throw new IllegalArgumentException("Invalid assignment to non-local variable (index " + state.getIndex(matcher) + ")");
 					}
 
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, Expression.FIRST_LOCAL_BINDING_INDEX + state.getLocalBindings().getOrAdd(name))));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name))));
 				} else if (backreach < 0 && (localBindingIndex = state.getLocalBindings().get(name)) != null) { // Check for a local binding
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Expression.FIRST_LOCAL_BINDING_INDEX + localBindingIndex.intValue())));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL + localBindingIndex.intValue())));
 				} else { // Resolve the identifier
 					final Identifier identifier = new Identifier(name);
 					final int index = state.getIdentifiers().getOrAdd(identifier);
@@ -349,7 +348,7 @@ public final class Expression {
 		final String remainingParameters = matcher.group("remainingParameters");
 
 		if (firstParameter != null && !".".equals(firstParameter)) {
-			initializeLocalBindings.addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addAccess(ASTORE, Expression.FIRST_LOCAL_BINDING_INDEX + state.getLocalBindings().getOrAdd(firstParameter));
+			initializeLocalBindings.addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(firstParameter));
 		}
 
 		if (remainingParameters == null) {
@@ -373,7 +372,7 @@ public final class Expression {
 
 				initializeLocalBindings.addCode(Evaluable.LOAD_ARGUMENTS).addBranch(IFNULL, ifNull).pushConstant(i).addCode(Evaluable.LOAD_ARGUMENTS).addCode(ARRAYLENGTH).addBranch(IF_ICMPGE, ifNull)
 					.addCode(Evaluable.LOAD_ARGUMENTS).pushConstant(i).addCode(AALOAD).addGoto(end, 1)
-					.updateLabel(ifNull).addCode(ACONST_NULL).updateLabel(end).addAccess(ASTORE, Expression.FIRST_LOCAL_BINDING_INDEX + state.getLocalBindings().getOrAdd(name));
+					.updateLabel(ifNull).addCode(ACONST_NULL).updateLabel(end).addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name));
 			}
 		}
 	}
@@ -976,16 +975,18 @@ public final class Expression {
 
 			if (!state.getOperators().isEmpty() && state.getOperators().peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
 				state.getOperators().push(state.getOperators().pop().addRightExpression());
+				return operator;
 			} else if (operator.has(Operator.TRAILING_IDENTIFIER)) {
-				if (!matcher.region(matcher.end(), matcher.regionEnd()).usePattern(TRAILING_IDENTIFIER_PATTERN).lookingAt()) {
-					throw new IllegalArgumentException("Missing identifier after \"" + operator + "\" operator (index " + state.getIndex(matcher) + ")");
-				}
+				matcher.region(matcher.end(), matcher.regionEnd()).usePattern(TRAILING_IDENTIFIER_PATTERN).lookingAt();
+				final String name = matcher.group("name");
 
-				state.getOperators().push(operator.withLocalBindingIndex(Expression.FIRST_LOCAL_BINDING_INDEX + state.getLocalBindings().getOrAdd(matcher.group("name"))));
-			} else {
-				state.getOperators().push(operator);
+				if (name != null) {
+					state.getOperators().push(operator.withLocalBindingIndex(Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name)));
+					return operator;
+				}
 			}
 
+			state.getOperators().push(operator);
 			return operator;
 		} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION) || lastOperator.getString().startsWith(":")) { // Check if this token ends an expression on the stack
 			if (lastOperator != null && lastOperator.getString().startsWith(":")) { // ":" can have an optional right expression
@@ -1020,19 +1021,6 @@ public final class Expression {
 		}
 
 		throw new IllegalArgumentException("Unexpected \"" + token + "\" (index " + state.getIndex(matcher) + ")");
-	}
-
-	/**
-	 * Creates a new expression.
-	 *
-	 * @param location the location of the expression
-	 * @param expressionString the trimmed, advanced expression string
-	 * @param namedExpressions the map used to lookup named expressions
-	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
-	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
-	 */
-	Expression(final Object location, final String expression, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
-		this(null, location, 0, expression, namedExpressions, horseshoeExpressions);
 	}
 
 	/**
@@ -1109,7 +1097,7 @@ public final class Expression {
 
 			// Initialize all local bindings to null
 			for (int i = initializeBindingsStart; i < state.getLocalBindings().size(); i++) {
-				mb.addCode(ACONST_NULL).addAccess(ASTORE, Expression.FIRST_LOCAL_BINDING_INDEX + i);
+				mb.addCode(ACONST_NULL).addAccess(ASTORE, Evaluable.FIRST_LOCAL + i);
 			}
 		}
 

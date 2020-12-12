@@ -201,14 +201,16 @@ class TemplateTests {
 
 	@Test
 	void testStreamingSections() throws IOException, LoadException {
-		assertEquals("3, 4, 5", new TemplateLoader().load("Remap Test", "{{#[1,2,3] #> i -> i + 2}}{{.}}{{#.hasNext}}, {{/}}{{/}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("-1", new TemplateLoader().load("Min Test", "{{ min = ~@'Integer'.MAX_VALUE; [1,-1,1000] #< i -> min=i<min?i:min}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("2", new TemplateLoader().load("Filter Test", "{{min = ~@'Integer'.MAX_VALUE;[1,-1,1000] #. v-> v+1 #? j-> j>0 #< j => min=j<min?j:min}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("1", new TemplateLoader().load("First Test", "{{[1,-1,1000] #< v-> #^ v}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("1000", new TemplateLoader().load("Last Test", "{{[1,-1,1000] #< i=>i}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("10", new TemplateLoader().load("Sum Test", "{{sum = 0; [[1, 2], [3, 4].toArray(), null] #? i -> i #| i -> i #< i -> sum = sum + i}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("", new TemplateLoader().load("Sum Test", "{{sum = 0; [[1, 2], [3, 4].toArray(), null, 5] #| i -> i #< i -> sum = sum + i}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Identifier Test", "{{sum = 0; [[1, 2], [3, 4].toArray(), null] #| + -> i #< i -> sum = sum + i}}"));
+		assertEquals("3, 4, 5", new TemplateLoader().load("Remap Test", "{{# [1, 2, 3] #> i -> i + 2 }}{{.}}{{# .hasNext }}, {{/}}{{/}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("1, 2, 3, 4", new TemplateLoader().load("Flat Map Test", "{{# [[1, 2], null, [3, 4].toArray()] #| i -> i }}{{.}}{{# .hasNext }}, {{/}}{{/}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("-1", new TemplateLoader().load("Min Test", "{{ min = ~@Integer.MAX_VALUE; [1, -1, 1000] #< i -> min = i < min ? i : min }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("2", new TemplateLoader().load("Filter Test", "{{ min = ~@Integer.MAX_VALUE; [1, -1, 1000] #. v-> v + 1 #? j-> j > 0 #< j => min = j < min ? j : min }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("1", new TemplateLoader().load("First Test", "{{ [1, -1, 1000] #< v -> #^ v }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("1000", new TemplateLoader().load("Last Test", "{{ [1, -1, 1000] #< i => i }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("3", new TemplateLoader().load("Count Test", "{{ count = 0; [[1, 2], [3, 4].toArray(), null] #< count = count + 1 }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("10", new TemplateLoader().load("Sum Test", "{{ sum = 0; [[1, 2], [3, 4].toArray(), null] #? i -> i #| i -> i #< i -> sum = sum + i }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("", new TemplateLoader().load("Sum Test", "{{ sum = 0; [[1, 2], [3, 4].toArray(), null, 5] #| i -> i #< i -> sum = sum + i }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Identifier Test", "{{ sum = 0; [[1, 2], [3, 4].toArray(), null] #| + -> i #< i -> sum = sum + i }}"));
 	}
 
 	@Test

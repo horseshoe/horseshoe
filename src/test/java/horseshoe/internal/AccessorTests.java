@@ -139,7 +139,7 @@ class AccessorTests {
 		}
 	}
 
-	private class IterableOnlyCollection<T> implements Iterable<T> {
+	private static class IterableOnlyCollection<T> implements Iterable<T> {
 		private final Collection<T> collection;
 
 		public IterableOnlyCollection(final Collection<T> collection) {

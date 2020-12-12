@@ -5,6 +5,9 @@ import java.util.regex.Matcher;
 
 import horseshoe.Stack;
 
+/**
+ * Stores the state of an expression being parsed.
+ */
 public final class ExpressionParseState {
 
 	private final int startIndex;

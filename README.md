@@ -343,9 +343,9 @@ However, named expressions are not exposed to included partial templates. This i
 results in a whitespace-only string, since `func()` is not defined within the partial `a`.
 
 #### Streaming
-Streaming operations can be used in expressions to transform (`#>`, `#.`, `#|`), filter (`#?`), or reduce (`#<`) data within a single expression. They can be used on iterables, arrays, or individual objects. Individual objects with `null` values are treated as absent.
+Streaming operations can be used in expressions to transform (`#>`, `#.`, `#|`), filter (`#?`), or reduce (`#<`) data within a single expression. They are followed by an optional identifier and arrow (`value ->`, `->`, and \[empty\] are all allowed) and can be used to stream iterables, arrays, or individual objects. Individual objects with `null` values are treated as absent.
 
-Streaming transformations (`{{ a `<b>`#>`</b>` i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator. Flattening transformations (`{{# [[1, 2], [3, 4], null] `<b>`#|`</b>` i -> i }}`) allow lists to be combined.
+Streaming transformations (`{{ a `<b>`#>`</b>` i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator. Flattening transformations (`{{# [[1, 2], null, [3, 4]] `<b>`#|`</b>` i -> i // [1, 2, 3, 4] }}`) allow lists to be combined.
 
 Streaming filters (`{{# names `<b>`#?`</b>` name -> /* Find names with initials. */ ~/\b.[.]/.matcher(name).find() }}`) are used to filter out unneeded items. The new list is the result of the operator.
 
