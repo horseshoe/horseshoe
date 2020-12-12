@@ -1,13 +1,14 @@
 package horseshoe.internal;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -15,13 +16,14 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import horseshoe.Helper;
 import horseshoe.LoadException;
-import horseshoe.Settings;
 import horseshoe.TemplateLoader;
 import horseshoe.internal.Accessor.PatternMatcher;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class AccessorTests {
@@ -113,12 +115,71 @@ class AccessorTests {
 		assertEquals(ManagementFactory.getOperatingSystemMXBean().getArch(), new TemplateLoader().load("Inaccessible Method", "{{ManagementFactory.getOperatingSystemMXBean().getArch()}}").render(Helper.loadMap("ManagementFactory", ManagementFactory.class), new java.io.StringWriter()).toString());
 	}
 
+	private static void assertArrayEquals(final Object expected, final Object actual) {
+		final Class<?> componentType = expected.getClass().getComponentType();
+
+		if (!componentType.isPrimitive()) {
+			Assertions.assertArrayEquals((Object[])expected, (Object[])actual);
+		} else if (int.class.equals(componentType)) {
+			Assertions.assertArrayEquals((int[])expected, (int[])actual);
+		} else if (byte.class.equals(componentType)) {
+			Assertions.assertArrayEquals((byte[])expected, (byte[])actual);
+		} else if (double.class.equals(componentType)) {
+			Assertions.assertArrayEquals((double[])expected, (double[])actual);
+		} else if (boolean.class.equals(componentType)) {
+			Assertions.assertArrayEquals((boolean[])expected, (boolean[])actual);
+		} else if (float.class.equals(componentType)) {
+			Assertions.assertArrayEquals((float[])expected, (float[])actual);
+		} else if (long.class.equals(componentType)) {
+			Assertions.assertArrayEquals((long[])expected, (long[])actual);
+		} else if (char.class.equals(componentType)) {
+			Assertions.assertArrayEquals((char[])expected, (char[])actual);
+		} else {
+			Assertions.assertArrayEquals((short[])expected, (short[])actual);
+		}
+	}
+
+	private class IterableOnlyCollection<T> implements Iterable<T> {
+		private final Collection<T> collection;
+
+		public IterableOnlyCollection(final Collection<T> collection) {
+			this.collection = collection;
+		}
+
+		public Iterator<T> iterator() {
+			return collection.iterator();
+		}
+	}
+
 	@Test
 	void testLookup() {
-		assertEquals(Arrays.asList(2, 3), Accessor.lookup(new int[] { 4, 2, 5, 3, 1 }, Arrays.asList(1, 3), false));
+		for (final Object object : Arrays.asList(new Object[] { new Object(), null }, new int[] { 1, 2 }, new byte[] { -1, -2 }, new double[] { 1.1, 2.2 }, new boolean[] { true, false }, new float[] { 0.1f, 0.2f }, new long[] { 0x100000000L, 2 }, new char[] { '1', '2' }, new short[] { 1, 2 })) {
+			final int length = Array.getLength(object);
+
+			assertEquals(Array.get(object, 0), Accessor.lookup(object, 0, false));
+			assertEquals(Array.get(object, length - 1), Accessor.lookup(object, -1, false));
+			assertArrayEquals(object, Accessor.lookup(object, Arrays.asList(0, -1), false));
+
+			for (final int newLength : new int[] { 10, 12 }) {
+				final Object newArray = Array.newInstance(object.getClass().getComponentType(), newLength);
+
+				for (int i = 0; i < newLength; i++) {
+					Array.set(newArray, i, Array.get(object, i % length));
+				}
+
+				assertArrayEquals(newArray, Accessor.lookup(newArray, new Iterable<Integer>() {
+						public Iterator<Integer> iterator() {
+							return IntStream.range(0, newLength).boxed().iterator();
+						}
+					}, false));
+			}
+		}
+
 		assertEquals(Arrays.asList(2, 3), Accessor.lookup(Arrays.asList(4, 2, 5, 3, 1), Arrays.asList(1, 3), false));
+		assertEquals(Arrays.asList(2, 3), Accessor.lookup(Arrays.asList(4, 2, 5, 3, 1), new IterableOnlyCollection<>(Arrays.asList(1, 3)), false));
 		assertEquals(asMap(2, 7, 3, 8, 4, null), Accessor.lookup(asMap(14, 9, 2, 7, 4, null, 20, 10, 3, 8, 1, 6), Arrays.asList(2, 3, 4, 5), false));
 		assertEquals("Sam I am", Accessor.lookup("I am Sam", Arrays.asList(-3, -2, -1, -4, 0, 1, 2, 3), false));
+		assertEquals("Sam I am", Accessor.lookup("I am Sam", new IterableOnlyCollection<>(Arrays.asList(-3, -2, -1, -4, 0, 1, 2, 3)), false));
 		assertEquals('I', Accessor.lookup("I am Sam", 0, false));
 		assertEquals(asSet(2, 3), Accessor.lookup(asSet(14, 2, 5, 3, 1), Arrays.asList(2, 3, 4), false));
 

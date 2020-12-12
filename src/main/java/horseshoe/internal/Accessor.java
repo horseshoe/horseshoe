@@ -7,6 +7,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -295,7 +296,7 @@ public abstract class Accessor {
 		try {
 			if (context == null) {
 				if (!ignoreFailures) {
-					throw new NullPointerException();
+					throw new NullPointerException("The lookup operator cannot be applied to a null value");
 				}
 			} else if (context instanceof Map) {
 				return lookupMap((Map<?, ?>)context, lookup);
@@ -325,39 +326,371 @@ public abstract class Accessor {
 	 * @return the result of the lookup
 	 */
 	private static Object lookupArray(final Object context, final Object lookup) {
-		if (lookup instanceof Iterable) {
-			final List<Object> list = (lookup instanceof Collection ? new ArrayList<>(((Collection<?>)lookup).size()) : new ArrayList<>());
-
-			for (final Object object : (Iterable<?>)lookup) {
-				list.add(lookupArray(context, object));
-			}
-
-			return list;
-		}
-
 		final Class<?> componentType = context.getClass().getComponentType();
 
 		if (componentType == null) {
-			throw new ClassCastException(context.getClass().getName() + " cannot be used with the lookup operator");
+			throw new ClassCastException("The lookup operator cannot be applied to a " + context.getClass().getName() + " object");
 		} else if (!componentType.isPrimitive()) {
-			return ((Object[])context)[((Number)lookup).intValue()];
+			return lookupArray((Object[])context, lookup);
 		} else if (int.class.equals(componentType)) {
-			return ((int[])context)[((Number)lookup).intValue()];
+			return lookupArray((int[])context, lookup);
 		} else if (byte.class.equals(componentType)) {
-			return ((byte[])context)[((Number)lookup).intValue()];
+			return lookupArray((byte[])context, lookup);
 		} else if (double.class.equals(componentType)) {
-			return ((double[])context)[((Number)lookup).intValue()];
+			return lookupArray((double[])context, lookup);
 		} else if (boolean.class.equals(componentType)) {
-			return ((boolean[])context)[((Number)lookup).intValue()];
+			return lookupArray((boolean[])context, lookup);
 		} else if (float.class.equals(componentType)) {
-			return ((float[])context)[((Number)lookup).intValue()];
+			return lookupArray((float[])context, lookup);
 		} else if (long.class.equals(componentType)) {
-			return ((long[])context)[((Number)lookup).intValue()];
+			return lookupArray((long[])context, lookup);
 		} else if (char.class.equals(componentType)) {
-			return ((char[])context)[((Number)lookup).intValue()];
+			return lookupArray((char[])context, lookup);
 		}
 
-		return ((short[])context)[((Number)lookup).intValue()];
+		return lookupArray((short[])context, lookup);
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArray(final Object[] context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final Object[] newArray = new Object[collection.size()];
+			int i = 0;
+
+			for (final Object object : collection) {
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return newArray;
+		} else if (lookup instanceof Iterable) {
+			Object[] newArray = new Object[10];
+			int i = 0;
+
+			for (final Object object : (Iterable<?>)lookup) {
+				if (i >= newArray.length) {
+					newArray = Arrays.copyOf(newArray, newArray.length * 2);
+				}
+
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return i == newArray.length ? newArray : Arrays.copyOf(newArray, i);
+		}
+
+		return context[calculateIndex(context.length, ((Number)lookup).intValue())];
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArray(final int[] context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final int[] newArray = new int[collection.size()];
+			int i = 0;
+
+			for (final Object object : collection) {
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return newArray;
+		} else if (lookup instanceof Iterable) {
+			int[] newArray = new int[10];
+			int i = 0;
+
+			for (final Object object : (Iterable<?>)lookup) {
+				if (i >= newArray.length) {
+					newArray = Arrays.copyOf(newArray, newArray.length * 2);
+				}
+
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return i == newArray.length ? newArray : Arrays.copyOf(newArray, i);
+		}
+
+		return context[calculateIndex(context.length, ((Number)lookup).intValue())];
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArray(final byte[] context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final byte[] newArray = new byte[collection.size()];
+			int i = 0;
+
+			for (final Object object : collection) {
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return newArray;
+		} else if (lookup instanceof Iterable) {
+			byte[] newArray = new byte[10];
+			int i = 0;
+
+			for (final Object object : (Iterable<?>)lookup) {
+				if (i >= newArray.length) {
+					newArray = Arrays.copyOf(newArray, newArray.length * 2);
+				}
+
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return i == newArray.length ? newArray : Arrays.copyOf(newArray, i);
+		}
+
+		return context[calculateIndex(context.length, ((Number)lookup).intValue())];
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArray(final double[] context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final double[] newArray = new double[collection.size()];
+			int i = 0;
+
+			for (final Object object : collection) {
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return newArray;
+		} else if (lookup instanceof Iterable) {
+			double[] newArray = new double[10];
+			int i = 0;
+
+			for (final Object object : (Iterable<?>)lookup) {
+				if (i >= newArray.length) {
+					newArray = Arrays.copyOf(newArray, newArray.length * 2);
+				}
+
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return i == newArray.length ? newArray : Arrays.copyOf(newArray, i);
+		}
+
+		return context[calculateIndex(context.length, ((Number)lookup).intValue())];
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArray(final boolean[] context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final boolean[] newArray = new boolean[collection.size()];
+			int i = 0;
+
+			for (final Object object : collection) {
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return newArray;
+		} else if (lookup instanceof Iterable) {
+			boolean[] newArray = new boolean[10];
+			int i = 0;
+
+			for (final Object object : (Iterable<?>)lookup) {
+				if (i >= newArray.length) {
+					newArray = Arrays.copyOf(newArray, newArray.length * 2);
+				}
+
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return i == newArray.length ? newArray : Arrays.copyOf(newArray, i);
+		}
+
+		return context[calculateIndex(context.length, ((Number)lookup).intValue())];
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArray(final float[] context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final float[] newArray = new float[collection.size()];
+			int i = 0;
+
+			for (final Object object : collection) {
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return newArray;
+		} else if (lookup instanceof Iterable) {
+			float[] newArray = new float[10];
+			int i = 0;
+
+			for (final Object object : (Iterable<?>)lookup) {
+				if (i >= newArray.length) {
+					newArray = Arrays.copyOf(newArray, newArray.length * 2);
+				}
+
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return i == newArray.length ? newArray : Arrays.copyOf(newArray, i);
+		}
+
+		return context[calculateIndex(context.length, ((Number)lookup).intValue())];
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArray(final long[] context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final long[] newArray = new long[collection.size()];
+			int i = 0;
+
+			for (final Object object : collection) {
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return newArray;
+		} else if (lookup instanceof Iterable) {
+			long[] newArray = new long[10];
+			int i = 0;
+
+			for (final Object object : (Iterable<?>)lookup) {
+				if (i >= newArray.length) {
+					newArray = Arrays.copyOf(newArray, newArray.length * 2);
+				}
+
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return i == newArray.length ? newArray : Arrays.copyOf(newArray, i);
+		}
+
+		return context[calculateIndex(context.length, ((Number)lookup).intValue())];
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArray(final char[] context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final char[] newArray = new char[collection.size()];
+			int i = 0;
+
+			for (final Object object : collection) {
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return newArray;
+		} else if (lookup instanceof Iterable) {
+			char[] newArray = new char[10];
+			int i = 0;
+
+			for (final Object object : (Iterable<?>)lookup) {
+				if (i >= newArray.length) {
+					newArray = Arrays.copyOf(newArray, newArray.length * 2);
+				}
+
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return i == newArray.length ? newArray : Arrays.copyOf(newArray, i);
+		}
+
+		return context[calculateIndex(context.length, ((Number)lookup).intValue())];
+	}
+
+	/**
+	 * Looks up a value based on an array and the lookup operand.
+	 *
+	 * @param context the array object used to perform the lookup
+	 * @param lookup the value to lookup
+	 * @return the result of the lookup
+	 */
+	private static Object lookupArray(final short[] context, final Object lookup) {
+		if (lookup instanceof Collection) {
+			final Collection<?> collection = (Collection<?>)lookup;
+			final short[] newArray = new short[collection.size()];
+			int i = 0;
+
+			for (final Object object : collection) {
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return newArray;
+		} else if (lookup instanceof Iterable) {
+			short[] newArray = new short[10];
+			int i = 0;
+
+			for (final Object object : (Iterable<?>)lookup) {
+				if (i >= newArray.length) {
+					newArray = Arrays.copyOf(newArray, newArray.length * 2);
+				}
+
+				newArray[i] = context[calculateIndex(context.length, ((Number)object).intValue())];
+				i++;
+			}
+
+			return i == newArray.length ? newArray : Arrays.copyOf(newArray, i);
+		}
+
+		return context[calculateIndex(context.length, ((Number)lookup).intValue())];
 	}
 
 	/**
@@ -372,7 +705,7 @@ public abstract class Accessor {
 		final Class<?> componentType = context.getClass().getComponentType();
 
 		if (componentType == null) {
-			throw new ClassCastException(context.getClass().getName() + " cannot be used with the lookup operator");
+			throw new ClassCastException("The lookup operator cannot be applied to a " + context.getClass().getName() + " object");
 		} else if (!componentType.isPrimitive()) {
 			final Object[] array = (Object[])context;
 			final Range range = new Range(start, end, array.length);
@@ -608,7 +941,7 @@ public abstract class Accessor {
 		try {
 			if (context == null) {
 				if (!ignoreFailures) {
-					throw new NullPointerException();
+					throw new NullPointerException("The lookup operator cannot be applied to a null value");
 				}
 			} else if (context instanceof Map) {
 				return lookupMapRange((Map<T, ?>)context, start, end);
