@@ -295,7 +295,7 @@ public final class Expression {
 			final String name = identifierText.startsWith("`") ? identifierText.substring(1, identifierText.length() - 1).replace("``", "`") : identifierText;
 
 			if (lastNavigation) {
-				final Identifier identifier = new Identifier(name);
+				final Identifier identifier = state.getCachedIdentifier(new Identifier(name));
 				final int index = state.getIdentifiers().getOrAdd(identifier);
 				final Operator operator = state.getOperators().pop();
 
@@ -320,7 +320,7 @@ public final class Expression {
 				} else if (backreach < 0 && (localBindingIndex = state.getLocalBindings().get(name)) != null) { // Check for a local binding
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL + localBindingIndex.intValue())));
 				} else { // Resolve the identifier
-					final Identifier identifier = new Identifier(name);
+					final Identifier identifier = state.getCachedIdentifier(new Identifier(name));
 					final int index = state.getIdentifiers().getOrAdd(identifier);
 
 					// Create a new output formed by invoking identifiers[index].getRootValue(context) or identifiers[index].findValue(context, backreach)
@@ -543,7 +543,7 @@ public final class Expression {
 
 		if (operator.has(Operator.KNOWN_OBJECT) || (namedExpression = state.getNamedExpressions().get(operator.getString())) == null) {
 			// Create the identifier, then get and invoke the appropriate method
-			final int index = state.getIdentifiers().getOrAdd(new Identifier(operator.getString(), parameterCount));
+			final int index = state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(operator.getString(), parameterCount)));
 			final MethodBuilder methodResult = state.getOperands().peek(parameterCount).builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).append(state.getOperands().peek(parameterCount + 1).builder);
 
 			if (parameterCount == 0) {
@@ -1028,14 +1028,11 @@ public final class Expression {
 	 *
 	 * @param cachedExpression a cached copy of the expression that can be leveraged to improve performance if applicable.
 	 * @param location the location of the expression
-	 * @param startIndex the starting index of the expression within the given scope
-	 * @param expression the trimmed expression string (starting at {@code expressionStart})
-	 * @param namedExpressions the map used to lookup named expressions
+	 * @param state the parse state for the expression
 	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	public Expression(final Expression cachedExpression, final Object location, final int startIndex, final String expression, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
-		final ExpressionParseState state = new ExpressionParseState(startIndex, expression, namedExpressions);
+	public Expression(final Expression cachedExpression, final Object location, final ExpressionParseState state, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final MethodBuilder mb = new MethodBuilder();
 		boolean named = false;
 
@@ -1048,11 +1045,11 @@ public final class Expression {
 			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(originalString, -1);
 
 			// Push a new operand formed by invoking identifiers[index].getValue(context, backreach, access)
-			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(new Identifier(names[0]))).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
+			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(names[0])))).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
 
 			// Load the identifiers and invoke identifiers[index].getValue(object)
 			for (int i = 1; i < names.length; i++) {
-				state.getOperands().peek().builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(new Identifier(names[i]))).addCode(AALOAD, SWAP).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE);
+				state.getOperands().peek().builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(names[i])))).addCode(AALOAD, SWAP).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE);
 			}
 		} else { // Tokenize the entire expression, using the shunting yard algorithm
 			int initializeBindingsStart = 0;

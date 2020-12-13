@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -40,8 +41,9 @@ class ExpressionTests {
 	public static Expression createExpression(final String expression, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final StackTraceElement[] elements = new Throwable().getStackTrace();
 		final String location = elements.length >= 1 ? elements[1].getFileName() + ":" + elements[1].getLineNumber() : "[Unknown]";
+		final ExpressionParseState parseState = new ExpressionParseState(0, expression, namedExpressions, new HashMap<>());
 
-		return new Expression(null, location, 0, expression, namedExpressions, horseshoeExpressions);
+		return new Expression(null, location, parseState, horseshoeExpressions);
 	}
 
 	@Test

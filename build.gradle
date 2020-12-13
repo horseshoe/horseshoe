@@ -29,6 +29,7 @@ compileJava {
 test {
 	finalizedBy jacocoTestReport
 	useJUnitPlatform()
+	systemProperty "horseshoe.useJava7", System.getProperty("horseshoe.useJava7")
 
 	testLogging {
 		exceptionFormat "full"

@@ -12,6 +12,11 @@ public class Properties {
 	 */
 	public static final double JAVA_VERSION = JAVA_VERSION_MATCHER.find() ? Double.parseDouble(JAVA_VERSION_MATCHER.group("majorDotMinor")) : 7.0;
 
+	/**
+	 * True to use the Java 7 versions of code that have newer Java version optimizations.
+	 */
+	public static final boolean USE_JAVA_7 = Boolean.parseBoolean(System.getProperty("horseshoe.useJava7"));
+
 	private Properties() {
 	}
 

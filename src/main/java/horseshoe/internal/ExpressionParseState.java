@@ -13,6 +13,7 @@ public final class ExpressionParseState {
 	private final int startIndex;
 	private final String trimmedString;
 	private final Map<String, Expression> namedExpressions;
+	private final Map<Identifier, Identifier> allIdentifiers;
 	private final CacheList<Expression> expressions = new CacheList<>();
 	private final CacheList<Identifier> identifiers = new CacheList<>();
 	private final CacheList<String> localBindings = new CacheList<>();
@@ -25,11 +26,22 @@ public final class ExpressionParseState {
 	 * @param startIndex the starting index of the trimmed string within the tag
 	 * @param trimmedString the trimmed string of the expression
 	 * @param namedExpressions the set of named expressions that can be used in the expression
+	 * @param allIdentifiers the set of all identifiers that can be used as a cache in the expression
 	 */
-	public ExpressionParseState(final int startIndex, final String trimmedString, final Map<String, Expression> namedExpressions) {
+	public ExpressionParseState(final int startIndex, final String trimmedString, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers) {
 		this.startIndex = startIndex;
 		this.trimmedString = trimmedString;
 		this.namedExpressions = namedExpressions;
+		this.allIdentifiers = allIdentifiers;
+	}
+
+	/**
+	 * Gets the matching cached identifier from the set of all identifiers.
+	 *
+	 * @return the matching cached identifier
+	 */
+	public Identifier getCachedIdentifier(final Identifier identifier) {
+		return Utilities.getOrAddMapValue(allIdentifiers, identifier, identifier);
 	}
 
 	/**

@@ -13,8 +13,8 @@ import java.util.logging.Level;
 
 import horseshoe.internal.Buffer;
 import horseshoe.internal.ParsedLine;
-import horseshoe.internal.StringUtils;
-import horseshoe.internal.StringUtils.Range;
+import horseshoe.internal.Utilities;
+import horseshoe.internal.Utilities.Range;
 
 /**
  * Loaders are used to parse {@link Template}s. It keeps track of the current state of the internal reader used to load the template text.
@@ -247,15 +247,15 @@ public final class Loader implements AutoCloseable {
 		nextLocation.column += bufferOffset - range.start;
 
 		if (stringToLoad != null) {
-			for (Range eolRange = StringUtils.findNewLine(stringToLoad, range.start, bufferOffset);
+			for (Range eolRange = Utilities.findNewLine(stringToLoad, range.start, bufferOffset);
 					eolRange != null;
-					nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = StringUtils.findNewLine(stringToLoad, eolRange.end, bufferOffset));
+					nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(stringToLoad, eolRange.end, bufferOffset));
 
 			value = stringToLoad.substring(range.start, range.end);
 		} else {
-			for (Range eolRange = StringUtils.findNewLine(streamBuffer.getData(), range.start, bufferOffset);
+			for (Range eolRange = Utilities.findNewLine(streamBuffer.getData(), range.start, bufferOffset);
 					eolRange != null;
-					nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = StringUtils.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset));
+					nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset));
 
 			value = streamBuffer.substring(range.start, range.end);
 		}
@@ -272,16 +272,16 @@ public final class Loader implements AutoCloseable {
 	 */
 	List<ParsedLine> nextLines(final String delimiter) throws IOException {
 		final List<ParsedLine> lines = new ArrayList<>();
-		final StringUtils.Range range = nextMatch(delimiter);
+		final Utilities.Range range = nextMatch(delimiter);
 		int startOfLine = range.start;
 
 		location.set(nextLocation);
 		nextLocation.column += bufferOffset - range.start;
 
 		if (stringToLoad != null) {
-			for (Range eolRange = StringUtils.findNewLine(stringToLoad, range.start, bufferOffset);
+			for (Range eolRange = Utilities.findNewLine(stringToLoad, range.start, bufferOffset);
 					eolRange != null;
-					startOfLine = eolRange.end, nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = StringUtils.findNewLine(stringToLoad, eolRange.end, bufferOffset)) {
+					startOfLine = eolRange.end, nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(stringToLoad, eolRange.end, bufferOffset)) {
 				if (startOfLine <= range.end) {
 					final int newLineStart = Math.min(eolRange.start, range.end);
 					final int newLineEnd = Math.min(eolRange.end, range.end);
@@ -297,9 +297,9 @@ public final class Loader implements AutoCloseable {
 			return lines;
 		}
 
-		for (Range eolRange = StringUtils.findNewLine(streamBuffer.getData(), range.start, bufferOffset);
+		for (Range eolRange = Utilities.findNewLine(streamBuffer.getData(), range.start, bufferOffset);
 				eolRange != null;
-				startOfLine = eolRange.end, nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = StringUtils.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset)) {
+				startOfLine = eolRange.end, nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset)) {
 			if (startOfLine <= range.end) {
 				final int newLineStart = Math.min(eolRange.start, range.end);
 				final int newLineEnd = Math.min(eolRange.end, range.end);
@@ -322,7 +322,7 @@ public final class Loader implements AutoCloseable {
 	 * @return the range up to the next matching delimiter or end-of-stream
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	private StringUtils.Range nextMatch(final String delimiter) throws IOException {
+	private Utilities.Range nextMatch(final String delimiter) throws IOException {
 		// Find the next match and increment the buffer offset
 		if (stringToLoad != null) {
 			final int start = bufferOffset;
@@ -330,12 +330,12 @@ public final class Loader implements AutoCloseable {
 
 			if (foundMatch >= 0) {
 				bufferOffset = foundMatch + delimiter.length();
-				return new StringUtils.Range(start, foundMatch);
+				return new Utilities.Range(start, foundMatch);
 			}
 
 			bufferOffset = stringToLoad.length();
 			hasNext = false;
-			return new StringUtils.Range(start, bufferOffset);
+			return new Utilities.Range(start, bufferOffset);
 		}
 
 		int foundMatch;
@@ -349,12 +349,12 @@ public final class Loader implements AutoCloseable {
 
 		if (foundMatch >= 0) {
 			bufferOffset = foundMatch + delimiter.length();
-			return new StringUtils.Range(start, foundMatch);
+			return new Utilities.Range(start, foundMatch);
 		}
 
 		bufferOffset = streamBuffer.length();
 		hasNext = false;
-		return new StringUtils.Range(start, bufferOffset);
+		return new Utilities.Range(start, bufferOffset);
 	}
 
 	/**

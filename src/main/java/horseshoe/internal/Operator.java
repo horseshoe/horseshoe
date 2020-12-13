@@ -115,8 +115,8 @@ final class Operator {
 		operators.add(new Operator("in",     8,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Is In"));
 		operators.add(new Operator("==",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Equal"));
 		operators.add(new Operator("!=",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Not Equal"));
-		operators.add(new Operator("=~",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Found Pattern"));
-		operators.add(new Operator("==~",    9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Matches Pattern"));
+		operators.add(new Operator("=~",     9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Find Pattern"));
+		operators.add(new Operator("==~",    9,  LEFT_EXPRESSION | RIGHT_EXPRESSION, "Match Pattern"));
 		operators.add(new Operator("&",      10, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise And"));
 		operators.add(new Operator("^",      11, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Xor"));
 		operators.add(new Operator("|",      12, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Or"));

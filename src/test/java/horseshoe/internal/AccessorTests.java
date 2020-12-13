@@ -268,12 +268,12 @@ class AccessorTests {
 
 	@Test
 	void testStaticFields() throws IOException, LoadException {
-		assertEquals("Values: (0) " + Byte.MAX_VALUE + ", 1) " + Short.MAX_VALUE + ", 2) " + Integer.MAX_VALUE + ", 3) " + Long.MAX_VALUE + ", 4) " + Float.MAX_VALUE + ", 5) " + Double.MAX_VALUE + ", 6) , , ", new TemplateLoader().load("Static Fields", "Values: {{.badInternal}}{{#Values}}{{#.isFirst}}({{/}}{{.index}}) {{. ?. MAX_VALUE}}{{#.hasNext}}, {{/}}{{/}}, {{Test.FIELD}}, {{Private.FIELD}}").render(Helper.loadMap("Values", Helper.loadList(Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class, Object.class), "Test", TestMap.class, "Private", PrivateClass.class), new java.io.StringWriter()).toString());
+		assertEquals("Values: (0) " + Byte.MAX_VALUE + ", 1) " + Short.MAX_VALUE + ", 2) " + Integer.MAX_VALUE + ", 3) " + Long.MAX_VALUE + ", 4) " + Float.MAX_VALUE + ", 5) " + Double.MAX_VALUE + ", 6) , , ", new TemplateLoader().load("Static Fields", "Values: {{ .badInternal }}{{# Values }}{{# .isFirst }}({{/}}{{ .index }}) {{ .?.MAX_VALUE }}{{# .hasNext }}, {{/}}{{/}}, {{ Test.FIELD }}, {{ Private.FIELD }}").render(Helper.loadMap("Values", Helper.loadList(Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class, Object.class), "Test", TestMap.class, "Private", PrivateClass.class), new java.io.StringWriter()).toString());
 	}
 
 	@Test
 	void testStaticMethod() throws IOException, LoadException {
-		assertEquals("Min: 0, Min: 1.0, Min: 0, Max: 0.0, Max: " + Byte.MAX_VALUE + ", Max: , Name: " + PrivateClass.class.getName(), new TemplateLoader().load("Static Methods", "Min: {{Math.`min:int,int`(Integer.MAX_VALUE, 0)}}, Min: {{Math.min(1.0d, 3.4)}}, Min: {{Math.min(Integer.MAX_VALUE, 0L)}}, Max: {{Math.`max:float,float`(Integer.MIN_VALUE, 0)}}, Max: {{Math.`max:int,int`(Integer.MIN_VALUE, Byte.MAX_VALUE)}}, Max: {{Math.max(Integer.MIN_VALUE, newObject)}}, Name: {{Private.getName()}}").render(Helper.loadMap("Math", Math.class, "Integer", Integer.class, "Byte", Byte.class, "newObject", new Object(), "Private", PrivateClass.class), new java.io.StringWriter()).toString());
+		assertEquals("Min: 0, Min: 1.0, Min: 0, Max: 0.0, Max: " + Byte.MAX_VALUE + ", Max: , Name: " + PrivateClass.class.getName(), new TemplateLoader().load("Static Methods", "Min: {{ Math.`min:int,int`(Integer.MAX_VALUE, 0) }}, Min: {{ Math.min(1.0d, 3.4) }}, Min: {{ Math.`min:long,long`(Integer.MAX_VALUE, 0L) }}, Max: {{ Math.`max:float,float`(Integer.MIN_VALUE, 0) }}, Max: {{ Math.`max:int,int`(Integer.MIN_VALUE, Byte.MAX_VALUE) }}, Max: {{ Math.max(Integer.MIN_VALUE, newObject) }}, Name: {{ Private.getName() }}").render(Helper.loadMap("Math", Math.class, "Integer", Integer.class, "Byte", Byte.class, "newObject", new Object(), "Private", PrivateClass.class), new java.io.StringWriter()).toString());
 	}
 
 }

@@ -24,7 +24,7 @@ class GenerateOperatorTableTest {
 	}
 
 	private static String escapeMarkdown(final String value) {
-		return escapeHTML(value).replaceAll("[-\\\\`*_{}\\[\\]()+.!|]|(?<!&)#", "\\\\$0");
+		return escapeHTML(value).replaceAll("[-\\\\`*_{}\\[\\]()+.!|~]|(?<!&)#", "\\\\$0");
 	}
 
 	@Test

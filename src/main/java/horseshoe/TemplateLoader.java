@@ -17,10 +17,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import horseshoe.internal.Expression;
+import horseshoe.internal.ExpressionParseState;
 import horseshoe.internal.Identifier;
 import horseshoe.internal.ParsedLine;
-import horseshoe.internal.StringUtils;
-import horseshoe.internal.StringUtils.TrimmedString;
+import horseshoe.internal.Utilities;
+import horseshoe.internal.Utilities.TrimmedString;
 
 /**
  * The TemplateLoader class is used to load any number of {@link Template}s before rendering. Various properties can be configured to load templates with different settings.
@@ -82,6 +83,7 @@ public class TemplateLoader {
 
 		private final Loader loader;
 		private final Stack<Section> sections = new Stack<>();
+		private final Map<Identifier, Identifier> allIdentifiers = new HashMap<>();
 		private final Map<String, Expression> expressionCache = new HashMap<>();
 		private final Stack<List<Renderer>> renderLists = new Stack<>();
 		private Delimiter delimiter = new Delimiter("{{", "}}");
@@ -105,7 +107,8 @@ public class TemplateLoader {
 		 */
 		private Expression createExpression(final Object location, final TrimmedString expression, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
 			final Expression cachedExpression = expressionCache.get(expression.string);
-			final Expression newExpression = new Expression(cachedExpression, location, expression.start, expression.string, sections.peek().getNamedExpressions(), extensions.contains(Extension.EXPRESSIONS));
+			final ExpressionParseState parseState = new ExpressionParseState(expression.start, expression.string, sections.peek().getNamedExpressions(), allIdentifiers);
+			final Expression newExpression = new Expression(cachedExpression, location, parseState, extensions.contains(Extension.EXPRESSIONS));
 
 			expressionCache.put(expression.string, newExpression);
 			return newExpression;
@@ -121,10 +124,10 @@ public class TemplateLoader {
 			final int size = lines.size();
 
 			if (size > 1) {
-				return StringUtils.isWhitespace(lines.get(0).getLine());
+				return Utilities.isWhitespace(lines.get(0).getLine());
 			}
 
-			return !loader.hasNext() && StringUtils.isWhitespace(lines.get(0).getLine());
+			return !loader.hasNext() && Utilities.isWhitespace(lines.get(0).getLine());
 		}
 
 		/**
@@ -139,7 +142,7 @@ public class TemplateLoader {
 			if (size > 1 || tagCount == 1) {
 				removedWhitespace = priorStaticText.get(size - 1).getLine();
 
-				if (StringUtils.isWhitespace(removedWhitespace)) {
+				if (Utilities.isWhitespace(removedWhitespace)) {
 					priorStaticText.set(size - 1, new ParsedLine(null, ""));
 					return removedWhitespace;
 				}
@@ -595,7 +598,7 @@ public class TemplateLoader {
 
 			case '<': // Local partial
 				if (extensions.contains(Extension.INLINE_PARTIALS)) {
-					final String name = StringUtils.trim(tag, 1).string;
+					final String name = Utilities.trim(tag, 1).string;
 					final Template partial = new Template(name, state.loader.toLocation());
 
 					state.sections.peek().getLocalPartials().put(name, partial);
@@ -635,7 +638,7 @@ public class TemplateLoader {
 				}
 
 				// Start a new section, or repeat the previous section
-				final TrimmedString expression = StringUtils.trim(tag, 1);
+				final TrimmedString expression = Utilities.trim(tag, 1);
 
 				if (expression.string.isEmpty() && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
 					state.sections.push(Section.repeat(state.sections.peek(), state.loader.toLocation()));
@@ -665,7 +668,7 @@ public class TemplateLoader {
 			}
 
 			case '^': { // Start a new inverted section, or else block for the current section
-				final TrimmedString expression = StringUtils.trim(tag, 1);
+				final TrimmedString expression = Utilities.trim(tag, 1);
 
 				if ((expression.string.isEmpty() || expression.string.startsWith("#")) && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
 					if (state.sections.peek().getExpression() == null && state.sections.peek().getAnnotation() == null || state.sections.peek().getRenderList() != state.renderLists.pop()) {
@@ -679,7 +682,7 @@ public class TemplateLoader {
 					} else { // "else if" tag
 						final Object location = state.loader.toLocation();
 
-						state.sections.pop(1).push(new Section(state.sections.peek(), location, state.createExpression(location, StringUtils.trim(tag, 2), extensions)));
+						state.sections.pop(1).push(new Section(state.sections.peek(), location, state.createExpression(location, Utilities.trim(tag, 2), extensions)));
 						previousSection.getInvertedRenderList().add(SectionRenderer.FACTORY.create(state.sections.peek()));
 						state.renderLists.push(state.sections.peek().getRenderList());
 					}
@@ -695,7 +698,7 @@ public class TemplateLoader {
 			}
 
 			case '/': { // Close the current section
-				final TrimmedString expression = StringUtils.trim(tag, 1);
+				final TrimmedString expression = Utilities.trim(tag, 1);
 				final Section section = state.sections.peek();
 
 				if (state.sections.size() <= 1) { // There should always be at least one section on the stack (the template root section)
@@ -731,7 +734,7 @@ public class TemplateLoader {
 			case '{': // Unescaped content tag
 			case '&':
 				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
-				state.renderLists.peek().add(new DynamicContentRenderer(state.createExpression(state.loader.toLocation(), StringUtils.trim(tag, 1), extensions), false));
+				state.renderLists.peek().add(new DynamicContentRenderer(state.createExpression(state.loader.toLocation(), Utilities.trim(tag, 1), extensions), false));
 				return;
 
 			default:
@@ -739,7 +742,7 @@ public class TemplateLoader {
 		}
 
 		// Load the expression
-		final Expression expression = state.createExpression(state.loader.toLocation(), StringUtils.trim(tag, 0), extensions);
+		final Expression expression = state.createExpression(state.loader.toLocation(), Utilities.trim(tag, 0), extensions);
 
 		if (!expression.isNamed()) {
 			// Default to parsing as a dynamic content tag

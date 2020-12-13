@@ -6,6 +6,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * A streamable enables chaining of operations. Both individual items and groups of items can be iterated using a streamable. Each iteration of the streamable clears all items in the streamable, so they must be readded to the streamable.
@@ -21,7 +23,7 @@ public abstract class Streamable<T> implements Iterable<T> {
 
 		if (Properties.JAVA_VERSION >= 8.0) {
 			try {
-				factory = (Factory)Streamable.class.getClassLoader().loadClass(Streamable.class.getName() + "_8$" + Factory.class.getSimpleName()).getConstructor().newInstance();
+				factory = (Factory)Streamable.class.getClassLoader().loadClass(Factory.class.getName() + "8").getConstructor().newInstance();
 			} catch (final ReflectiveOperationException e) {
 				throw new ExceptionInInitializerError("Failed to load Java 8 specialization: " + e.getMessage());
 			}
@@ -33,7 +35,8 @@ public abstract class Streamable<T> implements Iterable<T> {
 	/**
 	 * A factory class for creating streamables.
 	 */
-	static class Factory {
+	private static class Factory {
+
 		/**
 		 * Creates a streamable of the specified value.
 		 *
@@ -65,6 +68,31 @@ public abstract class Streamable<T> implements Iterable<T> {
 
 			return Streamable.of(value);
 		}
+
+	}
+
+	/**
+	 * Java 8 extensions for creating streamables.
+	 */
+	@SuppressWarnings("unused")
+	private static final class Factory8 extends Factory {
+
+		public Factory8() {
+			// public constructor to support reflection access
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		Streamable<?> create(final Object value) {
+			if (value instanceof Stream) {
+				return new StreamableList<>(8, ((Stream<Object>)value).iterator());
+			} else if (value instanceof Optional) {
+				return Streamable.of(((Optional<Object>)value).orElse(null));
+			}
+
+			return super.create(value);
+		}
+
 	}
 
 	/**

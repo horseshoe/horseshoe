@@ -168,7 +168,7 @@ public class Settings {
 				Matcher.class,
 				Pattern.class));
 
-		if (Properties.JAVA_VERSION >= 8) {
+		if (Properties.JAVA_VERSION >= 8.0) {
 			for (final String className : Arrays.asList("java.time.Duration",
 					"java.time.Instant",
 					"java.util.Optional",

@@ -6,7 +6,10 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import horseshoe.internal.Properties;
 
@@ -16,7 +19,40 @@ public class SectionRenderer implements Renderer {
 
 	private final Section section;
 
+	private static final class SectionRenderer8 extends SectionRenderer {
+
+		/**
+		 * Creates a new section renderer using the specified section.
+		 *
+		 * @param section the section to be rendered
+		 */
+		private SectionRenderer8(final Section section) {
+			super(section);
+		}
+
+		@Override
+		void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
+			final Object unwrappedData;
+
+			if (data instanceof Optional<?>) {
+				unwrappedData = ((Optional<?>)data).orElse(null);
+			} else {
+				unwrappedData = data;
+			}
+
+			if (!(unwrappedData instanceof Stream<?>)) {
+				super.dispatchData(context, unwrappedData, writer);
+			} else if (getSection().cacheResult()) { // Only collect to a list if we are required to cache the results
+				super.dispatchData(context, ((Stream<?>)unwrappedData).collect(Collectors.toList()), writer);
+			} else {
+				super.dispatchIteratorData(context, ((Stream<?>)unwrappedData).iterator(), writer);
+			}
+		}
+
+	}
+
 	static class Factory {
+
 		/**
 		 * Creates a new section renderer using the specified section.
 		 *
@@ -26,6 +62,24 @@ public class SectionRenderer implements Renderer {
 		SectionRenderer create(final Section section) {
 			return new SectionRenderer(section);
 		}
+
+	}
+
+	/**
+	 * Java 8 extensions for creating section renderers.
+	 */
+	@SuppressWarnings("unused")
+	private static class Factory8 extends Factory {
+
+		public Factory8() {
+			// public constructor to support reflection access
+		}
+
+		@Override
+		SectionRenderer8 create(final Section section) {
+			return new SectionRenderer8(section);
+		}
+
 	}
 
 	static class Reiterable<T> implements Iterable<T>, Iterator<T> {
@@ -66,7 +120,7 @@ public class SectionRenderer implements Renderer {
 
 		try { // Try to load the Java 8+ version
 			if (Properties.JAVA_VERSION >= 8.0) {
-				factory = (Factory)Factory.class.getClassLoader().loadClass(Factory.class.getName().replace(SectionRenderer.class.getSimpleName(), SectionRenderer.class.getSimpleName() + "_8")).getConstructor().newInstance();
+				factory = (Factory)Factory.class.getClassLoader().loadClass(Factory.class.getName() + "8").getConstructor().newInstance();
 			}
 		} catch (final ReflectiveOperationException e) {
 			throw new ExceptionInInitializerError("Failed to load Java 8 specialization: " + e.getMessage());
