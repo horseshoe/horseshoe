@@ -127,7 +127,7 @@ publishing {
 				licenses {
 					license {
 						name = 'MIT License'
-						url = "${repoUrl}/blob/master/LICENSE"
+						url = "${repoUrl}/blob/main/LICENSE"
 					}
 				}
 				scm {
