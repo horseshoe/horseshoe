@@ -16,6 +16,7 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import horseshoe.internal.CacheList;
 import horseshoe.internal.Expression;
 import horseshoe.internal.ExpressionParseState;
 import horseshoe.internal.Identifier;
@@ -84,6 +85,7 @@ public class TemplateLoader {
 		private final Loader loader;
 		private final Stack<Section> sections = new Stack<>();
 		private final Map<Identifier, Identifier> allIdentifiers = new HashMap<>();
+		private final CacheList<String> bindings = new CacheList<>();
 		private final Map<String, Expression> expressionCache = new HashMap<>();
 		private final Stack<List<Renderer>> renderLists = new Stack<>();
 		private Delimiter delimiter = new Delimiter("{{", "}}");
@@ -105,13 +107,22 @@ public class TemplateLoader {
 		 * @return the new expression or a cached copy of the expression with updated location
 		 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 		 */
-		private Expression createExpression(final Object location, final TrimmedString expression, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
-			final Expression cachedExpression = expressionCache.get(expression.string);
-			final ExpressionParseState parseState = new ExpressionParseState(expression.start, expression.string, sections.peek().getNamedExpressions(), allIdentifiers);
+		private Expression createExpression(final Object location, final ExpressionParseState parseState, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
+			final Expression cachedExpression = expressionCache.get(parseState.getExpressionString());
 			final Expression newExpression = new Expression(cachedExpression, location, parseState, extensions.contains(Extension.EXPRESSIONS));
 
-			expressionCache.put(expression.string, newExpression);
+			expressionCache.put(parseState.getExpressionString(), newExpression);
 			return newExpression;
+		}
+
+		/**
+		 * Create a new expression parser from the load state.
+		 *
+		 * @param expression the trimmed expression string
+		 * @return the new expression parser
+		 */
+		private ExpressionParseState createExpressionParser(final TrimmedString expression) {
+			return new ExpressionParseState(expression.start, expression.string, sections.peek().getNamedExpressions(), allIdentifiers, bindings);
 		}
 
 		/**
@@ -654,11 +665,11 @@ public class TemplateLoader {
 					final Object location = state.loader.toLocation();
 
 					// Load the annotation arguments
-					state.sections.push(new Section(state.sections.peek(), sectionName, location, parameters == null ? null : state.createExpression(location, new TrimmedString(annotation.start(2), parameters), extensions), sectionName.substring(1), true));
+					state.sections.push(new Section(state.sections.peek(), sectionName, location, parameters == null ? null : state.createExpression(location, state.createExpressionParser(new TrimmedString(annotation.start(2), parameters)), extensions), sectionName.substring(1), true));
 				} else { // Start a new section
 					final Object location = state.loader.toLocation();
 
-					state.sections.push(new Section(state.sections.peek(), location, state.createExpression(location, expression, extensions)));
+					state.sections.push(new Section(state.sections.peek(), location, state.createExpression(location, state.createExpressionParser(expression), extensions)));
 				}
 
 				// Add a new render section action
@@ -682,14 +693,14 @@ public class TemplateLoader {
 					} else { // "else if" tag
 						final Object location = state.loader.toLocation();
 
-						state.sections.pop(1).push(new Section(state.sections.peek(), location, state.createExpression(location, Utilities.trim(tag, 2), extensions)));
+						state.sections.pop(1).push(new Section(state.sections.peek(), location, state.createExpression(location, state.createExpressionParser(Utilities.trim(tag, 2)), extensions)));
 						previousSection.getInvertedRenderList().add(SectionRenderer.FACTORY.create(state.sections.peek()));
 						state.renderLists.push(state.sections.peek().getRenderList());
 					}
 				} else { // Start a new inverted section
 					final Object location = state.loader.toLocation();
 
-					state.sections.push(new Section(state.sections.peek(), location, state.createExpression(location, expression, extensions)));
+					state.sections.push(new Section(state.sections.peek(), location, state.createExpression(location, state.createExpressionParser(expression), extensions)));
 					state.renderLists.peek().add(SectionRenderer.FACTORY.create(state.sections.peek()));
 					state.renderLists.push(state.sections.peek().getInvertedRenderList());
 				}
@@ -734,7 +745,7 @@ public class TemplateLoader {
 			case '{': // Unescaped content tag
 			case '&':
 				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
-				state.renderLists.peek().add(new DynamicContentRenderer(state.createExpression(state.loader.toLocation(), Utilities.trim(tag, 1), extensions), false));
+				state.renderLists.peek().add(new DynamicContentRenderer(state.createExpression(state.loader.toLocation(), state.createExpressionParser(Utilities.trim(tag, 1)), extensions), false));
 				return;
 
 			default:
@@ -742,9 +753,10 @@ public class TemplateLoader {
 		}
 
 		// Load the expression
-		final Expression expression = state.createExpression(state.loader.toLocation(), Utilities.trim(tag, 0), extensions);
+		final ExpressionParseState parseState = state.createExpressionParser(Utilities.trim(tag, 0));
+		final Expression expression = state.createExpression(state.loader.toLocation(), parseState, extensions);
 
-		if (!expression.isNamed()) {
+		if (parseState.returnsValue()) {
 			// Default to parsing as a dynamic content tag
 			state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
 			state.renderLists.peek().add(new DynamicContentRenderer(expression, true));

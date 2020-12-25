@@ -119,7 +119,6 @@ public final class Expression {
 	private final Expression[] expressions;
 	private final Identifier[] identifiers;
 	private final Evaluable evaluable;
-	private final boolean isNamed;
 
 	public abstract static class Evaluable {
 		private static final byte LOAD_EXPRESSIONS = ALOAD_1;
@@ -507,7 +506,7 @@ public final class Expression {
 		} else if (matcher.usePattern(OPERATOR_PATTERN).lookingAt()) { // Operator
 			return processOperator(state, matcher, lastOperator, hasLeftExpression);
 		} else {
-			final String start = state.getTrimmedString().length() - matcher.regionStart() > 10 ? state.getTrimmedString().substring(matcher.regionStart(), matcher.regionStart() + 7) + "..." : state.getTrimmedString().substring(matcher.regionStart());
+			final String start = state.getExpressionString().length() - matcher.regionStart() > 10 ? state.getExpressionString().substring(matcher.regionStart(), matcher.regionStart() + 7) + "..." : state.getExpressionString().substring(matcher.regionStart());
 			throw new IllegalArgumentException("Unrecognized operand \"" + start + "\" (index " + state.getIndex(matcher) + ")");
 		}
 
@@ -1037,7 +1036,7 @@ public final class Expression {
 		boolean named = false;
 
 		this.location = location;
-		this.originalString = state.getTrimmedString();
+		this.originalString = state.getExpressionString();
 
 		if (".".equals(originalString)) {
 			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
@@ -1053,12 +1052,12 @@ public final class Expression {
 			}
 		} else { // Tokenize the entire expression, using the shunting yard algorithm
 			int initializeBindingsStart = 0;
-			final int end = state.getTrimmedString().length();
-			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(state.getTrimmedString());
+			final int end = state.getExpressionString().length();
+			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(state.getExpressionString());
 
 			if (matcher.lookingAt()) {
 				state.getNamedExpressions().put(matcher.group("name"), this);
-				named = true;
+				state.setReturnsValue(false);
 				parseNamedExpressionSignature(state, mb, matcher);
 				initializeBindingsStart = state.getLocalBindings().size();
 				matcher.region(matcher.end(), end);
@@ -1108,7 +1107,6 @@ public final class Expression {
 			this.expressions = cachedExpression.expressions;
 			this.identifiers = cachedExpression.identifiers;
 			this.evaluable = cachedExpression.evaluable;
-			this.isNamed = named;
 			return;
 		}
 
@@ -1116,7 +1114,6 @@ public final class Expression {
 		this.expressions = state.getExpressions().isEmpty() ? EMPTY_EXPRESSIONS : state.getExpressions().toArray(Expression.class);
 		this.identifiers = state.getIdentifiers().isEmpty() ? EMPTY_IDENTIFIERS : state.getIdentifiers().toArray(Identifier.class);
 		this.evaluable = mb.append(state.getOperands().pop().toObject()).addFlowBreakingCode(ARETURN, 0).build(Expression.class.getPackage().getName() + ".Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
-		this.isNamed = named;
 		assert state.getOperands().isEmpty();
 	}
 
@@ -1164,15 +1161,6 @@ public final class Expression {
 	@Override
 	public int hashCode() {
 		return originalString.hashCode();
-	}
-
-	/**
-	 * Checks if the expression is named.
-	 *
-	 * @return true if the expression is named, otherwise false
-	 */
-	public boolean isNamed() {
-		return isNamed;
 	}
 
 	@Override

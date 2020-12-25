@@ -41,7 +41,7 @@ class ExpressionTests {
 	public static Expression createExpression(final String expression, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final StackTraceElement[] elements = new Throwable().getStackTrace();
 		final String location = elements.length >= 1 ? elements[1].getFileName() + ":" + elements[1].getLineNumber() : "[Unknown]";
-		final ExpressionParseState parseState = new ExpressionParseState(0, expression, namedExpressions, new HashMap<>());
+		final ExpressionParseState parseState = new ExpressionParseState(0, expression, namedExpressions, new HashMap<>(), new CacheList<>());
 
 		return new Expression(null, location, parseState, horseshoeExpressions);
 	}

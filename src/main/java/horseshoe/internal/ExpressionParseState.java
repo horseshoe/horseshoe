@@ -11,9 +11,11 @@ import horseshoe.Stack;
 public final class ExpressionParseState {
 
 	private final int startIndex;
-	private final String trimmedString;
+	private final String expressionString;
+	private boolean returnsValue = true;
 	private final Map<String, Expression> namedExpressions;
 	private final Map<Identifier, Identifier> allIdentifiers;
+	private final CacheList<String> templateBindings;
 	private final CacheList<Expression> expressions = new CacheList<>();
 	private final CacheList<Identifier> identifiers = new CacheList<>();
 	private final CacheList<String> localBindings = new CacheList<>();
@@ -24,15 +26,26 @@ public final class ExpressionParseState {
 	 * Creates a new expression parse state.
 	 *
 	 * @param startIndex the starting index of the trimmed string within the tag
-	 * @param trimmedString the trimmed string of the expression
+	 * @param expressionString the string representation of the expression
 	 * @param namedExpressions the set of named expressions that can be used in the expression
 	 * @param allIdentifiers the set of all identifiers that can be used as a cache in the expression
+	 * @param templateBindings the set of all bindings used in the template
 	 */
-	public ExpressionParseState(final int startIndex, final String trimmedString, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers) {
+	public ExpressionParseState(final int startIndex, final String expressionString, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final CacheList<String> templateBindings) {
 		this.startIndex = startIndex;
-		this.trimmedString = trimmedString;
+		this.expressionString = expressionString;
 		this.namedExpressions = namedExpressions;
 		this.allIdentifiers = allIdentifiers;
+		this.templateBindings = templateBindings;
+	}
+
+	/**
+	 * Returns if the expression returns a value (named expression, template binding do not return values).
+	 *
+	 * @return true if the expression returns a value, otherwise false
+	 */
+	public boolean returnsValue() {
+		return returnsValue;
 	}
 
 	/**
@@ -108,12 +121,32 @@ public final class ExpressionParseState {
 	}
 
 	/**
-	 * Gets the trimmed expression string.
+	 * Gets the template bindings cache list.
 	 *
-	 * @return the trimmed expression string
+	 * @return the template bindings cache list
 	 */
-	public String getTrimmedString() {
-		return trimmedString;
+	public CacheList<String> getTemplateBindings() {
+		return templateBindings;
+	}
+
+	/**
+	 * Gets the expression string.
+	 *
+	 * @return the expression string
+	 */
+	public String getExpressionString() {
+		return expressionString;
+	}
+
+	/**
+	 * Sets if the expression returns a value (named expression, template binding do not return values).
+	 *
+	 * @param returnsValue true if the expression returns a value, otherwise false
+	 * @return this parse state
+	 */
+	public ExpressionParseState setReturnsValue(final boolean returnsValue) {
+		this.returnsValue = returnsValue;
+		return this;
 	}
 
 }
