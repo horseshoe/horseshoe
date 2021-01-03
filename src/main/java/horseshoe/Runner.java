@@ -60,7 +60,7 @@ public class Runner {
 		private static final String SPACE_CHARACTER = "[ \t\r\n]";
 		private static final String NON_SPACE_CHARACTER = "[!-\\x{10FFFF}&&[^\"&*:,\\[\\]{}]]";
 
-		private static final Pattern TOKEN_PATTERN = Pattern.compile("\"(?<string>(?:[ -\\x{10FFFF}&&[^\"\\\\]]|\\\\[\"\\\\/bfnrt]|\\\\u[0-9A-Fa-f]{4})*)\"|(?<raw>" + NON_SPACE_CHARACTER + "+)");
+		private static final Pattern TOKEN_PATTERN = Pattern.compile("\"(?<string>(?:[ -\\x{10FFFF}&&[^\"\\\\]]|\\\\[\"\\\\/bfnrt]|\\\\u[0-9A-Fa-f]{4})*+)\"|(?<raw>" + NON_SPACE_CHARACTER + "+)");
 
 		private static final Pattern ANCHOR_PATTERN = Pattern.compile("&" + SPACE_CHARACTER + "*(?<anchor>" + NON_SPACE_CHARACTER + "+)");
 		private static final Pattern ALIAS_PATTERN = Pattern.compile("[*]" + SPACE_CHARACTER + "*(?<alias>" + NON_SPACE_CHARACTER + "+)");
