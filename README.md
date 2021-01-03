@@ -2,6 +2,7 @@
 Horseshoe for Java is a templating system used to generate source code and other dynamic content from a template and organized data. It uses a Mustache-like syntax with extended expressions for dynamic data manipulation.
 
 ![Build](https://github.com/horseshoe/horseshoe/workflows/Build/badge.svg)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/dcfc526404694bd7995890eca4fc8773)](https://app.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Grade)
 [![Codacy](https://app.codacy.com/project/badge/Grade/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Grade)
 [![Coverage](https://app.codacy.com/project/badge/Coverage/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Coverage)
 [![Coverity](https://scan.coverity.com/projects/21451/badge.svg)](https://scan.coverity.com/projects/horseshoe)
