@@ -100,8 +100,8 @@ public final class Expression {
 	private static final Pattern NAMED_EXPRESSION_PARAMETER_PATTERN = Pattern.compile("(?:,\\s*" + COMMENT_PATTERN + "*(?:(?<parameter>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*)?)", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile(COMMENT_PATTERN + "*(?<name>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*(?:[(]\\s*" + COMMENT_PATTERN + "*(?:(?<firstParameter>[.]|" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*)?(?<remainingParameters>" + NAMED_EXPRESSION_PARAMETER_PATTERN + "+)?[)]\\s*" + COMMENT_PATTERN + "*)?[-=]>\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern OPERATOR_PATTERN;
-	private static final Pattern REGEX_PATTERN = Pattern.compile("~/(?<nounicode>\\(\\?-U\\))?(?<regex>(?:[^/\\\\]|\\\\.)*)/\\s*", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr{}0]|\\\\x[0-9A-Fa-f]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*)\"|'(?<unescapedString>(?:[^']|'')*)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern REGEX_PATTERN = Pattern.compile("~/(?<nounicode>\\(\\?-U\\))?(?<regex>(?:[^/\\\\]|\\\\.)*+)/\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr{}0]|\\\\x[0-9A-Fa-f]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*+)\"|'(?<unescapedString>(?:[^']|'')*+)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern TRAILING_IDENTIFIER_PATTERN = Pattern.compile(COMMENT_PATTERN + "*(((?<name>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*)?[-=]>\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private static final byte[] CHAR_VALUE = new byte[] {
@@ -1033,7 +1033,6 @@ public final class Expression {
 	 */
 	public Expression(final Expression cachedExpression, final Object location, final ExpressionParseState state, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final MethodBuilder mb = new MethodBuilder();
-		boolean named = false;
 
 		this.location = location;
 		this.originalString = state.getExpressionString();

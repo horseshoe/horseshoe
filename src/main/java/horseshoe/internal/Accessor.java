@@ -3,6 +3,7 @@ package horseshoe.internal;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.invoke.WrongMethodTypeException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -24,10 +25,12 @@ import java.util.regex.Pattern;
 
 public abstract class Accessor {
 
-	private static final MethodHandles.Lookup LOOKUP = MethodHandles.publicLookup();
+	public static final Object TO_BEGINNING = new Object();
+
 	static final Factory FACTORY = new Factory();
 	static final Object INVALID = new Object();
-	public static final Object TO_BEGINNING = new Object();
+
+	private static final MethodHandles.Lookup LOOKUP = MethodHandles.publicLookup();
 
 	private static final class MethodSignature {
 
@@ -1101,44 +1104,11 @@ public abstract class Accessor {
 	}
 
 	/**
-	 * A map accessor factory allows a new map accessor to be created.
-	 */
-	static class MapAccessorFactory {
-
-		/**
-		 * Creates a new map accessor.
-		 *
-		 * @param key the key used to get the value from the map
-		 * @return the map accessor
-		 */
-		Accessor create(final String key) {
-			return new MapAccessor(key);
-		}
-
-	}
-
-	/**
 	 * A map accessor provides access to a value in a map using the specified key.
 	 */
-	static class MapAccessor extends Accessor {
-
-		private static final MapAccessorFactory FACTORY;
+	private static class MapAccessor extends Accessor {
 
 		final String key;
-
-		static {
-			MapAccessorFactory factory = new MapAccessorFactory();
-
-			if (Properties.JAVA_VERSION >= 8.0) {
-				try {
-					factory = (MapAccessorFactory)Accessor.class.getClassLoader().loadClass(Accessor.class.getName() + "_8$" + MapAccessorFactory.class.getSimpleName()).getConstructor().newInstance();
-				} catch (final ReflectiveOperationException e) {
-					throw new ExceptionInInitializerError("Failed to load Java 8 specialization: " + e.getMessage());
-				}
-			}
-
-			FACTORY = factory;
-		}
 
 		MapAccessor(final String key) {
 			this.key = key;
@@ -1150,11 +1120,9 @@ public abstract class Accessor {
 		}
 
 		@Override
+		@SuppressWarnings("unchecked")
 		public Object tryGet(final Object context) {
-			final Map<?, ?> map = (Map<?, ?>)context;
-			final Object result = map.get(key);
-
-			return result != null || map.containsKey(key) ? result : INVALID;
+			return Utilities.getMapValueOrDefault((Map<?, Object>)context, key, INVALID);
 		}
 
 	}
@@ -1162,12 +1130,12 @@ public abstract class Accessor {
 	/**
 	 * A method accessor provides access to a method.
 	 */
-	static class MethodAccessor extends Accessor {
+	private static class MethodAccessor extends Accessor {
 
-		final Method method;
+		final MethodHandle methodHandle;
 
-		MethodAccessor(final Method method) {
-			this.method = method;
+		MethodAccessor(final MethodHandle methodHandle) {
+			this.methodHandle = methodHandle;
 		}
 
 		/**
@@ -1180,30 +1148,30 @@ public abstract class Accessor {
 		 */
 		public static Accessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
 			final MethodSignature signature = new MethodSignature(methodSignature);
-			final List<Method> methods = new ArrayList<>(2);
+			final List<MethodHandle> methodHandles = new ArrayList<>(2);
 
 			// Find all matching methods in the first public ancestor class, including all interfaces along the way
 			for (Class<?> ancestor = parent; true; ancestor = ancestor.getSuperclass()) {
 				if (Modifier.isPublic(ancestor.getModifiers())) {
-					getPublicMethods(methods, ancestor, false, signature, parameterCount);
+					getPublicMethods(methodHandles, ancestor, false, signature, parameterCount);
 					break;
 				}
 
 				for (final Class<?> iface : ancestor.getInterfaces()) {
 					if (Modifier.isPublic(iface.getModifiers())) {
-						getPublicMethods(methods, iface, false, signature, parameterCount);
+						getPublicMethods(methodHandles, iface, false, signature, parameterCount);
 
-						if (parameterCount == 0 && !methods.isEmpty()) {
-							return new MethodAccessor(methods.get(0));
+						if (parameterCount == 0 && !methodHandles.isEmpty()) {
+							return new MethodAccessor(methodHandles.get(0));
 						}
 					}
 				}
 			}
 
-			if (methods.size() > 1) {
-				return new MethodsAccessor(methods.toArray(new Method[0]));
-			} else if (!methods.isEmpty()) {
-				return new MethodAccessor(methods.get(0));
+			if (methodHandles.size() > 1) {
+				return new MethodsAccessor(methodHandles.toArray(new MethodHandle[0]));
+			} else if (!methodHandles.isEmpty()) {
+				return new MethodAccessor(methodHandles.get(0));
 			}
 
 			return null;
@@ -1219,26 +1187,22 @@ public abstract class Accessor {
 		 */
 		public static Accessor createStaticOrClass(final Class<?> parent, final String methodSignature, final int parameterCount) {
 			final MethodSignature signature = new MethodSignature(methodSignature);
+			final List<MethodHandle> methodHandles = new ArrayList<>(2);
 
 			// Find all matching static methods
 			if (Modifier.isPublic(parent.getModifiers())) {
-				final List<Method> methods = new ArrayList<>(2);
-
-				getPublicMethods(methods, parent, true, signature, parameterCount);
-
-				if (methods.size() > 1) {
-					return new MethodsAccessor(methods.toArray(new Method[0]));
-				} else if (!methods.isEmpty()) {
-					return new MethodAccessor(methods.get(0));
-				}
+				getPublicMethods(methodHandles, parent, true, signature, parameterCount);
 			}
 
 			// Find the Class<?> method
-			for (final Method method : Class.class.getMethods()) {
-				if (!Modifier.isStatic(method.getModifiers()) && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
-					method.setAccessible(true); // By-pass internal checks on access
-					return new MethodAccessor(method);
-				}
+			if (methodHandles.isEmpty()) {
+				getPublicMethods(methodHandles, Class.class, false, signature, parameterCount);
+			}
+
+			if (methodHandles.size() > 1) {
+				return new MethodsAccessor(methodHandles.toArray(new MethodHandle[0]));
+			} else if (!methodHandles.isEmpty()) {
+				return new MethodAccessor(methodHandles.get(0));
 			}
 
 			return null;
@@ -1246,38 +1210,37 @@ public abstract class Accessor {
 
 		@Override
 		public Object get(final Object context) throws ReflectiveOperationException {
-			return method;
+			return methodHandle;
 		}
 
 		@Override
-		public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
-			try {
-				return method.invoke(context, parameters);
-			} catch (final ReflectiveOperationException e) {
-				throw new ReflectiveOperationException("Failed to invoke method \"" + method.getName() + "\": " + e.getMessage(), e);
+		public Object get(final Object context, final Object... parameters) throws Throwable {
+			if (methodHandle.type().parameterCount() == 1) {
+				return methodHandle.invoke(parameters);
 			}
+
+			return methodHandle.invoke(context, parameters);
 		}
 
 		/**
 		 * Gets the public methods of the specified parent class that match the given information.
 		 *
-		 * @param methods the list used to store the matching methods
+		 * @param methodHandles the list used to store the matching method handles
 		 * @param parent the parent class
 		 * @param isStatic true to match only static methods, false to match only non-static methods
 		 * @param signature the method signature
 		 * @param parameterCount the parameter count of the method
 		 */
-		public static void getPublicMethods(final List<Method> methods, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) {
+		public static void getPublicMethods(final List<MethodHandle> methodHandles, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) {
 			for (final Method method : parent.getMethods()) {
-				if (Modifier.isStatic(method.getModifiers()) == isStatic && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
+				if (Modifier.isStatic(method.getModifiers()) == isStatic && !method.isSynthetic() && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
 					try {
-						method.setAccessible(true); // By-pass internal checks on access
-						methods.add(method);
+						methodHandles.add(LOOKUP.unreflect(method).asSpreader(Object[].class, parameterCount));
 
 						if (parameterCount == 0) {
 							return;
 						}
-					} catch (final SecurityException e) {
+					} catch (final IllegalAccessException e) {
 						// Probably a java 9+ module access error
 					}
 				}
@@ -1291,43 +1254,54 @@ public abstract class Accessor {
 	 */
 	static class MethodsAccessor extends Accessor {
 
-		final Method[] methods;
+		final MethodHandle[] methodHandles;
 		int mruIndex = 0;
 
-		MethodsAccessor(final Method[] methods) {
-			this.methods = methods;
+		MethodsAccessor(final MethodHandle[] methodHandles) {
+			this.methodHandles = methodHandles;
 		}
 
 		@Override
 		public Object get(final Object context) throws ReflectiveOperationException {
-			return methods;
+			return methodHandles;
 		}
 
 		@Override
-		public Object get(final Object context, final Object... parameters) throws ReflectiveOperationException {
+		public Object get(final Object context, final Object... parameters) throws Throwable {
 			return getWithDefault(null, context, parameters);
 		}
 
 		@Override
-		public Object tryGet(final Object context, final Object... parameters) throws ReflectiveOperationException {
+		public Object tryGet(final Object context, final Object... parameters) throws Throwable {
 			return getWithDefault(INVALID, context, parameters);
 		}
 
-		private Object getWithDefault(final Object defaultValue, final Object context, final Object... parameters) throws ReflectiveOperationException {
+		private Object getWithDefault(final Object defaultValue, final Object context, final Object... parameters) throws Throwable {
 			final int mru = mruIndex;
 
 			// We could do something fancy and try to find the most correct method to call, but for now just try to call them all starting with the most recently used.
 			//  Note: this may invoke the wrong method for closely-related overloads.
 			try {
-				return methods[mru].invoke(context, parameters);
-			} catch (final IllegalArgumentException e) {
-				for (int i = 0; i < methods.length; i++) {
+				if (methodHandles[mru].type().parameterCount() == 1) {
+					return methodHandles[mru].invoke(parameters);
+				}
+
+				return methodHandles[mru].invoke(context, parameters);
+			} catch (final WrongMethodTypeException | ClassCastException e) {
+				for (int i = 0; i < methodHandles.length; i++) {
 					if (i != mru) {
 						try {
-							final Object result = methods[i].invoke(context, parameters);
+							final Object result;
+
+							if (methodHandles[i].type().parameterCount() == 1) {
+								result = methodHandles[i].invoke(parameters);
+							} else {
+								result = methodHandles[i].invoke(context, parameters);
+							}
+
 							mruIndex = i;
 							return result;
-						} catch (final IllegalArgumentException e1) {
+						} catch (final WrongMethodTypeException | ClassCastException e1) {
 							// Ignore failures along the way
 						}
 					}
@@ -1353,7 +1327,7 @@ public abstract class Accessor {
 			} else if (Class.class.equals(contextClass)) { // Static field
 				return createStaticFieldAccessor((Class<?>)context, identifier.getName());
 			} else if (Map.class.isAssignableFrom(contextClass)) {
-				return MapAccessor.FACTORY.create(identifier.getName());
+				return new MapAccessor(identifier.getName());
 			}
 
 			final Accessor accessor = Accessors.get(contextClass, identifier);
