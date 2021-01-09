@@ -3,6 +3,7 @@ package horseshoe.internal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -39,6 +40,8 @@ class StreamableTests {
 
 	@Test
 	void testArray2() {
+		assertTrue(Streamable.of().isEmpty());
+		assertFalse(Streamable.of("Not Empty", "Has 2 Items").isEmpty());
 		assertEquals(2, count(remap(Streamable.of("Test", null))));
 	}
 
@@ -114,6 +117,8 @@ class StreamableTests {
 
 	@Test
 	void testNull() {
+		assertTrue(Streamable.ofUnknown(null).isEmpty());
+		assertFalse(Streamable.ofUnknown("Not Empty").isEmpty());
 		assertEquals(0, count(remap(Streamable.ofUnknown(null))));
 	}
 
