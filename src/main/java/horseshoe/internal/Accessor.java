@@ -4,6 +4,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.WrongMethodTypeException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -78,12 +79,21 @@ public abstract class Accessor {
 				return false;
 			}
 
+			return matchesParameters(method.getParameterTypes());
+		}
+
+		/**
+		 * Checks if this signature matches the specified parameters.
+		 *
+		 * @param parameters the parameters to compare with this signature
+		 * @return true if the parameters matches this signature, otherwise false
+		 */
+		private boolean matchesParameters(final Class<?>[] parameters) {
 			if (types != null) {
-				final Class<?>[] parameterTypes = method.getParameterTypes();
-				final int length = Math.min(parameterTypes.length, types.length);
+				final int length = Math.min(parameters.length, types.length);
 
 				for (int i = 0; i < length; i++) {
-					if (!types[i].isEmpty() && !types[i].equals(parameterTypes[i].getSimpleName()) && !types[i].equals(parameterTypes[i].getCanonicalName())) {
+					if (!types[i].isEmpty() && !types[i].equals(parameters[i].getSimpleName()) && !types[i].equals(parameters[i].getCanonicalName())) {
 						return false;
 					}
 				}
@@ -1142,12 +1152,11 @@ public abstract class Accessor {
 		 * Creates a new method accessor.
 		 *
 		 * @param parent the parent class for the method
-		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
+		 * @param signature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
 		 * @return the new accessor, or null if no method could be found
 		 */
-		public static Accessor create(final Class<?> parent, final String methodSignature, final int parameterCount) {
-			final MethodSignature signature = new MethodSignature(methodSignature);
+		public static Accessor create(final Class<?> parent, final MethodSignature signature, final int parameterCount) {
 			final List<MethodHandle> methodHandles = new ArrayList<>(2);
 
 			// Find all matching methods in the first public ancestor class, including all interfaces along the way
@@ -1181,12 +1190,11 @@ public abstract class Accessor {
 		 * Creates a new static or class method accessor.
 		 *
 		 * @param parent the parent class for the method
-		 * @param methodSignature the signature of the method in the form [name]:[parameterType0],...
+		 * @param signature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
 		 * @return the new accessor, or null if no method could be found
 		 */
-		public static Accessor createStaticOrClass(final Class<?> parent, final String methodSignature, final int parameterCount) {
-			final MethodSignature signature = new MethodSignature(methodSignature);
+		public static Accessor createStaticOrClass(final Class<?> parent, final MethodSignature signature, final int parameterCount) {
 			final List<MethodHandle> methodHandles = new ArrayList<>(2);
 
 			// Find all matching static methods
@@ -1315,15 +1323,27 @@ public abstract class Accessor {
 
 	static class Factory {
 
+		/**
+		 * Creates an accessor for the given context and identifier.
+		 *
+		 * @param context the context object on which to invoke the accessor
+		 * @param identifier the identifier used to create the accessor
+		 * @return a new accessor corresponding to the given context and identifier
+		 * @throws IllegalAccessException never
+		 */
 		public Accessor create(final Object context, final Identifier identifier) throws IllegalAccessException {
 			final Class<?> contextClass = context.getClass();
 
 			if (identifier.isMethod()) { // Method
-				if (Class.class.equals(contextClass)) { // Class method
-					return MethodAccessor.createStaticOrClass((Class<?>)context, identifier.getName(), identifier.getParameterCount());
+				final MethodSignature signature = new MethodSignature(identifier.getName());
+
+				if (!Class.class.equals(contextClass)) { // Instance method
+					return MethodAccessor.create(contextClass, signature, identifier.getParameterCount());
+				} else if ("new".equals(signature.name)) { // Object creation method
+					return createNewObjectAccessor((Class<?>)context, signature, identifier.getParameterCount());
 				}
 
-				return MethodAccessor.create(contextClass, identifier.getName(), identifier.getParameterCount());
+				return MethodAccessor.createStaticOrClass((Class<?>)context, signature, identifier.getParameterCount());
 			} else if (Class.class.equals(contextClass)) { // Static field
 				return createStaticFieldAccessor((Class<?>)context, identifier.getName());
 			} else if (Map.class.isAssignableFrom(contextClass)) {
@@ -1365,6 +1385,41 @@ public abstract class Accessor {
 						}
 					}
 				}
+			}
+
+			return null;
+		}
+
+		/**
+		 * Creates an accessor that creates a new instance of an object of the specified type.
+		 *
+		 * @param type the type of the new object that will be created
+		 * @param signature the signature of the constructor in the form new:[parameterType0],...
+		 * @param parameterCount the number of parameters that the constructor takes
+		 * @return the new accessor, or null if no constructor could be found
+		 */
+		private static Accessor createNewObjectAccessor(final Class<?> type, final MethodSignature signature, final int parameterCount) {
+			final List<MethodHandle> methodHandles = new ArrayList<>(2);
+
+			// Find all matching methods in the first public ancestor class, including all interfaces along the way
+			for (final Constructor<?> constructor : type.getConstructors()) {
+				if (constructor.getParameterTypes().length == parameterCount && signature.matchesParameters(constructor.getParameterTypes())) {
+					try {
+						methodHandles.add(LOOKUP.unreflectConstructor(constructor).asSpreader(Object[].class, parameterCount));
+
+						if (parameterCount == 0) {
+							break;
+						}
+					} catch (final IllegalAccessException e) {
+						// Probably a java 9+ module access error
+					}
+				}
+			}
+
+			if (methodHandles.size() > 1) {
+				return new MethodsAccessor(methodHandles.toArray(new MethodHandle[0]));
+			} else if (!methodHandles.isEmpty()) {
+				return new MethodAccessor(methodHandles.get(0));
 			}
 
 			return null;

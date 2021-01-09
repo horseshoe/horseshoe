@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -186,6 +187,7 @@ class ExpressionTests {
 		assertEquals(2_600.452_864, createExpression("2'600.452'864f", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertEquals(Double.NEGATIVE_INFINITY, createExpression("-Infinity", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertEquals(Double.POSITIVE_INFINITY, createExpression("+Infinity", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals(new BigInteger("12345678909876543211234567889"), createExpression("~@BigInteger.new('12345678909876543211234567890').subtract(~@BigInteger.ONE)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext()));
 	}
 
 	@Test

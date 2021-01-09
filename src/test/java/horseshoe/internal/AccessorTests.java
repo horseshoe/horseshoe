@@ -3,15 +3,18 @@ package horseshoe.internal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -103,6 +106,24 @@ class AccessorTests {
 		}
 
 		return set;
+	}
+
+	@Test
+	void testConstructor() throws Throwable {
+		assertNull(Accessor.FACTORY.create(ArrayList.class, new Identifier("new", 100)));
+		assertTrue(((ArrayList<?>)Accessor.FACTORY.create(ArrayList.class, new Identifier("new", 0)).get(ArrayList.class, (Object[])null)).isEmpty());
+
+		final Accessor listOneArgCtor = Accessor.FACTORY.create(ArrayList.class, new Identifier("new", 1));
+
+		assertTrue(((ArrayList<?>)listOneArgCtor.get(ArrayList.class, 100)).isEmpty());
+
+		final List<Integer> list = new ArrayList<>();
+
+		list.add(1);
+		list.add(2);
+		list.add(3);
+
+		assertEquals(list, listOneArgCtor.get(ArrayList.class, list));
 	}
 
 	@Test

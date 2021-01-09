@@ -264,7 +264,7 @@ String literals are sequences of characters wrapped in either single quotes or d
 - `\Uhhhhhhhh` - Unicode character with hex code point `hhhhhhhh`
 
 #### Class Literals
-Class literals (`~@[ClassName]`) can be used to reference a class. For example, `~@Integer.MAX_VALUE` can be used to get the max value of a 32-bit signed int. Class literals are closely related to the "Get Class" operator. The only difference being that the operator takes a string as its operand.
+Class literals (`~@[ClassName]`) can be used to reference a class. For example, `~@Integer.MAX_VALUE` can be used to get the max value of a 32-bit signed int, and `~@BigInteger.new('12345678909876543211234567890')` can be used to create a new `BigInteger`. Class literals are closely related to the "Get Class" operator. The only difference being that the operator takes a string as its operand.
 
 By default, only a limited number of classes can be loaded. Additional classes can be added to the Horseshoe settings, so that they can be loaded as well. Another setting can be modified to only allow loading a class by its fully-qualified name, which disables the use of class literals.
 
@@ -298,8 +298,17 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 
 Many operators support more operand types than traditional programming languages. Addition and subtraction can be applied to lists, maps, and sets as well as numeric primitives. Also, comparison operators can be used to compare enumerations with strings as well as comparing numeric primitives, strings, and any comparable objects.
 
-##### Nullable Operators
+##### Safe and Nullable Operators
+Safe operators return `null` rather than throwing an exception if the left hand side of the operation is `null`. A safe operator is equivalent to prefixing the operation with a `null` check that short circuits the operation by returning `null`. Essentially, `lhs == null ? null : (lhs <op> rhs)`.
+
 Nullable operators are similar to safe operators in that they return `null` when an exception would be thrown. However, nullable operators return `null` when failing to resolve interpolated values or methods on the right side of the operator as well as when encountering a `null` value on the left side of an operator. For example, `{{ a.?b() }}` would return `null` if either `a` is `null` or `a` does not contain a method `b()`.
+
+#### Method Calls
+Method calls can be invoked on an object using the navigate operator with parentheses and a list of parameters. The method `new` can be used to create new objects of a given type. For example, `~@Integer.new('5')` creates a new `Integer` with the value `5`.
+
+Method calls use a dynamic dispatch mechanism based on the type of the target object and the number of parameters. When multiple matching methods are found, each is tried until one succeeds without throwing an exception. Methods can be disambiguated by specifying the parameter types using a special syntax. The method name is followed by a colon and comma-separated list of simple or canonical type names and wrapped in backticks.
+
+For example, ``~@Math.`min:int`(1, 5)`` can be used to specify the `min` method that takes 2 `int` parameters, and ``~@Math.`min:double,double`(1.0, 5.0)`` can be used to specify the `min` method that takes 2 `double` parameters. The first example shows that not all parameters need to be specified. The second example shows that multiple parameter types are separated by commas and no spacing is allowed.
 
 #### Built-In Properties
 Built-in properties are properties that can be accessed via the navigate operator (`.`) for built-in types. For example, `{{# map.entries }}` will access the entries in a map and iterate over them in the section, rather than looking up the key-value pairs in the section. A list of the built-in properties and the applicable types are given in the table below:
