@@ -33,33 +33,20 @@ public final class Identifier {
 	/**
 	 * Returns null if failures are ignored. Otherwise, throws the exception with the specified message.
 	 *
+	 * @param <T> the type of exception to throw
 	 * @param ignoreFailures true to return null for failures, false to throw the exception
+	 * @param type the type of the exception to throw
 	 * @param message a detailed exception message
 	 * @return null
-	 * @throws NoSuchFieldException if failures are not ignored
+	 * @throws T if failures are not ignored
+	 * @throws ReflectiveOperationException if the exception type does not support a single string constructor
 	 */
-	private static Object throwNoSuchFieldException(final boolean ignoreFailures, final String message) throws NoSuchFieldException {
+	private static <T extends Throwable> Object throwException(final boolean ignoreFailures, final Class<T> type, final String message) throws T, ReflectiveOperationException {
 		if (ignoreFailures) {
 			return null;
 		}
 
-		throw new NoSuchFieldException(message);
-	}
-
-	/**
-	 * Returns null if failures are ignored. Otherwise, throws the exception with the specified message.
-	 *
-	 * @param ignoreFailures true to return null for failures, false to throw the exception
-	 * @param message a detailed exception message
-	 * @return null
-	 * @throws NoSuchMethodException if failures are not ignored
-	 */
-	private static Object throwNoSuchMethodException(final boolean ignoreFailures, final String message) throws NoSuchMethodException {
-		if (ignoreFailures) {
-			return null;
-		}
-
-		throw new NoSuchMethodException(message);
+		throw type.getConstructor(String.class).newInstance(message);
 	}
 
 	/**
@@ -268,7 +255,7 @@ public final class Identifier {
 	 */
 	public Object getValue(final Object context, final boolean ignoreFailures) throws Throwable {
 		if (context == null) {
-			return throwNoSuchFieldException(ignoreFailures, "Field \"" + name + "\" not found in null object");
+			return throwException(ignoreFailures, NullPointerException.class, "Field \"" + name + "\" not found in null object");
 		}
 
 		final Class<?> objectClass = context.getClass();
@@ -279,7 +266,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
-				return throwNoSuchFieldException(ignoreFailures, "Field \"" + name + "\" not found in object of type " + objectClass.getName());
+				return throwException(ignoreFailures, NoSuchFieldException.class, "Field \"" + name + "\" not found in object of type " + objectClass.getName());
 			}
 
 			accessorDatabase.put(lookupClass, accessor);
@@ -299,7 +286,7 @@ public final class Identifier {
 	 */
 	public Object getValue(final Object context, final boolean ignoreFailures, final Object... parameters) throws Throwable {
 		if (context == null) {
-			return throwNoSuchMethodException(ignoreFailures, "Method \"" + name + "\" not found in null object");
+			return throwException(ignoreFailures, NullPointerException.class, "Method \"" + name + "\" not found in null object");
 		}
 
 		final Class<?> objectClass = context.getClass();
@@ -310,7 +297,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
-				return throwNoSuchMethodException(ignoreFailures, "Method \"" + name + "\" not found in object of type " + objectClass.getName());
+				return throwException(ignoreFailures, NoSuchMethodException.class, "Method \"" + name + "\" not found in object of type " + objectClass.getName());
 			}
 
 			accessorDatabase.put(lookupClass, accessor);

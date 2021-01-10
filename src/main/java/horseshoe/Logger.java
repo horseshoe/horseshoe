@@ -1,12 +1,99 @@
 package horseshoe;
 
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
+import horseshoe.internal.Expression;
+
 /**
- * The Logger interface is used to log messages during the {@link Template} rendering process.
+ * The Logger class is used to log messages during the {@link Template} rendering process.
  */
 public abstract class Logger {
+
+	static final class StoredError {
+		private final Throwable throwable;
+		private final StackTraceElement[] trace;
+
+		StoredError(final Throwable throwable) {
+			this.throwable = throwable;
+			this.trace = throwable.getStackTrace();
+		}
+
+		@Override
+		public boolean equals(Object object) {
+			if (!(object instanceof StoredError) || !throwable.getClass().equals(((StoredError)object).throwable.getClass()) ||
+					!Objects.equals(throwable.getMessage(), ((StoredError)object).throwable.getMessage())) {
+				return false;
+			}
+
+			// Compare stack traces up to the last expression element
+			final StackTraceElement[] otherTrace = ((StoredError)object).trace;
+			final int length = Math.min(trace.length, otherTrace.length);
+			int i;
+
+			for (i = 0; i < length && trace[i].equals(otherTrace[i]); i++);
+
+			for (int j = i; j < trace.length; j++) {
+				if (Expression.class.getName().equals(trace[j].getClassName())) {
+					return false;
+				}
+			}
+
+			for (int j = i; j < otherTrace.length; j++) {
+				if (Expression.class.getName().equals(otherTrace[j].getClassName())) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(throwable.getClass(), throwable.getMessage());
+		}
+	}
+
+	/**
+	 * Creates a {@link Logger} that only logs each error once.
+	 *
+	 * @param logger the logger to wrap
+	 * @return the new filtering logger
+	 */
+	public static Logger filterDuplicateErrors(final Logger logger) {
+		return new Logger() {
+			private final Set<StoredError> errors = new HashSet<>();
+
+			@Override
+			public void log(Level level, Throwable error, String message, Object... params) {
+				if (error == null || errors.add(new StoredError(error))) {
+					logger.log(level, error, message, params);
+				}
+			}
+		};
+	}
+
+	/**
+	 * Creates a {@link Logger} that filters out {@link java.lang.NullPointerException}s when rendering Horseshoe {@link Template}s.
+	 * This allows {@link Template}s that would otherwise need to make significant use of safe operators (`?.`, `?[]`) to ignore null dereferences.
+	 * Note that this will ignore all {@link java.lang.NullPointerException}s including those thrown in called methods.
+	 *
+	 * @param logger the logger to wrap
+	 * @return the new filtering logger
+	 */
+	public static Logger filterNullErrors(final Logger logger) {
+		return new Logger() {
+			@Override
+			public void log(Level level, Throwable error, String message, Object... params) {
+				if (!(error instanceof NullPointerException)) {
+					logger.log(level, error, message, params);
+				}
+			}
+		};
+	}
 
 	/**
 	 * Wraps a {@link java.util.logging.Logger} in a Horseshoe {@link Logger}.

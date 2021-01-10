@@ -2,6 +2,7 @@ package horseshoe;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,6 +23,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
+
+import horseshoe.internal.Expression;
 
 import org.junit.jupiter.api.Test;
 
@@ -115,6 +118,74 @@ class TemplateTests {
 		template.render(settings, data, writer);
 
 		assertEquals("Hello, world!", writer.toString());
+	}
+
+	private static final class CountingLogger extends Logger {
+
+		private int count = 0;
+
+		@Override
+		public void log(Level level, Throwable error, String message, Object... params) {
+			count++;
+		}
+
+		private Logger reset() {
+			count = 0;
+			return this;
+		}
+
+	}
+
+	private static final class StackTraceThrowable extends Throwable {
+
+		private static final long serialVersionUID = 1L;
+
+		private final StackTraceElement[] stackTraceElements;
+
+		private StackTraceThrowable(final String message, final StackTraceElement...stackTraceElements) {
+			super(message);
+			this.stackTraceElements = stackTraceElements;
+		}
+
+		@Override
+		public StackTraceElement[] getStackTrace() {
+			return stackTraceElements;
+		}
+
+	}
+
+	@Test
+	void testLoggers() throws LoadException, IOException {
+		final CountingLogger logCounter = new CountingLogger();
+		final Template template = Template.load("{{ null.field }} {{ null.toString() }} {{ 'blah'.invalidMethod() }}");
+
+		template.render(new Settings().setLogger(logCounter), null, new java.io.StringWriter());
+		assertEquals(3, logCounter.count);
+
+		template.render(new Settings().setLogger(Logger.filterNullErrors(logCounter.reset())), null, new java.io.StringWriter());
+		assertEquals(1, logCounter.count);
+
+		final Logger nonDuplicateLogger = Logger.filterDuplicateErrors(logCounter.reset());
+		template.render(new Settings().setLogger(nonDuplicateLogger), null, new java.io.StringWriter());
+		assertEquals(3, logCounter.count);
+
+		logCounter.reset();
+		template.render(new Settings().setLogger(nonDuplicateLogger), null, new java.io.StringWriter());
+		assertEquals(0, logCounter.count);
+
+		final StackTraceElement expressionElement = new StackTraceElement(Expression.class.getName(), "methodName", "fileName", 0);
+		final StackTraceElement emptyElement = new StackTraceElement("declaringClass", "methodName", "fileName", 0);
+		final Logger.StoredError error = new Logger.StoredError(new StackTraceThrowable(null, expressionElement, emptyElement));
+		final Logger.StoredError errorSame = new Logger.StoredError(new StackTraceThrowable(null, expressionElement, emptyElement));
+		final Logger.StoredError errorDifferent = new Logger.StoredError(new StackTraceThrowable(null, expressionElement, emptyElement, expressionElement));
+
+		assertFalse(error.equals(new Object()));
+		assertFalse(error.equals(new Logger.StoredError(new Throwable())));
+		assertFalse(error.equals(new Logger.StoredError(new StackTraceThrowable("Different Message", expressionElement, emptyElement))));
+		assertTrue(error.equals(errorSame));
+		assertTrue(errorSame.equals(error));
+		assertFalse(error.equals(errorDifferent));
+		assertFalse(errorDifferent.equals(error));
 	}
 
 	@Test
