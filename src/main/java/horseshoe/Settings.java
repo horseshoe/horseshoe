@@ -195,6 +195,8 @@ public class Settings {
 	}
 
 	private final class ClassMap extends HashSet<Class<?>> {
+		private static final long serialVersionUID = 1L;
+
 		private final Map<String, Class<?>> qualifiedNameLookup = new ConcurrentHashMap<>();
 		private final Map<String, Class<?>> unqualifiedNameLookup = new ConcurrentHashMap<>();
 
