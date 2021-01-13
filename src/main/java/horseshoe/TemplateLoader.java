@@ -550,7 +550,7 @@ public class TemplateLoader {
 					(state.standaloneStatus == LoadState.TAG_CHECK_TAIL_STANDALONE && state.isStandaloneTagTail(lines))) {
 				StaticContentRenderer.create(state.renderLists.peek(), lines, true, false);
 			} else {
-				StaticContentRenderer.create(state.renderLists.peek(), lines, false, state.renderLists.peek().isEmpty());
+				StaticContentRenderer.create(state.renderLists.peek(), lines, false, state.renderLists.peek().isEmpty() && state.sections.peek().getParent() == null);
 			}
 
 			if (!loader.hasNext()) {

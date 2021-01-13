@@ -186,6 +186,11 @@ class PartialsTests {
 	}
 
 	@Test
+	void testInlinePartialIndentation() throws IOException, LoadException {
+		assertEquals("ab" + LS + "\tab" + LS, Template.load("{{< a }}\na{{# b }}b{{/ b }}\n{{/}}\n{{> a }}\n\t{{> a }}\n").render(Collections.singletonMap("b", true), new StringWriter()).toString());
+	}
+
+	@Test
 	void testInlineRecursivePartialIndentation() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
