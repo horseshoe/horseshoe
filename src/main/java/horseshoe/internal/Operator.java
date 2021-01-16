@@ -132,12 +132,12 @@ final class Operator {
 		operators.add(new Operator("\u2620", 18, RIGHT_EXPRESSION, "Die")); // Skull and crossbones
 		operators.add(new Operator("~:<",    18, RIGHT_EXPRESSION, "Die - Alternate"));
 		operators.add(new Operator("#^",     18, RIGHT_EXPRESSION, "Return"));
-		operators.add(new Operator(";",      19, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
-		operators.add(new Operator("#>",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap"));
-		operators.add(new Operator("#.",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap - Alternate"));
-		operators.add(new Operator("#|",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Flatten Remap"));
-		operators.add(new Operator("#?",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Filter"));
-		operators.add(new Operator("#<",     20, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Reduction"));
+		operators.add(new Operator("#>",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap"));
+		operators.add(new Operator("#.",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap - Alternate"));
+		operators.add(new Operator("#|",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Flatten Remap"));
+		operators.add(new Operator("#?",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Filter"));
+		operators.add(new Operator("#<",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Reduction"));
+		operators.add(new Operator(";",      20, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
 
 		// These operators have known assertion failures and may contain ambiguities with other operators or Horseshoe features. These ambiguities have been thoroughly analyzed and deemed acceptable.
 		final Set<String> ignoreFailuresIn = new HashSet<>(Arrays.asList("?[" /* ambiguous with "?" and "[" operators; allowed, spaces must be used to disambiguate safe array lookup and ternary with list literal (e.g. "a ? [1..4] : null") */,
