@@ -811,7 +811,7 @@ public final class Expression {
 			case "?:": {
 				final Label end = left.builder.newLabel();
 
-				state.getOperands().push(new Operand(Object.class, left.toObject().addCode(DUP).addBranch(IFNONNULL, end).addCode(POP).append(right.toObject()).updateLabel(end)));
+				state.getOperands().push(new Operand(Object.class, new Operand(Object.class, left.toObject().addCode(DUP)).toBoolean().addBranch(IFNE, end).addCode(POP).append(right.toObject()).updateLabel(end)));
 				break;
 			}
 			case "?": {

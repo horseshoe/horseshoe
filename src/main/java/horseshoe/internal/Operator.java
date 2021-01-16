@@ -122,8 +122,8 @@ final class Operator {
 		operators.add(new Operator("|",      12, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Bitwise Or"));
 		operators.add(new Operator("&&",     13, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical And"));
 		operators.add(new Operator("||",     14, LEFT_EXPRESSION | RIGHT_EXPRESSION, "Logical Or"));
-		operators.add(new Operator("?:",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce"));
-		operators.add(new Operator("??",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Null Coalesce - Alternate"));
+		operators.add(new Operator("?:",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Conditional"));
+		operators.add(new Operator("??",     15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Conditional - Alternate"));
 		operators.add(new Operator("?",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Ternary"));
 		operators.add(new Operator(":",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair / Range"));
 		operators.add(new Operator(":<",     15, LEFT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Backward Range"));
