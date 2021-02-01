@@ -562,17 +562,12 @@ public final class Expression {
 		}
 
 		// Process the named expression
-		final MethodBuilder expressionResult = new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA);
 		final int index = state.getExpressions().getOrAdd(namedExpression);
+		final MethodBuilder expressionResult = new MethodBuilder().addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT);
 
-		// Load the context
-		if (parameterCount == 0) {
-			expressionResult.addCode(DUP).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true);
-		} else {
+		if (parameterCount > 0) {
 			expressionResult.append(state.getOperands().peek(parameterCount - 1).toObject());
 		}
-
-		expressionResult.pushNewObject(SectionRenderData.class).addCode(DUP_X1, SWAP).addInvoke(SECTION_RENDER_DATA_CTOR_DATA).addInvoke(STACK_PUSH_OBJECT).addCode(POP).addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT);
 
 		// Load the arguments
 		if (parameterCount > 1) {
@@ -585,8 +580,13 @@ public final class Expression {
 			expressionResult.addCode(ACONST_NULL);
 		}
 
-		// Evaluate the expression
-		expressionResult.addInvoke(EXPRESSION_EVALUATE).addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_POP).addCode(POP);
+		// Evaluate the expression (if at least one parameter, then first push the first parameter onto the context stack and pop it off after)
+		if (parameterCount > 0) {
+			expressionResult.addCode(SWAP).addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addCode(SWAP).pushNewObject(SectionRenderData.class).addCode(DUP_X1, SWAP).addInvoke(SECTION_RENDER_DATA_CTOR_DATA).addInvoke(STACK_PUSH_OBJECT).addCode(POP)
+				.addInvoke(EXPRESSION_EVALUATE).addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_POP).addCode(POP);
+		} else {
+			expressionResult.addInvoke(EXPRESSION_EVALUATE);
+		}
 
 		state.getOperands().pop(parameterCount + 3).push(new Operand(Object.class, expressionResult));
 	}
