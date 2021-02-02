@@ -201,6 +201,20 @@ public final class Utilities {
 	}
 
 	/**
+	 * Returns the result of calling {@code toString} for a non-{@code null} argument and throws an exception if object is {@code null}. Used for constructing {@link StringBuilder}s or invoking {@link StringBuilder#append(String)}.
+	 *
+	 * @param object an {@code Object}
+	 * @return the result of calling {@code toString} for a non-{@code null} argument
+	 * @throws NullPointerException if the object is {@code null}
+	 */
+	public static String requireNonNullToString(final Object object) {
+		if (object == null) {
+			throw new NullPointerException("Invalid object cannot be concatenated: null");
+		}
+		return object.toString();
+	}
+
+	/**
 	 * Gets the trimmed string from the specified starting index.
 	 *
 	 * @param value the string to trim

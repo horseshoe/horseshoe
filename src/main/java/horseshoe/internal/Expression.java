@@ -87,9 +87,10 @@ public final class Expression {
 	private static final Method STREAMABLE_FLAT_ADD_ARRAY = getMethod(Streamable.class, "flatAdd", Object[].class);
 	private static final Method STREAMABLE_FLAT_ADD_ITERABLE = getMethod(Streamable.class, "flatAdd", Iterable.class);
 	private static final Method STREAMABLE_OF_UNKNOWN = getMethod(Streamable.class, "ofUnknown", Object.class);
-	private static final Method STRING_BUILDER_APPEND_OBJECT = getMethod(StringBuilder.class, "append", Object.class);
+	private static final Method STRING_BUILDER_APPEND_STRING = getMethod(StringBuilder.class, "append", String.class);
 	private static final Constructor<?> STRING_BUILDER_INIT_STRING = getConstructor(StringBuilder.class, String.class);
 	private static final Method STRING_VALUE_OF = getMethod(String.class, "valueOf", Object.class);
+	private static final Method UTILITIES_REQUIRE_NON_NULL_TO_STRING = getMethod(Utilities.class, "requireNonNullToString", Object.class);
 
 	// The patterns used for parsing the grammar
 	private static final Pattern COMMENT_PATTERN = Pattern.compile("(?:/(?s:/[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|[*].*?[*]/)\\s*)", Pattern.UNICODE_CHARACTER_CLASS);
@@ -699,9 +700,9 @@ public final class Expression {
 				if (left == null) { // Unary +, basically do nothing except require a number
 					state.getOperands().push(new Operand(Double.class, right.toNumeric(true)));
 				} else if (StringBuilder.class.equals(left.type)) { // Check for string concatenation
-					state.getOperands().push(left).peek().builder.append(right.toObject()).addInvoke(STRING_BUILDER_APPEND_OBJECT);
+					state.getOperands().push(left).peek().builder.append(right.toObject()).addInvoke(UTILITIES_REQUIRE_NON_NULL_TO_STRING).addInvoke(STRING_BUILDER_APPEND_STRING);
 				} else if (String.class.equals(left.type) || String.class.equals(right.type) || StringBuilder.class.equals(right.type)) {
-					state.getOperands().push(new Operand(StringBuilder.class, left.toObject().pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject()).addInvoke(STRING_BUILDER_APPEND_OBJECT)));
+					state.getOperands().push(new Operand(StringBuilder.class, left.toObject().pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject()).addInvoke(UTILITIES_REQUIRE_NON_NULL_TO_STRING).addInvoke(STRING_BUILDER_APPEND_STRING)));
 				} else { // String concatenation, mathematical addition, collection addition, or invalid
 					state.getOperands().push(new Operand(Object.class, left.toObject().append(right.toObject()).addInvoke(OPERANDS_ADD)));
 				}

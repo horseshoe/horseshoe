@@ -13,8 +13,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -34,7 +37,7 @@ class ExpressionTests {
 	/**
 	 * Creates a new expression.
 	 *
-	 * @param expressionString the trimmed, advanced expression string
+	 * @param expression the trimmed, advanced expression string
 	 * @param namedExpressions the map used to lookup named expressions
 	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
@@ -45,6 +48,37 @@ class ExpressionTests {
 		final ExpressionParseState parseState = new ExpressionParseState(0, expression, namedExpressions, new HashMap<>(), new CacheList<>());
 
 		return new Expression(null, location, parseState, horseshoeExpressions);
+	}
+
+	/**
+	 * Evaluates an {@code Expression}, throwing an exception if one is thrown by the evaluated {@code Expression}.
+	 *
+	 * @param expression the {@code Expression}
+	 * @param context the {@Code Map} global data
+	 * @return the result of the {@code Expression}, if no exception is thrown
+	 * @throws Throwable an exception thrown by the evaluated {@code Expression}
+	 */
+	public static Object evaluateExpression(final Expression expression, final Map<String, Object> context) throws Throwable {
+		class ThrowableLogger extends horseshoe.Logger {
+			private Throwable lastError;
+
+			@Override
+			public void log(final Level level, final Throwable error, final String message, final Object... params) {
+				if (error != null) {
+					lastError = error;
+				}
+			}
+		}
+
+		final ThrowableLogger logger = new ThrowableLogger();
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT).setLogger(logger);
+		final Object result = expression.evaluate(new RenderContext(settings, context));
+
+		if (result == null) {
+			throw logger.lastError;
+		}
+
+		return result;
 	}
 
 	@Test
@@ -132,6 +166,7 @@ class ExpressionTests {
 	void testIn() throws ReflectiveOperationException {
 		assertTrue((Boolean)createExpression("'Test' in ['Test', 'Retest']", EMPTY_EXPRESSIONS_MAP, true).evaluate());
 		assertFalse((Boolean)createExpression("'test' in ['Test', 'Retest']", EMPTY_EXPRESSIONS_MAP, true).evaluate());
+		assertTrue((Boolean)createExpression("'Test' in (['Test', 'Retest'] #? x -> x != null)", EMPTY_EXPRESSIONS_MAP, true).evaluate());
 	}
 
 	@Test
@@ -279,6 +314,39 @@ class ExpressionTests {
 	}
 
 	@Test
+	void testPlusOperatorIterables() throws ReflectiveOperationException {
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
+		final Map<String, Object> context = new HashMap<>();
+		context.put("arr", new int[] { 1, 2, 3, 4 });
+		assertEquals(Arrays.asList(1, 2, 3, 4), createExpression("(arr #? a -> a < 2) + (arr #? a -> a >= 2)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(settings, context)));
+		context.put("col", Arrays.asList(2, 3));
+		context.put("arr", new int[] { 5, 6 });
+		assertEquals(Arrays.asList(2, 3, 5, 6), createExpression("col + (arr #? a != -1)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(settings, context)));
+		assertEquals(Arrays.asList(5, 6, 2, 3), createExpression("(arr #? a != -1) + col", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(settings, context)));
+		context.put("set", new LinkedHashSet<>(Arrays.asList(8, 2)));
+		context.put("arr", new int[] { 1, 6, 7, 8 });
+		assertEquals(new LinkedHashSet<>(Arrays.asList(8, 2, 1, 6, 7)), createExpression("set + (arr #? a != -1)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(settings, context)));
+		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 6, 7, 8, 2)), createExpression("(arr #? a != -1) + set", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(settings, context)));
+	}
+
+	@Test
+	void testPlusOperatorMap() throws ReflectiveOperationException {
+		final Map<Integer, Integer> map = new LinkedHashMap<>();
+		map.put(5, 6);
+		map.put(7, 8);
+		final Map<String, Object> context = new HashMap<>();
+		context.put("map", map);
+		context.put("arr", new int[] { 1, 2, 3 });
+		final Map<Integer, Integer> expected = new LinkedHashMap<>();
+		expected.put(1, 1);
+		expected.put(2, 2);
+		expected.put(3, 3);
+		expected.put(5, 6);
+		expected.put(7, 8);
+		assertEquals(expected, createExpression("(m = [:]; arr #< a -> m = m + [a: a]; m) + map", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
+	}
+
+	@Test
 	void testQuotedIdentifiers() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("a\\", "a", "`b\\`", 5);
 		assertEquals("a", createExpression("`a\\`", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
@@ -325,9 +393,9 @@ class ExpressionTests {
 	void testStringConcatenation() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("cb", "bc");
 		assertEquals("abcd \\\"\'\b\t\n\f\rƪāĂ\t", createExpression("\"\" + \"a\" + cb + \"d \\\\\\\"\\\'\\b\\t\\n\\f\\r\\x1Aa\\u0101\\U00000102\\x9\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
-		assertEquals("anull", createExpression("\"a\" + ab", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
-		assertEquals("bcnull", createExpression("cb + ab", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
-		assertEquals("nullbc", createExpression("ab + cb", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
+		assertThrows(NullPointerException.class, () -> evaluateExpression(createExpression("\"a\" + ab", EMPTY_EXPRESSIONS_MAP, true), context));
+		assertThrows(NullPointerException.class, () -> evaluateExpression(createExpression("cb + ab", EMPTY_EXPRESSIONS_MAP, true), context));
+		assertThrows(NullPointerException.class, () -> evaluateExpression(createExpression("ab + cb", EMPTY_EXPRESSIONS_MAP, true), context));
 		assertEquals("54", createExpression("5.toString() + 4.toString()", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
 	}
 

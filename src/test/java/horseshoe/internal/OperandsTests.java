@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -59,12 +60,13 @@ class OperandsTests {
 		expectedMap.put(2, 3);
 
 		assertEquals(Arrays.asList(1, 2, 3), Operands.add(Arrays.asList(1), Arrays.asList(2, 3)));
-		assertEquals(expectedMap, Operands.add(Arrays.asList(1), Collections.singletonMap(2, 3)));
 		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Operands.add(new LinkedHashSet<>(Arrays.asList(1)), Arrays.asList(2, 3)));
 		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Operands.add(Arrays.asList(1), new LinkedHashSet<>(Arrays.asList(2, 3, 1))));
-		assertEquals(expectedMap, Operands.add(new LinkedHashSet<>(Arrays.asList(1)), Collections.singletonMap(2, 3)));
 		assertEquals(expectedMap, Operands.add(Collections.singletonMap(1, 1), Collections.singletonMap(2, 3)));
-		assertEquals(expectedMap, Operands.add(Collections.singletonMap(2, 3), Arrays.asList(1)));
+
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(new LinkedHashSet<>(Arrays.asList(1)), Collections.singletonMap(2, 3)));
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(Arrays.asList(1), Collections.singletonMap(2, 3)));
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(Collections.singletonMap(2, 3), Arrays.asList(1)));
 
 		final List<Integer> testList = Arrays.asList(1, 2, 3);
 		assertThrows(IllegalArgumentException.class, () -> Operands.add(testList, null));
@@ -77,6 +79,46 @@ class OperandsTests {
 		final Map<Integer, Integer> testMap = Collections.singletonMap(1, 2);
 		assertThrows(IllegalArgumentException.class, () -> Operands.add(testMap, null));
 		assertThrows(IllegalArgumentException.class, () -> Operands.add(null, testMap));
+	}
+
+	@Test
+	void testAddIterables() {
+		class Iter<T> implements Iterable<T> {
+
+			private final Iterable<T> iter;
+
+			Iter(final Iterable<T> iter) {
+				this.iter = iter;
+			}
+
+			@Override
+			public Iterator<T> iterator() {
+				return iter.iterator();
+			}
+
+		}
+
+		// Iterable + Iterable = List
+		assertEquals(Arrays.asList(1, 2, 3, 4),
+				Operands.add(new Iter<>(Arrays.asList(1, 2)), new Iter<>(Arrays.asList(3, 4))));
+		// Iterable + Collection = List
+		assertEquals(Arrays.asList(1, 2, 3, 4),
+				Operands.add(new Iter<>(Arrays.asList(1, 2)), Arrays.asList(3, 4)));
+		// Collection + Iterable = List
+		assertEquals(Arrays.asList(1, 2, 3, 4),
+				Operands.add(Arrays.asList(1, 2), new Iter<>(Arrays.asList(3, 4))));
+		// Iterable + Set = Set
+		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3, 4)),
+				Operands.add(new Iter<>(Arrays.asList(1, 2)), new LinkedHashSet<>(Arrays.asList(3, 4))));
+		// Set + Iterable = Set
+		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3, 4)),
+				Operands.add(new LinkedHashSet<>(Arrays.asList(1, 2)), new Iter<>(Arrays.asList(3, 4))));
+		// Map + Iterable -> exception
+		assertThrows(IllegalArgumentException.class, () ->
+				Operands.add(Collections.singletonMap(1, 2), new Iter<>(Arrays.asList(3, 4))));
+		// Iterable + Map -> exception
+		assertThrows(IllegalArgumentException.class, () ->
+				Operands.add(new Iter<>(Arrays.asList(1, 2)), Collections.singletonMap(3, 4)));
 	}
 
 	@Test
@@ -265,6 +307,22 @@ class OperandsTests {
 
 	@Test
 	void testIsIn() {
+		assertTrue(Operands.isIn(3, new Iterable<Integer>() {
+
+			@Override
+			public Iterator<Integer> iterator() {
+				return Arrays.asList(1, 2, 3, 4).iterator();
+			}
+
+		}));
+		assertFalse(Operands.isIn(5, new Iterable<Integer>() {
+
+			@Override
+			public Iterator<Integer> iterator() {
+				return Arrays.asList(1, 2, 3, 4).iterator();
+			}
+
+		}));
 		assertTrue(Operands.isIn(4, Arrays.asList(1, 2, 3, 4)));
 		assertFalse(Operands.isIn(4, Arrays.asList(1, 2, 3, 5)));
 		assertTrue(Operands.isIn("key", Collections.singletonMap("key", "value")));

@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,68 +33,95 @@ public final class Operands {
 				return add(toNumeric(left), toNumeric(right));
 			}
 		} else if (left instanceof String) {
-			return (String)left + right;
+			if (right == null) {
+				throw new NullPointerException("Invalid objects cannot be concatenated: \"" + left + "\" + null");
+			}
+			return (String)left + right.toString();
 		} else if (left instanceof Set) {
 			if (right instanceof Collection) {
 				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
 
 				result.addAll((Collection<?>)right);
 				return result;
-			} else if (right instanceof Map) {
-				final Map<?, ?> rightMap = (Map<?, ?>)right;
-				final Map<Object, Object> result = new LinkedHashMap<>(rightMap.size());
+			} else if (right instanceof Iterable) {
+				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
 
-				for (final Object object : (Set<?>)left) {
-					result.put(object, object);
+				for (final Object object : (Iterable<?>)right) {
+					result.add(object);
 				}
 
-				result.putAll(rightMap);
 				return result;
 			}
 		} else if (left instanceof Collection) {
-			if (right instanceof Set) {
-				final Set<Object> result = new LinkedHashSet<>((Collection<?>)left);
+			final Collection<?> leftCollection = (Collection<?>)left;
 
-				result.addAll((Set<?>)right);
+			if (right instanceof Set) {
+				final Set<?> rightSet = (Set<?>)right;
+				final Set<Object> result = new LinkedHashSet<>(leftCollection);
+
+				result.addAll(rightSet);
 				return result;
 			} else if (right instanceof Collection) {
-				final Collection<?> leftCollection = (Collection<?>)left;
 				final Collection<?> rightCollection = (Collection<?>)right;
 				final List<Object> result = new ArrayList<>(leftCollection.size() + rightCollection.size());
 
 				result.addAll(leftCollection);
 				result.addAll(rightCollection);
 				return result;
-			} else if (right instanceof Map) {
-				final Map<?, ?> rightMap = (Map<?, ?>)right;
-				final Map<Object, Object> result = new LinkedHashMap<>(rightMap.size());
+			} else if (right instanceof Iterable) {
+				final List<Object> result = new ArrayList<>(leftCollection);
 
-				for (final Object object : (Collection<?>)left) {
-					result.put(object, object);
+				for (final Object object : (Iterable<?>)right) {
+					result.add(object);
 				}
 
-				result.putAll(rightMap);
 				return result;
 			}
-		} else if (left instanceof Map) {
-			if (right instanceof Map) {
-				final Map<Object, Object> result = new LinkedHashMap<>((Map<?, ?>)left);
+		} else if (left instanceof Iterable) {
+			if (right instanceof Set) {
+				final Set<?> rightSet = (Set<?>)right;
+				final Set<Object> result = new LinkedHashSet<>(rightSet.size());
 
-				result.putAll((Map<?, ?>)right);
+				for (final Object object : (Iterable<?>)left) {
+					result.add(object);
+				}
+
+				result.addAll(rightSet);
 				return result;
 			} else if (right instanceof Collection) {
-				final Map<Object, Object> result = new LinkedHashMap<>((Map<?, ?>)left);
+				final Collection<?> rightCollection = (Collection<?>)right;
+				final List<Object> result = new ArrayList<>(rightCollection.size());
 
-				for (final Object object : (Collection<?>)right) {
-					result.put(object, object);
+				for (final Object object : (Iterable<?>)left) {
+					result.add(object);
+				}
+
+				result.addAll(rightCollection);
+				return result;
+			} else if (right instanceof Iterable) {
+				final List<Object> result = new ArrayList<>();
+
+				for (final Object object : (Iterable<?>)left) {
+					result.add(object);
+				}
+				for (final Object object : (Iterable<?>)right) {
+					result.add(object);
 				}
 
 				return result;
 			}
+		} else if (left instanceof Map && right instanceof Map) {
+			final Map<Object, Object> result = new LinkedHashMap<>((Map<?, ?>)left);
+
+			result.putAll((Map<?, ?>)right);
+			return result;
 		}
 
 		if (right instanceof String) {
-			return left + (String)right;
+			if (left == null) {
+				throw new NullPointerException("Invalid objects cannot be concatenated: null + \"" + right + '"');
+			}
+			return left.toString() + (String)right;
 		}
 
 		throw new IllegalArgumentException("Invalid objects cannot be added: " + (left == null ? "null" : left.getClass().getName()) + " + " + (right == null ? "null" : right.getClass().getName()));
@@ -356,6 +384,12 @@ public final class Operands {
 			return ((Collection<?>)container).contains(item);
 		} else if (container instanceof Map) {
 			return ((Map<?, ?>)container).containsKey(item);
+		} else if (container instanceof Iterable) {
+			for (final Object object : (Iterable<?>)container) {
+				if (Objects.equals(object, item)) {
+					return true;
+				}
+			}
 		}
 
 		return false;
