@@ -1157,30 +1157,30 @@ public abstract class Accessor {
 		 * @return the new accessor, or null if no method could be found
 		 */
 		public static Accessor create(final Class<?> parent, final MethodSignature signature, final int parameterCount) {
-			final List<MethodHandle> methodHandles = new ArrayList<>(2);
+			final Set<MethodHandle> methodHandles = new LinkedHashSet<>(2);
 
 			// Find all matching methods in the first public ancestor class, including all interfaces along the way
 			for (Class<?> ancestor = parent; true; ancestor = ancestor.getSuperclass()) {
 				if (Modifier.isPublic(ancestor.getModifiers())) {
-					getPublicMethods(methodHandles, ancestor, false, signature, parameterCount);
-					break;
+					try {
+						getPublicMethods(methodHandles, ancestor, false, signature, parameterCount);
+						break;
+					} catch (final IllegalAccessException e) {
+						// Ignore illegal access errors
+					}
 				}
 
-				for (final Class<?> iface : ancestor.getInterfaces()) {
-					if (Modifier.isPublic(iface.getModifiers())) {
-						getPublicMethods(methodHandles, iface, false, signature, parameterCount);
+				getPublicInterfaceMethods(methodHandles, ancestor, signature, parameterCount);
 
-						if (parameterCount == 0 && !methodHandles.isEmpty()) {
-							return new MethodAccessor(methodHandles.get(0));
-						}
-					}
+				if (parameterCount == 0 && !methodHandles.isEmpty()) {
+					return new MethodAccessor(methodHandles.iterator().next());
 				}
 			}
 
 			if (methodHandles.size() > 1) {
 				return new MethodsAccessor(methodHandles.toArray(new MethodHandle[0]));
 			} else if (!methodHandles.isEmpty()) {
-				return new MethodAccessor(methodHandles.get(0));
+				return new MethodAccessor(methodHandles.iterator().next());
 			}
 
 			return null;
@@ -1193,8 +1193,9 @@ public abstract class Accessor {
 		 * @param signature the signature of the method in the form [name]:[parameterType0],...
 		 * @param parameterCount the number of parameters that the method takes
 		 * @return the new accessor, or null if no method could be found
+		 * @throws IllegalAccessException if a matching method is found, but it cannot be accessed
 		 */
-		public static Accessor createStaticOrClass(final Class<?> parent, final MethodSignature signature, final int parameterCount) {
+		public static Accessor createStaticOrClass(final Class<?> parent, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
 			final List<MethodHandle> methodHandles = new ArrayList<>(2);
 
 			// Find all matching static methods
@@ -1233,25 +1234,48 @@ public abstract class Accessor {
 		/**
 		 * Gets the public methods of the specified parent class that match the given information.
 		 *
-		 * @param methodHandles the list used to store the matching method handles
+		 * @param methodHandles the collection used to store the matching method handles
 		 * @param parent the parent class
 		 * @param isStatic true to match only static methods, false to match only non-static methods
 		 * @param signature the method signature
 		 * @param parameterCount the parameter count of the method
+		 * @throws IllegalAccessException if a matching method is found, but it cannot be accessed
 		 */
-		public static void getPublicMethods(final List<MethodHandle> methodHandles, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) {
+		public static void getPublicMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
 			for (final Method method : parent.getMethods()) {
 				if (Modifier.isStatic(method.getModifiers()) == isStatic && !method.isSynthetic() && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
-					try {
-						methodHandles.add(LOOKUP.unreflect(method).asSpreader(Object[].class, parameterCount));
+					methodHandles.add(LOOKUP.unreflect(method).asSpreader(Object[].class, parameterCount));
 
-						if (parameterCount == 0) {
+					if (parameterCount == 0) {
+						return;
+					}
+				}
+			}
+		}
+
+		/**
+		 * Gets the public interface methods of the specified parent class that match the given information.
+		 *
+		 * @param methodHandles the collection used to store the matching method handles
+		 * @param parent the parent class
+		 * @param signature the method signature
+		 * @param parameterCount the parameter count of the method
+		 */
+		public static void getPublicInterfaceMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final MethodSignature signature, final int parameterCount) {
+			for (final Class<?> iface : parent.getInterfaces()) {
+				if (Modifier.isPublic(iface.getModifiers())) {
+					try {
+						getPublicMethods(methodHandles, iface, false, signature, parameterCount);
+
+						if (parameterCount == 0 && !methodHandles.isEmpty()) {
 							return;
 						}
 					} catch (final IllegalAccessException e) {
-						// Probably a java 9+ module access error
+						// Ignore illegal access issues with a specific interface
 					}
 				}
+
+				getPublicInterfaceMethods(methodHandles, iface, signature, parameterCount);
 			}
 		}
 
@@ -1329,7 +1353,7 @@ public abstract class Accessor {
 		 * @param context the context object on which to invoke the accessor
 		 * @param identifier the identifier used to create the accessor
 		 * @return a new accessor corresponding to the given context and identifier
-		 * @throws IllegalAccessException never
+		 * @throws IllegalAccessException if a matching method or field is found, but it cannot be accessed
 		 */
 		public Accessor create(final Object context, final Identifier identifier) throws IllegalAccessException {
 			final Class<?> contextClass = context.getClass();
@@ -1366,7 +1390,7 @@ public abstract class Accessor {
 		 * @param parent the parent class for the field
 		 * @param fieldName the name of the field
 		 * @return the new accessor, or null if no field could be found
-		 * @throws IllegalAccessException never
+		 * @throws IllegalAccessException if a matching field is found, but it cannot be accessed
 		 */
 		private static Accessor createFieldAccessor(final Class<?> parent, final String fieldName) throws IllegalAccessException {
 			// Find first matching field
@@ -1431,7 +1455,7 @@ public abstract class Accessor {
 		 * @param parent the parent class for the field
 		 * @param fieldName the name of the field
 		 * @return the new accessor, or null if no field could be found
-		 * @throws IllegalAccessException never
+		 * @throws IllegalAccessException if a matching field is found, but it cannot be accessed
 		 */
 		public static Accessor createStaticFieldAccessor(final Class<?> parent, final String fieldName) throws IllegalAccessException {
 			// Get public static fields only from the current class if it is public
