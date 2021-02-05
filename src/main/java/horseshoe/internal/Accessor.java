@@ -1200,7 +1200,11 @@ public abstract class Accessor {
 
 			// Find all matching static methods
 			if (Modifier.isPublic(parent.getModifiers())) {
-				getPublicMethods(methodHandles, parent, true, signature, parameterCount);
+				try {
+					getPublicMethods(methodHandles, parent, true, signature, parameterCount);
+				} catch (final IllegalAccessException e) {
+					// Ignore illegal access errors
+				}
 			}
 
 			// Find the Class<?> method
