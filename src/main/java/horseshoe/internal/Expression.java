@@ -163,16 +163,17 @@ public final class Expression {
 
 		// Create the patterns
 		for (final Operator pattern : patterns) {
-			allOperators.append(Pattern.quote(pattern.getString())).append('|');
-
 			if (pattern.has(Operator.ASSIGNMENT)) {
 				assignmentOperators.append('|').append(Pattern.quote(pattern.getString()));
+			} else {
+				allOperators.append(Pattern.quote(pattern.getString())).append('|');
 			}
 		}
 
 		// Add comma as a separator
-		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<backreach>[.]?[/\\\\]|(?:[.][.][/\\\\])+)?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?=" + COMMENT_PATTERN + "*(?<assignment>" + assignmentOperators.substring(1) + ")(?:[^=]|$))?", Pattern.UNICODE_CHARACTER_CLASS);
-		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + allOperators.append(",)\\s*").toString(), Pattern.UNICODE_CHARACTER_CLASS);
+		allOperators.append(',');
+		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<backreach>[.]?[/\\\\]|(?:[.][.][/\\\\])+)?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?:" + COMMENT_PATTERN + "*(?!" + allOperators + ")(?<assignment>" + assignmentOperators.substring(1) + ")\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
+		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + allOperators.append(")\\s*").toString(), Pattern.UNICODE_CHARACTER_CLASS);
 	}
 
 	/**
@@ -317,6 +318,7 @@ public final class Expression {
 					}
 
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name))));
+					return state.getOperators().push(operator).peek();
 				} else if (backreach < 0 && (localBindingIndex = state.getLocalBindings().get(name)) != null) { // Check for a local binding
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL + localBindingIndex.intValue())));
 				} else { // Resolve the identifier

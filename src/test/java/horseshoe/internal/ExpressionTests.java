@@ -343,7 +343,7 @@ class ExpressionTests {
 		expected.put(3, 3);
 		expected.put(5, 6);
 		expected.put(7, 8);
-		assertEquals(expected, createExpression("(m = [:]; arr #< a -> m = m + [a: a]; m) + map", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
+		assertEquals(expected, createExpression("(m = [:]; arr #< a -> m = m + [a: a]) + map", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)));
 	}
 
 	@Test

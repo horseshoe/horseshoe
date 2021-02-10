@@ -290,10 +290,10 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 | 13 | a <code>&amp;&amp;</code> b \(Logical And\) | Left&nbsp;to&nbsp;right |
 | 14 | a <code>&#124;&#124;</code> b \(Logical Or\) | Left&nbsp;to&nbsp;right |
 | 15 | a <code>?:</code> b \(Conditional\), <br>a <code>??</code> b \(Conditional \- Alternate\), <br>a <code>?</code> b \(Ternary\), <br>a <code>:</code> b \(Pair / Range\), <br>a <code>:&lt;</code> \(Backward Range\) | Right&nbsp;to&nbsp;left |
-| 16 | a <code>,</code> b\* \(Item Separator\) | Left&nbsp;to&nbsp;right |
-| 17 | a <code>=</code> b \(Bind Local Name\) | Right&nbsp;to&nbsp;left |
-| 18 | <code>☠</code> a \(Die\), <br><code>\~:&lt;</code> a \(Die \- Alternate\), <br><code>\#^</code> a \(Return\) | Left&nbsp;to&nbsp;right |
-| 19 | a <code>\#&gt;</code> b \(Streaming Remap\), <br>a <code>\#\.</code> b \(Streaming Remap \- Alternate\), <br>a <code>\#&#124;</code> b \(Streaming Flatten Remap\), <br>a <code>\#?</code> b \(Streaming Filter\), <br>a <code>\#&lt;</code> b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
+| 16 | <code>☠</code> a \(Die\), <br><code>\~:&lt;</code> a \(Die \- Alternate\), <br><code>\#^</code> a \(Return\) | Left&nbsp;to&nbsp;right |
+| 17 | a <code>\#&gt;</code> b \(Streaming Remap\), <br>a <code>\#\.</code> b \(Streaming Remap \- Alternate\), <br>a <code>\#&#124;</code> b \(Streaming Flatten Remap\), <br>a <code>\#?</code> b \(Streaming Filter\), <br>a <code>\#&lt;</code> b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
+| 18 | a <code>=</code> b \(Bind Local Name\) | Right&nbsp;to&nbsp;left |
+| 19 | a <code>,</code> b\* \(Item Separator\) | Left&nbsp;to&nbsp;right |
 | 20 | a <code>;</code> b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
 
 Many operators support more operand types than traditional programming languages. Addition and subtraction can be applied to lists, maps, and sets as well as numeric primitives. Also, comparison operators can be used to compare enumerations with strings as well as comparing numeric primitives, strings, and any comparable objects.

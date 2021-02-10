@@ -63,8 +63,6 @@ final class Operator {
 	public static final int ASSIGNMENT          = 0x00001000; // Is an assignment operator
 	public static final int TRAILING_IDENTIFIER = 0x00002000; // Requires a trailing identifier
 
-	private static final int CONTAINER          = 0x00004000; // Is a container (has an ending match or comma separator)
-
 	private static final List<Operator> OPERATORS;
 	private static final Map<String, Operator> OPERATOR_LOOKUP = new LinkedHashMap<>();
 
@@ -127,16 +125,16 @@ final class Operator {
 		operators.add(new Operator("?",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Ternary"));
 		operators.add(new Operator(":",      15, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Pair / Range"));
 		operators.add(new Operator(":<",     15, LEFT_EXPRESSION | RIGHT_ASSOCIATIVITY, "Backward Range"));
-		operators.add(new Operator(",",      16, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING | CONTAINER, "Item Separator"));
-		operators.add(new Operator("=",      17, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind Local Name"));
-		operators.add(new Operator("\u2620", 18, RIGHT_EXPRESSION, "Die")); // Skull and crossbones
-		operators.add(new Operator("~:<",    18, RIGHT_EXPRESSION, "Die - Alternate"));
-		operators.add(new Operator("#^",     18, RIGHT_EXPRESSION, "Return"));
-		operators.add(new Operator("#>",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap"));
-		operators.add(new Operator("#.",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap - Alternate"));
-		operators.add(new Operator("#|",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Flatten Remap"));
-		operators.add(new Operator("#?",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Filter"));
-		operators.add(new Operator("#<",     19, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Reduction"));
+		operators.add(new Operator("\u2620", 16, RIGHT_EXPRESSION, "Die")); // Skull and crossbones
+		operators.add(new Operator("~:<",    16, RIGHT_EXPRESSION, "Die - Alternate"));
+		operators.add(new Operator("#^",     16, RIGHT_EXPRESSION, "Return"));
+		operators.add(new Operator("#>",     17, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap"));
+		operators.add(new Operator("#.",     17, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Remap - Alternate"));
+		operators.add(new Operator("#|",     17, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Flatten Remap"));
+		operators.add(new Operator("#?",     17, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Filter"));
+		operators.add(new Operator("#<",     17, LEFT_EXPRESSION | RIGHT_EXPRESSION | TRAILING_IDENTIFIER, "Streaming Reduction"));
+		operators.add(new Operator("=",      18, LEFT_EXPRESSION | RIGHT_EXPRESSION | RIGHT_ASSOCIATIVITY | ASSIGNMENT, "Bind Local Name"));
+		operators.add(new Operator(",",      19, LEFT_EXPRESSION | X_RIGHT_EXPRESSIONS | ALLOW_PAIRS | IGNORE_TRAILING, "Item Separator"));
 		operators.add(new Operator(";",      20, LEFT_EXPRESSION | RIGHT_EXPRESSION | IGNORE_TRAILING, "Statement Separator"));
 
 		// These operators have known assertion failures and may contain ambiguities with other operators or Horseshoe features. These ambiguities have been thoroughly analyzed and deemed acceptable.
@@ -308,7 +306,7 @@ final class Operator {
 	 * @return true if the operator is a container operator, otherwise false
 	 */
 	public boolean isContainer() {
-		return closingString != null || has(CONTAINER);
+		return has(X_RIGHT_EXPRESSIONS) || closingString != null;
 	}
 
 	/**
