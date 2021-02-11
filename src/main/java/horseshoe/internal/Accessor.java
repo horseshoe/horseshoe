@@ -31,7 +31,7 @@ public abstract class Accessor {
 	static final Factory FACTORY = new Factory();
 	static final Object INVALID = new Object();
 
-	private static final MethodHandles.Lookup LOOKUP = MethodHandles.publicLookup();
+	private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
 
 	private static final class MethodSignature {
 
@@ -1267,16 +1267,14 @@ public abstract class Accessor {
 		 */
 		public static void getPublicInterfaceMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final MethodSignature signature, final int parameterCount) {
 			for (final Class<?> iface : parent.getInterfaces()) {
-				if (Modifier.isPublic(iface.getModifiers())) {
-					try {
-						getPublicMethods(methodHandles, iface, false, signature, parameterCount);
+				try {
+					getPublicMethods(methodHandles, iface, false, signature, parameterCount);
 
-						if (parameterCount == 0 && !methodHandles.isEmpty()) {
-							return;
-						}
-					} catch (final IllegalAccessException e) {
-						// Ignore illegal access issues with a specific interface
+					if (parameterCount == 0 && !methodHandles.isEmpty()) {
+						return;
 					}
+				} catch (final IllegalAccessException e) {
+					// Ignore illegal access issues with a specific interface
 				}
 
 				getPublicInterfaceMethods(methodHandles, iface, signature, parameterCount);

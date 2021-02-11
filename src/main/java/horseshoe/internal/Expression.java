@@ -312,7 +312,7 @@ public final class Expression {
 				final Operator operator = Operator.get(matcher.group("assignment"), true);
 
 				// Look-ahead for an assignment operation
-				if (operator != null && operator.has(Operator.ASSIGNMENT)) {
+				if (operator != null) {
 					if (backreach >= 0) {
 						throw new IllegalArgumentException("Invalid assignment to non-local variable (index " + state.getIndex(matcher) + ")");
 					}

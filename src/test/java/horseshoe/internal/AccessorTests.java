@@ -45,15 +45,20 @@ class AccessorTests {
 	}
 
 	private interface PrivateInterface {
-		String testBad(final int i);
+		String testShouldWork(final int i);
 
-		String testBad();
+		@SuppressWarnings("unused")
+		default String testShouldWork() {
+			return "Good";
+		}
 	}
 
-	interface PublicInterface {
+	public interface PublicInterface {
 		String test(final int i);
 
-		String test();
+		default String test() {
+			return "Good";
+		}
 	}
 
 	@SuppressWarnings("unused")
@@ -72,17 +77,7 @@ class AccessorTests {
 		}
 
 		@Override
-		public String test() {
-			return field;
-		}
-
-		@Override
-		public String testBad(final int i) {
-			return FIELD;
-		}
-
-		@Override
-		public String testBad() {
+		public String testShouldWork(final int i) {
 			return FIELD;
 		}
 
@@ -257,12 +252,12 @@ class AccessorTests {
 
 	@Test
 	void testMethod() throws IOException, LoadException {
-		assertEquals(", ", new TemplateLoader().load("Method", "{{PrivateClassInstance.testBad()}}, {{PrivateClassInstance.testBad(6)}}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new java.io.StringWriter()).toString());
+		assertEquals("Good, Bad, Good, Good", new TemplateLoader().load("Method", "{{PrivateClassInstance.testShouldWork()}}, {{PrivateClassInstance.testShouldWork(6)}}, {{PrivateClassInstance.test()}}, {{PrivateClassInstance.test(6)}}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new java.io.StringWriter()).toString());
 	}
 
 	@Test
 	void testNonexistantMethods() throws IOException, LoadException {
-		assertEquals(", , , , , , , ", new TemplateLoader().load("Nonexistant Methods", "{{Object.nonexistantMethod(5)}}, {{TestMapInstance.test(1)}}, {{TestMapInstance.test(1)}}, {{TestMapInstance.test(TestMapInstance)}}, {{TestMapInstance.test('')}}, {{TestMapInstance.nonexistantMethod(5)}}, {{PrivateClassInstance.testBad(5)}}, {{PrivateClassInstance.testBad()}}").render(Helper.loadMap("Object", ManagementFactory.class, "TestMapInstance", new TestMap(), "PrivateClassInstance", new PrivateClass()), new java.io.StringWriter()).toString());
+		assertEquals(", , , , , , ", new TemplateLoader().load("Nonexistant Methods", "{{Object.nonexistantMethod(5)}}, {{TestMapInstance.test(1)}}, {{TestMapInstance.test(TestMapInstance)}}, {{TestMapInstance.test('')}}, {{TestMapInstance.nonexistantMethod(5)}}, {{PrivateClassInstance.testBad(5)}}, {{PrivateClassInstance.testBad()}}").render(Helper.loadMap("Object", ManagementFactory.class, "TestMapInstance", new TestMap(), "PrivateClassInstance", new PrivateClass()), new java.io.StringWriter()).toString());
 	}
 
 	@Test
