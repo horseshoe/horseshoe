@@ -177,6 +177,33 @@ public final class Expression {
 	}
 
 	/**
+	 * Counts the number of ternaries on the operator stack.
+	 *
+	 * @param state the parse state
+	 * @param precedence the precedence level of ternary operators
+	 * @return the number of ternary operations at the current level in the operator stack
+	 */
+	private static int countTernaries(final ExpressionParseState state, final int precedence) {
+		int ternaries = 0;
+
+		for (final Operator stackOperator : state.getOperators()) {
+			if (stackOperator.getPrecedence() != precedence) {
+				return ternaries;
+			} else if ("?".equals(stackOperator.getString())) {
+				ternaries++;
+
+				if (ternaries > 0) {
+					return ternaries;
+				}
+			} else if (":".equals(stackOperator.getString())) {
+				ternaries--;
+			}
+		}
+
+		return ternaries;
+	}
+
+	/**
 	 * Parses an identifier from the given matcher and returns the last operator (null or method call).
 	 *
 	 * @param state the parse state
@@ -834,19 +861,7 @@ public final class Expression {
 			case ":":
 				state.getOperands().push(new Operand(Entry.class, left.toObject()));
 
-				int ternaries = 0;
-
-				for (final Operator stackOperator : state.getOperators()) {
-					if (stackOperator.getPrecedence() != operator.getPrecedence()) {
-						break;
-					} else if ("?".equals(stackOperator.getString())) {
-						ternaries++;
-					} else if (":".equals(stackOperator.getString())) {
-						ternaries--;
-					}
-				}
-
-				if (ternaries > 0) { // Process everything up to the ternary
+				if (countTernaries(state, operator.getPrecedence()) > 0) { // Process everything up to the ternary
 					while (!"?".equals(state.getOperators().peek().getString())) {
 						processOperation(state);
 					}
