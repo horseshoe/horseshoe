@@ -11,7 +11,7 @@ final class Accessors {
 	 * An array length accessor provides access to the length of an array.
 	 */
 	static class ArrayLengthAccessor extends Accessor {
-		private static Accessor singleton = new ArrayLengthAccessor();
+		private static final Accessor singleton = new ArrayLengthAccessor();
 
 		@Override
 		public Object get(final Object context) {
@@ -23,7 +23,7 @@ final class Accessors {
 	 * A collection size accessor provides access to the size of a collection.
 	 */
 	static class CollectionSizeAccessor extends Accessor {
-		private static Accessor singleton = new CollectionSizeAccessor();
+		private static final Accessor singleton = new CollectionSizeAccessor();
 
 		@Override
 		public Object get(final Object context) {
@@ -35,7 +35,7 @@ final class Accessors {
 	 * A character sequence length accessor provides access to the length of a character sequence.
 	 */
 	static class CharSequenceLengthAccessor extends Accessor {
-		private static Accessor singleton = new CharSequenceLengthAccessor();
+		private static final Accessor singleton = new CharSequenceLengthAccessor();
 
 		@Override
 		public Object get(final Object context) {
@@ -47,7 +47,7 @@ final class Accessors {
 	 * An entry key accessor provides access to the key of an entry.
 	 */
 	static class EntryKeyAccessor extends Accessor {
-		private static Accessor singleton = new EntryKeyAccessor();
+		private static final Accessor singleton = new EntryKeyAccessor();
 
 		@Override
 		public Object get(final Object context) {
@@ -59,7 +59,7 @@ final class Accessors {
 	 * An entry value accessor provides access to the value of an entry.
 	 */
 	static class EntryValueAccessor extends Accessor {
-		private static Accessor singleton = new EntryValueAccessor();
+		private static final Accessor singleton = new EntryValueAccessor();
 
 		@Override
 		public Object get(final Object context) {
@@ -71,7 +71,7 @@ final class Accessors {
 	 * A map size accessor provides access to the size of a map.
 	 */
 	static class MapSizeAccessor extends Accessor {
-		private static Accessor singleton = new MapSizeAccessor();
+		private static final Accessor singleton = new MapSizeAccessor();
 
 		@Override
 		public Object get(final Object context) {
@@ -83,7 +83,7 @@ final class Accessors {
 	 * A map entries accessor provides access to the entries of a map.
 	 */
 	static class MapEntriesAccessor extends Accessor {
-		private static Accessor singleton = new MapEntriesAccessor();
+		private static final Accessor singleton = new MapEntriesAccessor();
 
 		@Override
 		public Object get(final Object context) {

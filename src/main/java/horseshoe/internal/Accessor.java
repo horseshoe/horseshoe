@@ -1372,14 +1372,14 @@ public abstract class Accessor {
 				return MethodAccessor.createStaticOrClass((Class<?>)context, signature, identifier.getParameterCount());
 			} else if (Class.class.equals(contextClass)) { // Static field
 				return createStaticFieldAccessor((Class<?>)context, identifier.getName());
-			} else if (Map.class.isAssignableFrom(contextClass)) {
-				return new MapAccessor(identifier.getName());
 			}
 
 			final Accessor accessor = Accessors.get(contextClass, identifier);
 
 			if (accessor != null) {
 				return accessor;
+			} else if (Map.class.isAssignableFrom(contextClass)) {
+				return new MapAccessor(identifier.getName());
 			}
 
 			// Field
