@@ -680,23 +680,33 @@ public class TemplateLoader {
 
 			case '^': { // Start a new inverted section, or else block for the current section
 				final TrimmedString expression = Utilities.trim(tag, 1);
+				final boolean elseIf = expression.string.startsWith("#");
+				final boolean elseDoc = expression.string.startsWith("^");
 
-				if ((expression.string.isEmpty() || expression.string.startsWith("#")) && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
+				if ((expression.string.isEmpty() || elseIf || elseDoc) && extensions.contains(Extension.ELSE_TAGS)) { // Else block for the current section
 					if (state.sections.peek().getExpression() == null && state.sections.peek().getAnnotation() == null || state.sections.peek().getRenderList() != state.renderLists.pop()) {
 						throw new LoadException(loaders, "Section else tag outside section start tag");
 					}
 
 					final Section previousSection = state.sections.peek();
 
-					if (expression.string.isEmpty()) { // "else" tag
-						state.renderLists.push(previousSection.getInvertedRenderList());
-					} else { // "else if" tag
+					if (elseIf) { // "else if" tag
 						final Object location = state.loader.toLocation();
 
 						state.sections.pop(1).push(new Section(state.sections.peek(), location, state.createExpression(location, state.createExpressionParser(Utilities.trim(tag, 2)), extensions)));
 						previousSection.getInvertedRenderList().add(SectionRenderer.FACTORY.create(state.sections.peek()));
 						state.renderLists.push(state.sections.peek().getRenderList());
+						return;
+					} else if (elseDoc) { // documentative "else" tag
+						final Section section = state.sections.peek();
+						final String expressionString = expression.string.substring(1).trim();
+
+						if (!section.getName().contentEquals(expressionString)) {
+							throw new LoadException(loaders, "Section else tag mismatch, expecting else tag for section " + section);
+						}
 					}
+
+					state.renderLists.push(previousSection.getInvertedRenderList());
 				} else { // Start a new inverted section
 					final Object location = state.loader.toLocation();
 

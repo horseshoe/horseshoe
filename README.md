@@ -204,6 +204,15 @@ An inverted section tag may start with a `#` (`{{^# condition }}`) to indicate a
 {{/ b }}
 ```
 
+An inverted section tag may also start with a `^` (`{{^^ condition }}`) to match a preceding condition from a `#` or `^#` tagged section. This section is handled in the same way as a `{{^}}` section with the requirement that the `condition` matches the preceding section's expression. This section's expression is not evaluated nor does `^^` change a section's scope, only the content is compared. For example,
+```horseshoe
+{{# a }}
+  a evaluates to true
+{{^^ a }}
+  a evaluates to false
+{{/ a }}
+```
+
 #### Inline Partials
 Inline partial tags (`{{< partial }}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a Horseshoe template file. Inline partials inherit the scope of the template in which they are declared, so named expressions and other inline partials can be used within the inline partial.
 
