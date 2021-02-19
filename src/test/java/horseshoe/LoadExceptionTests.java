@@ -1,6 +1,7 @@
 package horseshoe;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -129,6 +130,12 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 		}
+	}
+
+	@Test
+	void testUnmatchedElseTag() {
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Documentative Else Test", "{{ IsTrue() -> true }}{{ IsFalse() -> false }}{{# IsTrue() }}correct{{^^ IsFalse() }}wrong{{/ IsTrue() }}"));
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Documentative Else Test", "{{ IsFalse() -> false }}{{^^ IsFalse() }}wrong{{/ IsFalse() }}"));
 	}
 
 }

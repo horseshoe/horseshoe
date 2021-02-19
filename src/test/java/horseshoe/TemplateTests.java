@@ -253,9 +253,7 @@ class TemplateTests {
 		assertEquals("String, nil -> String, nil", new TemplateLoader().load("Optional Test", "{{#optionals}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}} -> {{#}}{{#.}}{{.}}{{^}}nil{{/}}{{#.hasNext}}, {{/}}{{/}}").render(Collections.<String, Object>singletonMap("optionals", new Object[] { Optional.of("String"), Optional.empty() }), new java.io.StringWriter()).toString());
 		assertEquals("X, X, 1, X, 1, X, 2.0, X, -1.0, X, 1, X, 10, X, 1, X, 1, X", new TemplateLoader().load("Section Test", "{{#values}}{{#.index}}, {{/}}{{#'X'}}{{#..}}{{.}}{{^}}{{.}}{{/}}{{/}}{{/}}").render(Collections.<String, Object>singletonMap("values", new Object[] { true, false, 1, 0, 1L, 0L, 2.0, 0.0, -1.0f, 0.0f, BigDecimal.ONE, BigDecimal.ZERO, BigInteger.TEN, BigInteger.ZERO, '1', '\0', "1", null }), new java.io.StringWriter()).toString());
 		assertEquals("Big, Medium, Small, Zero, ", new TemplateLoader().load("Else If Test", "{{# [1_000_000, 1_000, 1, 0, -1].iterator() }}{{# .index }}, {{/}}{{# . > 65_536 }}Big{{^# . > 64 }}Medium{{^# . > 0 }}Small{{^# . == 0 }}Zero{{/}}{{/}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("correct", new TemplateLoader().load("Documentative Else Test", "{{IsTrue() -> true}}{{# IsTrue() }}correct{{^^ IsTrue() }}wrong{{/ IsTrue() }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertThrows(LoadException.class, () -> new TemplateLoader().load("Documentative Else Test", "{{IsTrue() -> true}}{{ IsFalse() -> false }}{{# IsTrue() }}correct{{^^ IsFalse() }}wrong{{/ IsTrue() }}"));
-		assertThrows(LoadException.class, () -> new TemplateLoader().load("Documentative Else Test", "{{ IsFalse() -> false }}{{^^ IsFalse() }}wrong{{/ IsFalse() }}"));
+		assertEquals("correct", new TemplateLoader().load("Documentative Else Test", "{{ IsTrue() -> true }}{{# IsTrue() }}correct{{^^ IsTrue() }}wrong{{/ IsTrue() }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 	@Test

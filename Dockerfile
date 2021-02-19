@@ -39,7 +39,7 @@ RUN apt-get update && \
 	apt-get install -y --no-install-recommends binutils && \
 	rm -rf /var/lib/apt/lists/*
 
-RUN jlink --compress=2 --add-modules  java.base,java.logging --no-header-files --no-man-pages --strip-debug --output /opt/jre
+RUN jlink --compress=2 --add-modules java.base,java.logging --no-header-files --no-man-pages --strip-debug --output /opt/jre
 RUN rm -rf /opt/jre/bin/keytool
 RUN find /opt/jre -name '*.so' | xargs strip
 RUN find /usr/lib -name '*.so*' | xargs strip

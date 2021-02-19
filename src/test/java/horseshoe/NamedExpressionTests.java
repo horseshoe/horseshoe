@@ -91,6 +91,11 @@ public class NamedExpressionTests {
 	}
 
 	@Test
+	void testNamedExpressionsNoArgs() throws IOException, LoadException {
+		assertEquals("1 2 3", new TemplateLoader().load("{{ X() -> a + ' ' + ..\\b + ' ' + ..\\..\\c }}" + LS + "{{# 'c': 3 }}{{# 'b': 2 }}{{# 'a': 1 }}{{ X() }}{{/}}{{/}}{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+	}
+
+	@Test
 	void testNamedExpressionDupParam() throws IOException, LoadException {
 		assertThrows(LoadException.class, () -> new TemplateLoader().load("Duplicate Parameter", "{{func(c,c)->c}}" + LS + "{{func()}}"));
 	}
