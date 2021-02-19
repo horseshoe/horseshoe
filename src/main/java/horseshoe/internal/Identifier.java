@@ -135,7 +135,7 @@ public final class Identifier {
 			return null;
 		}
 
-		throw new NoSuchFieldException("Field \"" + name + "\" not found in object of type " + object.getClass().getName());
+		throw new NoSuchFieldException("Field \"" + name + "\" not found in " + getObjectType(object) + " object");
 	}
 
 	/**
@@ -189,7 +189,17 @@ public final class Identifier {
 			return null;
 		}
 
-		throw new NoSuchMethodException("Method \"" + name + "\" not found in object of type " + object.getClass().getName());
+		throw new NoSuchMethodException("Method \"" + name + "\" not found in " + getObjectType(object) + " object");
+	}
+
+	/**
+	 * Gets the string name of the type of an object, or "null" if the object is null.
+	 *
+	 * @param object the object to get the type of
+	 * @return the name of the type for the specified object, or "null" if the object is null
+	 */
+	private String getObjectType(final Object object) {
+		return object == null ? "null" : object.getClass().getName();
 	}
 
 	/**
@@ -200,6 +210,10 @@ public final class Identifier {
 	 * @throws IllegalAccessException if the value cannot be retrieved due to an illegal access
 	 */
 	private Accessor getOrAddAccessor(final Object object) throws IllegalAccessException {
+		if (object == null) {
+			return null;
+		}
+
 		final Class<?> objectClass = object.getClass();
 		final Class<?> lookupClass = Class.class.equals(objectClass) ? (Class<?>)object : objectClass;
 		final Accessor accessor = accessorDatabase.get(lookupClass);
@@ -266,7 +280,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
-				return throwException(ignoreFailures, NoSuchFieldException.class, "Field \"" + name + "\" not found in object of type " + objectClass.getName());
+				return throwException(ignoreFailures, NoSuchFieldException.class, "Field \"" + name + "\" not found in " + objectClass.getName() + " object");
 			}
 
 			accessorDatabase.put(lookupClass, accessor);
@@ -297,7 +311,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
-				return throwException(ignoreFailures, NoSuchMethodException.class, "Method \"" + name + "\" not found in object of type " + objectClass.getName());
+				return throwException(ignoreFailures, NoSuchMethodException.class, "Method \"" + name + "\" not found in " + objectClass.getName() + " object");
 			}
 
 			accessorDatabase.put(lookupClass, accessor);

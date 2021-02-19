@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import horseshoe.Settings.ContextAccess;
+
 import org.junit.jupiter.api.Test;
 
 public class NamedExpressionTests {
@@ -91,6 +93,12 @@ public class NamedExpressionTests {
 	@Test
 	void testNamedExpressionDupParam() throws IOException, LoadException {
 		assertThrows(LoadException.class, () -> new TemplateLoader().load("Duplicate Parameter", "{{func(c,c)->c}}" + LS + "{{func()}}"));
+	}
+
+	@Test
+	void testNestedNamedExpressionsWithArgs() throws IOException, LoadException {
+		assertEquals("blue, orange, ", new TemplateLoader().load("Nested Expression", "{{ GetMap(blue) -> Map.ONE: blue, 2: null, 3: 'orange' }}{{ TraverseMap(value, map) -> map[value] ?: value <= 0 ? null : TraverseMap(value - 1, map) }}{{ TraverseMap(2, GetMap('blue')) }}, {{ TraverseMap(3, GetMap(false)) }}, {{ TraverseMap(2, GetMap(null)) }}").render(Collections.singletonMap("Map", Collections.singletonMap("ONE", 1)), new StringWriter()).toString());
+		assertEquals(", , ", new TemplateLoader().load("Nested Expression", "{{ GetMap(blue) -> Map.ONE: blue, 2: null, 3: 'orange' }}{{ TraverseMap(value, map) -> map[value] ?: value <= 0 ? null : TraverseMap(value - 1, map) }}{{ TraverseMap(2, GetMap('blue')) }}, {{ TraverseMap(3, GetMap(false)) }}, {{ TraverseMap(2, GetMap(null)) }}").render(new Settings().setContextAccess(ContextAccess.FULL), null, new StringWriter()).toString());
 	}
 
 	@Test

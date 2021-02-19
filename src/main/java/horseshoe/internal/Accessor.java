@@ -309,7 +309,7 @@ public abstract class Accessor {
 		try {
 			if (context == null) {
 				if (!ignoreFailures) {
-					throw new NullPointerException("The lookup operator cannot be applied to a null value");
+					throw new NullPointerException("The lookup operator cannot be applied to a null object");
 				}
 			} else if (context instanceof Map) {
 				return lookupMap((Map<?, ?>)context, lookup);
@@ -954,7 +954,7 @@ public abstract class Accessor {
 		try {
 			if (context == null) {
 				if (!ignoreFailures) {
-					throw new NullPointerException("The lookup operator cannot be applied to a null value");
+					throw new NullPointerException("The lookup operator cannot be applied to a null object");
 				}
 			} else if (context instanceof Map) {
 				return lookupMapRange((Map<T, ?>)context, start, end);
