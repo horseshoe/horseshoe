@@ -1,0 +1,20 @@
+plugins {
+	id 'java'
+	id 'application'
+}
+
+sourceSets.main.java.srcDirs += "${buildDir}/generated/horseshoe"
+
+compileJava {
+	dependsOn ':gen:run'
+}
+
+jar {
+	manifest {
+		attributes 'Main-Class': 'my.example.Runner'
+	}
+}
+
+application {
+	mainClass = 'my.example.Runner'
+}

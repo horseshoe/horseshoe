@@ -1,4 +1,4 @@
-rootProject.name = 'java-project'
+rootProject.name = 'generate-and-build'
 
 include('horseshoe')
 project(':horseshoe').projectDir = file('../../../')

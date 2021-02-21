@@ -1,0 +1,51 @@
+plugins {
+	id 'java'
+	id 'application'
+}
+
+configurations {
+	horseshoe
+}
+
+dependencies {
+	horseshoe project(':horseshoe') // Use 'com.github.horseshoe:horseshoe:x.y.z' instead
+}
+
+def inputDir = "${projectDir}/src/main/horseshoe"
+def outputDir = "${buildDir}/generated/horseshoe"
+
+sourceSets.main.java.srcDirs += outputDir
+
+task generateCode {
+	dependsOn ':horseshoe:jar' // Ignore this, necessary for inter-Gradle project dependency
+
+	getInputs().dir(inputDir)
+
+	getOutputs().dir(outputDir)
+
+	doLast {
+		javaexec {
+			classpath = configurations.horseshoe
+
+			workingDir = outputDir
+
+			args = ['-cUTF-8', "-d${inputDir}/data.json", "${inputDir}/Template.U"]
+
+			// Horseshoe is packaged as a runnable jar, so main/mainClass does not need to be provided
+		}
+	}
+}
+
+compileJava {
+	dependsOn generateCode
+}
+
+jar {
+	manifest {
+		attributes 'Main-Class': 'my.example.Runner'
+	}
+}
+
+application {
+	mainClass = 'my.example.Runner'
+}

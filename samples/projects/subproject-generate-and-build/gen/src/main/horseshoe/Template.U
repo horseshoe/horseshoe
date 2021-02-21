@@ -1,0 +1,12 @@
+Generating Runner from template
+{{# @File('my/example/Runner.java') }}
+package my.example;
+
+public class Runner {
+
+	public static void main(final String[] args) {
+		System.out.println("{{ s = ""; values #> v -> v + 1 #< v -> s = s + v + " "; s.trim() }}");
+	}
+
+}
+{{/ @File }}

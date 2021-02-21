@@ -1,0 +1,24 @@
+Generating Java class from Horseshoe template
+{{# @File('my/example/MyClass.java') }}
+// This is a template that generates a simple Java class
+package my.example;
+
+public class MyClass {
+
+	public void doSomething() {
+		System.out.println("{{ first }} {{ second }}");
+	}
+
+}
+{{/ @File }}
+{{# @File('my/example/Runner.java') }}
+package my.example;
+
+public class Runner {
+
+	public static void main(final String[] args) {
+		new MyClass().doSomething();
+	}
+
+}
+{{/ @File }}

@@ -1,0 +1,2 @@
+include('horseshoe')
+project(':horseshoe').projectDir = file('../../../../')
