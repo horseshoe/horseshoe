@@ -91,6 +91,7 @@ public class TemplateLoader {
 		private Delimiter delimiter = new Delimiter("{{", "}}");
 		private List<ParsedLine> priorStaticText = new ArrayList<>();
 		private int standaloneStatus = TAG_CANT_BE_STANDALONE;
+		private StandaloneRenderer standaloneRenderer = null;
 		private int tagCount = 0;
 
 		public LoadState(final Loader loader) {
@@ -420,14 +421,14 @@ public class TemplateLoader {
 	 * @param loaders the current stack of loaders
 	 * @param state the load state of the template
 	 * @param tag the string representation of the tag
-	 * @return the name of the loaded partial
+	 * @return the template renderer associated with the loaded partial
 	 * @throws LoadException if an error is encountered while loading the partial
 	 */
-	private String loadPartial(final Stack<Loader> loaders, final LoadState state, final String tag) throws LoadException {
+	private TemplateRenderer loadPartial(final Stack<Loader> loaders, final LoadState state, final String tag) throws LoadException {
 		final Matcher matcher;
 		String indentation = null;
 
-		if (tag.length() > 1 && tag.charAt(1) == '>') { // >> uses indentation on first line, no trailing new line
+		if (tag.length() > 1 && tag.charAt(1) == '>') { // ">>" uses indentation on first line, no trailing new line
 			matcher = LOAD_PARTIAL_PATTERN.matcher(tag).region(2, tag.length());
 			state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
 		} else {
@@ -453,8 +454,7 @@ public class TemplateLoader {
 
 		// Check for anonymous partials
 		if (name == null) {
-			TemplateRenderer.create(state.renderLists.peek(), null, indentation);
-			return null;
+			return new TemplateRenderer(null, indentation);
 		}
 
 		// Load the partial and any associated imports
@@ -476,8 +476,7 @@ public class TemplateLoader {
 			}
 		}
 
-		TemplateRenderer.create(state.renderLists.peek(), partial, indentation);
-		return name;
+		return new TemplateRenderer(partial, indentation);
 	}
 
 	/**
@@ -548,6 +547,10 @@ public class TemplateLoader {
 
 			if ((state.standaloneStatus == LoadState.TAG_CAN_BE_STANDALONE && state.isStandaloneTagTail(lines) && state.removeStandaloneTagHead() != null) ||
 					(state.standaloneStatus == LoadState.TAG_CHECK_TAIL_STANDALONE && state.isStandaloneTagTail(lines))) {
+				if (state.standaloneRenderer != null) {
+					state.standaloneRenderer.setStandalone(true);
+				}
+
 				StaticContentRenderer.create(state.renderLists.peek(), lines, true, false);
 			} else {
 				StaticContentRenderer.create(state.renderLists.peek(), lines, false, state.renderLists.peek().isEmpty() && state.sections.peek().getParent() == null);
@@ -569,7 +572,7 @@ public class TemplateLoader {
 			state.priorStaticText = lines;
 
 			try {
-				processTag(loaders, state, tag);
+				state.standaloneRenderer = processTag(loaders, state, tag);
 			} catch (final LoadException e) {
 				throw e;
 			} catch (final Exception e) {
@@ -598,14 +601,14 @@ public class TemplateLoader {
 	 * @throws LoadException if an error is encountered while loading the template
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading an expression
 	 */
-	private void processTag(final Stack<Loader> loaders, final LoadState state, final String tag) throws LoadException, ReflectiveOperationException {
+	private StandaloneRenderer processTag(final Stack<Loader> loaders, final LoadState state, final String tag) throws LoadException, ReflectiveOperationException {
 		if (tag.length() == 0) {
-			return;
+			return null;
 		}
 
 		switch (tag.charAt(0)) {
 			case '!': // Comments are completely ignored
-				return;
+				return null;
 
 			case '<': // Local partial
 				if (extensions.contains(Extension.INLINE_PARTIALS)) {
@@ -615,37 +618,40 @@ public class TemplateLoader {
 					state.sections.peek().getLocalPartials().put(name, partial);
 					state.sections.push(partial.getSection().inheritFrom(state.sections.peek()));
 					state.renderLists.push(partial.getRenderList());
-					return;
+					return null;
 				}
 
 				break;
 
-			case '>':
-				loadPartial(loaders, state, tag);
-				return;
+			case '>': {
+				final TemplateRenderer renderer = loadPartial(loaders, state, tag);
+
+				state.renderLists.peek().add(renderer);
+				return renderer;
+			}
 
 			case '#': {
 				if (tag.length() > 1 && tag.charAt(1) == '>') { // Section Partial
-					final int index = state.renderLists.peek().size();
-					state.renderLists.peek().add(null);
+					final TemplateRenderer partialRenderer = loadPartial(loaders, state, tag.substring(1));
 
-					final Template partial = new Template(loadPartial(loaders, state, tag.substring(1)), state.loader.toLocation());
-					state.renderLists.peek().set(index, new Renderer() {
-						@Override
-						public void render(final RenderContext context, final Writer writer) throws IOException {
-							context.getSectionPartials().push(partial);
-						}
-					});
+					if (partialRenderer.getTemplate() == null) {
+						throw new LoadException(loaders, "Invalid anonymous section partial");
+					}
+
+					final Template partial = new Template(partialRenderer.getTemplate().getSection().getName(), state.loader.toLocation());
+
 					state.renderLists.peek().add(new Renderer() {
 						@Override
 						public void render(final RenderContext context, final Writer writer) throws IOException {
+							context.getSectionPartials().push(partial);
+							partialRenderer.render(context, writer);
 							context.getSectionPartials().pop();
 						}
 					});
 
 					state.sections.push(partial.getSection());
 					state.renderLists.push(partial.getRenderList());
-					return;
+					return partialRenderer;
 				}
 
 				// Start a new section, or repeat the previous section
@@ -675,7 +681,7 @@ public class TemplateLoader {
 				// Add a new render section action
 				state.renderLists.peek().add(SectionRenderer.FACTORY.create(state.sections.peek()));
 				state.renderLists.push(state.sections.peek().getRenderList());
-				return;
+				return null;
 			}
 
 			case '^': { // Start a new inverted section, or else block for the current section
@@ -696,7 +702,7 @@ public class TemplateLoader {
 						state.sections.pop(1).push(new Section(state.sections.peek(), location, state.createExpression(location, state.createExpressionParser(Utilities.trim(tag, 2)), extensions)));
 						previousSection.getInvertedRenderList().add(SectionRenderer.FACTORY.create(state.sections.peek()));
 						state.renderLists.push(state.sections.peek().getRenderList());
-						return;
+						return null;
 					} else if (elseDoc) { // documentative "else" tag
 						final Section section = state.sections.peek();
 						final String expressionString = expression.string.substring(1).trim();
@@ -715,7 +721,7 @@ public class TemplateLoader {
 					state.renderLists.push(state.sections.peek().getInvertedRenderList());
 				}
 
-				return;
+				return null;
 			}
 
 			case '/': { // Close the current section
@@ -738,7 +744,7 @@ public class TemplateLoader {
 				}
 
 				state.renderLists.pop();
-				return;
+				return null;
 			}
 
 			case '=': { // Set delimiter
@@ -749,14 +755,14 @@ public class TemplateLoader {
 				}
 
 				state.delimiter = new Delimiter(matcher.group("start"), matcher.group("end"));
-				return;
+				return null;
 			}
 
 			case '{': // Unescaped content tag
 			case '&':
 				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
 				state.renderLists.peek().add(new DynamicContentRenderer(state.createExpression(state.loader.toLocation(), state.createExpressionParser(Utilities.trim(tag, 1)), extensions), false));
-				return;
+				return null;
 
 			default:
 				break;
@@ -771,6 +777,8 @@ public class TemplateLoader {
 			state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
 			state.renderLists.peek().add(new DynamicContentRenderer(expression, true));
 		}
+
+		return null;
 	}
 
 	/**

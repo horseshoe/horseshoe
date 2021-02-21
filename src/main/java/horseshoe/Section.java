@@ -115,15 +115,6 @@ final class Section {
 	}
 
 	/**
-	 * Gets the list of renderers associated with the section.
-	 *
-	 * @return the list of renderers associated with the section
-	 */
-	public List<Renderer> getRenderList() {
-		return renderList;
-	}
-
-	/**
 	 * Gets the name of the annotation for the section.
 	 *
 	 * @return the name of the annotation for the section, or null if no annotation exists
@@ -173,7 +164,7 @@ final class Section {
 	 *
 	 * @return the map of named expressions associated with the section
 	 */
-	public Map<String, Expression> getNamedExpressions() {
+	Map<String, Expression> getNamedExpressions() {
 		return namedExpressions;
 	}
 
@@ -184,6 +175,15 @@ final class Section {
 	 */
 	Section getParent() {
 		return parent;
+	}
+
+	/**
+	 * Gets the list of renderers associated with the section.
+	 *
+	 * @return the list of renderers associated with the section
+	 */
+	public List<Renderer> getRenderList() {
+		return renderList;
 	}
 
 	/**
