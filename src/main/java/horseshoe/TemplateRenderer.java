@@ -24,8 +24,21 @@ final class TemplateRenderer extends StandaloneRenderer {
 			context.getIndentation().push("");
 		}
 
-		for (final Renderer action : template == null ? context.getSectionPartials().peek().getRenderList() : template.getRenderList()) {
-			action.render(context, writer);
+		final Template renderTemplate = template == null ? context.getSectionPartials().peek() : template;
+		final int bindings = renderTemplate.getBindings().size();
+
+		if (bindings > 0) {
+			final Stack<Object[]> templateBindings = context.getTemplateBinding(renderTemplate.getIndex()).push(new Object[bindings]);
+
+			for (final Renderer action : renderTemplate.getSection().getRenderList()) {
+				action.render(context, writer);
+			}
+
+			templateBindings.pop();
+		} else {
+			for (final Renderer action : renderTemplate.getSection().getRenderList()) {
+				action.render(context, writer);
+			}
 		}
 
 		context.getIndentation().pop();

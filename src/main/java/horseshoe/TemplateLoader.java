@@ -16,11 +16,11 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import horseshoe.internal.CacheList;
 import horseshoe.internal.Expression;
 import horseshoe.internal.ExpressionParseState;
 import horseshoe.internal.Identifier;
 import horseshoe.internal.ParsedLine;
+import horseshoe.internal.TemplateBinding;
 import horseshoe.internal.Utilities;
 import horseshoe.internal.Utilities.TrimmedString;
 
@@ -85,7 +85,7 @@ public class TemplateLoader {
 		private final Loader loader;
 		private final Stack<Section> sections = new Stack<>();
 		private final Map<Identifier, Identifier> allIdentifiers = new HashMap<>();
-		private final CacheList<String> bindings = new CacheList<>();
+		private final Stack<Map<String, TemplateBinding>> templateBindings = new Stack<>();
 		private final Map<String, Expression> expressionCache = new HashMap<>();
 		private final Stack<List<Renderer>> renderLists = new Stack<>();
 		private Delimiter delimiter = new Delimiter("{{", "}}");
@@ -94,8 +94,9 @@ public class TemplateLoader {
 		private StandaloneRenderer standaloneRenderer = null;
 		private int tagCount = 0;
 
-		public LoadState(final Loader loader) {
+		public LoadState(final Loader loader, final Template template) {
 			this.loader = loader;
+			templateBindings.push(template.getBindings());
 			this.priorStaticText.add(new ParsedLine("", ""));
 		}
 
@@ -123,7 +124,7 @@ public class TemplateLoader {
 		 * @return the new expression parser
 		 */
 		private ExpressionParseState createExpressionParser(final TrimmedString expression) {
-			return new ExpressionParseState(expression.start, expression.string, sections.peek().getNamedExpressions(), allIdentifiers, bindings);
+			return new ExpressionParseState(expression.start, expression.string, sections.peek().getNamedExpressions(), allIdentifiers, templateBindings);
 		}
 
 		/**
@@ -534,11 +535,11 @@ public class TemplateLoader {
 		putTemplate(template.getIdentifier(), template);
 		Template.LOGGER.log(Level.FINE, "Loading template {0}", template.getSection());
 
-		final LoadState state = new LoadState(loader);
+		final LoadState state = new LoadState(loader, template);
 
 		loaders.push(loader);
 		state.sections.push(template.getSection());
-		state.renderLists.push(template.getRenderList());
+		state.renderLists.push(template.getSection().getRenderList());
 
 		// Parse all tags
 		while (true) {
@@ -551,9 +552,9 @@ public class TemplateLoader {
 					state.standaloneRenderer.setStandalone(true);
 				}
 
-				StaticContentRenderer.create(state.renderLists.peek(), lines, true, false);
+				StaticContentRenderer.create(state.renderLists.peek(), lines);
 			} else {
-				StaticContentRenderer.create(state.renderLists.peek(), lines, false, state.renderLists.peek().isEmpty() && state.sections.peek().getParent() == null);
+				StaticContentRenderer.create(state.renderLists.peek(), lines, state.renderLists.peek().isEmpty() && state.sections.peek().getParent() == null);
 			}
 
 			if (!loader.hasNext()) {
@@ -613,11 +614,12 @@ public class TemplateLoader {
 			case '<': // Local partial
 				if (extensions.contains(Extension.INLINE_PARTIALS)) {
 					final String name = Utilities.trim(tag, 1).string;
-					final Template partial = new Template(name, state.loader.toLocation());
+					final Template partial = new Template(name, state.loader.toLocation(), state.templateBindings.size());
 
 					state.sections.peek().getLocalPartials().put(name, partial);
 					state.sections.push(partial.getSection().inheritFrom(state.sections.peek()));
-					state.renderLists.push(partial.getRenderList());
+					state.templateBindings.push(partial.getBindings());
+					state.renderLists.push(partial.getSection().getRenderList());
 					return null;
 				}
 
@@ -650,7 +652,8 @@ public class TemplateLoader {
 					});
 
 					state.sections.push(partial.getSection());
-					state.renderLists.push(partial.getRenderList());
+					state.templateBindings.push(partial.getBindings());
+					state.renderLists.push(partial.getSection().getRenderList());
 					return partialRenderer;
 				}
 
@@ -739,6 +742,7 @@ public class TemplateLoader {
 				}
 
 				if (state.sections.pop().getParent() == null) { // Null parent means top-level, which indicates an inline partial
+					state.templateBindings.pop();
 					state.removeStandaloneTagHead();
 					state.standaloneStatus = LoadState.TAG_CHECK_TAIL_STANDALONE;
 				}
@@ -772,10 +776,21 @@ public class TemplateLoader {
 		final ExpressionParseState parseState = state.createExpressionParser(Utilities.trim(tag, 0));
 		final Expression expression = state.createExpression(state.loader.toLocation(), parseState, extensions);
 
-		if (parseState.returnsValue()) {
-			// Default to parsing as a dynamic content tag
-			state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
-			state.renderLists.peek().add(new DynamicContentRenderer(expression, true));
+		switch (parseState.getEvaluation()) {
+			case EVALUATE:
+				state.renderLists.peek().add(new Renderer() {
+					@Override
+					public void render(RenderContext context, Writer writer) throws IOException {
+						expression.evaluate(context);
+					}
+				});
+				break;
+			case EVALUATE_AND_RENDER: // Parse as a dynamic content tag
+				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
+				state.renderLists.peek().add(new DynamicContentRenderer(expression, true));
+				break;
+			default:
+				break;
 		}
 
 		return null;

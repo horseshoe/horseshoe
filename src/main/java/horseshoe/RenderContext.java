@@ -1,5 +1,6 @@
 package horseshoe;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
@@ -8,6 +9,8 @@ public final class RenderContext {
 	private final Settings settings;
 	private final Map<String, AnnotationHandler> annotationMap;
 	private final Stack<SectionRenderData> sectionData = new Stack<>();
+	@SuppressWarnings("unchecked")
+	private Stack<Object[]>[] templateBindings = new Stack[] { new Stack<>(),  new Stack<>(),  new Stack<>() };
 	private Object repeatedSectionData = null;
 	private final Stack<String> indentation = new Stack<>();
 	private final Stack<Template> sectionPartials = new Stack<>();
@@ -106,6 +109,32 @@ public final class RenderContext {
 	 */
 	public Settings getSettings() {
 		return settings;
+	}
+
+	/**
+	 * Gets the template bindings for the template at the specified index.
+	 *
+	 * @param index the index of the template
+	 * @return the template bindings for the template at the specified index
+	 */
+	public Stack<Object[]> getTemplateBinding(final int index) {
+		int oldLength = templateBindings.length;
+
+		if (index >= oldLength) {
+			int length = oldLength;
+
+			do {
+				length = length * 2 + 1;
+			} while (index >= (length & 0xFFFFFFFFL));
+
+			templateBindings = Arrays.copyOf(templateBindings, length);
+
+			for (int i = oldLength; i < length; i++) {
+				templateBindings[i] = new Stack<>();
+			}
+		}
+
+		return templateBindings[index];
 	}
 
 	/**

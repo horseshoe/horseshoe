@@ -23,6 +23,7 @@ import java.util.regex.Pattern;
 import horseshoe.RenderContext;
 import horseshoe.SectionRenderData;
 import horseshoe.Stack;
+import horseshoe.internal.ExpressionParseState.Evaluation;
 import horseshoe.internal.MethodBuilder.Label;
 
 public final class Expression {
@@ -74,12 +75,13 @@ public final class Expression {
 	private static final Method PATTERN_COMPILE = getMethod(Pattern.class, "compile", String.class, int.class);
 	private static final Method RENDER_CONTEXT_GET_INDENTATION = getMethod(RenderContext.class, "getIndentation");
 	private static final Method RENDER_CONTEXT_GET_SECTION_DATA = getMethod(RenderContext.class, "getSectionData");
+	private static final Method RENDER_CONTEXT_GET_TEMPLATE_BINDING = getMethod(RenderContext.class, "getTemplateBinding", int.class);
 	private static final Constructor<SectionRenderData> SECTION_RENDER_DATA_CTOR_DATA = getConstructor(SectionRenderData.class, Object.class);
 	private static final Field SECTION_RENDER_DATA_DATA = getField(SectionRenderData.class, "data");
 	private static final Field SECTION_RENDER_DATA_HAS_NEXT = getField(SectionRenderData.class, "hasNext");
 	private static final Field SECTION_RENDER_DATA_INDEX = getField(SectionRenderData.class, "index");
 	private static final Method SET_ADD = getMethod(Set.class, "add", Object.class);
-	private static final Method STACK_PEEK = getMethod(Stack.class, "peek", int.class);
+	private static final Method STACK_PEEK = getMethod(Stack.class, "peek");
 	private static final Method STACK_PEEK_BASE = getMethod(Stack.class, "peekBase");
 	private static final Method STACK_POP = getMethod(Stack.class, "pop");
 	private static final Method STACK_PUSH_OBJECT = getMethod(Stack.class, "push", Object.class);
@@ -93,23 +95,25 @@ public final class Expression {
 	private static final Method UTILITIES_REQUIRE_NON_NULL_TO_STRING = getMethod(Utilities.class, "requireNonNullToString", Object.class);
 
 	// The patterns used for parsing the grammar
-	private static final Pattern COMMENT_PATTERN = Pattern.compile("(?:/(?s:/[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|[*].*?[*]/)\\s*)", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern SINGLE_COMMENT_PATTERN = Pattern.compile("(?:/(?s:/[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|[*].*?[*]/)\\s*)", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern COMMENT_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "++", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern COMMENTS_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "*+", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[-+]Infinity|[-+]?(?:[0-9][0-9_']*[fFdD]|(?:[0-9][0-9_']*[.]?[eE][-+]?[0-9_']+|[0-9][0-9_']*[.][0-9_']+(?:[eE][-+]?[0-9_']+)?|0[xX](?:[0-9A-Fa-f_']+[.]?|[0-9A-Fa-f_']+[.][0-9A-Fa-f_']+)[pP][-+]?[0-9_']+)[fFdD]?))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>" + Identifier.PATTERN + "|`(?:[^`]|``)+`|[.][.]|[.])\\s*" + COMMENT_PATTERN + "*(?<isMethod>[(])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>" + Identifier.PATTERN + "|`(?:[^`]|``)++`|[.][.]|[.])\\s*" + COMMENTS_PATTERN + "(?<isMethod>[(])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_WITH_PREFIX_PATTERN;
 	private static final Pattern LONG_PATTERN = Pattern.compile("(?:(?<hexsign>[-+]?)0[xX](?<hexadecimal>[0-9A-Fa-f_']+)|(?<decimal>[-+]?[0-9][0-9_']*))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern NAMED_EXPRESSION_PARAMETER_PATTERN = Pattern.compile("(?:,\\s*" + COMMENT_PATTERN + "*(?:(?<parameter>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*)?)", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile(COMMENT_PATTERN + "*(?<name>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*(?:[(]\\s*" + COMMENT_PATTERN + "*(?:(?<firstParameter>[.]|" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*)?(?<remainingParameters>" + NAMED_EXPRESSION_PARAMETER_PATTERN + "+)?[)]\\s*" + COMMENT_PATTERN + "*)?[-=]>\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern NAMED_EXPRESSION_PARAMETER_PATTERN = Pattern.compile("(?:,\\s*" + COMMENTS_PATTERN + "(?:(?<parameter>" + Identifier.PATTERN + ")\\s*" + COMMENTS_PATTERN + ")?)", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile(COMMENTS_PATTERN + "(?<name>" + Identifier.PATTERN + ")\\s*" + COMMENTS_PATTERN + "(?:(?:[(]\\s*" + COMMENTS_PATTERN + "(?:(?<firstParameter>[.]|" + Identifier.PATTERN + ")\\s*" + COMMENTS_PATTERN + ")?(?<remainingParameters>" + NAMED_EXPRESSION_PARAMETER_PATTERN + "+)?[)]\\s*" + COMMENTS_PATTERN + ")?[-=]>|(?<assignment>:=))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern OPERATOR_PATTERN;
 	private static final Pattern REGEX_PATTERN = Pattern.compile("~/(?<nounicode>\\(\\?-U\\))?(?<regex>(?:[^/\\\\]|\\\\.)*+)/\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr{}0]|\\\\x[0-9A-Fa-f]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*+)\"|'(?<unescapedString>(?:[^']|'')*+)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern TRAILING_IDENTIFIER_PATTERN = Pattern.compile(COMMENT_PATTERN + "*(((?<name>" + Identifier.PATTERN + ")\\s*" + COMMENT_PATTERN + "*)?[-=]>\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern TRAILING_IDENTIFIER_PATTERN = Pattern.compile(COMMENTS_PATTERN + "(((?<name>" + Identifier.PATTERN + ")\\s*" + COMMENTS_PATTERN + ")?[-=]>\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private static final byte[] CHAR_VALUE = new byte[] {
-			127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
-			127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127,   0,   1,   2,   3,   4,   5,   6,   7,   8,   9, 127, 127, 127, 127, 127, 127,
-			127,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35, 127, 127, 127, 127, 127,
-			127,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35, 127, 127, 127, 127, 127
+			-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+			-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,
+			-1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, -1, -1, -1, -1, -1,
+			-1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, -1, -1, -1, -1, -1
 	};
 
 	private static final Expression[] EMPTY_EXPRESSIONS = { };
@@ -171,9 +175,10 @@ public final class Expression {
 		}
 
 		// Add comma as a separator
-		allOperators.append(',');
-		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<backreach>[.]?[/\\\\]|(?:[.][.][/\\\\])+)?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?:" + COMMENT_PATTERN + "*(?!" + allOperators + ")(?<assignment>" + assignmentOperators.substring(1) + ")\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
-		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + allOperators.append(")\\s*").toString(), Pattern.UNICODE_CHARACTER_CLASS);
+		final String nonAssignmentOperators = allOperators.append(',').toString();
+
+		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<backreach>[.]?[/\\\\]|(?:[.][.][/\\\\])+)?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?:" + COMMENTS_PATTERN + "(?!" + nonAssignmentOperators + ")(?<assignment>" + assignmentOperators.substring(1) + ")\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
+		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + nonAssignmentOperators + ")\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	}
 
 	/**
@@ -322,7 +327,7 @@ public final class Expression {
 		} else { // Process the identifier
 			final String name = identifierText.startsWith("`") ? identifierText.substring(1, identifierText.length() - 1).replace("``", "`") : identifierText;
 
-			if (lastNavigation) {
+			if (lastNavigation) { // Follows a '.', so not a local or template binding
 				final Identifier identifier = state.getCachedIdentifier(new Identifier(name));
 				final int index = state.getIdentifiers().getOrAdd(identifier);
 				final Operator operator = state.getOperators().pop();
@@ -334,9 +339,10 @@ public final class Expression {
 				} else {
 					state.getOperands().push(new Operand(Object.class, identifier, state.getOperands().pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE)));
 				}
-			} else {
-				final Integer localBindingIndex;
+			} else { // Check for a local or template binding
 				final Operator operator = Operator.get(matcher.group("assignment"), true);
+				final Integer bindingIndex;
+				final TemplateBinding templateBinding;
 
 				// Look-ahead for an assignment operation
 				if (operator != null) {
@@ -346,8 +352,10 @@ public final class Expression {
 
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name))));
 					return state.getOperators().push(operator).peek();
-				} else if (backreach < 0 && (localBindingIndex = state.getLocalBindings().get(name)) != null) { // Check for a local binding
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL + localBindingIndex.intValue())));
+				} else if (backreach < 0 && (bindingIndex = state.getLocalBindings().get(name)) != null) { // Check for a local binding
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL + bindingIndex)));
+				} else if (backreach < 0 && (templateBinding = state.getTemplateBinding(name)) != null) { // Check for a template binding
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDING).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).addCode(AALOAD)));
 				} else { // Resolve the identifier
 					final Identifier identifier = state.getCachedIdentifier(new Identifier(name));
 					final int index = state.getIdentifiers().getOrAdd(identifier);
@@ -377,7 +385,7 @@ public final class Expression {
 		final String remainingParameters = matcher.group("remainingParameters");
 
 		if (firstParameter != null && !".".equals(firstParameter)) {
-			initializeLocalBindings.addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(firstParameter));
+			initializeLocalBindings.addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(firstParameter));
 		}
 
 		if (remainingParameters == null) {
@@ -483,7 +491,7 @@ public final class Expression {
 		int i = index;
 
 		for (; i < string.length() && string.charAt(i) < CHAR_VALUE.length; i++) {
-			final int value = CHAR_VALUE[string.charAt(i)];
+			final byte value = CHAR_VALUE[string.charAt(i)];
 
 			if ((value & 0xF0) != 0) {
 				break;
@@ -1051,12 +1059,13 @@ public final class Expression {
 	 */
 	public Expression(final Expression cachedExpression, final Object location, final ExpressionParseState state, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final MethodBuilder mb = new MethodBuilder();
+		String templateBindingName = null;
 
 		this.location = location;
 		this.originalString = state.getExpressionString();
 
 		if (".".equals(originalString)) {
-			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(0).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
+			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 		} else if (!horseshoeExpressions) {
 			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(originalString, -1);
 
@@ -1073,10 +1082,16 @@ public final class Expression {
 			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(state.getExpressionString());
 
 			if (matcher.lookingAt()) {
-				state.getNamedExpressions().put(matcher.group("name"), this);
-				state.setReturnsValue(false);
-				parseNamedExpressionSignature(state, mb, matcher);
-				initializeBindingsStart = state.getLocalBindings().size();
+				if (matcher.group("assignment") != null) {
+					templateBindingName = matcher.group("name");
+					state.setEvaluation(Evaluation.EVALUATE);
+				} else {
+					state.getNamedExpressions().put(matcher.group("name"), this);
+					state.setEvaluation(Evaluation.NO_EVALUATION);
+					parseNamedExpressionSignature(state, mb, matcher);
+					initializeBindingsStart = state.getLocalBindings().size();
+				}
+
 				matcher.region(matcher.end(), end);
 			}
 
@@ -1127,10 +1142,18 @@ public final class Expression {
 			return;
 		}
 
+		if (templateBindingName != null) {
+			final TemplateBinding templateBinding = state.getOrAddTemplateBinding(templateBindingName);
+
+			mb.addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDING).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).append(state.getOperands().pop().toObject()).addCode(AASTORE, ACONST_NULL).addFlowBreakingCode(ARETURN, 0);
+		} else {
+			mb.append(state.getOperands().pop().toObject()).addFlowBreakingCode(ARETURN, 0);
+		}
+
 		// Populate all the class data
 		this.expressions = state.getExpressions().isEmpty() ? EMPTY_EXPRESSIONS : state.getExpressions().toArray(Expression.class);
 		this.identifiers = state.getIdentifiers().isEmpty() ? EMPTY_IDENTIFIERS : state.getIdentifiers().toArray(Identifier.class);
-		this.evaluable = mb.append(state.getOperands().pop().toObject()).addFlowBreakingCode(ARETURN, 0).build(Expression.class.getPackage().getName() + ".Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
+		this.evaluable = mb.build(Expression.class.getPackage().getName() + ".Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		assert state.getOperands().isEmpty();
 	}
 

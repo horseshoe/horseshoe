@@ -145,8 +145,15 @@ final class StaticContentRenderer implements Renderer {
 
 	}
 
-	static StaticContentRenderer create(final List<Renderer> container, final List<ParsedLine> lines, final boolean followsStandaloneTag, final boolean indentFirstLine) {
-		final StaticContentRenderer renderer = new StaticContentRenderer(container, lines, followsStandaloneTag, indentFirstLine);
+	static StaticContentRenderer create(final List<Renderer> container, final List<ParsedLine> lines) {
+		final StaticContentRenderer renderer = new StaticContentRenderer(container, lines, true, false);
+
+		container.add(renderer);
+		return renderer;
+	}
+
+	static StaticContentRenderer create(final List<Renderer> container, final List<ParsedLine> lines, final boolean indentFirstLine) {
+		final StaticContentRenderer renderer = new StaticContentRenderer(container, lines, false, indentFirstLine);
 
 		container.add(renderer);
 		return renderer;

@@ -25,6 +25,7 @@ import horseshoe.Helper;
 import horseshoe.RenderContext;
 import horseshoe.Settings;
 import horseshoe.Settings.ContextAccess;
+import horseshoe.Stack;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,7 +46,7 @@ class ExpressionTests {
 	public static Expression createExpression(final String expression, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final StackTraceElement[] elements = new Throwable().getStackTrace();
 		final String location = elements.length >= 1 ? elements[1].getFileName() + ":" + elements[1].getLineNumber() : "[Unknown]";
-		final ExpressionParseState parseState = new ExpressionParseState(0, expression, namedExpressions, new HashMap<>(), new CacheList<>());
+		final ExpressionParseState parseState = new ExpressionParseState(0, expression, namedExpressions, new HashMap<>(), new Stack<>());
 
 		return new Expression(null, location, parseState, horseshoeExpressions);
 	}

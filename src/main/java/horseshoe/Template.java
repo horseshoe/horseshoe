@@ -4,13 +4,13 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import horseshoe.internal.HaltRenderingException;
+import horseshoe.internal.TemplateBinding;
 
 /**
  * Templates represent parsed and resolved Horseshoe template files. They are loaded using the {@link TemplateLoader} class. An example of how to load and render a template is given below:
@@ -37,7 +37,8 @@ public class Template {
 
 	private final Object identifier;
 	private final Section section;
-	private final List<Renderer> renderList = new ArrayList<>();
+	private final int index;
+	private final Map<String, TemplateBinding> bindings = new LinkedHashMap<>();
 
 	/**
 	 * Loads a template from a file.
@@ -75,23 +76,44 @@ public class Template {
 	}
 
 	/**
+	 * Creates an empty template with the specified name and index.
+	 *
+	 * @param name the name of the template
+	 * @param identifier the identifier of the template
+	 * @param index the index of the template partial, or 0 to indicate top-level template
+	 */
+	Template(final String name, final Object identifier, final int index) {
+		this.identifier = identifier;
+		this.section = new Section(null, name == null ? "[Anonymous]" : name, identifier, null, null, true);
+		this.index = index;
+	}
+
+	/**
 	 * Creates an empty template with the specified name.
 	 *
 	 * @param name the name of the template
 	 * @param identifier the identifier of the template
 	 */
 	protected Template(final String name, final Object identifier) {
-		this.identifier = identifier;
-		this.section = new Section(null, name == null ? "[Anonymous]" : name, identifier, null, null, true);
+		this(name, identifier, 0);
 	}
 
 	/**
-	 * Gets the render actions associated with the template.
+	 * Gets the bindings associated with the template.
 	 *
-	 * @return the render actions associated with the template
+	 * @return the bindings associated with the template
 	 */
-	protected final List<Renderer> getRenderList() {
-		return renderList;
+	final Map<String, TemplateBinding> getBindings() {
+		return bindings;
+	}
+
+	/**
+	 * Gets the index associated with the template.
+	 *
+	 * @return the index associated with the template
+	 */
+	final int getIndex() {
+		return index;
 	}
 
 	/**
@@ -123,14 +145,10 @@ public class Template {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	public Writer render(final Settings settings, final Object globalData, final Writer writer, final Map<String, AnnotationHandler> annotations) throws IOException {
+		final TemplateRenderer renderer = new TemplateRenderer(this, null);
+
 		try {
-			final RenderContext renderContext = new RenderContext(settings, globalData, annotations);
-
-			renderContext.getIndentation().push("");
-
-			for (final Renderer renderer : renderList) {
-				renderer.render(renderContext, writer);
-			}
+			renderer.render(new RenderContext(settings, globalData, annotations), writer);
 		} catch (final HaltRenderingException e) {
 			settings.getLogger().log(Level.SEVERE, e.getMessage());
 		}
