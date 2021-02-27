@@ -7,12 +7,14 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,7 +30,13 @@ import horseshoe.internal.MethodBuilder.Label;
 
 public final class Expression {
 
+	private static final Expression[] EMPTY_EXPRESSIONS = { };
+	private static final Identifier[] EMPTY_IDENTIFIERS = { };
+
+	private static final Expression EXPRESSION_BEING_CREATED = new Expression();
+
 	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
+	private static final Map<BytecodeContainer, Expression> cache = new HashMap<>();
 
 	// Reflected Methods
 	private static final Constructor<?> ARRAY_LIST_CTOR_INT = getConstructor(ArrayList.class, int.class);
@@ -115,9 +123,6 @@ public final class Expression {
 			-1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, -1, -1, -1, -1, -1,
 			-1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, -1, -1, -1, -1, -1
 	};
-
-	private static final Expression[] EMPTY_EXPRESSIONS = { };
-	private static final Identifier[] EMPTY_IDENTIFIERS = { };
 
 	private final Object location;
 	private final String originalString;
@@ -206,6 +211,17 @@ public final class Expression {
 		}
 
 		return ternaries;
+	}
+
+	/**
+	 * Gets the next class name used for a new expression. The class name is a fixed length, so that equivalent methods generate bytecode of the same length.
+	 *
+	 * @return the next class name used for a new expression
+	 */
+	private static String nextClassName() {
+		final String number = "0000000" + Integer.toHexString(DYN_INDEX.getAndIncrement());
+
+		return Expression.class.getPackage().getName() + ".Expression_" + number.substring(number.length() - 8);
 	}
 
 	/**
@@ -1049,25 +1065,22 @@ public final class Expression {
 	}
 
 	/**
-	 * Creates a new expression, using the cached expression if applicable.
+	 * Creates a new expression.
 	 *
-	 * @param cachedExpression a cached copy of the expression that can be leveraged to improve performance if applicable.
 	 * @param location the location of the expression
 	 * @param state the parse state for the expression
 	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	public Expression(final Expression cachedExpression, final Object location, final ExpressionParseState state, final boolean horseshoeExpressions) throws ReflectiveOperationException {
+	public static Expression create(final Object location, final ExpressionParseState state, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final MethodBuilder mb = new MethodBuilder();
 		String templateBindingName = null;
+		String expressionName = null;
 
-		this.location = location;
-		this.originalString = state.getExpressionString();
-
-		if (".".equals(originalString)) {
+		if (".".equals(state.getExpressionString())) {
 			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 		} else if (!horseshoeExpressions) {
-			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(originalString, -1);
+			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(state.getExpressionString(), -1);
 
 			// Push a new operand formed by invoking identifiers[index].getValue(context, backreach, access)
 			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(names[0])))).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
@@ -1086,7 +1099,8 @@ public final class Expression {
 					templateBindingName = matcher.group("name");
 					state.setEvaluation(Evaluation.EVALUATE);
 				} else {
-					state.getNamedExpressions().put(matcher.group("name"), this);
+					expressionName = matcher.group("name");
+					state.getNamedExpressions().put(expressionName, EXPRESSION_BEING_CREATED);
 					state.setEvaluation(Evaluation.NO_EVALUATION);
 					parseNamedExpressionSignature(state, mb, matcher);
 					initializeBindingsStart = state.getLocalBindings().size();
@@ -1133,15 +1147,6 @@ public final class Expression {
 			throw new IllegalArgumentException("Unexpected empty expression");
 		}
 
-		// Check for match to the cached expression
-		if (cachedExpression != null && state.getExpressions().equalsArray(cachedExpression.expressions) && state.getIdentifiers().equalsArray(cachedExpression.identifiers)) {
-			assert cachedExpression.originalString.equals(originalString) : "Invalid cached expression \"" + cachedExpression + "\" does not match parsed expression \"" + originalString + "\"";
-			this.expressions = cachedExpression.expressions;
-			this.identifiers = cachedExpression.identifiers;
-			this.evaluable = cachedExpression.evaluable;
-			return;
-		}
-
 		if (templateBindingName != null) {
 			final TemplateBinding templateBinding = state.getOrAddTemplateBinding(templateBindingName);
 
@@ -1150,20 +1155,73 @@ public final class Expression {
 			mb.append(state.getOperands().pop().toObject()).addFlowBreakingCode(ARETURN, 0);
 		}
 
-		// Populate all the class data
-		this.expressions = state.getExpressions().isEmpty() ? EMPTY_EXPRESSIONS : state.getExpressions().toArray(Expression.class);
-		this.identifiers = state.getIdentifiers().isEmpty() ? EMPTY_IDENTIFIERS : state.getIdentifiers().toArray(Identifier.class);
-		this.evaluable = mb.build(Expression.class.getPackage().getName() + ".Expression_" + DYN_INDEX.getAndIncrement(), Evaluable.class, Expression.class.getClassLoader()).getConstructor().newInstance();
 		assert state.getOperands().isEmpty();
+
+		final String name = nextClassName();
+		final BytecodeContainer bytecode = mb.build(name, Evaluable.class);
+		final Expression cachedExpression;
+		Expression expression = null;
+
+		synchronized (cache) {
+			cachedExpression = cache.get(bytecode);
+
+			if (cachedExpression == null) {
+				expression = new Expression(location, expressionName, state, null,
+						MethodBuilder.<Evaluable>createClass(name, Expression.class.getClassLoader(), bytecode.getBytecode()).getConstructor().newInstance());
+
+				cache.put(bytecode, expression);
+				return expression;
+			}
+		}
+
+		// Check if any other items in the cached expression match
+		return new Expression(location, expressionName, state, cachedExpression, cachedExpression.evaluable);
+	}
+
+	/**
+	 * Creates a new empty expression that cannot be evaluated.
+	 */
+	private Expression() {
+		this.location = null;
+		this.originalString = "";
+		this.expressions = EMPTY_EXPRESSIONS;
+		this.identifiers = EMPTY_IDENTIFIERS;
+		this.evaluable = null;
+	}
+
+	/**
+	 * Creates a new expression from a location, an optional expression name, a parse state, an optional cached expression to use for loading, and an evaluable object.
+	 *
+	 * @param location the location of the expression
+	 * @param expressionName the optional name of the expression
+	 * @param state the parse state of the expression
+	 * @param cache the optional cached expression
+	 * @param evaluable the evaluable associated with the expression
+	 */
+	private Expression(final Object location, final String expressionName, final ExpressionParseState state, final Expression cache, final Evaluable evaluable) {
+		this.location = location;
+		this.originalString = state.getExpressionString();
+		this.expressions = (cache != null && state.getExpressions().equalsArray(cache.expressions) ? cache.expressions : state.getExpressions().toArray(Expression.class, EMPTY_EXPRESSIONS));
+		this.identifiers = (cache != null && state.getIdentifiers().equalsArray(cache.identifiers) ? cache.identifiers : state.getIdentifiers().toArray(Identifier.class, EMPTY_IDENTIFIERS));
+		this.evaluable = evaluable;
+
+		// Update self-expression reference
+		if (expressionName != null) {
+			state.getNamedExpressions().put(expressionName, this);
+
+			for (int i = 0; i < expressions.length; i++) {
+				if (expressions[i] == EXPRESSION_BEING_CREATED) {
+					expressions[i] = this;
+					break;
+				}
+			}
+		}
 	}
 
 	@Override
-	public boolean equals(final Object object) {
-		if (object instanceof Expression) {
-			return originalString.equals(((Expression)object).originalString) && location.equals(((Expression)object).location);
-		}
-
-		return false;
+	public boolean equals(final Object obj) {
+		return this == obj ||
+			(obj instanceof Expression && originalString.equals(((Expression) obj).originalString) && Objects.equals(location, ((Expression) obj).location));
 	}
 
 	/**
@@ -1196,6 +1254,15 @@ public final class Expression {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Gets the evaluable used by the expression.
+	 *
+	 * @return the evaluable used by the expression
+	 */
+	Evaluable getEvaluable() {
+		return evaluable;
 	}
 
 	@Override

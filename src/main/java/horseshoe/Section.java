@@ -164,7 +164,7 @@ final class Section {
 	 *
 	 * @return the map of named expressions associated with the section
 	 */
-	Map<String, Expression> getNamedExpressions() {
+	public Map<String, Expression> getNamedExpressions() {
 		return namedExpressions;
 	}
 

@@ -110,10 +110,16 @@ public final class CacheList<T> {
 	/**
 	 * Creates an array of all the items.
 	 *
+	 * @param type the type of the items in the list
+	 * @param emptyArray the value to return if the list is empty
 	 * @return an array of all the items
 	 */
 	@SuppressWarnings("unchecked")
-	public T[] toArray(final Class<T> type) {
+	public T[] toArray(final Class<T> type, final T[] emptyArray) {
+		if (isEmpty()) {
+			return emptyArray;
+		}
+
 		final T[] array = (T[])Array.newInstance(type, map.size());
 
 		for (final Entry<T, Integer> entry : map.entrySet()) {

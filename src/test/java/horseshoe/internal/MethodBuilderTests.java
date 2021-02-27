@@ -3,8 +3,11 @@ package horseshoe.internal;
 import static horseshoe.internal.MethodBuilder.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.invoke.MethodType;
 import java.util.Arrays;
@@ -332,6 +335,24 @@ class MethodBuilderTests {
 	void testBadStack() throws ReflectiveOperationException {
 		final MethodBuilder mb = new MethodBuilder().addCode(ACONST_NULL);
 		assertThrows(IllegalStateException.class, () -> mb.build("BadStack", SimpleInterface.class, classLoader));
+	}
+
+	@Test
+	void testBytecodeContainer() {
+		final BytecodeContainer bc1 = new BytecodeContainer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7 }, 2, 4);
+		final BytecodeContainer bc2 = new BytecodeContainer(new byte[] { 0, 0, 2, 3, 4, 5, 6, 7 }, 2, 4);
+		final BytecodeContainer bc3 = new BytecodeContainer(new byte[] { 0, 1, 2, 3, 0, 5, 6, 7 }, 2, 4);
+		final BytecodeContainer bc4 = new BytecodeContainer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7 }, 1, 4);
+		final BytecodeContainer bc5 = new BytecodeContainer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7 }, 2, 5);
+		final BytecodeContainer bc6 = new BytecodeContainer(new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 }, 2, 4);
+
+		assertTrue(bc1.equals(bc1));
+		assertNotEquals(bc1, bc2);
+		assertNotEquals(bc1, bc3);
+		assertNotEquals(bc1, bc4);
+		assertNotEquals(bc1, bc5);
+		assertNotEquals(bc1, bc6);
+		assertFalse(bc1.equals(new Object()));
 	}
 
 	@Test

@@ -329,7 +329,16 @@ Built-in properties are properties that can be accessed via the navigate operato
 | `length`, `size` | `List`, `Map`, `Set`, `String` |
 | `value` | `Entry` |
 
-#### Named Expressions
+#### Streaming
+Streaming operations can be used in expressions to transform (`#>`, `#.`, `#|`), filter (`#?`), or reduce (`#<`) data within a single expression. They are followed by an optional identifier and arrow (`value ->`, `->`, and \[empty\] are all allowed) and can be used to stream iterables, arrays, or individual objects. Individual objects with `null` values are treated as absent.
+
+Streaming transformations (`{{ a `<b>`#>`</b>` i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator. Flattening transformations (`{{# [[1, 2], null, [3, 4]] `<b>`#|`</b>` i -> i // [1, 2, 3, 4] }}`) allow lists to be combined.
+
+Streaming filters (`{{# names `<b>`#?`</b>` name -> /* Find names with initials. */ ~/\b.[.]/.matcher(name).find() }}`) are used to filter out unneeded items. The new list is the result of the operator.
+
+Streaming reductions (`{{ sum = 0; values `<b>`#<`</b>` value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.
+
+### Named Expressions
 Named expressions are tags with the form `{{ name -> expression }}` or `{{ name(param1, param2) -> expression }}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags).
 
 Referencing a named expression using a function-like syntax evaluates the expression. The first argument is always pushed onto the context stack (if no first argument is given, the context stack is not modified). For this reason, the first parameter in a named expression can be unnamed or specified as a literal `.`. It is not an error to mismatch the number of arguments with the number of parameters of the named expression. Unspecified parameters receive the value `null` upon invocation.
@@ -360,14 +369,10 @@ However, named expressions are not exposed to included partial templates. This i
 ```
 results in a whitespace-only string, since `func()` is not defined within the partial `a`.
 
-#### Streaming
-Streaming operations can be used in expressions to transform (`#>`, `#.`, `#|`), filter (`#?`), or reduce (`#<`) data within a single expression. They are followed by an optional identifier and arrow (`value ->`, `->`, and \[empty\] are all allowed) and can be used to stream iterables, arrays, or individual objects. Individual objects with `null` values are treated as absent.
+### Template Bindings
+Template bindings are tags with the form `{{ name := expression }}`. (Unlike normal expressions, template bindings qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions within the template or any inline partial templates.
 
-Streaming transformations (`{{ a `<b>`#>`</b>` i -> transform(i) }}`) allow data to be remapped into a new form. The original item is replaced with the transformed item. Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data. The new list is the result of the operator. Flattening transformations (`{{# [[1, 2], null, [3, 4]] `<b>`#|`</b>` i -> i // [1, 2, 3, 4] }}`) allow lists to be combined.
-
-Streaming filters (`{{# names `<b>`#?`</b>` name -> /* Find names with initials. */ ~/\b.[.]/.matcher(name).find() }}`) are used to filter out unneeded items. The new list is the result of the operator.
-
-Streaming reductions (`{{ sum = 0; values `<b>`#<`</b>` value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.
+Template bindings are scoped to the template in which they are declared and can only be accessed after they are declared. They can be referenced inside inline partial templates, but can only be reassigned within the declaring template. Assigning to a template binding within an inline partial template will result in a new template binding being created scoped to the inline partial template. Recursively loaded templates will get their own copies of any template bindings, similar to local variables inside a recusively invoke function.
 
 ## Docker Image
 The Horseshoe docker image executes the runner using the given run arguments. Files can be mounted into the container using the `--volume` option. For example, `docker run -v ~/horseshoe_data:/data horseshoe/horseshoe /data/input.U -o /data/output.cxx` reads the file `~/horseshoe_data/input.U` and writes the results to the file `~/horseshoe_data/output.cxx`.

@@ -48,7 +48,7 @@ class ExpressionTests {
 		final String location = elements.length >= 1 ? elements[1].getFileName() + ":" + elements[1].getLineNumber() : "[Unknown]";
 		final ExpressionParseState parseState = new ExpressionParseState(0, expression, namedExpressions, new HashMap<>(), new Stack<>());
 
-		return new Expression(null, location, parseState, horseshoeExpressions);
+		return Expression.create(location, parseState, horseshoeExpressions);
 	}
 
 	/**
@@ -110,6 +110,13 @@ class ExpressionTests {
 	@ValueSource(strings = { "[5)", "[5", "a, b[5", "[,,]", ",,", "5[5]", "a[]", "a[,]", "a[b,,]", "a =", "a ; = 2", "a../", "../", "", "()", "(,)", "(a,,)", "#", "a #", "a b", "a 1", "1 b", "\"blah\" a", "\"blah\" 3.5", "blah.3.5", "..\\3.5", "a += 5", "./a = 5", "./a++", "a--", "a = 0; a-- = 1", "a(,)", "a +", "call(/..)", "call(/.a)", "\"bad\\\"", "\"\\q\"", "\"\\u000\"", "\"\\U0000000\"", "true ? false" })
 	void testBadSyntax(final String expression) throws ReflectiveOperationException {
 		assertThrows(IllegalArgumentException.class, () -> createExpression(expression, EMPTY_EXPRESSIONS_MAP, true));
+	}
+
+	@Test
+	void testCaching() throws ReflectiveOperationException {
+		final Expression expression = createExpression("// Ignore this comment\n(\"a\" + \"bc\" == \"ab\" + \"c\") + \", \" + /* Ignore multi-line comment with code\n '; ' + */ (5 + 8.3 == 5.31 + 8) /* Trailing double comment */ // Second comment", EMPTY_EXPRESSIONS_MAP, true);
+		final Expression sameExpressionWithoutComments = createExpression("(\"a\"+\"bc\"==\"ab\"+\"c\")+\", \"+(5+8.3==5.31+8)", EMPTY_EXPRESSIONS_MAP, true);
+		assertEquals(expression.getEvaluable(), sameExpressionWithoutComments.getEvaluable());
 	}
 
 	@Test

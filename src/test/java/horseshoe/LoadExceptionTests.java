@@ -27,6 +27,11 @@ class LoadExceptionTests {
 	}
 
 	@Test
+	void testInvalidAnonymousTag() {
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Invalid Anonymous Partial", "{{#>}}"));
+	}
+
+	@Test
 	void testInvertedSectionError() throws IOException {
 		try {
 			new TemplateLoader().load("Inverted Section", "{{#Test}}\n test\n{{^}}\n{{/}}\n{{^}}\n{{/}}").render(Collections.emptyMap(), new java.io.StringWriter());

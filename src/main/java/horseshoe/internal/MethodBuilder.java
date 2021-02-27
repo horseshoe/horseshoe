@@ -1182,16 +1182,21 @@ public final class MethodBuilder {
 	 * @param methodName the constant pool entry for the method name
 	 * @param returnType the return type of the method
 	 * @param parameterTypes the parameter types of the method
-	 * @return the bytecode of the new class
+	 * @return the container for the bytecode of the new class
 	 * @throws ReflectiveOperationException if an exception is thrown while generating the bytecode
 	 */
-	private byte[] build(final String name, final Class<?> base, final boolean isStatic, final String methodName, final Class<?> returnType, final Class<?>... parameterTypes) throws ReflectiveOperationException {
+	final BytecodeContainer build(final String name, final Class<?> base, final boolean isStatic, final String methodName, final Class<?> returnType, final Class<?>... parameterTypes) throws ReflectiveOperationException {
 		if (stackSize != 0) {
 			throw new IllegalStateException("Stack size is not zero: " + stackSize);
 		}
 
 		// Add this class
-		getConstant(new UTF8String(name.replace('.', '/'))).locations.add(new Location(constantPool, constantPool.getLength() + 1));
+		final int startOfName = constantPool.getLength() + 10;
+		final ConstantPoolEntry nameEntry = getConstant(new UTF8String(name.replace('.', '/')));
+		final int endOfName = constantPool.getLength() + 10;
+
+		nameEntry.locations.add(new Location(constantPool, constantPool.getLength() + 1));
+
 		final ConstantPoolEntry classNameInfo = constantPool.add(this, CLASS_CONSTANT, B0, B0);
 		final ConstantPoolEntry codeAttributeInfo = getConstant(new UTF8String("Code"));
 		final ConstantPoolEntry methodNameInfo = getConstant(new UTF8String(methodName));
@@ -1358,20 +1363,19 @@ public final class MethodBuilder {
 
 		// Attributes [0 - 1] = 0
 
-		return bytecode;
+		return new BytecodeContainer(bytecode, startOfName, endOfName);
 	}
 
 	/**
-	 * Builds the method by loading the bytecode of the method builder into a new class.
+	 * Builds the method by creating bytecode for a new class.
 	 *
 	 * @param <T> the type of the base class
 	 * @param name the name of the new class
 	 * @param base the base class of the new class
-	 * @param loader the class loader used to load the new class
-	 * @return the new class
-	 * @throws ReflectiveOperationException if an exception is thrown while loading the bytecode
+	 * @return the container for the bytecode of the new class
+	 * @throws ReflectiveOperationException if an exception is thrown while creating the bytecode
 	 */
-	public <T> Class<T> build(final String name, final Class<T> base, final ClassLoader loader) throws ReflectiveOperationException {
+	final <T> BytecodeContainer build(final String name, final Class<T> base) throws ReflectiveOperationException {
 		Method method = null;
 
 		if (base.isInterface()) { // This method is implementing an interface
@@ -1414,16 +1418,21 @@ public final class MethodBuilder {
 			throw new IllegalArgumentException("Base class " + base.getName() + " must have exactly 1 abstract method or 1 public declared non-static, non-final, non-native method (contains none)");
 		}
 
-		final byte[] bytecode = build(name, base, false, method.getName(), method.getReturnType(), method.getParameterTypes());
+		return build(name, base, false, method.getName(), method.getReturnType(), method.getParameterTypes());
+	}
 
-		return AccessController.doPrivileged(
-			new PrivilegedAction<Class<T>>() {
-				@Override
-				public Class<T> run() {
-					return new BytecodeLoader<T>(loader).defineClass(name, bytecode);
-				}
-			}
-		);
+	/**
+	 * Builds the method by loading the bytecode of the method builder into a new class.
+	 *
+	 * @param <T> the type of the base class
+	 * @param name the name of the new class
+	 * @param base the base class of the new class
+	 * @param loader the class loader used to load the new class
+	 * @return the new class
+	 * @throws ReflectiveOperationException if an exception is thrown while loading the bytecode
+	 */
+	public <T> Class<T> build(final String name, final Class<T> base, final ClassLoader loader) throws ReflectiveOperationException {
+		return createClass(name, loader, build(name, base).getBytecode());
 	}
 
 	/**
@@ -1437,13 +1446,24 @@ public final class MethodBuilder {
 	 * @throws ReflectiveOperationException if an exception is thrown while loading the bytecode
 	 */
 	public Method build(final String name, final String methodName, final MethodType type, final ClassLoader loader) throws ReflectiveOperationException {
-		final byte[] bytecode = build(name, Object.class, true, methodName, type.returnType(), type.parameterArray());
+		return createClass(name, loader, build(name, Object.class, true, methodName, type.returnType(), type.parameterArray()).getBytecode()).getMethods()[0];
+	}
 
+	/**
+	 * Creates a new class from the specified bytecode.
+	 *
+	 * @param <T> the type of the base class
+	 * @param name the name of the new class
+	 * @param loader the class loader used to load the new class
+	 * @param bytecode the bytecode for the new class
+	 * @return the new class
+	 */
+	static <T> Class<T> createClass(final String name, final ClassLoader loader, final byte[] bytecode) {
 		return AccessController.doPrivileged(
-			new PrivilegedAction<Method>() {
+			new PrivilegedAction<Class<T>>() {
 				@Override
-				public Method run() {
-					return new BytecodeLoader<Object>(loader).defineClass(name, bytecode).getMethods()[0];
+				public Class<T> run() {
+					return new BytecodeLoader<T>(loader).defineClass(name, bytecode);
 				}
 			}
 		);

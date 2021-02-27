@@ -86,7 +86,6 @@ public class TemplateLoader {
 		private final Stack<Section> sections = new Stack<>();
 		private final Map<Identifier, Identifier> allIdentifiers = new HashMap<>();
 		private final Stack<Map<String, TemplateBinding>> templateBindings = new Stack<>();
-		private final Map<String, Expression> expressionCache = new HashMap<>();
 		private final Stack<List<Renderer>> renderLists = new Stack<>();
 		private Delimiter delimiter = new Delimiter("{{", "}}");
 		private List<ParsedLine> priorStaticText = new ArrayList<>();
@@ -106,15 +105,11 @@ public class TemplateLoader {
 		 * @param location the location of the expression
 		 * @param expression the trimmed expression string
 		 * @param extensions the set of extensions currently in use
-		 * @return the new expression or a cached copy of the expression with updated location
+		 * @return the new expression
 		 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 		 */
 		private Expression createExpression(final Object location, final ExpressionParseState parseState, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
-			final Expression cachedExpression = expressionCache.get(parseState.getExpressionString());
-			final Expression newExpression = new Expression(cachedExpression, location, parseState, extensions.contains(Extension.EXPRESSIONS));
-
-			expressionCache.put(parseState.getExpressionString(), newExpression);
-			return newExpression;
+			return Expression.create(location, parseState, extensions.contains(Extension.EXPRESSIONS));
 		}
 
 		/**
@@ -778,12 +773,7 @@ public class TemplateLoader {
 
 		switch (parseState.getEvaluation()) {
 			case EVALUATE:
-				state.renderLists.peek().add(new Renderer() {
-					@Override
-					public void render(RenderContext context, Writer writer) throws IOException {
-						expression.evaluate(context);
-					}
-				});
+				state.renderLists.peek().add(new ExpressionEvaluationRenderer(expression));
 				break;
 			case EVALUATE_AND_RENDER: // Parse as a dynamic content tag
 				state.standaloneStatus = LoadState.TAG_CANT_BE_STANDALONE; // Content tags cannot be stand-alone tags
