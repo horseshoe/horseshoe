@@ -89,8 +89,7 @@ public class TemplateLoader {
 		private final Stack<List<Renderer>> renderLists = new Stack<>();
 		private Delimiter delimiter = new Delimiter("{{", "}}");
 		private List<ParsedLine> priorStaticText = new ArrayList<>();
-		private int standaloneStatus = TAG_CANT_BE_STANDALONE;
-		private StandaloneRenderer standaloneRenderer = null;
+		private int standaloneStatus;
 		private int tagCount = 0;
 
 		public LoadState(final Loader loader, final Template template) {
@@ -536,28 +535,15 @@ public class TemplateLoader {
 		state.sections.push(template.getSection());
 		state.renderLists.push(template.getSection().getRenderList());
 
+		// Parse first static content
+		List<ParsedLine> lines = loader.nextLines(state.delimiter.start);
+		StaticContentRenderer.create(state.renderLists.peek(), lines, true);
+
 		// Parse all tags
-		while (true) {
-			// Get text before this tag
-			final List<ParsedLine> lines = loader.nextLines(state.delimiter.start);
-
-			if ((state.standaloneStatus == LoadState.TAG_CAN_BE_STANDALONE && state.isStandaloneTagTail(lines) && state.removeStandaloneTagHead() != null) ||
-					(state.standaloneStatus == LoadState.TAG_CHECK_TAIL_STANDALONE && state.isStandaloneTagTail(lines))) {
-				if (state.standaloneRenderer != null) {
-					state.standaloneRenderer.setStandalone(true);
-				}
-
-				StaticContentRenderer.create(state.renderLists.peek(), lines);
-			} else {
-				StaticContentRenderer.create(state.renderLists.peek(), lines, state.renderLists.peek().isEmpty() && state.sections.peek().getParent() == null);
-			}
-
-			if (!loader.hasNext()) {
-				break;
-			}
-
+		while (loader.hasNext()) {
 			// Parse the tag
 			final String tag = loader.next(loader.checkNext("{") ? state.delimiter.unescapedEnd : state.delimiter.end);
+			final TagRenderer previousTagRenderer;
 
 			if (!loader.hasNext()) {
 				throw new LoadException(loaders, "Incomplete tag at end of input");
@@ -568,11 +554,25 @@ public class TemplateLoader {
 			state.priorStaticText = lines;
 
 			try {
-				state.standaloneRenderer = processTag(loaders, state, tag);
+				previousTagRenderer = processTag(loaders, state, tag);
 			} catch (final LoadException e) {
 				throw e;
 			} catch (final Exception e) {
 				throw new LoadException(loaders, "Invalid tag \"" + tag + "\": " + e.getMessage(), e);
+			}
+
+			// Get text after the tag
+			lines = loader.nextLines(state.delimiter.start);
+
+			if ((state.standaloneStatus == LoadState.TAG_CAN_BE_STANDALONE && state.isStandaloneTagTail(lines) && state.removeStandaloneTagHead() != null) ||
+					(state.standaloneStatus == LoadState.TAG_CHECK_TAIL_STANDALONE && state.isStandaloneTagTail(lines))) {
+				if (previousTagRenderer != null) {
+					previousTagRenderer.setStandalone(true);
+				}
+
+				StaticContentRenderer.create(state.renderLists.peek(), lines);
+			} else {
+				StaticContentRenderer.create(state.renderLists.peek(), lines, state.renderLists.peek().isEmpty() && state.sections.peek().getParent() == null);
 			}
 		}
 
@@ -597,7 +597,7 @@ public class TemplateLoader {
 	 * @throws LoadException if an error is encountered while loading the template
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading an expression
 	 */
-	private StandaloneRenderer processTag(final Stack<Loader> loaders, final LoadState state, final String tag) throws LoadException, ReflectiveOperationException {
+	private TagRenderer processTag(final Stack<Loader> loaders, final LoadState state, final String tag) throws LoadException, ReflectiveOperationException {
 		if (tag.length() == 0) {
 			return null;
 		}

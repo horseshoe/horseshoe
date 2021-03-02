@@ -114,18 +114,18 @@ public final class RenderContext {
 	/**
 	 * Gets the template bindings for the template at the specified index.
 	 *
-	 * @param index the index of the template
+	 * @param templateIndex the index of the template
 	 * @return the template bindings for the template at the specified index
 	 */
-	public Stack<Object[]> getTemplateBinding(final int index) {
+	public Stack<Object[]> getTemplateBindings(final int templateIndex) {
 		int oldLength = templateBindings.length;
 
-		if (index >= oldLength) {
+		if (templateIndex >= oldLength) {
 			int length = oldLength;
 
 			do {
 				length = length * 2 + 1;
-			} while (index >= (length & 0xFFFFFFFFL));
+			} while (templateIndex >= (length & 0xFFFFFFFFL));
 
 			templateBindings = Arrays.copyOf(templateBindings, length);
 
@@ -134,7 +134,7 @@ public final class RenderContext {
 			}
 		}
 
-		return templateBindings[index];
+		return templateBindings[templateIndex];
 	}
 
 	/**

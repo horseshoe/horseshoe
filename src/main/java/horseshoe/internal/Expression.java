@@ -17,7 +17,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,8 +34,8 @@ public final class Expression {
 
 	private static final Expression EXPRESSION_BEING_CREATED = new Expression();
 
-	private static final AtomicInteger DYN_INDEX = new AtomicInteger();
 	private static final Map<BytecodeContainer, Expression> cache = new HashMap<>();
+	private static long cacheIndex = 0;
 
 	// Reflected Methods
 	private static final Constructor<?> ARRAY_LIST_CTOR_INT = getConstructor(ArrayList.class, int.class);
@@ -83,7 +82,7 @@ public final class Expression {
 	private static final Method PATTERN_COMPILE = getMethod(Pattern.class, "compile", String.class, int.class);
 	private static final Method RENDER_CONTEXT_GET_INDENTATION = getMethod(RenderContext.class, "getIndentation");
 	private static final Method RENDER_CONTEXT_GET_SECTION_DATA = getMethod(RenderContext.class, "getSectionData");
-	private static final Method RENDER_CONTEXT_GET_TEMPLATE_BINDING = getMethod(RenderContext.class, "getTemplateBinding", int.class);
+	private static final Method RENDER_CONTEXT_GET_TEMPLATE_BINDINGS = getMethod(RenderContext.class, "getTemplateBindings", int.class);
 	private static final Constructor<SectionRenderData> SECTION_RENDER_DATA_CTOR_DATA = getConstructor(SectionRenderData.class, Object.class);
 	private static final Field SECTION_RENDER_DATA_DATA = getField(SectionRenderData.class, "data");
 	private static final Field SECTION_RENDER_DATA_HAS_NEXT = getField(SectionRenderData.class, "hasNext");
@@ -187,6 +186,17 @@ public final class Expression {
 	}
 
 	/**
+	 * Gets the class name used for a new expression. The class name is a fixed length, so that equivalent methods generate bytecode of the same length.
+	 *
+	 * @return the class name used for a new expression
+	 */
+	private static String className() {
+		final String number = "000000000000000" + Long.toHexString(cacheIndex);
+
+		return Expression.class.getPackage().getName() + ".Expression_" + number.substring(number.length() - 10);
+	}
+
+	/**
 	 * Counts the number of ternaries on the operator stack.
 	 *
 	 * @param state the parse state
@@ -211,17 +221,6 @@ public final class Expression {
 		}
 
 		return ternaries;
-	}
-
-	/**
-	 * Gets the next class name used for a new expression. The class name is a fixed length, so that equivalent methods generate bytecode of the same length.
-	 *
-	 * @return the next class name used for a new expression
-	 */
-	private static String nextClassName() {
-		final String number = "0000000" + Integer.toHexString(DYN_INDEX.getAndIncrement());
-
-		return Expression.class.getPackage().getName() + ".Expression_" + number.substring(number.length() - 8);
 	}
 
 	/**
@@ -371,7 +370,7 @@ public final class Expression {
 				} else if (backreach < 0 && (bindingIndex = state.getLocalBindings().get(name)) != null) { // Check for a local binding
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL + bindingIndex)));
 				} else if (backreach < 0 && (templateBinding = state.getTemplateBinding(name)) != null) { // Check for a template binding
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDING).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).addCode(AALOAD)));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).addCode(AALOAD)));
 				} else { // Resolve the identifier
 					final Identifier identifier = state.getCachedIdentifier(new Identifier(name));
 					final int index = state.getIdentifiers().getOrAdd(identifier);
@@ -1150,26 +1149,25 @@ public final class Expression {
 		if (templateBindingName != null) {
 			final TemplateBinding templateBinding = state.getOrAddTemplateBinding(templateBindingName);
 
-			mb.addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDING).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).append(state.getOperands().pop().toObject()).addCode(AASTORE, ACONST_NULL).addFlowBreakingCode(ARETURN, 0);
+			mb.addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).append(state.getOperands().pop().toObject()).addCode(AASTORE, ACONST_NULL).addFlowBreakingCode(ARETURN, 0);
 		} else {
 			mb.append(state.getOperands().pop().toObject()).addFlowBreakingCode(ARETURN, 0);
 		}
 
 		assert state.getOperands().isEmpty();
-
-		final String name = nextClassName();
-		final BytecodeContainer bytecode = mb.build(name, Evaluable.class);
 		final Expression cachedExpression;
-		Expression expression = null;
 
 		synchronized (cache) {
+			final String name = className();
+			final BytecodeContainer bytecode = mb.build(name, Evaluable.class);
 			cachedExpression = cache.get(bytecode);
 
 			if (cachedExpression == null) {
-				expression = new Expression(location, expressionName, state, null,
+				final Expression expression = new Expression(location, expressionName, state, null,
 						MethodBuilder.<Evaluable>createClass(name, Expression.class.getClassLoader(), bytecode.getBytecode()).getConstructor().newInstance());
 
 				cache.put(bytecode, expression);
+				cacheIndex++;
 				return expression;
 			}
 		}

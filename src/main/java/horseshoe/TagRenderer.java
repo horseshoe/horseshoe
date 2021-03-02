@@ -1,6 +1,6 @@
 package horseshoe;
 
-abstract class StandaloneRenderer implements Renderer {
+abstract class TagRenderer implements Renderer {
 
 	private boolean isStandalone = false;
 

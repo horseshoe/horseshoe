@@ -3,7 +3,7 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
-final class TemplateRenderer extends StandaloneRenderer {
+final class TemplateRenderer extends TagRenderer {
 
 	private final Template template;
 	private final String indentation;
@@ -28,7 +28,7 @@ final class TemplateRenderer extends StandaloneRenderer {
 		final int bindings = renderTemplate.getBindings().size();
 
 		if (bindings > 0) {
-			final Stack<Object[]> templateBindings = context.getTemplateBinding(renderTemplate.getIndex()).push(new Object[bindings]);
+			final Stack<Object[]> templateBindings = context.getTemplateBindings(renderTemplate.getIndex()).push(new Object[bindings]);
 
 			for (final Renderer action : renderTemplate.getSection().getRenderList()) {
 				action.render(context, writer);
