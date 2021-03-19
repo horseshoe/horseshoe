@@ -677,7 +677,7 @@ public class TemplateLoader {
 				}
 
 				// Add a new render section action
-				state.renderLists.peek().add(SectionRenderer.FACTORY.create(state.sections.peek()));
+				state.renderLists.peek().add(new SectionRenderer(state.sections.peek()));
 				state.renderLists.push(state.sections.peek().getRenderList());
 				return null;
 			}
@@ -698,7 +698,7 @@ public class TemplateLoader {
 						final Object location = state.loader.toLocation();
 
 						state.sections.pop(1).push(new Section(state.sections.peek(), location, state.createExpression(location, state.createExpressionParser(Utilities.trim(tag, 2)), extensions)));
-						previousSection.getInvertedRenderList().add(SectionRenderer.FACTORY.create(state.sections.peek()));
+						previousSection.getInvertedRenderList().add(new SectionRenderer(state.sections.peek()));
 						state.renderLists.push(state.sections.peek().getRenderList());
 						return null;
 					} else if (elseDoc) { // documentative "else" tag
@@ -715,7 +715,7 @@ public class TemplateLoader {
 					final Object location = state.loader.toLocation();
 
 					state.sections.push(new Section(state.sections.peek(), location, state.createExpression(location, state.createExpressionParser(expression), extensions)));
-					state.renderLists.peek().add(SectionRenderer.FACTORY.create(state.sections.peek()));
+					state.renderLists.peek().add(new SectionRenderer(state.sections.peek()));
 					state.renderLists.push(state.sections.peek().getInvertedRenderList());
 				}
 

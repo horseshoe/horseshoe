@@ -1132,7 +1132,7 @@ public abstract class Accessor {
 		@Override
 		@SuppressWarnings("unchecked")
 		public Object tryGet(final Object context) {
-			return Utilities.getMapValueOrDefault((Map<?, Object>)context, key, INVALID);
+			return ((Map<?, Object>)context).getOrDefault(key, INVALID);
 		}
 
 	}

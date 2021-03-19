@@ -16,85 +16,6 @@ import java.util.stream.Stream;
  */
 public abstract class Streamable<T> implements Iterable<T> {
 
-	private static final Factory FACTORY;
-
-	static {
-		Factory factory = new Factory();
-
-		if (Properties.JAVA_VERSION >= 8.0) {
-			try {
-				factory = (Factory)Streamable.class.getClassLoader().loadClass(Factory.class.getName() + "8").getConstructor().newInstance();
-			} catch (final ReflectiveOperationException e) {
-				throw new ExceptionInInitializerError("Failed to load Java 8 specialization: " + e.getMessage());
-			}
-		}
-
-		FACTORY = factory;
-	}
-
-	/**
-	 * A factory class for creating streamables.
-	 */
-	private static class Factory {
-
-		/**
-		 * Creates a streamable of the specified value.
-		 *
-		 * @param value the value to reiterate
-		 * @return a streamable of the specified value
-		 */
-		@SuppressWarnings("unchecked")
-		Streamable<Object> create(final Object value) {
-			if (value instanceof Collection) {
-				return Streamable.of((Collection<Object>)value);
-			} else if (value instanceof Iterable) {
-				return Streamable.of((Iterable<Object>)value);
-			} else if (value instanceof Iterator) {
-				return Streamable.of((Iterator<Object>)value);
-			} else if (value.getClass().isArray()) {
-				if (value.getClass().getComponentType().isPrimitive()) {
-					final Object[] array = new Object[Array.getLength(value)];
-
-					for (int i = 0; i < array.length; i++) {
-						array[i] = Array.get(value, i);
-					}
-
-					return Streamable.of(array);
-				}
-
-				final Object[] original = (Object[])value;
-				return Streamable.of(Arrays.copyOf(original, original.length));
-			}
-
-			return Streamable.of(value);
-		}
-
-	}
-
-	/**
-	 * Java 8 extensions for creating streamables.
-	 */
-	@SuppressWarnings("unused")
-	private static final class Factory8 extends Factory {
-
-		public Factory8() {
-			// public constructor to support reflection access
-		}
-
-		@SuppressWarnings("unchecked")
-		@Override
-		Streamable<Object> create(final Object value) {
-			if (value instanceof Stream) {
-				return new StreamableSequence<>(8, ((Stream<Object>)value).iterator());
-			} else if (value instanceof Optional) {
-				return Streamable.of(((Optional<Object>)value).orElse(null));
-			}
-
-			return super.create(value);
-		}
-
-	}
-
 	/**
 	 * A streamable sequence enables chaining over an iterable type.
 	 *
@@ -253,6 +174,42 @@ public abstract class Streamable<T> implements Iterable<T> {
 	}
 
 	/**
+	 * Creates a streamable of the specified value.
+	 *
+	 * @param value the value to reiterate
+	 * @return a streamable of the specified value
+	 */
+	@SuppressWarnings("unchecked")
+	static Streamable<Object> create(final Object value) {
+		if (value instanceof Stream) {
+			return new StreamableSequence<>(8, ((Stream<Object>)value).iterator());
+		} else if (value instanceof Optional) {
+			return Streamable.of(((Optional<Object>)value).orElse(null));
+		} else if (value instanceof Collection) {
+			return Streamable.of((Collection<Object>)value);
+		} else if (value instanceof Iterable) {
+			return Streamable.of((Iterable<Object>)value);
+		} else if (value instanceof Iterator) {
+			return Streamable.of((Iterator<Object>)value);
+		} else if (value.getClass().isArray()) {
+			if (value.getClass().getComponentType().isPrimitive()) {
+				final Object[] array = new Object[Array.getLength(value)];
+
+				for (int i = 0; i < array.length; i++) {
+					array[i] = Array.get(value, i);
+				}
+
+				return Streamable.of(array);
+			}
+
+			final Object[] original = (Object[])value;
+			return Streamable.of(Arrays.copyOf(original, original.length));
+		}
+
+		return Streamable.of(value);
+	}
+
+	/**
 	 * Returns a streamable of the specified value.
 	 *
 	 * @param <T> the type of streamable item
@@ -322,7 +279,7 @@ public abstract class Streamable<T> implements Iterable<T> {
 			return (Streamable<Object>)value;
 		}
 
-		return FACTORY.create(value);
+		return create(value);
 	}
 
 	/**

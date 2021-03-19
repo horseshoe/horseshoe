@@ -16,20 +16,14 @@ checkstyle {
 	toolVersion = 'latest.release'
 }
 
-java {
-	sourceCompatibility = JavaVersion.VERSION_1_9
-	targetCompatibility = JavaVersion.VERSION_1_9
-}
-
 compileJava {
-	sourceCompatibility = JavaVersion.VERSION_1_7
-	targetCompatibility = JavaVersion.VERSION_1_7
+	sourceCompatibility = JavaVersion.VERSION_1_8
+	targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 test {
 	finalizedBy jacocoTestReport
 	useJUnitPlatform()
-	systemProperty "horseshoe.useJava7", System.getProperty("horseshoe.useJava7")
 
 	testLogging {
 		exceptionFormat "full"

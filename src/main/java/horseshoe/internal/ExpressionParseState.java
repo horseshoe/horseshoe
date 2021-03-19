@@ -51,7 +51,8 @@ public final class ExpressionParseState {
 	 * @return the matching cached identifier
 	 */
 	public Identifier getCachedIdentifier(final Identifier identifier) {
-		return Utilities.getOrAddMapValue(allIdentifiers, identifier, identifier);
+		allIdentifiers.putIfAbsent(identifier, identifier);
+		return identifier;
 	}
 
 	/**

@@ -1,10 +1,5 @@
 package horseshoe.internal;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodHandles.Lookup;
-import java.util.Map;
-
 public final class Utilities {
 
 	private static final byte WHITESPACE_PROPERTY = 0x01;
@@ -28,28 +23,6 @@ public final class Utilities {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	};
-
-	private static final MethodHandle MAP_GET_OR_DEFAULT;
-	private static final MethodHandle MAP_PUT_IF_ABSENT;
-
-	static {
-		final Lookup lookup = MethodHandles.publicLookup();
-
-		MethodHandle mapGetOrDefault = null;
-		MethodHandle mapPutIfAbsent = null;
-
-		if (!Properties.USE_JAVA_7 && Properties.JAVA_VERSION >= 8.0) {
-			try {
-				mapGetOrDefault = lookup.unreflect(Map.class.getMethod("getOrDefault", Object.class, Object.class));
-				mapPutIfAbsent = lookup.unreflect(Map.class.getMethod("putIfAbsent", Object.class, Object.class));
-			} catch (final ReflectiveOperationException e) {
-				throw new ExceptionInInitializerError("Failed to load Java 8 specialization: " + e.getMessage());
-			}
-		}
-
-		MAP_GET_OR_DEFAULT = mapGetOrDefault;
-		MAP_PUT_IF_ABSENT = mapPutIfAbsent;
-	}
 
 	public static final class Range {
 
@@ -113,59 +86,6 @@ public final class Utilities {
 	 */
 	public static Range findNewLine(final String value, final int start, final int end) {
 		return findNewLine(value.toCharArray(), start, end);
-	}
-
-	/**
-	 * Gets the specified value from a map using the key, or the default value if the key does not exist in the map.
-	 *
-	 * @param <V> the type of the map values
-	 * @param map the map used to lookup the value
-	 * @param key the key of the value in the map
-	 * @param defaultValue the default value that will be returned if the key is not found in the map
-	 * @return the specified value from the map corresponding to the key, or the default value if the key does not exist
-	 */
-	@SuppressWarnings("unchecked")
-	public static <V> V getMapValueOrDefault(final Map<?, V> map, final Object key, final V defaultValue) {
-		if (MAP_GET_OR_DEFAULT != null) {
-			try {
-				return (V)MAP_GET_OR_DEFAULT.invokeExact(map, key, defaultValue);
-			} catch (final Throwable throwable) {
-				throw new InternalError(throwable.getMessage());
-			}
-		}
-
-		final Object result = map.get(key);
-		return result != null || map.containsKey(key) ? (V)result : defaultValue;
-	}
-
-	/**
-	 * Gets the specified value from a map using the key, or sets the value if the key does not exist in the map and returns it.
-	 *
-	 * @param <K> the type of the map keys
-	 * @param <V> the type of the map values
-	 * @param map the map used to lookup the value
-	 * @param key the key of the value in the map
-	 * @param value the value that will be set and returned if the key is not found in the map
-	 * @return the specified value from the map corresponding to the key, or the value if the key does not exist
-	 */
-	public static <K, V> V getOrAddMapValue(final Map<K, V> map, final K key, final V value) {
-		if (MAP_PUT_IF_ABSENT != null) {
-			try {
-				final V existingValue = (V)MAP_PUT_IF_ABSENT.invokeExact(map, key, value);
-				return existingValue == null ? value : existingValue;
-			} catch (final Throwable throwable) {
-				throw new InternalError(throwable.getMessage());
-			}
-		}
-
-		final V existingValue = map.get(key);
-
-		if (existingValue != null) {
-			return existingValue;
-		}
-
-		map.put(key, value);
-		return value;
 	}
 
 	/**

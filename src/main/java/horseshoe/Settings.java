@@ -2,6 +2,8 @@ package horseshoe;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Calendar;
@@ -15,13 +17,23 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
+import java.util.Spliterators;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import horseshoe.internal.Properties;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * The Settings class allows configuring different properties that are used when rendering a {@link Template}.
@@ -166,30 +178,22 @@ public class Settings {
 				GregorianCalendar.class,
 				Objects.class,
 				Matcher.class,
-				Pattern.class));
+				Pattern.class,
 
-		if (Properties.JAVA_VERSION >= 8.0) {
-			for (final String className : Arrays.asList("java.time.Duration",
-					"java.time.Instant",
-					"java.util.Optional",
-					"java.util.OptionalDouble",
-					"java.util.OptionalInt",
-					"java.util.OptionalLong",
-					"java.util.Spliterators",
-					"java.util.stream.StreamSupport",
-					"java.util.stream.Stream",
-					"java.util.stream.DoubleStream",
-					"java.util.stream.IntStream",
-					"java.util.stream.LongStream",
-					"java.util.stream.Collector",
-					"java.util.stream.Collectors")) {
-				try {
-					defaultLoadableClasses.add(Class.forName(className));
-				} catch (final ClassNotFoundException e) {
-					Template.LOGGER.log(Level.WARNING, "Failed to load class \"{0}\", even though Java 8 or later was detected.", className);
-				}
-			}
-		}
+				Instant.class,
+				Duration.class,
+				Optional.class,
+				OptionalDouble.class,
+				OptionalInt.class,
+				OptionalLong.class,
+				Spliterators.class,
+				StreamSupport.class,
+				Stream.class,
+				DoubleStream.class,
+				IntStream.class,
+				LongStream.class,
+				Collector.class,
+				Collectors.class));
 
 		DEFAULT_LOADABLE_CLASSES = Collections.unmodifiableSet(defaultLoadableClasses);
 	}

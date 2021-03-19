@@ -1,6 +1,5 @@
 package horseshoe.internal;
 
-import horseshoe.internal.Accessor.MethodSignature;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
@@ -8,47 +7,38 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
 
+import horseshoe.internal.Accessor.MethodSignature;
+
 abstract class MethodHandler {
 
-	private static final Factory FACTORY;
+	private static final Lookup lookup = MethodHandles.lookup();
+	private static final LookerUpper lookerUpper = Properties.JAVA_VERSION >= 9.0 ? new PrivateLookerUpper() : x -> lookup;
 
-	static {
-		Factory factory = new Factory();
+	private interface LookerUpper {
+		Lookup lookup(Class<?> targetClass) throws IllegalAccessException;
+	}
 
-		if (Properties.JAVA_VERSION >= 9.0) {
+	private static class PrivateLookerUpper implements LookerUpper {
+
+		private static final MethodHandle privateLookup;
+
+		static {
 			try {
-				factory = (Factory)MethodHandler.class.getClassLoader().loadClass(Factory.class.getName() + "9").getConstructor().newInstance();
-			} catch (final ReflectiveOperationException e) {
-				throw new ExceptionInInitializerError("Failed to load Java 9 specialization: " + e.getMessage());
+				privateLookup = lookup.unreflect(MethodHandles.class.getMethod("privateLookupIn", Class.class, Lookup.class));
+			} catch (ReflectiveOperationException e) {
+				throw new ExceptionInInitializerError(e);
 			}
 		}
 
-		FACTORY = factory;
-	}
-
-	private static class Factory {
-
-		protected static final Lookup LOOKUP = MethodHandles.lookup();
-
-		protected Lookup lookup(Class<?> targetClass) throws IllegalAccessException {
-			return LOOKUP;
-		}
-
-	}
-
-	@SuppressWarnings("unused")
-	private static class Factory9 extends Factory {
-
-		public Factory9() {
-			// public constructor to support reflection access
-		}
-
-		@Override
-		protected Lookup lookup(Class<?> targetClass) throws IllegalAccessException {
+		public Lookup lookup(Class<?> targetClass) throws IllegalAccessException {
 			if (targetClass.isAnonymousClass()) {
-				return MethodHandles.privateLookupIn(targetClass, LOOKUP);
+				try {
+					return (Lookup) privateLookup.invokeExact(targetClass, lookup);
+				} catch (final Throwable t) {
+					throw new InternalError(t.getMessage());
+				}
 			}
-			return LOOKUP;
+			return lookup;
 		}
 
 	}
@@ -63,20 +53,16 @@ abstract class MethodHandler {
 	 * @param parameterCount the parameter count of the method
 	 * @throws IllegalAccessException if a matching method is found, but it cannot be accessed
 	 */
-	static void getPublicMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
+	public static void getPublicMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
 		for (final Method method : parent.getMethods()) {
 			if (Modifier.isStatic(method.getModifiers()) == isStatic && !method.isSynthetic() && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
-				methodHandles.add(FACTORY.lookup(parent).unreflect(method).asSpreader(Object[].class, parameterCount));
+				methodHandles.add(lookerUpper.lookup(parent).unreflect(method).asSpreader(Object[].class, parameterCount));
 
 				if (parameterCount == 0) {
 					return;
 				}
 			}
 		}
-	}
-
-	MethodHandler() {
-		throw new UnsupportedOperationException();
 	}
 
 }

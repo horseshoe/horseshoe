@@ -11,76 +11,9 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import horseshoe.internal.Properties;
-
 public class SectionRenderer implements Renderer {
 
-	static final Factory FACTORY;
-
 	private final Section section;
-
-	private static final class SectionRenderer8 extends SectionRenderer {
-
-		/**
-		 * Creates a new section renderer using the specified section.
-		 *
-		 * @param section the section to be rendered
-		 */
-		private SectionRenderer8(final Section section) {
-			super(section);
-		}
-
-		@Override
-		void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
-			final Object unwrappedData;
-
-			if (data instanceof Optional<?>) {
-				unwrappedData = ((Optional<?>)data).orElse(null);
-			} else {
-				unwrappedData = data;
-			}
-
-			if (!(unwrappedData instanceof Stream<?>)) {
-				super.dispatchData(context, unwrappedData, writer);
-			} else if (getSection().cacheResult()) { // Only collect to a list if we are required to cache the results
-				super.dispatchData(context, ((Stream<?>)unwrappedData).collect(Collectors.toList()), writer);
-			} else {
-				super.dispatchIteratorData(context, ((Stream<?>)unwrappedData).iterator(), writer);
-			}
-		}
-
-	}
-
-	static class Factory {
-
-		/**
-		 * Creates a new section renderer using the specified section.
-		 *
-		 * @param section the section to be rendered
-		 * @return the created section renderer
-		 */
-		SectionRenderer create(final Section section) {
-			return new SectionRenderer(section);
-		}
-
-	}
-
-	/**
-	 * Java 8 extensions for creating section renderers.
-	 */
-	@SuppressWarnings("unused")
-	private static class Factory8 extends Factory {
-
-		public Factory8() {
-			// public constructor to support reflection access
-		}
-
-		@Override
-		SectionRenderer8 create(final Section section) {
-			return new SectionRenderer8(section);
-		}
-
-	}
 
 	static class Reiterable<T> implements Iterable<T>, Iterator<T> {
 		private final ArrayList<T> reiterableList = new ArrayList<>();
@@ -113,20 +46,6 @@ public class SectionRenderer implements Renderer {
 		public Iterator<T> iterator() {
 			return reiterableList.iterator();
 		}
-	}
-
-	static {
-		Factory factory = new Factory();
-
-		try { // Try to load the Java 8+ version
-			if (Properties.JAVA_VERSION >= 8.0) {
-				factory = (Factory)Factory.class.getClassLoader().loadClass(Factory.class.getName() + "8").getConstructor().newInstance();
-			}
-		} catch (final ReflectiveOperationException e) {
-			throw new ExceptionInInitializerError("Failed to load Java 8 specialization: " + e.getMessage());
-		}
-
-		FACTORY = factory;
 	}
 
 	/**
@@ -390,29 +309,46 @@ public class SectionRenderer implements Renderer {
 	 * Dispatches the data for rendering using the appropriate transformation for the specified data. Lists are iterated, booleans are evaluated, etc.
 	 *
 	 * @param context the render context
-	 * @param data the data to render
+	 * @param unwrappedData the data to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
-		Object cache = data;
+		Object unwrappedData;
 
-		if (data == null) {
+		if (data instanceof Optional<?>) {
+			unwrappedData = ((Optional<?>)data).orElse(null);
+		} else {
+			unwrappedData = data;
+		}
+
+		if (unwrappedData instanceof Stream<?>) {
+			if (getSection().cacheResult()) { // Only collect to a list if we are required to cache the results
+				unwrappedData = ((Stream<?>)unwrappedData).collect(Collectors.toList());
+			} else {
+				dispatchIteratorData(context, ((Stream<?>)unwrappedData).iterator(), writer);
+				return;
+			}
+		}
+
+		Object cache = unwrappedData;
+
+		if (unwrappedData == null) {
 			renderInverted(context, writer);
-		} else if (data instanceof Iterable) {
-			dispatchIteratorData(context, ((Iterable<?>)data).iterator(), writer);
-		} else if (data instanceof Iterator) {
+		} else if (unwrappedData instanceof Iterable) {
+			dispatchIteratorData(context, ((Iterable<?>)unwrappedData).iterator(), writer);
+		} else if (unwrappedData instanceof Iterator) {
 			if (section.cacheResult()) {
-				final Iterator<?> reiterator = new Reiterable<>((Iterator<?>)data);
+				final Iterator<?> reiterator = new Reiterable<>((Iterator<?>)unwrappedData);
 				dispatchIteratorData(context, reiterator, writer);
 				cache = reiterator;
 			} else {
-				dispatchIteratorData(context, (Iterator<?>)data, writer);
+				dispatchIteratorData(context, (Iterator<?>)unwrappedData, writer);
 			}
-		} else if (data.getClass().isArray()) {
-			dispatchArray(context, data, writer);
-		} else if (!dispatchPrimitiveData(context, data, writer)) {
-			context.getSectionData().push(new SectionRenderData(data));
+		} else if (unwrappedData.getClass().isArray()) {
+			dispatchArray(context, unwrappedData, writer);
+		} else if (!dispatchPrimitiveData(context, unwrappedData, writer)) {
+			context.getSectionData().push(new SectionRenderData(unwrappedData));
 			renderSection(context, writer);
 			context.getSectionData().pop();
 		}
