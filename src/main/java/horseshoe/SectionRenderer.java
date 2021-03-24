@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class SectionRenderer implements Renderer {
@@ -309,7 +308,7 @@ public class SectionRenderer implements Renderer {
 	 * Dispatches the data for rendering using the appropriate transformation for the specified data. Lists are iterated, booleans are evaluated, etc.
 	 *
 	 * @param context the render context
-	 * @param unwrappedData the data to render
+	 * @param data the data to render
 	 * @param writer the writer used for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
@@ -317,18 +316,13 @@ public class SectionRenderer implements Renderer {
 		Object unwrappedData;
 
 		if (data instanceof Optional<?>) {
-			unwrappedData = ((Optional<?>)data).orElse(null);
+			unwrappedData = ((Optional<?>) data).orElse(null);
 		} else {
 			unwrappedData = data;
 		}
 
 		if (unwrappedData instanceof Stream<?>) {
-			if (getSection().cacheResult()) { // Only collect to a list if we are required to cache the results
-				unwrappedData = ((Stream<?>)unwrappedData).collect(Collectors.toList());
-			} else {
-				dispatchIteratorData(context, ((Stream<?>)unwrappedData).iterator(), writer);
-				return;
-			}
+			unwrappedData = ((Stream<?>) unwrappedData).iterator();
 		}
 
 		Object cache = unwrappedData;
@@ -336,14 +330,14 @@ public class SectionRenderer implements Renderer {
 		if (unwrappedData == null) {
 			renderInverted(context, writer);
 		} else if (unwrappedData instanceof Iterable) {
-			dispatchIteratorData(context, ((Iterable<?>)unwrappedData).iterator(), writer);
+			dispatchIteratorData(context, ((Iterable<?>) unwrappedData).iterator(), writer);
 		} else if (unwrappedData instanceof Iterator) {
 			if (section.cacheResult()) {
-				final Iterator<?> reiterator = new Reiterable<>((Iterator<?>)unwrappedData);
+				final Iterator<?> reiterator = new Reiterable<>((Iterator<?>) unwrappedData);
 				dispatchIteratorData(context, reiterator, writer);
 				cache = reiterator;
 			} else {
-				dispatchIteratorData(context, (Iterator<?>)unwrappedData, writer);
+				dispatchIteratorData(context, (Iterator<?>) unwrappedData, writer);
 			}
 		} else if (unwrappedData.getClass().isArray()) {
 			dispatchArray(context, unwrappedData, writer);

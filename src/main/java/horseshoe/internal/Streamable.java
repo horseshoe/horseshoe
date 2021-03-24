@@ -181,12 +181,10 @@ public abstract class Streamable<T> implements Iterable<T> {
 	 */
 	@SuppressWarnings("unchecked")
 	static Streamable<Object> create(final Object value) {
-		if (value instanceof Stream) {
-			return new StreamableSequence<>(8, ((Stream<Object>)value).iterator());
-		} else if (value instanceof Optional) {
-			return Streamable.of(((Optional<Object>)value).orElse(null));
-		} else if (value instanceof Collection) {
+		if (value instanceof Collection) {
 			return Streamable.of((Collection<Object>)value);
+		} else if (value instanceof Stream) {
+			return new StreamableSequence<>(8, ((Stream<Object>)value).iterator());
 		} else if (value instanceof Iterable) {
 			return Streamable.of((Iterable<Object>)value);
 		} else if (value instanceof Iterator) {
@@ -204,6 +202,8 @@ public abstract class Streamable<T> implements Iterable<T> {
 
 			final Object[] original = (Object[])value;
 			return Streamable.of(Arrays.copyOf(original, original.length));
+		} else if (value instanceof Optional) {
+			return Streamable.of(((Optional<Object>)value).orElse(null));
 		}
 
 		return Streamable.of(value);
