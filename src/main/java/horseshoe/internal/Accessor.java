@@ -1163,7 +1163,7 @@ public abstract class Accessor {
 			for (Class<?> ancestor = parent; true; ancestor = ancestor.getSuperclass()) {
 				if (Modifier.isPublic(ancestor.getModifiers()) || ancestor.isAnonymousClass()) {
 					try {
-						MethodHandler.getPublicMethods(methodHandles, ancestor, false, signature, parameterCount);
+						getPublicMethods(methodHandles, ancestor, false, signature, parameterCount);
 						break;
 					} catch (final IllegalAccessException e) {
 						// Ignore illegal access errors
@@ -1201,7 +1201,7 @@ public abstract class Accessor {
 			// Find all matching static methods
 			if (Modifier.isPublic(parent.getModifiers())) {
 				try {
-					MethodHandler.getPublicMethods(methodHandles, parent, true, signature, parameterCount);
+					getPublicMethods(methodHandles, parent, true, signature, parameterCount);
 				} catch (final IllegalAccessException e) {
 					// Ignore illegal access errors
 				}
@@ -1209,7 +1209,7 @@ public abstract class Accessor {
 
 			// Find the Class<?> method
 			if (methodHandles.isEmpty()) {
-				MethodHandler.getPublicMethods(methodHandles, Class.class, false, signature, parameterCount);
+				getPublicMethods(methodHandles, Class.class, false, signature, parameterCount);
 			}
 
 			if (methodHandles.size() > 1) {
@@ -1246,7 +1246,7 @@ public abstract class Accessor {
 		public static void getPublicInterfaceMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final MethodSignature signature, final int parameterCount) {
 			for (final Class<?> iface : parent.getInterfaces()) {
 				try {
-					MethodHandler.getPublicMethods(methodHandles, iface, false, signature, parameterCount);
+					getPublicMethods(methodHandles, iface, false, signature, parameterCount);
 
 					if (parameterCount == 0 && !methodHandles.isEmpty()) {
 						return;
@@ -1256,6 +1256,28 @@ public abstract class Accessor {
 				}
 
 				getPublicInterfaceMethods(methodHandles, iface, signature, parameterCount);
+			}
+		}
+
+		/**
+		 * Gets the public methods of the specified parent class that match the given information.
+		 *
+		 * @param methodHandles the collection used to store the matching method handles
+		 * @param parent the parent class
+		 * @param isStatic true to match only static methods, false to match only non-static methods
+		 * @param signature the method signature
+		 * @param parameterCount the parameter count of the method
+		 * @throws IllegalAccessException if a matching method is found, but it cannot be accessed
+		 */
+		public static void getPublicMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
+			for (final Method method : parent.getMethods()) {
+				if (Modifier.isStatic(method.getModifiers()) == isStatic && !method.isSynthetic() && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
+					methodHandles.add(LOOKUP.unreflect(method).asSpreader(Object[].class, parameterCount));
+
+					if (parameterCount == 0) {
+						return;
+					}
+				}
 			}
 		}
 

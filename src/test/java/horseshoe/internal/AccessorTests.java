@@ -6,11 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -23,6 +25,7 @@ import java.util.stream.IntStream;
 
 import horseshoe.Helper;
 import horseshoe.LoadException;
+import horseshoe.Template;
 import horseshoe.TemplateLoader;
 import horseshoe.internal.Accessor.PatternMatcher;
 
@@ -290,6 +293,17 @@ class AccessorTests {
 	@Test
 	void testStaticMethod() throws IOException, LoadException {
 		assertEquals("Min: 0, Min: 1.0, Min: 0, Max: 0.0, Max: " + Byte.MAX_VALUE + ", Max: , Name: " + PrivateClass.class.getName(), new TemplateLoader().load("Static Methods", "Min: {{ Math.`min:int,int`(Integer.MAX_VALUE, 0) }}, Min: {{ Math.min(1.0d, 3.4) }}, Min: {{ Math.`min:long,long`(Integer.MAX_VALUE, 0L) }}, Max: {{ Math.`max:float,float`(Integer.MIN_VALUE, 0) }}, Max: {{ Math.`max:int,int`(Integer.MIN_VALUE, Byte.MAX_VALUE) }}, Max: {{ Math.max(Integer.MIN_VALUE, newObject) }}, Name: {{ Private.getName() }}").render(Helper.loadMap("Math", Math.class, "Integer", Integer.class, "Byte", Byte.class, "newObject", new Object(), "Private", PrivateClass.class), new java.io.StringWriter()).toString());
+	}
+
+	@Test
+	void testAnonymousObjectMethods() throws IOException, LoadException {
+		@SuppressWarnings("unused")
+		final Object obj = new Object() {
+			public String foo() {
+				return "hello";
+			}
+		};
+		assertEquals("hello", Template.load("{{ obj.foo() }}").render(Collections.singletonMap("obj", obj), new StringWriter()).toString());
 	}
 
 }
