@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe;
 
 public class HaltRenderingException extends RuntimeException {
 

@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import horseshoe.HaltRenderingException;
 import horseshoe.Helper;
 import horseshoe.RenderContext;
 import horseshoe.Settings;

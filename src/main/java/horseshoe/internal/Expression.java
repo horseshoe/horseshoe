@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import horseshoe.HaltRenderingException;
 import horseshoe.RenderContext;
 import horseshoe.SectionRenderData;
 import horseshoe.Stack;

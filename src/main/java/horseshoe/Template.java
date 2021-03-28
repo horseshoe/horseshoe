@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import horseshoe.internal.HaltRenderingException;
 import horseshoe.internal.TemplateBinding;
 
 /**
@@ -145,10 +144,8 @@ public class Template {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	public Writer render(final Settings settings, final Object globalData, final Writer writer, final Map<String, AnnotationHandler> annotations) throws IOException {
-		final TemplateRenderer renderer = new TemplateRenderer(this, null);
-
 		try {
-			renderer.render(new RenderContext(settings, globalData, annotations), writer);
+			renderUnprotected(settings, globalData, writer, annotations);
 		} catch (final HaltRenderingException e) {
 			settings.getLogger().log(Level.SEVERE, e.getMessage());
 		}
@@ -179,6 +176,22 @@ public class Template {
 	 */
 	public Writer render(final Object globalData, final Writer writer) throws IOException {
 		return render(new Settings(), globalData, writer);
+	}
+
+	/**
+	 * Renders the template to the specified writer using the specified settings, global data, and annotation handlers. The writer is not closed, so that chaining can be used, if desired.
+	 *
+	 * @param settings the settings used while rendering
+	 * @param globalData the global data used while rendering
+	 * @param writer the writer used to render the template
+	 * @param annotations the map of annotation handlers used to process annotations
+	 * @return the writer passed to the render method
+	 * @throws HaltRenderingException if rendering the template results in a die operation
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	public Writer renderUnprotected(final Settings settings, final Object globalData, final Writer writer, final Map<String, AnnotationHandler> annotations) throws HaltRenderingException, IOException {
+		new TemplateRenderer(this, null).render(new RenderContext(settings, globalData, annotations), writer);
+		return writer;
 	}
 
 }
