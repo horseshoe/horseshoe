@@ -453,13 +453,16 @@ public class SectionRenderer implements Renderer {
 			}
 
 			final AnnotationHandler annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
+			Object argument = null;
 
-			if (annotationProcessor == null) { // Render inverted actions if the annotation processor is not available
+			// Render inverted actions if the annotation processor is not available or the expression evaluates to null
+			if (annotationProcessor == null ||
+					(section.getExpression() != null && (argument = section.getExpression().evaluate(context)) == null)) {
 				renderInverted(context, writer);
 				return;
 			}
 
-			final Writer annotationWriter = annotationProcessor.getWriter(writer, section.getExpression() == null ? null : section.getExpression().evaluate(context));
+			final Writer annotationWriter = annotationProcessor.getWriter(writer, argument);
 
 			if (annotationWriter == null || annotationWriter == writer) { // If the writer is not changed then render the actions using the current writer
 				renderSection(context, writer);

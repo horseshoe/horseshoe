@@ -183,7 +183,7 @@ Repeated section tags (`{{#}}`) are used to duplicate the previous section at th
 ```
 
 #### Annotations
-Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are section tags that begin with an at sign (`@`). The parameters are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler. Annotations do not affect the context stack and are not considered in scope for repeated sections.
+Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are section tags that begin with an at sign (`@`). The parameters are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler. If the expression fails to parse or results in `null` then the section will not be rendered and the corresponding empty, [inverted section](#inverted-sections) will be rendered if it exists. Annotations do not affect the context stack and are not considered in scope for repeated sections.
 
 Built-in annotations include the following:
 - @StdErr - Sends output to stderr.
