@@ -1,8 +1,8 @@
 {{< a }}
-  {{ lower->toLowerCase() }}
+  {{ lower() -> toLowerCase() }}
 {{/}}
-{{ lower -> toString() }}
-{{ upper -> toUpperCase() }}
+{{ lower() -> toString() }}
+{{ upper() -> toUpperCase() }}
 {{# "Original String" }}
   {{> a | lower }}
   {{ upper() + "-" + lower() }}
