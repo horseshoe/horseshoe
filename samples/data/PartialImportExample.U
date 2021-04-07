@@ -1,0 +1,14 @@
+{{< a }}
+  {{ lower() -> toLowerCase() }}
+{{/}}
+{{ lower() -> toString() }}
+{{ upper() -> toUpperCase() }}
+{{# "Original String" }}
+  {{> a | lower }}
+  {{ upper() + "-" + lower() }}
+{{/}}
+{{ func() -> "Hello!" }}
+{{< b }}
+  {{ func() }}
+{{/ b }}
+{{> b }}

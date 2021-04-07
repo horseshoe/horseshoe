@@ -19,6 +19,7 @@ public final class ExpressionParseState {
 	private final int startIndex;
 	private final String expressionString;
 	private Evaluation evaluation = Evaluation.EVALUATE_AND_RENDER;
+	private String bindingName = null;
 	private final Map<String, Expression> namedExpressions;
 	private final Map<Identifier, Identifier> allIdentifiers;
 	private final Stack<Map<String, TemplateBinding>> templateBindings;
@@ -53,6 +54,15 @@ public final class ExpressionParseState {
 	public Identifier getCachedIdentifier(final Identifier identifier) {
 		allIdentifiers.putIfAbsent(identifier, identifier);
 		return identifier;
+	}
+
+	/**
+	 * Gets the binding name associated with the expression.
+	 *
+	 * @return the binding name associated with the expression
+	 */
+	public String getBindingName() {
+		return bindingName;
 	}
 
 	/**
@@ -173,6 +183,17 @@ public final class ExpressionParseState {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Sets the binding name associated with the expression.
+	 *
+	 * @param bindingName the binding name associated with the expression
+	 * @return this parse state
+	 */
+	public ExpressionParseState setBindingName(final String bindingName) {
+		this.bindingName = bindingName;
+		return this;
 	}
 
 	/**

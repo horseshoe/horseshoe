@@ -6,7 +6,7 @@
 {{ name }} was not hairy.
 	{{/}}
 	{{# birthOrder // Non-Booleans WILL be pushed onto the context stack. }}
-{{ ../name }} was born {{.}}.
+{{ ..\name }} was born {{.}}.
 	{{^}}
 Birth order of {{ name }} is not given.
 	{{/}}

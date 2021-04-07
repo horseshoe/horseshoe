@@ -55,4 +55,9 @@ class TemplateBindingTests {
 		assertEquals("1", new TemplateLoader().load("Binding Sibling", "{{< First }}{{ templateBinding := 0 }}{{/}}{{< Second }}{{ templateBinding }}{{ templateBinding := 1 }}{{ templateBinding }}{{/}}{{> First }}{{> Second }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
+	@Test
+	void testStreamingReturnBinding() throws IOException, LoadException {
+		assertEquals("1", new TemplateLoader().load("Binding", "{{ templateBinding := [1, 2, 3] #< i -> #^ i; null }}{{ templateBinding }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+	}
+
 }

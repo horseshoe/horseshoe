@@ -107,7 +107,7 @@ There are a couple major differences from Mustache interpolation tags:
 1. The printed values are not HTML-escaped by default, since Horseshoe is designed for generating source code rather than HTML. Horseshoe can be configured to escape HTML if desired.
 2. The value specified inside the content tag represents a [Horseshoe expression](#expressions). Note that values such as `some-content` will be interpreted as the value `some` minus the value `content` rather than the value of `some-content`. This setting can be changed to match the Mustache interpolation tag if desired. Or the value can be quoted by wrapping the value in backticks (`` `some-content` ``).
 
-Explicit levels within the context stack can be referenced by prefixing an identifier with `./`, `.\`, `../`, `..\`, `/`, or `\`. For example, `{{ ../content }}` will render the value of `content` from one level up in the context stack. Leaving off the prefix informs Horseshoe to use the render settings when performing a lookup for an identifier. The default settings will search for an identifier in the current level of the context stack, followed by the root level of the context stack. See  [Sections](#sections) for more details.
+Explicit levels within the context stack can be referenced by prefixing an identifier with `./`, `.\`, `../`, `..\`, `/`, or `\`. For example, `{{ ..\content }}` will render the value of `content` from one level up in the context stack. Leaving off the prefix informs Horseshoe to use the render settings when performing a lookup for an identifier. The default settings will search for an identifier in the current level of the context stack, followed by the root level of the context stack. See  [Sections](#sections) for more details.
 
 #### Unescaped Content
 Unescaped content (`{{{ content }}}`, `{{& content }}`) is the same as normal content in Horseshoe, since content is not escaped by default. It only differs from normal content if content escaping is enabled. The tag can either start with a `{` and end with a `}` or simply start with a `&`.
@@ -144,7 +144,7 @@ All sections except for Booleans, [annotations](#annotations), and [section part
 {{ name }} was not hairy.
 	{{/}}
 	{{# birthOrder /* Non-Booleans WILL be pushed onto the context stack. */ }}
-{{ ../name }} was born {{.}}.
+{{ ..\name }} was born {{.}}.
 	{{^}}
 Birth order of {{ name }} is not given.
 	{{/}}
@@ -161,7 +161,7 @@ Internal identifiers can be used to get state information about the current sect
 | `.index` | Gets the index of the foreach section. |
 | `.isFirst` | Returns `true` only if the foreach section is iterating the first item. This is equivalent to `(.index == 0)`. |
 
-Internal identifiers can be paired with one of the prefixes to look up data in a higher-scoped section. For example, `../.index` can be used to look up the index of the section one level above the current section.
+Internal identifiers can be paired with one of the prefixes to look up data in a higher-scoped section. For example, `..\.index` can be used to look up the index of the section one level above the current section.
 
 #### Repeated Sections
 Repeated section tags (`{{#}}`) are used to duplicate the previous section at the same scope. Nested scopes within a repeated section can also be repeated, allowing a hierarchical repeating of sections. For example,
@@ -170,14 +170,14 @@ Repeated section tags (`{{#}}`) are used to duplicate the previous section at th
 {{# ['Feature 1', 'Feature 2', 'Feature 3'] }}
 	<ul><li><a href="#{{ replace(' ', '') }}">{{.}}</a><ul>
 	{{# ['x86', 'x86-64', 'ArmHf', 'Aarch64'] }}
-		<li><a href="#{{ ../replace(' ', '') }}_{{ replace(' ', '') }}">{{.}}</a></li>
+		<li><a href="#{{ ..\replace(' ', '') }}_{{ replace(' ', '') }}">{{.}}</a></li>
 	{{/}}
 	</ul></li></ul>
 {{/}}
 {{#}}
 <h1 id="{{ replace(' ', '') }}">{{.}}</h1>
 	{{#}}
-	<h2 id="{{ ../replace(' ', '') }}_{{ replace(' ', '') }}">{{.}}</h2>
+	<h2 id="{{ ..\replace(' ', '') }}_{{ replace(' ', '') }}">{{.}}</h2>
 	{{/}}
 {{/}}
 ```
@@ -343,9 +343,9 @@ Named expressions are tags with the form `{{ name -> expression }}` or `{{ name(
 
 Referencing a named expression using a function-like syntax evaluates the expression. The first argument is always pushed onto the context stack (if no first argument is given, the context stack is not modified). For this reason, the first parameter in a named expression can be unnamed or specified as a literal `.`. It is not an error to mismatch the number of arguments with the number of parameters of the named expression. Unspecified parameters receive the value `null` upon invocation.
 
-Named expressions are scoped to the context in which they are declared and can be overridden anywhere within that scope. They always take precedence over equivalently named methods on the current context object. If a method is preferred over a named expression, it can be prefixed (using `./` or `../`), since named expressions can not be invoked using prefixes.
+Named expressions are scoped to the context in which they are declared and can be overridden anywhere within that scope. They always take precedence over equivalently named methods on the current context object. If a method is preferred over a named expression, it can be prefixed (using `.\` or `..\`), since named expressions can not be invoked using prefixes.
 
-Root-level named expressions in each partial template can be imported into the calling template when a partial is included (`{{> f | * }}` includes all root-level expressions from the partial "f" at the current scope). Root-level named expressions can be imported individually as well. For example,
+Root-level named expressions in each partial template can be imported into the calling template when a partial is included (`{{> f | * }}` includes all root-level expressions from the partial "f" at the current scope). Root-level named expressions can be imported individually as well using `{{> f | MyExpression }}` or `{{> f | MyExpression() }}`. For example,
 ```horseshoe
 {{< a }}
   {{ lower() -> toLowerCase() }}
@@ -359,15 +359,15 @@ Root-level named expressions in each partial template can be imported into the c
 ```
 results in `  ORIGINAL STRING-original string`, because the `lower` named expression is overridden when the partial `a` is included on line 7. This allows partials to contain either content to render or named expressions as a payload.
 
-However, named expressions are not exposed to included partial templates. This is done so that all templates including partials are self-contained. For example,
+Named expressions are inherited by inline partials in templates. For example,
 ```horseshoe
 {{ func() -> "Hello!" }}
-{{< a }}
+{{< b }}
   {{ func() }}
-{{/ a }}
-{{> a }}
+{{/ b }}
+{{> b }}
 ```
-results in a whitespace-only string, since `func()` is not defined within the partial `a`.
+results in `  Hello!`, since `func()` is inherited by the partial `b`. However, the named expression `func` would <b>not</b> be accessible from a non-inline partial.
 
 ### Template Bindings
 Template bindings are tags with the form `{{ name := expression }}`. (Unlike normal expressions, template bindings qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions within the template or any inline partial templates.

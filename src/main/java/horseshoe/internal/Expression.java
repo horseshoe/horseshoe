@@ -187,6 +187,24 @@ public final class Expression {
 	}
 
 	/**
+	 * Adds a return to the expression. This method adds the necessary code if the result is assigned to a template binding.
+	 *
+	 * @param mb the method builder used to add the return statement
+	 * @param state the parse state for the expression
+	 * @param operand the operand to return from the expression
+	 * @return the method builder used to add the return statement
+	 */
+	private static MethodBuilder addReturn(final MethodBuilder mb, final ExpressionParseState state, final Operand operand) {
+		if (state.getBindingName() != null) {
+			final TemplateBinding templateBinding = state.getOrAddTemplateBinding(state.getBindingName());
+
+			return mb.addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).append(operand.toObject()).addCode(AASTORE, ACONST_NULL).addFlowBreakingCode(ARETURN, 0);
+		} else {
+			return mb.append(operand.toObject()).addFlowBreakingCode(ARETURN, 0);
+		}
+	}
+
+	/**
 	 * Gets the class name used for a new expression. The class name is a fixed length, so that equivalent methods generate bytecode of the same length.
 	 *
 	 * @return the class name used for a new expression
@@ -963,7 +981,7 @@ public final class Expression {
 				break;
 			}
 			case "#^": // Return
-				state.getOperands().push(new Operand(Object.class, right.toObject().addFlowBreakingCode(ARETURN, 0).addCode(ACONST_NULL)));
+				state.getOperands().push(new Operand(Object.class, addReturn(new MethodBuilder(), state, right).addCode(ACONST_NULL)));
 				break;
 
 			case "(":
@@ -1014,10 +1032,11 @@ public final class Expression {
 				processOperation(state);
 			}
 
+			// Check for operators with multiple comma-separated values (collections, method calls, etc.)
 			if (!state.getOperators().isEmpty() && state.getOperators().peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
 				state.getOperators().push(state.getOperators().pop().addRightExpression());
 				return operator;
-			} else if (operator.has(Operator.TRAILING_IDENTIFIER)) {
+			} else if (operator.has(Operator.TRAILING_IDENTIFIER)) { // Check for streaming operations w/ 'x -> ...'
 				matcher.region(matcher.end(), matcher.regionEnd()).usePattern(TRAILING_IDENTIFIER_PATTERN).lookingAt();
 				final String name = matcher.group("name");
 
@@ -1074,7 +1093,6 @@ public final class Expression {
 	 */
 	public static Expression create(final Object location, final ExpressionParseState state, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final MethodBuilder mb = new MethodBuilder();
-		String templateBindingName = null;
 		String expressionName = null;
 
 		if (".".equals(state.getExpressionString())) {
@@ -1096,7 +1114,7 @@ public final class Expression {
 
 			if (matcher.lookingAt()) {
 				if (matcher.group("assignment") != null) {
-					templateBindingName = matcher.group("name");
+					state.setBindingName(matcher.group("name"));
 					state.setEvaluation(Evaluation.EVALUATE);
 				} else {
 					expressionName = matcher.group("name");
@@ -1147,14 +1165,7 @@ public final class Expression {
 			throw new IllegalArgumentException("Unexpected empty expression");
 		}
 
-		if (templateBindingName != null) {
-			final TemplateBinding templateBinding = state.getOrAddTemplateBinding(templateBindingName);
-
-			mb.addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).append(state.getOperands().pop().toObject()).addCode(AASTORE, ACONST_NULL).addFlowBreakingCode(ARETURN, 0);
-		} else {
-			mb.append(state.getOperands().pop().toObject()).addFlowBreakingCode(ARETURN, 0);
-		}
-
+		addReturn(mb, state, state.getOperands().pop());
 		assert state.getOperands().isEmpty();
 		final Expression cachedExpression;
 
