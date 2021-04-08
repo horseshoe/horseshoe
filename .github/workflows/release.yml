@@ -27,7 +27,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v1.0.1
+      uses: docker/setup-qemu-action@v1.0.2
       with:
         platforms: all
 
