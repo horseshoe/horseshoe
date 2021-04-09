@@ -1,9 +1,0 @@
-{{< a }}
-  {{ lower() -> toLowerCase() }}
-{{/}}
-{{ lower() -> toString() }}
-{{ upper() -> toUpperCase() }}
-{{# "Original String" }}
-  {{> a | lower }}
-  {{ upper() + "-" + lower() }}
-{{/}}

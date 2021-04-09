@@ -183,7 +183,7 @@ Repeated section tags (`{{#}}`) are used to duplicate the previous section at th
 ```
 
 #### Annotations
-Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are section tags that begin with an at sign (`@`). The parameters are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler. If the expression fails to parse or results in `null` then the section will not be rendered and the corresponding empty, [inverted section](#inverted-sections) will be rendered if it exists. Annotations do not affect the context stack and are not considered in scope for repeated sections.
+Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are section tags that begin with an at sign (`@`). The parameters are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler. If the expression fails to parse or results in `null` then the section will <b>not</b> be rendered and the corresponding empty, [inverted section](#inverted-sections) <b>will</b> be rendered, if it exists. Annotations do not affect the context stack and are not considered in scope for repeated sections.
 
 Built-in annotations include the following:
 - @StdErr - Sends output to stderr.
@@ -339,27 +339,23 @@ Streaming filters (`{{# names `<b>`#?`</b>` name -> /* Find names with initials.
 Streaming reductions (`{{ sum = 0; values `<b>`#<`</b>` value -> sum = sum + value }}`) allow a stream to be reduced to a single value. The result of the last iteration is the result of the operator.
 
 ### Named Expressions
-Named expressions are tags with the form `{{ name() -> expression }}` or `{{ name(param1, param2) -> expression }}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags).
-
-Referencing a named expression using a function-like syntax evaluates the expression. The first argument is always pushed onto the context stack (if no first argument is given, the context stack is not modified). For this reason, the first parameter in a named expression can be unnamed or specified as a literal `.`. It is not an error to mismatch the number of arguments with the number of parameters of the named expression. Unspecified parameters receive the value `null` upon invocation.
-
-Named expressions are scoped to the context in which they are declared and can be overridden anywhere within that scope. They always take precedence over equivalently named methods on the current context object. If a method is preferred over a named expression, it can be prefixed (using `.\` or `..\`), since named expressions can not be invoked using prefixes.
-
-Root-level named expressions in each partial template can be imported into the calling template when a partial is included (`{{> f | * }}` includes all root-level expressions from the partial "f" at the current scope). Root-level named expressions can be imported individually as well using `{{> f | MyExpression }}` or `{{> f | MyExpression() }}`. For example,
+Named expressions are tags with the form `{{ name() -> expression }}` or `{{ name(param1, param2) -> expression }}`. (Unlike normal expressions, named expressions qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions (in both dynamic content tags and section tags). Referencing a named expression using a function-like syntax evaluates the expression. For example,
 ```horseshoe
-{{< a }}
-  {{ lower() -> toLowerCase() }}
-{{/}}
-{{ lower() -> toString() }}
+{{ lower() -> toLowerCase() }}
 {{ upper() -> toUpperCase() }}
 {{# "Original String" }}
-  {{> a | lower }}
   {{ upper() + "-" + lower() }}
 {{/}}
 ```
-results in `  ORIGINAL STRING-original string`, because the `lower` named expression is overridden when the partial `a` is included on line 7. This allows partials to contain either content to render or named expressions as a payload.
+results in `  ORIGINAL STRING-original string`.
 
-Named expressions are inherited by inline partials in templates. For example,
+The first argument to a named expression is pushed onto the context stack. (If no first argument is given, the context stack is not modified.) For this reason, the first parameter in a named expression tag can be specified as a literal `.`. It is not an error to mismatch the number of arguments in a named expression invocation with the number of parameters in a named expression tag. Unspecified parameters receive the value `null` upon invocation.
+
+Named expressions are scoped to the template in which they are declared. If a named expression with the same name already exists in the template, then attempting to redeclare it will result in an error. Named expressions always take precedence over equivalently named methods on the current context object. If a method is preferred over a named expression, it can be prefixed (using `.\` or `..\`), since named expressions can not be invoked using prefixes.
+
+Root-level named expressions in each partial template can be imported into a template using a [partial tag](#partials). Named expressions can be imported individually, using `{{> f | MyExpression() }}`, or collectively, using `{{> f | * }}`. This allows partial templates to contain either templated content or named expressions (or both) as a payload.
+
+Named expressions are implicitly inherited by all [inline partials](#inline-partials) inside a template. For example,
 ```horseshoe
 {{ func() -> "Hello!" }}
 {{< b }}
@@ -367,12 +363,12 @@ Named expressions are inherited by inline partials in templates. For example,
 {{/ b }}
 {{> b }}
 ```
-results in `  Hello!`, since `func()` is inherited by the partial `b`. However, the named expression `func` would <b>not</b> be accessible from a non-inline partial.
+results in `  Hello!`, since `func()` is inherited by the partial `b`. However, the named expression `func` would <b>not</b> be accessible from a non-inline partial included using a [partial tag](#partials).
 
 ### Template Bindings
 Template bindings are tags with the form `{{ name := expression }}`. (Unlike normal expressions, template bindings qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions within the template or any inline partial templates.
 
-Template bindings are scoped to the template in which they are declared and can only be accessed after they are declared. They can be referenced inside inline partial templates, but can only be reassigned within the declaring template. Assigning to a template binding within an inline partial template will result in a new template binding being created scoped to the inline partial template. Recursively loaded templates will get their own copies of any template bindings, similar to local variables inside a recusively invoke function.
+Template bindings are scoped to the template in which they are declared and can only be accessed after they are declared. They can be referenced inside inline partial templates. Recursively loaded templates will get their own copies of any template bindings, similar to local variables inside a recusively invoked function.
 
 ## Docker Image
 The Horseshoe docker image executes the runner using the given run arguments. Files can be mounted into the container using the `--volume` option. For example, `docker run -v ~/horseshoe_data:/data horseshoe/horseshoe /data/input.U -o /data/output.cxx` reads the file `~/horseshoe_data/input.U` and writes the results to the file `~/horseshoe_data/output.cxx`.

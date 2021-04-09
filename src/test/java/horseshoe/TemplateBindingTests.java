@@ -42,12 +42,13 @@ class TemplateBindingTests {
 	@Test
 	void testReadBinding() throws IOException, LoadException {
 		assertEquals("2", new TemplateLoader().load("Read Binding", "{{ templateBinding := 1 }}{{< First }}{{ templateBinding + 1 }}{{/}}{{> First }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
-		assertEquals("1", new TemplateLoader().load("Read Binding", "{{ templateBinding := 1 }}{{< First }}{{ templateBinding := 2 }}{{/}}{{> First }}{{< Second }}{{ templateBinding }}{{/}}{{> Second }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("2", new TemplateLoader().load("Read Binding", "{{ templateBinding := 1 }}{{< First }}{{ templateBinding := 2 }}{{/}}{{> First }}{{< Second }}{{ templateBinding }}{{/}}{{> Second }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("1", new TemplateLoader().load("Read Binding", "{{ templateBinding := 1 }}{{< First }}{{ templateBinding := 2 }}{{/}}{{< Second }}{{ templateBinding }}{{/}}{{> Second }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 	}
 
 	@Test
 	void testRecursiveBinding() throws IOException, LoadException {
-		assertEquals("11", new TemplateLoader().load("Recursive Binding", "{{ templateBinding := 0 }}{{< First }}{{ templateBinding := templateBinding + 1 }}{{ templateBinding }}{{# a }}{{> First }}{{/}}{{/}}{{< Second }}{{ templateBinding := 1 }}{{> First }}{{/}}{{> Second }}").render(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("a", "b"), new java.io.StringWriter()).toString());
+		assertEquals("23", new TemplateLoader().load("Recursive Binding", "{{ templateBinding := 0 }}{{< First }}{{ templateBinding := templateBinding + 1 }}{{ templateBinding }}{{# a }}{{> First }}{{/}}{{/}}{{< Second }}{{ templateBinding := 1 }}{{> First }}{{/}}{{> Second }}").render(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("a", "b"), new java.io.StringWriter()).toString());
 	}
 
 	@Test

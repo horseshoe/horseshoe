@@ -51,8 +51,13 @@ public class NamedExpressionTests {
 	}
 
 	@Test
-	void testNamedExprCache() throws IOException, LoadException {
-		assertEquals("Good, Good, Bad, ", new TemplateLoader().load("Test", "{{# true }}{{ Good() -> 'Good' }}{{ Good() }}, {{ Good() }}, {{ Good() -> 'Bad' }}{{ Good() }}{{/}}, {{ Good() }}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
+	void testNamedExprRedefine() {
+		assertThrows(LoadException.class, () -> Template.load("{{# true }}{{ Good() -> 'Good' }}{{ Good() }}{{/}}, {{ Good() -> 'Bad' }}").render(new Settings(), Collections.emptyMap(), new StringWriter()));
+	}
+
+	@Test
+	void testNamedExprScope() throws IOException, LoadException {
+		assertEquals("Good, Good", new TemplateLoader().load("Test", "{{# true }}{{ Good() -> 'Good' }}{{ Good() }}{{/}}, {{ Good() }}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
@@ -76,11 +81,16 @@ public class NamedExpressionTests {
 		assertEquals("ORIGINAL STRING-Original string" + LS, new TemplateLoader().load("Upper", "{{upper()->toUpperCase()}}\n{{capitalize()=>substring(0, 1).toUpperCase() + substring(1).toLowerCase()}}\n{{#\"orIgInal StrIng\"}}\n{{#charAt(1)}}\n{{upper(..)}}-{{capitalize(..)}}\n{{/}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 		assertEquals("    ORIGINAL STRING-Original String" + LS, new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{>a}}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | * }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower , lower ( ) }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
-		assertThrows(LoadException.class, () -> new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | badNamedExpression }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
-		assertThrows(LoadException.class, () -> new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) , badNamedExpression }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
-		assertThrows(LoadException.class, () -> new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) lower }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
+		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+
+		final TemplateLoader loader = new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}");
+
+		assertThrows(LoadException.class, () -> loader.load("{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | badNamedExpression() }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
+		assertThrows(LoadException.class, () -> loader.load("{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) , badNamedExpression }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
+		assertThrows(LoadException.class, () -> loader.load("{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) lower }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
+
+		loader.put("a", "{{# false }}{{ lower() -> toLowerCase() }}{{/}}");
+		assertThrows(LoadException.class, () -> loader.load("{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower() }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
 	}
 
 	@Test

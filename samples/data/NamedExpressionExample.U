@@ -1,10 +1,6 @@
-{{< a }}
-  {{ lower() -> toLowerCase() }}
-{{/}}
-{{ lower() -> toString() }}
+{{ lower() -> toLowerCase() }}
 {{ upper() -> toUpperCase() }}
 {{# "Original String" }}
-  {{> a | lower }}
   {{ upper() + "-" + lower() }}
 {{/}}
 {{ func() -> "Hello!" }}

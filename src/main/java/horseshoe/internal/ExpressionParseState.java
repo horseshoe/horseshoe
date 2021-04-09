@@ -153,13 +153,13 @@ public final class ExpressionParseState {
 	 * @return the template binding with the specified name
 	 */
 	public TemplateBinding getOrAddTemplateBinding(final String name) {
-		final Map<String, TemplateBinding> bindings = templateBindings.peek();
-		final TemplateBinding existingBinding = bindings.get(name);
+		final TemplateBinding existingBinding = getTemplateBinding(name);
 
 		if (existingBinding != null) {
 			return existingBinding;
 		}
 
+		final Map<String, TemplateBinding> bindings = templateBindings.peek();
 		final TemplateBinding binding = new TemplateBinding(name, templateBindings.size() - 1, bindings.size());
 
 		bindings.put(name, binding);

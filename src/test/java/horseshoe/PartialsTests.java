@@ -174,7 +174,7 @@ class PartialsTests {
 	void testInlinePartials2() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
-				.load("Test", "{{< a }}{{ b }}{{ x }}{{/ a }}{{# b }}{{< a }}bad{{/ a }}{{/ b }}{{< g }}{{# a }}{{> a }}{{/ a }}{{/ g }}{{> g }}{{# a }}{{> g }}{{/ a }}");
+				.load("Test", "{{< a }}{{ b }}{{ x }}{{/ a }}{{< g }}{{# a }}{{> a }}{{/ a }}{{/ g }}{{> g }}{{# a }}{{> g }}{{/ a }}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("b", 2, "x", false), "x", true), writer);
 		assertEquals("2false", writer.toString());
@@ -183,6 +183,16 @@ class PartialsTests {
 	@Test
 	void testInlinePartials3() throws IOException, LoadException {
 		assertEquals("Allow an inline partial without a newline", Template.load("{{< a }}\n an{{/}}\nAllow{{> a }} inline partial without a newline").render(Collections.emptyMap(), new StringWriter()).toString());
+	}
+
+	@Test
+	void testInlinePartials4() throws IOException, LoadException {
+		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.FULL);
+		final Template template = new TemplateLoader()
+				.load("Test", "{{< a }}{{>}}{{/ a }}{{< b }}hello{{/ b }}{{#> a }}{{> b }}{{/ a }}");
+		final StringWriter writer = new StringWriter();
+		template.render(settings, null, writer);
+		assertEquals("hello", writer.toString());
 	}
 
 	@Test
@@ -241,7 +251,7 @@ class PartialsTests {
 		final Template template = new TemplateLoader()
 				.load("f", "bad",
 					"f", "{{f.b}}",
-					"Test", "{{#f}}{{<f}}{{a}}{{/f}}{{>f}}{{/f}}{{>f}}");
+					"Test", "{{#f}}{{<g}}{{a}}{{/g}}{{>g}}{{/f}}{{>f}}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("f", loadMap("a", "123", "b", "456")), writer);
 		assertEquals("123456", writer.toString());

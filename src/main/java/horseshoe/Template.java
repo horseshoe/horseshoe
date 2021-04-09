@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import horseshoe.internal.Expression;
 import horseshoe.internal.TemplateBinding;
 
 /**
@@ -38,6 +39,7 @@ public class Template {
 	private final Section section;
 	private final int index;
 	private final Map<String, TemplateBinding> bindings = new LinkedHashMap<>();
+	private final Map<String, Expression> rootExpressions = new LinkedHashMap<>();
 
 	/**
 	 * Loads a template from a file.
@@ -122,6 +124,15 @@ public class Template {
 	 */
 	public final Object getIdentifier() {
 		return identifier;
+	}
+
+	/**
+	 * Gets the root expressions associated with the template.
+	 *
+	 * @return the root expressions with the template
+	 */
+	final Map<String, Expression> getRootExpressions() {
+		return rootExpressions;
 	}
 
 	/**

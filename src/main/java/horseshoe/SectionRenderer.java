@@ -433,15 +433,6 @@ public class SectionRenderer implements Renderer {
 		return true;
 	}
 
-	/**
-	 * Gets the section that is rendered by this renderer.
-	 *
-	 * @return the section that is rendered by this renderer
-	 */
-	final Section getSection() {
-		return section;
-	}
-
 	@Override
 	public final void render(final RenderContext context, final Writer writer) throws IOException {
 		final int contextSize = context.getSectionData().size();

@@ -1,9 +1,7 @@
 package horseshoe;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import horseshoe.internal.Expression;
@@ -19,8 +17,6 @@ final class Section {
 	private final boolean isInvisible;
 	private boolean cacheResult = false;
 	private boolean useCache = false;
-	private final Map<String, Expression> namedExpressions;
-	private final Map<String, Template> localPartials;
 	private final List<Renderer> renderList = new ArrayList<>();
 	private final List<Renderer> invertedRenderList = new ArrayList<>();
 
@@ -84,12 +80,7 @@ final class Section {
 		this.annotation = annotation;
 		this.isInvisible = isInvisible;
 
-		if (parent == null) {
-			this.namedExpressions = new HashMap<>();
-			this.localPartials = new HashMap<>();
-		} else {
-			this.namedExpressions = new HashMap<>(parent.namedExpressions);
-			this.localPartials = new HashMap<>(parent.localPartials);
+		if (parent != null) {
 			parent.children.add(this);
 		}
 	}
@@ -142,30 +133,12 @@ final class Section {
 	}
 
 	/**
-	 * Gets the local partials for the section.
-	 *
-	 * @return the local partials for the section
-	 */
-	public Map<String, Template> getLocalPartials() {
-		return localPartials;
-	}
-
-	/**
 	 * Gets the name of the section.
 	 *
 	 * @return the name of the section
 	 */
 	public String getName() {
 		return name;
-	}
-
-	/**
-	 * Gets the map of named expressions associated with the section.
-	 *
-	 * @return the map of named expressions associated with the section
-	 */
-	public Map<String, Expression> getNamedExpressions() {
-		return namedExpressions;
 	}
 
 	/**
@@ -184,18 +157,6 @@ final class Section {
 	 */
 	public List<Renderer> getRenderList() {
 		return renderList;
-	}
-
-	/**
-	 * Sets up the section to inherit from the other section. This is used to set up this section when it is nested in the other.
-	 *
-	 * @param other the section to inherit from
-	 * @return this section
-	 */
-	Section inheritFrom(final Section other) {
-		getNamedExpressions().putAll(other.getNamedExpressions());
-		getLocalPartials().putAll(other.getLocalPartials());
-		return this;
 	}
 
 	/**

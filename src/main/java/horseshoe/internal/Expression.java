@@ -103,9 +103,10 @@ public final class Expression {
 	private static final Method UTILITIES_REQUIRE_NON_NULL_TO_STRING = getMethod(Utilities.class, "requireNonNullToString", Object.class);
 
 	// The patterns used for parsing the grammar
-	private static final Pattern SINGLE_COMMENT_PATTERN = Pattern.compile("(?:/(?s:/[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|[*].*?[*]/)\\s*)", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern COMMENT_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "++", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern COMMENTS_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "*+", Pattern.UNICODE_CHARACTER_CLASS);
+	public static final Pattern SINGLE_COMMENT_PATTERN = Pattern.compile("(?:/(?s:/[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|[*].*?[*]/)\\s*)", Pattern.UNICODE_CHARACTER_CLASS);
+	public static final Pattern COMMENT_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "++", Pattern.UNICODE_CHARACTER_CLASS);
+	public static final Pattern COMMENTS_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "*+", Pattern.UNICODE_CHARACTER_CLASS);
+
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[-+]Infinity|[-+]?(?:[0-9][0-9_']*[fFdD]|(?:[0-9][0-9_']*[.]?[eE][-+]?[0-9_']+|[0-9][0-9_']*[.][0-9_']+(?:[eE][-+]?[0-9_']+)?|0[xX](?:[0-9A-Fa-f_']+[.]?|[0-9A-Fa-f_']+[.][0-9A-Fa-f_']+)[pP][-+]?[0-9_']+)[fFdD]?))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>" + Identifier.PATTERN + "|`(?:[^`]|``)++`|[.][.]|[.])\\s*" + COMMENTS_PATTERN + "(?<isMethod>[(])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_WITH_PREFIX_PATTERN;
@@ -126,6 +127,7 @@ public final class Expression {
 
 	private final Object location;
 	private final String originalString;
+	private final String name;
 	private final Expression[] expressions;
 	private final Identifier[] identifiers;
 	private final Evaluable evaluable;
@@ -1118,10 +1120,13 @@ public final class Expression {
 					state.setEvaluation(Evaluation.EVALUATE);
 				} else {
 					expressionName = matcher.group("name");
-					state.getNamedExpressions().put(expressionName, EXPRESSION_BEING_CREATED);
 					state.setEvaluation(Evaluation.NO_EVALUATION);
 					parseNamedExpressionSignature(state, mb, matcher);
 					initializeBindingsStart = state.getLocalBindings().size();
+
+					if (state.getNamedExpressions().putIfAbsent(expressionName, EXPRESSION_BEING_CREATED) != null) {
+						throw new IllegalStateException("Expression \"" + expressionName + "\" is already defined");
+					}
 				}
 
 				matcher.region(matcher.end(), end);
@@ -1194,6 +1199,7 @@ public final class Expression {
 	private Expression() {
 		this.location = null;
 		this.originalString = "";
+		this.name = null;
 		this.expressions = EMPTY_EXPRESSIONS;
 		this.identifiers = EMPTY_IDENTIFIERS;
 		this.evaluable = null;
@@ -1211,6 +1217,7 @@ public final class Expression {
 	private Expression(final Object location, final String expressionName, final ExpressionParseState state, final Expression cache, final Evaluable evaluable) {
 		this.location = location;
 		this.originalString = state.getExpressionString();
+		this.name = expressionName;
 		this.expressions = (cache != null && state.getExpressions().equalsArray(cache.expressions) ? cache.expressions : state.getExpressions().toArray(Expression.class, EMPTY_EXPRESSIONS));
 		this.identifiers = (cache != null && state.getIdentifiers().equalsArray(cache.identifiers) ? cache.identifiers : state.getIdentifiers().toArray(Identifier.class, EMPTY_IDENTIFIERS));
 		this.evaluable = evaluable;
@@ -1226,6 +1233,15 @@ public final class Expression {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Gets the name of the expression.
+	 *
+	 * @return the name of the expression
+	 */
+	public String getName() {
+		return name;
 	}
 
 	@Override
