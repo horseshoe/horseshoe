@@ -13,9 +13,10 @@ jobs:
         fetch-depth: 0
 
     - name: Set up JDK
-      uses: actions/setup-java@v1.4.3
+      uses: actions/setup-java@v2
       with:
         java-version: 11
+        distribution: "adopt"
 
     - name: Build with Gradle
       run: ./gradlew sonarqube -Dhorseshoe.useJava7=true -Dsonar.projectKey=horseshoe_horseshoe -Dsonar.organization=horseshoe -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONARQUBE_TOKEN
