@@ -19,7 +19,7 @@ jobs:
         distribution: "adopt"
 
     - name: Build with Gradle
-      run: ./gradlew sonarqube -Dhorseshoe.useJava7=true -Dsonar.projectKey=horseshoe_horseshoe -Dsonar.organization=horseshoe -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONARQUBE_TOKEN
+      run: ./gradlew test sonarqube -Dsonar.projectKey=horseshoe_horseshoe -Dsonar.organization=horseshoe -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONARQUBE_TOKEN
       env:
         SONARQUBE_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

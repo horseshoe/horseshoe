@@ -33,6 +33,7 @@ public final class AnnotationHandlers {
 
 		defaultAnnotations.put("StdErr", printWriter(System.err, Charset.defaultCharset()));
 		defaultAnnotations.put("StdOut", printWriter(System.out, Charset.defaultCharset()));
+		defaultAnnotations.put("Null", nullWriter());
 		defaultAnnotations.put("File", fileWriter(Paths.get("."), StandardCharsets.UTF_8));
 
 		DEFAULT_ANNOTATIONS = Collections.unmodifiableMap(defaultAnnotations);
@@ -105,15 +106,35 @@ public final class AnnotationHandlers {
 	 * @return the new annotation handler
 	 */
 	public static AnnotationHandler printWriter(final PrintStream printStream, final Charset charset) {
-		return new AnnotationHandler() {
+		return (final Writer writer, final Object value) -> new PrintWriter(new OutputStreamWriter(printStream, charset)) {
 			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
-				return new PrintWriter(new OutputStreamWriter(printStream, charset)) {
-					@Override
-					public void close() {
-						flush();
-					}
-				};
+			public void close() {
+				flush();
+			}
+		};
+	}
+
+	/**
+	 * Creates an annotation handler that sends ignores all output.
+	 *
+	 * @return the new annotation handler
+	 */
+	public static AnnotationHandler nullWriter() {
+		return (final Writer writer, final Object value) -> new Writer() {
+			@Override
+			public void close() { // Closing does nothing
+			}
+
+			@Override
+			public void write(final char[] cbuf, final int off, final int len) { // Writing does nothing
+			}
+
+			@Override
+			public void write(final String str) { // Writing does nothing
+			}
+
+			@Override
+			public void flush() { // Flushing does nothing
 			}
 		};
 	}

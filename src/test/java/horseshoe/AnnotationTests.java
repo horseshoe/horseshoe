@@ -334,17 +334,9 @@ class AnnotationTests {
 
 	@Test
 	void testNullWriter() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Null Writer", "a{{#@Test}}b{{^}}d{{/}}c");
-		final Settings settings = new Settings();
-		final StringWriter writer = new StringWriter();
-
-		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", new AnnotationHandler() {
-			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
-				return null;
-			}
-		}));
-		assertEquals("abc", writer.toString());
+		assertEquals("1", Template.load("{{# @Null }}{{ a := 1 }}Bad{{/ @Null }}{{ a }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertDoesNotThrow(() -> AnnotationHandlers.nullWriter().getWriter(null, null).write((char[])null, 0, 0));
+		assertDoesNotThrow(() -> AnnotationHandlers.nullWriter().getWriter(null, null).flush());
 	}
 
 	@Test
