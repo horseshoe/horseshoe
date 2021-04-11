@@ -24,27 +24,59 @@ import horseshoe.internal.Operands;
 public final class AnnotationHandlers {
 
 	/**
-	 * The map of default annotations that are made available during the rendering process. Valid default annotations include "StdOut", "StdErr", and "File".
+	 * An annotation suppling a writer that writes to a file.
+	 */
+	public static final AnnotationHandler FILE_HANDLER = fileHandler(Paths.get("."), StandardCharsets.UTF_8);
+
+	/**
+	 * An annotation suppling a writer that discards all output.
+	 */
+	public static final AnnotationHandler NULL_HANDLER = (writer, value) -> new Writer() {
+		@Override
+		public void close() { // Closing does nothing
+		}
+
+		@Override
+		public void write(final char[] cbuf, final int off, final int len) { // Writing does nothing
+		}
+
+		@Override
+		public void flush() { // Flushing does nothing
+		}
+	};
+
+	/**
+	 * An annotation suppling a writer that writes to stdout.
+	 */
+	public static final AnnotationHandler STDOUT_HANDLER = printStreamHandler(System.out, Charset.defaultCharset());
+
+	/**
+	 * An annotation suppling a writer that writes to stderr.
+	 */
+	public static final AnnotationHandler STDERR_HANDLER = printStreamHandler(System.err, Charset.defaultCharset());
+
+	/**
+	 * The map of default annotations that are made available during the rendering process. Valid default annotations include "Null", "StdOut", "StdErr", and "File".
 	 */
 	public static final Map<String, AnnotationHandler> DEFAULT_ANNOTATIONS;
 
 	static {
 		final Map<String, AnnotationHandler> defaultAnnotations = new HashMap<>();
 
-		defaultAnnotations.put("StdErr", printWriter(System.err, Charset.defaultCharset()));
-		defaultAnnotations.put("StdOut", printWriter(System.out, Charset.defaultCharset()));
-		defaultAnnotations.put("Null", nullWriter());
-		defaultAnnotations.put("File", fileWriter(Paths.get("."), StandardCharsets.UTF_8));
+		defaultAnnotations.put("StdErr", STDERR_HANDLER);
+		defaultAnnotations.put("StdOut", STDOUT_HANDLER);
+		defaultAnnotations.put("Null", NULL_HANDLER);
+		defaultAnnotations.put("File", FILE_HANDLER);
 
 		DEFAULT_ANNOTATIONS = Collections.unmodifiableMap(defaultAnnotations);
 	}
 
-	private static final class FileWriterHandler implements AnnotationHandler {
+	private static final class FileHandler implements AnnotationHandler {
 
 		private final Path rootDir;
 		private final Charset defaultCharset;
 
-		private FileWriterHandler(final Path rootDir, final Charset defaultCharset) {
+		private FileHandler(final Path rootDir, final Charset defaultCharset) {
 			this.rootDir = rootDir;
 			this.defaultCharset = defaultCharset;
 		}
@@ -105,36 +137,11 @@ public final class AnnotationHandlers {
 	 * @param charset the character set used when rendering text to the stream
 	 * @return the new annotation handler
 	 */
-	public static AnnotationHandler printWriter(final PrintStream printStream, final Charset charset) {
+	private static AnnotationHandler printStreamHandler(final PrintStream printStream, final Charset charset) {
 		return (final Writer writer, final Object value) -> new PrintWriter(new OutputStreamWriter(printStream, charset)) {
 			@Override
 			public void close() {
 				flush();
-			}
-		};
-	}
-
-	/**
-	 * Creates an annotation handler that sends ignores all output.
-	 *
-	 * @return the new annotation handler
-	 */
-	public static AnnotationHandler nullWriter() {
-		return (final Writer writer, final Object value) -> new Writer() {
-			@Override
-			public void close() { // Closing does nothing
-			}
-
-			@Override
-			public void write(final char[] cbuf, final int off, final int len) { // Writing does nothing
-			}
-
-			@Override
-			public void write(final String str) { // Writing does nothing
-			}
-
-			@Override
-			public void flush() { // Flushing does nothing
 			}
 		};
 	}
@@ -146,8 +153,8 @@ public final class AnnotationHandlers {
 	 * @param defaultCharset the {@link Charset} to use when not specified otherwise
 	 * @return the new annotation handler
 	 */
-	public static AnnotationHandler fileWriter(final Path rootDir, final Charset defaultCharset) {
-		return new FileWriterHandler(rootDir, defaultCharset);
+	public static AnnotationHandler fileHandler(final Path rootDir, final Charset defaultCharset) {
+		return new FileHandler(rootDir, defaultCharset);
 	}
 
 }

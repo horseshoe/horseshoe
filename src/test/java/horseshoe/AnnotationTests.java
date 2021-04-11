@@ -335,8 +335,11 @@ class AnnotationTests {
 	@Test
 	void testNullWriter() throws IOException, LoadException {
 		assertEquals("1", Template.load("{{# @Null }}{{ a := 1 }}Bad{{/ @Null }}{{ a }}").render(Collections.emptyMap(), new StringWriter()).toString());
-		assertDoesNotThrow(() -> AnnotationHandlers.nullWriter().getWriter(null, null).write((char[])null, 0, 0));
-		assertDoesNotThrow(() -> AnnotationHandlers.nullWriter().getWriter(null, null).flush());
+		assertDoesNotThrow(() -> {
+			try (final Writer writer = AnnotationHandlers.NULL_HANDLER.getWriter(null, null)) {
+				writer.flush();
+			}
+		});
 	}
 
 	@Test
