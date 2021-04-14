@@ -12,7 +12,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import horseshoe.BufferedFileUpdateStream.Update;
@@ -82,22 +81,21 @@ public final class AnnotationHandlers {
 		}
 
 		@Override
-		public Writer getWriter(final Writer writer, final Object value) throws IOException {
+		public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
 			final Map<?, ?> properties;
 			final File file;
 
-			if (value instanceof Map) {
-				properties = (Map<?, ?>)value;
+			if (args.length == 0) {
+				throw new IllegalArgumentException("No filename specified for \"File\" annotation");
+			} else if (args.length > 1) {
+				properties = args[1] instanceof Map ? (Map<?, ?>) args[1] : Collections.emptyMap();
+				file = rootDir.resolve(Paths.get(String.valueOf(args[0]))).toFile();
+			} else if (args[0] instanceof Map) {
+				properties = (Map<?, ?>) args[0];
 				file = rootDir.resolve(Paths.get(String.valueOf(properties.get("name")))).toFile();
-			} else if (value instanceof List) {
-				final List<?> list = (List<?>)value;
-				final int size = list.size();
-
-				properties = size > 1 && list.get(1) instanceof Map ? (Map<?, ?>)list.get(1) : Collections.emptyMap();
-				file = rootDir.resolve(Paths.get(String.valueOf(size == 0 ? null : list.get(0)))).toFile();
 			} else {
 				properties = Collections.emptyMap();
-				file = rootDir.resolve(Paths.get(String.valueOf(value))).toFile();
+				file = rootDir.resolve(Paths.get(String.valueOf(args[0]))).toFile();
 			}
 
 			// Load properties
@@ -138,7 +136,7 @@ public final class AnnotationHandlers {
 	 * @return the new annotation handler
 	 */
 	private static AnnotationHandler printStreamHandler(final PrintStream printStream, final Charset charset) {
-		return (final Writer writer, final Object value) -> new PrintWriter(new OutputStreamWriter(printStream, charset)) {
+		return (final Writer writer, final Object[] args) -> new PrintWriter(new OutputStreamWriter(printStream, charset)) {
 			@Override
 			public void close() {
 				flush();

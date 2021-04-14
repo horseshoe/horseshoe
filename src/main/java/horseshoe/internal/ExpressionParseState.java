@@ -18,6 +18,7 @@ public final class ExpressionParseState {
 
 	private final int startIndex;
 	private final String expressionString;
+	private final boolean methodCall;
 	private Evaluation evaluation = Evaluation.EVALUATE_AND_RENDER;
 	private String bindingName = null;
 	private final Map<String, Expression> namedExpressions;
@@ -34,13 +35,15 @@ public final class ExpressionParseState {
 	 *
 	 * @param startIndex the starting index of the trimmed string within the tag
 	 * @param expressionString the string representation of the expression
+	 * @param methodCall true if the expression should be parsed as a method call invocation (no starting "(", ends with ")", returns array object), otherwise false
 	 * @param namedExpressions the set of named expressions that can be used in the expression
 	 * @param allIdentifiers the set of all identifiers that can be used as a cache in the expression
 	 * @param templateBindings the set of all bindings used in the template
 	 */
-	public ExpressionParseState(final int startIndex, final String expressionString, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings) {
+	public ExpressionParseState(final int startIndex, final String expressionString, final boolean methodCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings) {
 		this.startIndex = startIndex;
 		this.expressionString = expressionString;
+		this.methodCall = methodCall;
 		this.namedExpressions = namedExpressions;
 		this.allIdentifiers = allIdentifiers;
 		this.templateBindings = templateBindings;
@@ -183,6 +186,15 @@ public final class ExpressionParseState {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Checks if the expression should be parsed as a method call invocation (no starting "(", ends with ")", returns array object).
+	 *
+	 * @return true if the expression should be parsed as a method call invocation
+	 */
+	public boolean isMethodCall() {
+		return methodCall;
 	}
 
 	/**

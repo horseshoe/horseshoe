@@ -31,7 +31,7 @@ import horseshoe.internal.Utilities.TrimmedString;
 public class TemplateLoader {
 
 	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?<arguments>[(](?s:.*))?", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?s:[(](?<arguments>.*))?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private static final Pattern INLINE_PARTIAL_NAME_PATTERN = Pattern.compile(Expression.COMMENTS_PATTERN + "(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern INLINE_PARTIAL_PARAMETER_PATTERN = Pattern.compile("\\s*" + Expression.COMMENTS_PATTERN + "(?<parameter>[.]|" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
@@ -39,7 +39,7 @@ public class TemplateLoader {
 
 	private static final Pattern IDENTIFIER_PARENS_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "[(]\\s*" + Expression.COMMENTS_PATTERN + "[)]\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
 	private static final String IDENTIFIER_PARENS = IDENTIFIER_PARENS_PATTERN.toString().replace("(?<name>", "(?:");
-	private static final Pattern LOAD_PARTIAL_PATTERN = Pattern.compile("\\s*+(?:(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?<arguments>[(](?s:.*)[)]\\s*" + Expression.COMMENTS_PATTERN + ")?|(?<filename>[^|]+?)\\s*(?:[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + ")?)?", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern LOAD_PARTIAL_PATTERN = Pattern.compile("\\s*+(?:(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?s:[(](?<arguments>.*))?|(?<filename>[^|]+?)\\s*(?:[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + ")?)?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<Object, Template> templates = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
@@ -612,15 +612,15 @@ public class TemplateLoader {
 					}
 
 					final String sectionName = annotation.group("name");
-					final String parameters = annotation.group("arguments");
+					final String arguments = annotation.group("arguments");
 					final Object location = state.toLocation();
 
 					// Load the annotation arguments
-					state.getSections().push(new Section(state.getSections().peek(), sectionName, location, parameters == null ? null : state.createExpression(location, state.createExpressionParser(new TrimmedString(annotation.start(2), parameters)), extensions), sectionName.substring(1), true));
+					state.getSections().push(new Section(state.getSections().peek(), sectionName, location, arguments == null ? null : state.createExpression(location, state.createExpressionParser(new TrimmedString(annotation.start(2), arguments), true), extensions), sectionName.substring(1), true));
 				} else { // Start a new section
 					final Object location = state.toLocation();
 
-					state.getSections().push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(expression), extensions)));
+					state.getSections().push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(expression, false), extensions)));
 				}
 
 				// Add a new render section action
@@ -644,7 +644,7 @@ public class TemplateLoader {
 					if (elseIf) { // "else if" tag
 						final Object location = state.toLocation();
 
-						state.getSections().pop(1).push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(Utilities.trim(tag, 2)), extensions)));
+						state.getSections().pop(1).push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(Utilities.trim(tag, 2), false), extensions)));
 						previousSection.getInvertedRenderList().add(new SectionRenderer(state.getSections().peek()));
 						state.getRenderLists().push(state.getSections().peek().getRenderList());
 						return null;
@@ -661,7 +661,7 @@ public class TemplateLoader {
 				} else { // Start a new inverted section
 					final Object location = state.toLocation();
 
-					state.getSections().push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(expression), extensions)));
+					state.getSections().push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(expression, false), extensions)));
 					state.getRenderLists().peek().add(new SectionRenderer(state.getSections().peek()));
 					state.getRenderLists().push(state.getSections().peek().getInvertedRenderList());
 				}
@@ -707,7 +707,7 @@ public class TemplateLoader {
 			case '{': // Unescaped content tag
 			case '&':
 				state.setStandaloneStatus(TemplateLoadState.TAG_CANT_BE_STANDALONE) // Content tags cannot be stand-alone tags
-					.getRenderLists().peek().add(new DynamicContentRenderer(state.createExpression(state.toLocation(), state.createExpressionParser(Utilities.trim(tag, 1)), extensions), false));
+					.getRenderLists().peek().add(new DynamicContentRenderer(state.createExpression(state.toLocation(), state.createExpressionParser(Utilities.trim(tag, 1), false), extensions), false));
 				return null;
 
 			default:
@@ -715,7 +715,7 @@ public class TemplateLoader {
 		}
 
 		// Load the expression
-		final ExpressionParseState parseState = state.createExpressionParser(Utilities.trim(tag, 0));
+		final ExpressionParseState parseState = state.createExpressionParser(Utilities.trim(tag, 0), false);
 		final Expression expression = state.createExpression(state.toLocation(), parseState, extensions);
 
 		switch (parseState.getEvaluation()) {

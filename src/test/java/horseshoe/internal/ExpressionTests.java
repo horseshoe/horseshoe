@@ -47,7 +47,7 @@ class ExpressionTests {
 	public static Expression createExpression(final String expression, final Map<String, Expression> namedExpressions, final boolean horseshoeExpressions) throws ReflectiveOperationException {
 		final StackTraceElement[] elements = new Throwable().getStackTrace();
 		final String location = elements.length >= 1 ? elements[1].getFileName() + ":" + elements[1].getLineNumber() : "[Unknown]";
-		final ExpressionParseState parseState = new ExpressionParseState(0, expression, namedExpressions, new HashMap<>(), new Stack<>());
+		final ExpressionParseState parseState = new ExpressionParseState(0, expression, false, namedExpressions, new HashMap<>(), new Stack<>());
 
 		return Expression.create(location, parseState, horseshoeExpressions);
 	}
@@ -110,7 +110,7 @@ class ExpressionTests {
 	@ParameterizedTest
 	@ValueSource(strings = { "[5)", "[5", "a, b[5", "[,,]", ",,", "5[5]", "a[]", "a[,]", "a[b,,]", "a =", "a ; = 2", "a../", "../", "", "()", "(,)", "(a,,)", "#", "a #", "a b", "a 1", "1 b", "\"blah\" a", "\"blah\" 3.5", "blah.3.5", "..\\3.5", "a += 5", "./a = 5", "./a++", "a--", "a = 0; a-- = 1", "a(,)", "a +", "call(/..)", "call(/.a)", "\"bad\\\"", "\"\\q\"", "\"\\u000\"", "\"\\U0000000\"", "true ? false" })
 	void testBadSyntax(final String expression) throws ReflectiveOperationException {
-		assertThrows(IllegalArgumentException.class, () -> createExpression(expression, EMPTY_EXPRESSIONS_MAP, true));
+		assertThrows(IllegalStateException.class, () -> createExpression(expression, EMPTY_EXPRESSIONS_MAP, true));
 	}
 
 	@Test

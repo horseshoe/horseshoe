@@ -12,10 +12,10 @@ public interface AnnotationHandler {
 	 * Gets the writer based on the result of the expression.
 	 *
 	 * @param writer the writer from the enveloping section
-	 * @param value the result of the expression for the annotation
+	 * @param args the arguments passed to the annotation
 	 * @return the writer to use for the annotated section, or null to indicate that the writer should not be changed
 	 * @throws IOException if an I/O error occurs while manipulating the writer
 	 */
-	public Writer getWriter(final Writer writer, final Object value) throws IOException;
+	public Writer getWriter(final Writer writer, final Object[] args) throws IOException;
 
 }

@@ -290,7 +290,7 @@ public final class Expression {
 				isRoot = true;
 
 				if (isInternal || (identifierText.length() > 1 && identifierText.charAt(0) == '.')) {
-					throw new IllegalArgumentException("Invalid identifier with prefix \"" + backreachString + "\" (index " + state.getIndex(matcher) + ")");
+					throw new IllegalStateException("Invalid identifier with prefix \"" + backreachString + "\" (index " + state.getIndex(matcher) + ")");
 				}
 			} else { // All other backreach ('./', '../', '../../', etc.)
 				backreach = backreachString.length() / 3;
@@ -383,7 +383,7 @@ public final class Expression {
 				// Look-ahead for an assignment operation
 				if (operator != null) {
 					if (backreach >= 0) {
-						throw new IllegalArgumentException("Invalid assignment to non-local variable (index " + state.getIndex(matcher) + ")");
+						throw new IllegalStateException("Invalid assignment to non-local variable (index " + state.getIndex(matcher) + ")");
 					}
 
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name))));
@@ -561,7 +561,7 @@ public final class Expression {
 		if (!hasLeftExpression && matcher.usePattern(lastNavigation ? IDENTIFIER_PATTERN : IDENTIFIER_WITH_PREFIX_PATTERN).lookingAt()) { // Identifier
 			return parseIdentifier(state, matcher, lastOperator, lastNavigation);
 		} else if (lastNavigation) { // An identifier must follow the navigation operator
-			throw new IllegalArgumentException("Invalid identifier (index " + state.getIndex(matcher) + ")");
+			throw new IllegalStateException("Invalid identifier (index " + state.getIndex(matcher) + ")");
 		} else if (!hasLeftExpression && matcher.usePattern(DOUBLE_PATTERN).lookingAt()) { // Double literal
 			state.getOperands().push(new Operand(double.class, new MethodBuilder().pushConstant(Double.parseDouble(matcher.group("double").replace("_", "").replace("'", "")))));
 		} else if (!hasLeftExpression && matcher.usePattern(LONG_PATTERN).lookingAt()) { // Long literal
@@ -581,7 +581,7 @@ public final class Expression {
 			return processOperator(state, matcher, lastOperator, hasLeftExpression);
 		} else {
 			final String start = state.getExpressionString().length() - matcher.regionStart() > 10 ? state.getExpressionString().substring(matcher.regionStart(), matcher.regionStart() + 7) + "..." : state.getExpressionString().substring(matcher.regionStart());
-			throw new IllegalArgumentException("Unrecognized operand \"" + start + "\" (index " + state.getIndex(matcher) + ")");
+			throw new IllegalStateException("Unrecognized operand \"" + start + "\" (index " + state.getIndex(matcher) + ")");
 		}
 
 		return null;
@@ -614,7 +614,17 @@ public final class Expression {
 		final int parameterCount = operator.getRightExpressions();
 		final Expression namedExpression;
 
-		if (operator.has(Operator.KNOWN_OBJECT) || (namedExpression = state.getNamedExpressions().get(operator.getString())) == null) {
+		if (operator.getString() == null) {
+			// Parsing the expression as a method call, so return array with arguments
+			final MethodBuilder mb = new MethodBuilder().pushNewObject(Object.class, parameterCount);
+
+			for (int i = 0; i < parameterCount; i++) {
+				mb.addCode(DUP).pushConstant(i).append(state.getOperands().peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
+			}
+
+			state.getOperands().pop(parameterCount).push(new Operand(Object.class, mb));
+			return;
+		} else if (operator.has(Operator.KNOWN_OBJECT) || (namedExpression = state.getNamedExpressions().get(operator.getString())) == null) {
 			// Create the identifier, then get and invoke the appropriate method
 			final int index = state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(operator.getString(), parameterCount)));
 			final MethodBuilder methodResult = state.getOperands().peek(parameterCount).builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).append(state.getOperands().peek(parameterCount + 1).builder);
@@ -623,11 +633,11 @@ public final class Expression {
 				methodResult.addCode(ACONST_NULL);
 			} else {
 				methodResult.pushNewObject(Object.class, parameterCount);
+			}
 
-				// Convert all parameters to objects and store them in the array
-				for (int i = 0; i < parameterCount; i++) {
-					methodResult.addCode(DUP).pushConstant(i).append(state.getOperands().peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
-				}
+			// Convert all parameters to objects and store them in the array
+			for (int i = 0; i < parameterCount; i++) {
+				methodResult.addCode(DUP).pushConstant(i).append(state.getOperands().peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
 			}
 
 			state.getOperands().push(new Operand(Object.class, methodResult.append(state.getOperands().pop(parameterCount + 2).pop().builder)));
@@ -638,19 +648,17 @@ public final class Expression {
 		final int index = state.getExpressions().getOrAdd(namedExpression);
 		final MethodBuilder expressionResult = new MethodBuilder().addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT);
 
-		if (parameterCount > 0) {
-			expressionResult.append(state.getOperands().peek(parameterCount - 1).toObject());
-		}
-
 		// Load the arguments
 		if (parameterCount > 1) {
-			expressionResult.pushNewObject(Object.class, parameterCount - 1);
-
-			for (int i = 0; i < parameterCount - 1; i++) {
-				expressionResult.addCode(DUP).pushConstant(i).append(state.getOperands().peek(parameterCount - 2 - i).toObject()).addCode(AASTORE);
-			}
+			expressionResult.append(state.getOperands().peek(parameterCount - 1).toObject()).pushNewObject(Object.class, parameterCount - 1);
+		} else if (parameterCount > 0) {
+			expressionResult.append(state.getOperands().peek(parameterCount - 1).toObject()).addCode(ACONST_NULL);
 		} else {
 			expressionResult.addCode(ACONST_NULL);
+		}
+
+		for (int i = 0; i < parameterCount - 1; i++) {
+			expressionResult.addCode(DUP).pushConstant(i).append(state.getOperands().peek(parameterCount - 2 - i).toObject()).addCode(AASTORE);
 		}
 
 		// Evaluate the expression (if at least one parameter, then first push the first parameter onto the context stack and pop it off after)
@@ -694,7 +702,7 @@ public final class Expression {
 					final Operand subject = Entry.class.equals(right.type) ? state.getOperands().pop() : left;
 
 					if (subject.type.isPrimitive() || Number.class.isAssignableFrom(subject.type)) {
-						throw new IllegalArgumentException("Unexpected \"" + operator + "\" operator applied to " + subject.type.getName() + ", expecting list, map, set, string, or array type value");
+						throw new IllegalStateException("Unexpected \"" + operator + "\" operator applied to " + subject.type.getName() + ", expecting list, map, set, string, or array type value");
 					}
 
 					final Label end = subject.builder.newLabel();
@@ -890,7 +898,7 @@ public final class Expression {
 			}
 			case "?": {
 				if (!Entry.class.equals(right.type)) {
-					throw new IllegalArgumentException("Incomplete ternary operator, missing \":\"");
+					throw new IllegalStateException("Incomplete ternary operator, missing \":\"");
 				}
 
 				assert !state.getOperands().isEmpty();
@@ -1038,6 +1046,8 @@ public final class Expression {
 			if (!state.getOperators().isEmpty() && state.getOperators().peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
 				state.getOperators().push(state.getOperators().pop().addRightExpression());
 				return operator;
+			} else if (state.getOperators().isEmpty() && state.isMethodCall()) {
+				throw new IllegalStateException("Unexpected \"" + token + "\", expecting end of expression (index " + state.getIndex(matcher) + ")");
 			} else if (operator.has(Operator.TRAILING_IDENTIFIER)) { // Check for streaming operations w/ 'x -> ...'
 				matcher.region(matcher.end(), matcher.regionEnd()).usePattern(TRAILING_IDENTIFIER_PATTERN).lookingAt();
 				final String name = matcher.group("name");
@@ -1051,7 +1061,7 @@ public final class Expression {
 			state.getOperators().push(operator);
 			return operator;
 		} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION) || lastOperator.getString().startsWith(":")) { // Check if this token ends an expression on the stack
-			if (lastOperator != null && lastOperator.getString().startsWith(":")) { // ":" can have an optional right expression
+			if (lastOperator != null && !lastOperator.has(Operator.METHOD_CALL) && lastOperator.getString().startsWith(":")) { // ":" can have an optional right expression
 				if (":<".equals(lastOperator.getString())) {
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addFieldAccess(ACCESSOR_TO_BEGINNING, true)));
 					state.getOperators().pop(1).push(Operator.get(":", true));
@@ -1069,7 +1079,7 @@ public final class Expression {
 
 				if (closedOperator.getClosingString() != null) {
 					if (!closedOperator.getClosingString().equals(token)) { // Check for a mismatched closing string
-						throw new IllegalArgumentException("Unexpected \"" + token + "\", expecting \"" + closedOperator.getClosingString() + "\" (index " + state.getIndex(matcher) + ")");
+						throw new IllegalStateException("Unexpected \"" + token + "\", expecting \"" + closedOperator.getClosingString() + "\" (index " + state.getIndex(matcher) + ")");
 					}
 
 					state.getOperators().push(closedOperator);
@@ -1082,7 +1092,7 @@ public final class Expression {
 			}
 		}
 
-		throw new IllegalArgumentException("Unexpected \"" + token + "\" (index " + state.getIndex(matcher) + ")");
+		throw new IllegalStateException("Unexpected \"" + token + "\" (index " + state.getIndex(matcher) + ")");
 	}
 
 	/**
@@ -1113,6 +1123,7 @@ public final class Expression {
 			int initializeBindingsStart = 0;
 			final int end = state.getExpressionString().length();
 			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(state.getExpressionString());
+			Operator lastOperator = Operator.get("(", false);
 
 			if (matcher.lookingAt()) {
 				if (matcher.group("assignment") != null) {
@@ -1130,9 +1141,10 @@ public final class Expression {
 				}
 
 				matcher.region(matcher.end(), end);
+			} else if (state.isMethodCall()) {
+				lastOperator = Operator.createMethod(null, false);
+				state.getOperators().push(lastOperator);
 			}
-
-			Operator lastOperator = Operator.get("(", false);
 
 			// Loop through all tokens
 			for (; matcher.regionStart() < end; matcher.region(matcher.end(), end)) {
@@ -1144,7 +1156,7 @@ public final class Expression {
 				Operator operator = state.getOperators().pop();
 
 				if (operator.getClosingString() != null) {
-					throw new IllegalArgumentException("Unexpected end of expression, expecting \"" + operator.getClosingString() + "\" (unmatched \"" + operator.getString() + "\")");
+					throw new IllegalStateException("Unexpected end of expression, expecting \"" + operator.getClosingString() + "\" (unmatched \"" + operator.getString() + "\")");
 				} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS) && (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION | Operator.X_RIGHT_EXPRESSIONS))) { // Process multi-argument operators, but allow trailing commas
 					operator = operator.addRightExpression();
 				} else if (lastOperator != null && lastOperator.has(Operator.RIGHT_EXPRESSION)) {
@@ -1152,7 +1164,7 @@ public final class Expression {
 						lastOperator = null;
 						continue;
 					} else {
-						throw new IllegalArgumentException("Unexpected end of expression");
+						throw new IllegalStateException("Unexpected end of expression");
 					}
 				}
 
@@ -1167,7 +1179,7 @@ public final class Expression {
 		}
 
 		if (state.getOperands().isEmpty()) {
-			throw new IllegalArgumentException("Unexpected empty expression");
+			throw new IllegalStateException("Unexpected empty expression");
 		}
 
 		addReturn(mb, state, state.getOperands().pop());

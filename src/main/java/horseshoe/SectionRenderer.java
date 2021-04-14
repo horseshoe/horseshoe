@@ -444,16 +444,24 @@ public class SectionRenderer implements Renderer {
 			}
 
 			final AnnotationHandler annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
-			Object argument = null;
+			Object[] args = null;
 
 			// Render inverted actions if the annotation processor is not available or the expression evaluates to null
 			if (annotationProcessor == null ||
-					(section.getExpression() != null && (argument = section.getExpression().evaluate(context)) == null)) {
+					(section.getExpression() != null && (args = (Object[]) section.getExpression().evaluate(context)) == null)) {
 				renderInverted(context, writer);
 				return;
 			}
 
-			final Writer annotationWriter = annotationProcessor.getWriter(writer, argument);
+			final Writer annotationWriter;
+
+			try {
+				annotationWriter = annotationProcessor.getWriter(writer, args);
+			} catch (final Exception e) {
+				context.getSettings().getLogger().log(Level.WARNING, "Encountered exception with annotation section " + section, e);
+				renderInverted(context, writer);
+				return;
+			}
 
 			if (annotationWriter == null || annotationWriter == writer) { // If the writer is not changed then render the actions using the current writer
 				renderSection(context, writer);

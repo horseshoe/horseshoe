@@ -21,6 +21,7 @@ import java.nio.file.WatchService;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import horseshoe.BufferedFileUpdateStream.Update;
 
@@ -58,11 +59,11 @@ class AnnotationTests {
 		final Map<String, String> map = new LinkedHashMap<>();
 
 		@Override
-		public Writer getWriter(final Writer writer, final Object value) throws IOException {
+		public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
 			return new StringWriter() {
 				@Override
 				public void close() throws IOException {
-					map.put(value == null ? null : value.toString(), toString());
+					map.put(args == null ? null : Objects.toString(args[0]), toString());
 					super.close();
 				}
 
@@ -129,7 +130,7 @@ class AnnotationTests {
 	void testCloseException() throws IOException, LoadException {
 		assertDoesNotThrow(() -> new TemplateLoader().load("Exception Writer", "a{{#@Test}}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
 			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+			public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
 				return new TestWriter() {
 					@Override
 					public void close() throws IOException {
@@ -145,7 +146,7 @@ class AnnotationTests {
 		final Template template = new TemplateLoader().load("Exception Writer", "a{{#@Test}}{{#true}}b{{/}}{{^}}d{{/}}c");
 		final AnnotationHandler handler = new AnnotationHandler() {
 			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+			public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
 				return new TestWriter() {
 					@Override
 					public void write(final char[] cbuf, final int off, final int len) throws IOException {
@@ -163,7 +164,7 @@ class AnnotationTests {
 		final Template template = new TemplateLoader().load("Exception Writer", "a{{#true}}{{#@Test}}b{{^}}d{{/}}{{/}}c");
 		final AnnotationHandler handler = new AnnotationHandler() {
 			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+			public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
 				return new TestWriter() {
 					@Override
 					public void close() throws IOException {
@@ -277,8 +278,11 @@ class AnnotationTests {
 			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
 
-			new TemplateLoader().load("File Update", "{{#@File([])}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{# @File(null) }}\nTest 1\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(pathNull), StandardCharsets.UTF_8));
+
+			assertEquals("NoFile", Template.load("{{# @File() }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+			assertThrows(LoadException.class, () -> Template.load("{{# @File('Test') + '1' }}Bad{{^}}NoFile{{/}}"));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 			final WatchKey watchKey1 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
@@ -376,7 +380,7 @@ class AnnotationTests {
 
 		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", new AnnotationHandler() {
 			@Override
-			public Writer getWriter(final Writer writer, final Object value) throws IOException {
+			public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
 				return writer;
 			}
 		}));

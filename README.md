@@ -186,6 +186,7 @@ Repeated section tags (`{{#}}`) are used to duplicate the previous section at th
 Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are section tags that begin with an at sign (`@`). The parameters are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler. If the expression fails to parse or results in `null` then the section will <b>not</b> be rendered and the corresponding empty, [inverted section](#inverted-sections) <b>will</b> be rendered, if it exists. Annotations do not affect the context stack and are not considered in scope for repeated sections.
 
 Built-in annotations include the following:
+- @Null - Ignores all output.
 - @StdErr - Sends output to stderr.
 - @StdOut - Sends output to stdout.
 - @File('name': 'filename', 'encoding': 'UTF-16', 'overwrite': false, 'append') - Sends output to the file with the specified name, using the specified encoding. <b>The file is only written if the contents of the file are different than the rendered contents, unless overwrite is specified as true.</b> If append is specified as true the rendered contents are appended to the file.
