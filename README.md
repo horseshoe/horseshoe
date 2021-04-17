@@ -217,7 +217,12 @@ An inverted section tag may also start with a `^` (`{{^^ condition }}`) to match
 #### Inline Partials
 Inline partial tags (`{{< partial }}`) define a partial template inline in the current template. In this way, partial templates can be nested instead of requiring them to be loaded from another source, like a Horseshoe template file. Inline partials inherit the scope of the template in which they are declared, so named expressions and other inline partials can be used within the inline partial.
 
-Inline partials can only be included (using a partial tag) from within their declared scope in the template. Additionally, they cannot be included from other templates (except other inline partials in the appropriate scope). This prevents naming collisions of inline partials with external partials. Inline partials may be overridden later in a template or in a nested scope.
+Inline partials can have named parameters ([template bindings](#template-bindings)). The first parameter can be specified as a literal `.` to indicate the value will be pushed onto the context stack.
+
+Inline partials can only be included (using a [partial tag](#partials)) from the declaring template. This prevents naming collisions with inline partials in other templates. Passing arguments to an inline partial is done as an [expression](#expressions). For example,
+```horseshoe
+{{> MyPartial(1 + 1, 'second arg') }}
+```
 
 <b>Closing tags for inline partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows inline partials to end without a trailing newline and not cause an output line in the current template.
 
@@ -354,9 +359,9 @@ The first argument to a named expression is pushed onto the context stack. (If n
 
 Named expressions are scoped to the template in which they are declared. If a named expression with the same name already exists in the template, then attempting to redeclare it will result in an error. Named expressions always take precedence over equivalently named methods on the current context object. If a method is preferred over a named expression, it can be prefixed (using `.\` or `..\`), since named expressions can not be invoked using prefixes.
 
-Root-level named expressions in each partial template can be imported into a template using a [partial tag](#partials). Named expressions can be imported individually, using `{{> f | MyExpression() }}`, or collectively, using `{{> f | * }}`. This allows partial templates to contain either templated content or named expressions (or both) as a payload.
+Root-level named expressions can be imported into a template using [partial tags](#partials). Named expressions can be imported individually, using `{{> f | MyExpression() }}`, or collectively, using `{{> f | * }}`. This allows templates to contain either templated content or named expressions (or both) as a payload.
 
-Named expressions are implicitly inherited by all [inline partials](#inline-partials) inside a template. For example,
+Named expressions are inherited by all [inline partials](#inline-partials) inside a template. For example,
 ```horseshoe
 {{ func() -> "Hello!" }}
 {{< b }}
@@ -364,7 +369,7 @@ Named expressions are implicitly inherited by all [inline partials](#inline-part
 {{/ b }}
 {{> b }}
 ```
-results in `  Hello!`, since `func()` is inherited by the partial `b`. However, the named expression `func` would <b>not</b> be accessible from a non-inline partial included using a [partial tag](#partials).
+results in `  Hello!`, since `func()` is inherited by the partial `b`. However, the named expression `func` would <b>not</b> be accessible from an external template included using a [partial tag](#partials).
 
 ### Template Bindings
 Template bindings are tags with the form `{{ name := expression }}`. (Unlike normal expressions, template bindings qualify for consideration as stand-alone tags.) The expression is bound to the specified name and can be used in later expressions within the template or any inline partial templates.

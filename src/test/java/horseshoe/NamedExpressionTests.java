@@ -95,7 +95,8 @@ public class NamedExpressionTests {
 
 	@Test
 	void testNamedExpressionsWithArgs() throws IOException, LoadException {
-		assertEquals(", , , c, c", new TemplateLoader().load("Multi-Arguments", "{{func(., /*no-arg*/ ,c)->c}}" + LS + "{{func()}}, {{func('a')}}, {{func('a','b')}}, {{func('a','b','c')}}, {{func('a','b','c','d')}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals(", , , c, c", Template.load("{{func(., /*no-arg*/ ,c)->c}}" + LS + "{{func()}}, {{func('a')}}, {{func('a','b')}}, {{func('a','b','c')}}, {{func('a','b','c','d')}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertThrows(LoadException.class, () -> Template.load("{{func(c, /*no-arg*/ ,.)->c}}" + LS + "{{func()}}, {{func('a')}}, {{func('a','b')}}, {{func('a','b','c')}}, {{func('a','b','c','d')}}"));
 		assertEquals("abc:abc, abc:abc, a:abc, a:abc", new TemplateLoader().load("Multi-Arguments", "{{func(,,)->.+':'+..}}" + LS + "{{func2(a,b,c)->a+':'+..}}" + LS + "{{#a}}{{func(.)}}, {{func2(.)}}, {{func('a')}}, {{func2('a')}}{{/}}").render(Collections.singletonMap("a", "abc"), new StringWriter()).toString());
 		assertEquals("Test 1:true:, Test 2:false:, Test 3:true:Test", new TemplateLoader().load("Multi-Arguments", "{{ func(a, b, c) -> a + ':' + b + ':' + (c ?: '') }}" + LS + "{{# [[ 'name': 'Test 1', 'value': true ], [ 'name': 'Test 2', 'value': false ], [ 'name': 'Test 3', 'value': true, 'optional': 'Test' ]] }}{{ func(name, value, optional) }}{{# .hasNext }}, {{/}}{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 	}

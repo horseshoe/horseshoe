@@ -614,7 +614,7 @@ public final class Expression {
 		final int parameterCount = operator.getRightExpressions();
 		final Expression namedExpression;
 
-		if (operator.getString() == null) {
+		if (operator.getString().isEmpty()) {
 			// Parsing the expression as a method call, so return array with arguments
 			final MethodBuilder mb = new MethodBuilder().pushNewObject(Object.class, parameterCount);
 
@@ -1142,8 +1142,9 @@ public final class Expression {
 
 				matcher.region(matcher.end(), end);
 			} else if (state.isMethodCall()) {
-				lastOperator = Operator.createMethod(null, false);
+				lastOperator = Operator.createMethod("", false);
 				state.getOperators().push(lastOperator);
+				matcher.region(1, end);
 			}
 
 			// Loop through all tokens

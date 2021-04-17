@@ -8,7 +8,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +20,6 @@ import horseshoe.internal.Expression;
 import horseshoe.internal.ExpressionParseState;
 import horseshoe.internal.Identifier;
 import horseshoe.internal.ParsedLine;
-import horseshoe.internal.TemplateBinding;
 import horseshoe.internal.Utilities;
 import horseshoe.internal.Utilities.TrimmedString;
 
@@ -31,7 +29,7 @@ import horseshoe.internal.Utilities.TrimmedString;
 public class TemplateLoader {
 
 	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?s:[(](?<arguments>.*))?", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?s:(?<arguments>[(].*?[)]\\s*" + Expression.COMMENTS_PATTERN + "))?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private static final Pattern INLINE_PARTIAL_NAME_PATTERN = Pattern.compile(Expression.COMMENTS_PATTERN + "(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern INLINE_PARTIAL_PARAMETER_PATTERN = Pattern.compile("\\s*" + Expression.COMMENTS_PATTERN + "(?<parameter>[.]|" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
@@ -39,7 +37,7 @@ public class TemplateLoader {
 
 	private static final Pattern IDENTIFIER_PARENS_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "[(]\\s*" + Expression.COMMENTS_PATTERN + "[)]\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
 	private static final String IDENTIFIER_PARENS = IDENTIFIER_PARENS_PATTERN.toString().replace("(?<name>", "(?:");
-	private static final Pattern LOAD_PARTIAL_PATTERN = Pattern.compile("\\s*+(?:(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?s:[(](?<arguments>.*))?|(?<filename>[^|]+?)\\s*(?:[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + ")?)?", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern LOAD_PARTIAL_PATTERN = Pattern.compile("\\s*+(?:(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?s:(?<arguments>[(].*[)]\\s*" + Expression.COMMENTS_PATTERN + "))?|(?<filename>[^|]+?)\\s*(?:[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + ")?)?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<Object, Template> templates = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
@@ -325,8 +323,9 @@ public class TemplateLoader {
 	 * @param tag the string representation of the tag
 	 * @return the template renderer associated with the loaded partial
 	 * @throws LoadException if an error is encountered while loading the partial
+	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading an expression
 	 */
-	private TemplateRenderer loadPartial(final Stack<Loader> loaders, final TemplateLoadState state, final String tag) throws LoadException {
+	private TemplateRenderer loadPartial(final Stack<Loader> loaders, final TemplateLoadState state, final String tag) throws LoadException, ReflectiveOperationException {
 		final Matcher matcher;
 		String indentation = null;
 
@@ -362,7 +361,9 @@ public class TemplateLoader {
 			final Template localPartial = state.getLocalPartials().get(name);
 
 			if (localPartial != null) {
-				return new TemplateRenderer(localPartial, indentation);
+				final String arguments = matcher.group("arguments");
+
+				return new TemplateRenderer(localPartial, indentation, arguments == null ? null : state.createExpression(state.toLocation(), state.createExpressionParser(new TrimmedString(matcher.start(2), arguments.trim()), true), extensions));
 			}
 		}
 
@@ -500,13 +501,13 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Parse an inline partial signature from the specified tag. The parameter names are populated in the given collection and the name is returned.
+	 * Parse an inline partial signature from the specified tag.
 	 *
 	 * @param tag the tag to parse as an inline partial
-	 * @param parameterNames the collection that will be populated with the names of the parameters
-	 * @return the name of the inline partial
+	 * @param state the load state of the template
+	 * @return the inline partial
 	 */
-	private static String parsePartialSignature(final String tag, final Collection<String> parameterNames) {
+	private static Template parsePartialSignature(final String tag, final TemplateLoadState state) {
 		final Matcher matcher = INLINE_PARTIAL_PATTERN.matcher(tag);
 
 		if (!matcher.matches()) {
@@ -514,6 +515,7 @@ public class TemplateLoader {
 		}
 
 		final String parameters = matcher.group("parameters");
+		final List<String> parameterNames = new ArrayList<>();
 
 		if (parameters != null) {
 			for (final Matcher parameterMatcher = INLINE_PARTIAL_PARAMETER_PATTERN.matcher(parameters); parameterMatcher.find(); ) {
@@ -527,7 +529,7 @@ public class TemplateLoader {
 			}
 		}
 
-		return matcher.group("name");
+		return new Template(matcher.group("name"), state.toLocation(), state.getTemplateBindings().size(), parameterNames);
 	}
 
 	/**
@@ -550,15 +552,12 @@ public class TemplateLoader {
 
 			case '<': // Local partial
 				if (extensions.contains(Extension.INLINE_PARTIALS)) {
-					final List<String> parameterNames = new ArrayList<>();
-					final String name = parsePartialSignature(Utilities.trim(tag, 1).string, parameterNames);
-					final Template partial = new Template(name, state.toLocation(), state.getTemplateBindings().size());
+					final Template partial = parsePartialSignature(Utilities.trim(tag, 1).string, state);
 
-					for (final String parameterName : parameterNames) {
-						partial.getBindings().put(parameterName, new TemplateBinding(parameterName, partial.getIndex(), partial.getBindings().size()));
+					if (state.getLocalPartials().put(partial.getSection().getName(), partial) != null) {
+						throw new IllegalStateException("Inline partial \"" + partial.getSection().getName() + "\" is already defined");
 					}
 
-					state.getLocalPartials().put(name, partial);
 					state.getSections().push(partial.getSection());
 					state.getTemplateBindings().push(partial.getBindings());
 					state.getRenderLists().push(partial.getSection().getRenderList());
@@ -616,7 +615,7 @@ public class TemplateLoader {
 					final Object location = state.toLocation();
 
 					// Load the annotation arguments
-					state.getSections().push(new Section(state.getSections().peek(), sectionName, location, arguments == null ? null : state.createExpression(location, state.createExpressionParser(new TrimmedString(annotation.start(2), arguments), true), extensions), sectionName.substring(1), true));
+					state.getSections().push(new Section(state.getSections().peek(), sectionName, location, arguments == null ? null : state.createExpression(location, state.createExpressionParser(new TrimmedString(annotation.start(2), arguments.trim()), true), extensions), sectionName.substring(1), true));
 				} else { // Start a new section
 					final Object location = state.toLocation();
 

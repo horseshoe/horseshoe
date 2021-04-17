@@ -282,6 +282,7 @@ class AnnotationTests {
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(pathNull), StandardCharsets.UTF_8));
 
 			assertEquals("NoFile", Template.load("{{# @File() }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("NoFile", Template.load("{{# @File }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 			assertThrows(LoadException.class, () -> Template.load("{{# @File('Test') + '1' }}Bad{{^}}NoFile{{/}}"));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));

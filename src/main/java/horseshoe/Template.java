@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,6 +40,7 @@ public class Template {
 	private final Object identifier;
 	private final Section section;
 	private final int index;
+	private final List<String> parameters;
 	private final Map<String, TemplateBinding> bindings = new LinkedHashMap<>();
 	private final Map<String, Expression> rootExpressions = new LinkedHashMap<>();
 
@@ -83,10 +86,26 @@ public class Template {
 	 * @param identifier the identifier of the template
 	 * @param index the index of the template partial, or 0 to indicate top-level template
 	 */
-	Template(final String name, final Object identifier, final int index) {
+	Template(final String name, final Object identifier, final int index, final List<String> parameters) {
 		this.identifier = identifier;
 		this.section = new Section(null, name == null ? "[Anonymous]" : name, identifier, null, null, true);
 		this.index = index;
+		this.parameters = parameters;
+
+		for (final String parameterName : parameters) {
+			bindings.put(parameterName, new TemplateBinding(parameterName, index, bindings.size()));
+		}
+	}
+
+	/**
+	 * Creates an empty template with the specified name and index.
+	 *
+	 * @param name the name of the template
+	 * @param identifier the identifier of the template
+	 * @param index the index of the template partial, or 0 to indicate top-level template
+	 */
+	Template(final String name, final Object identifier, final int index) {
+		this(name, identifier, index, Collections.emptyList());
 	}
 
 	/**
@@ -127,9 +146,18 @@ public class Template {
 	}
 
 	/**
+	 * Gets the list of parameters associated with the template.
+	 *
+	 * @return the list of parameters associated with the template
+	 */
+	final List<String> getParameters() {
+		return parameters;
+	}
+
+	/**
 	 * Gets the root expressions associated with the template.
 	 *
-	 * @return the root expressions with the template
+	 * @return the root expressions associated with the template
 	 */
 	final Map<String, Expression> getRootExpressions() {
 		return rootExpressions;

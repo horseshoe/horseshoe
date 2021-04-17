@@ -161,6 +161,25 @@ class PartialsTests {
 	}
 
 	@Test
+	void testInlinePartialContext() throws IOException, LoadException {
+		assertEquals("b", Template.load("{{# 'a' }}{{< f }}{{ . }}{{/ f }}{{> f('b') }}{{/}}").render(null, new StringWriter()).toString());
+		assertEquals("b", Template.load("{{# 'a' }}{{< f(.) }}{{ . }}{{/ f }}{{> f('b') }}{{/}}").render(null, new StringWriter()).toString());
+		assertEquals("a", Template.load("{{# 'a' }}{{< f(.) }}{{ . }}{{/ f }}{{> f }}{{/}}").render(null, new StringWriter()).toString());
+		assertEquals("a", Template.load("{{# 'a' }}{{< f(a) }}{{ . }}{{/ f }}{{> f() }}{{/}}").render(null, new StringWriter()).toString());
+		assertEquals("", Template.load("{{# 'a' }}{{< f(a) }}{{ . }}{{/ f }}{{> f(a + 1) }}{{/}}").render(null, new StringWriter()).toString());
+		assertEquals("bb", Template.load("{{# 'a' }}{{< f(b, c) }}{{ . }}{{ b }}{{ c }}{{/ f }}{{> f('b') }}{{/}}").render(null, new StringWriter()).toString());
+		assertEquals("bc", Template.load("{{# 'a' }}{{< f(., b) }}{{ . }}{{ b }}{{/ f }}{{> f('b', 'c') }}{{/}}").render(null, new StringWriter()).toString());
+		assertThrows(LoadException.class, () -> Template.load("{{# 'a' }}{{< f(b) }}{{ . }}{{/ f }}{{> f('b') + 6 }}{{/}}"));
+		assertThrows(LoadException.class, () -> Template.load("{{# 'a' }}{{< f(b, .) }}{{ . }}{{/ f }}{{> f('b') }}{{/}}"));
+		assertThrows(LoadException.class, () -> Template.load("{{< f(b, b) }}{{ . }}{{/ f }}"));
+	}
+
+	@Test
+	void testInlinePartialDuplicate() {
+		assertThrows(LoadException.class, () -> Template.load("{{< f }}{{ . }}{{/ f }}{{< f }}{{ . }}{{/ f }}"));
+	}
+
+	@Test
 	void testInlinePartials() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
@@ -203,8 +222,7 @@ class PartialsTests {
 	@Test
 	void testInlineRecursivePartialIndentation() throws IOException, LoadException {
 		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
-		final Template template = new TemplateLoader()
-				.load("Test", "{{<g}}\n{{x}}:\n{{#a}}\n\t{{>g}}\n{{/a}}\n{{/g}}\n\t{{>g}}\n");
+		final Template template = Template.load("{{<g}}\n{{x}}:\n{{#a}}\n\t{{>g}}\n{{/a}}\n{{/g}}\n\t{{>g}}\n");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("a", loadMap("x", 3), "x", 2), "x", 1), writer);
 		assertEquals("\t1:" + LS + "\t\t2:" + LS + "\t\t\t3:" + LS, writer.toString());

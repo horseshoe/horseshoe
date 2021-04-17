@@ -85,7 +85,7 @@ public final class AnnotationHandlers {
 			final Map<?, ?> properties;
 			final File file;
 
-			if (args.length == 0) {
+			if (args == null || args.length == 0) {
 				throw new IllegalArgumentException("No filename specified for \"File\" annotation");
 			} else if (args.length > 1) {
 				properties = args[1] instanceof Map ? (Map<?, ?>) args[1] : Collections.emptyMap();
