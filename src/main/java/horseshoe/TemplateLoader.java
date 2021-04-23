@@ -37,7 +37,7 @@ public class TemplateLoader {
 
 	private static final Pattern IDENTIFIER_PARENS_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "[(]\\s*" + Expression.COMMENTS_PATTERN + "[)]\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
 	private static final String IDENTIFIER_PARENS = IDENTIFIER_PARENS_PATTERN.toString().replace("(?<name>", "(?:");
-	private static final Pattern LOAD_PARTIAL_PATTERN = Pattern.compile("\\s*+(?:(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?s:(?<arguments>[(].*[)]\\s*" + Expression.COMMENTS_PATTERN + "))?|(?<filename>[^|]+?)\\s*(?:[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + ")?)?", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern LOAD_PARTIAL_PATTERN = Pattern.compile("\\s*+(?:((?<name>" + Identifier.PATTERN + ")|(?<expr>[(].*?[)]))\\s*" + Expression.COMMENTS_PATTERN + "(?s:(?<arguments>[(].*[)]\\s*" + Expression.COMMENTS_PATTERN + "))?|(?<filename>[^|]+?)\\s*(?:[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + ")?)?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<Object, Template> templates = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
@@ -327,10 +327,11 @@ public class TemplateLoader {
 	 */
 	private TemplateRenderer loadPartial(final Stack<Loader> loaders, final TemplateLoadState state, final String tag) throws LoadException, ReflectiveOperationException {
 		final Matcher matcher;
-		String indentation = null;
+		final String indentation;
 
 		if (tag.length() > 1 && tag.charAt(1) == '>') { // ">>" uses indentation on first line, no trailing new line
 			matcher = LOAD_PARTIAL_PATTERN.matcher(tag).region(2, tag.length());
+			indentation = null;
 			state.setStandaloneStatus(TemplateLoadState.TAG_CHECK_TAIL_STANDALONE);
 		} else {
 			matcher = LOAD_PARTIAL_PATTERN.matcher(tag).region(1, tag.length());
@@ -344,6 +345,26 @@ public class TemplateLoader {
 		// Check if the tag matches the load partial pattern
 		if (!matcher.matches()) {
 			throw new LoadException(loaders, "Invalid load partial tag");
+		}
+
+		final String expr = matcher.group("expr");
+
+		if (expr != null) {
+			final Expression expression = state.createExpression(state.toLocation(), state.createExpressionParser(new TrimmedString(0, expr), false), extensions);
+			return new TemplateRenderer(new Template(null, "[Deferred]"), null) {
+				@Override
+				public void render(RenderContext context, Writer writer) throws IOException {
+					final Object result = expression.evaluate(context);
+					if (result == null) {
+						return;
+					}
+					try {
+						new TemplateRenderer(indentation, isStandalone(), loadPartial(loaders, state, tag.replace(expr, result.toString()))).render(context, writer);
+					} catch (LoadException | ReflectiveOperationException e) {
+						throw new HaltRenderingException("Failed to load partial from expression " + expr + ". " + e.getMessage());
+					}
+				}
+			};
 		}
 
 		final String matchedName = matcher.group("name");

@@ -215,6 +215,22 @@ class PartialsTests {
 	}
 
 	@Test
+	void testInlinePartials5() throws IOException, LoadException {
+		assertEquals("123", Template.load("{{< ab }}123{{/}}{{> ('a' + 'b') }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("  123" + LS + "  zzz" + LS, Template.load("{{< ab }}\n123\nzzz\n{{/}}\n  {{> ('a' + 'b') }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("  123" + LS + "zzz" + LS, Template.load("{{< ab }}\n123\nzzz\n{{/}}  {{> ('a' + 'b') }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("  123" + LS + "zzz" + LS, Template.load("{{< ab }}\n123\nzzz\n{{/}}\n  {{>> ('a' + 'b') }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("456", Template.load("{{< ab }}456{{/}}{{> (s = ''; ['A', 'B'] #> i -> i.toLowerCase() #< i -> s = s + i; s) }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("789", Template.load("{{< ab }}789{{/}}{{> (key) }}").render(Collections.singletonMap("key", "ab"), new StringWriter()).toString());
+		assertEquals("1011", Template.load("{{< ab }}1011{{/}}{{ Exp() -> 'ab' }}{{> (Exp()) }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("123hi", Template.load("{{< ab }}123{{>}}{{/}}{{#> ('a' + 'b') }}hi{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("456hello", Template.load("{{< ab }}456{{>}}{{/}}{{#> (s = ''; ['A', 'B'] #> i -> i.toLowerCase() #< i -> s = s + i; s) }}hello{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("", Template.load("{{> ('a' + '') }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("", Template.load("{{> (noexists) }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("123", Template.load("{{< ab(x, y, z) }}{{ x }}{{ y }}{{ z }}{{/}}{{> ('a' + 'B'.toLowerCase())(0 + 1, 1 + 1, 1 + 2) }}").render(Collections.emptyMap(), new StringWriter()).toString());
+	}
+
+	@Test
 	void testInlinePartialIndentation() throws IOException, LoadException {
 		assertEquals("ab" + LS + "\tab" + LS, Template.load("{{< a }}\na{{# b }}b{{/ b }}\n{{/}}\n{{> a }}\n\t{{> a }}\n").render(Collections.singletonMap("b", true), new StringWriter()).toString());
 	}

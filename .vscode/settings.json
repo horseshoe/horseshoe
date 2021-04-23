@@ -2,6 +2,11 @@
 	"java.sources.organizeImports.starThreshold": 99,
 	"java.sources.organizeImports.staticStarThreshold": 99,
 	"java.completion.importOrder": [
+		"#java",
+		"#javax",
+		"#com",
+		"#horseshoe",
+		"#org",
 		"java",
 		"javax",
 		"com",

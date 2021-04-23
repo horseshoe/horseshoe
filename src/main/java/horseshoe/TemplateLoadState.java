@@ -187,7 +187,7 @@ final class TemplateLoadState {
 		if (size > 1 || tagCount == 1) {
 			final String removedWhitespace = priorStaticText.get(size - 1).getLine();
 
-			if (Utilities.isWhitespace(removedWhitespace)) {
+			if (removedWhitespace != null && Utilities.isWhitespace(removedWhitespace)) {
 				priorStaticText.set(size - 1, new ParsedLine(null, ""));
 				return removedWhitespace;
 			}

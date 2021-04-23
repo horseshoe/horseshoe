@@ -6,7 +6,7 @@ import java.util.List;
 
 import horseshoe.internal.Expression;
 
-final class TemplateRenderer extends TagRenderer {
+class TemplateRenderer extends TagRenderer {
 
 	private final Template template;
 	private final String indentation;
@@ -20,6 +20,11 @@ final class TemplateRenderer extends TagRenderer {
 
 	TemplateRenderer(final Template template, final String indentation) {
 		this(template, indentation, null);
+	}
+
+	TemplateRenderer(final String indentation, final boolean standalone, final TemplateRenderer deferred) {
+		this(deferred.template, indentation, deferred.expression);
+		setStandalone(standalone);
 	}
 
 	@Override
