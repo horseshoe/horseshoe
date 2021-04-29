@@ -269,8 +269,10 @@ class AccessorTests {
 
 		assertEquals(0, matcher.start());
 		assertEquals(0, matcher.start(1));
+		assertEquals(0, matcher.start("first"));
 		assertEquals(4, matcher.end());
 		assertEquals(1, matcher.end(1));
+		assertEquals(1, matcher.end("first"));
 		assertEquals("Test", matcher.group());
 		assertEquals("T", matcher.group(1));
 		assertEquals("T", matcher.group("first"));

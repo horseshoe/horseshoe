@@ -175,6 +175,13 @@ class PartialsTests {
 	}
 
 	@Test
+	void testNonInlinePartialContext() throws IOException, LoadException {
+		final TemplateLoader loader = new TemplateLoader();
+		loader.load("f (1)a", "{{ . }}");
+		assertEquals("abc", loader.load("a", "{{# 'a' }}{{> f (1)a }}{{> f (1)a (('b')) }}{{> f (1)a (//('a' \n/* ('b') */('c')) }}{{/}}").render(null, new StringWriter()).toString());
+	}
+
+	@Test
 	void testInlinePartialDuplicate() {
 		assertThrows(LoadException.class, () -> Template.load("{{< f }}{{ . }}{{/ f }}{{< f }}{{ . }}{{/ f }}"));
 	}

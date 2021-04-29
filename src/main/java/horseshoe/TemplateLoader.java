@@ -37,7 +37,7 @@ public class TemplateLoader {
 
 	private static final Pattern IDENTIFIER_PARENS_PATTERN = Pattern.compile("(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "[(]\\s*" + Expression.COMMENTS_PATTERN + "[)]\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
 	private static final String IDENTIFIER_PARENS = IDENTIFIER_PARENS_PATTERN.toString().replace("(?<name>", "(?:");
-	private static final Pattern LOAD_PARTIAL_PATTERN = Pattern.compile("\\s*+(?:((?<name>" + Identifier.PATTERN + ")|(?<expr>[(].*?[)]))\\s*" + Expression.COMMENTS_PATTERN + "(?s:(?<arguments>[(].*[)]\\s*" + Expression.COMMENTS_PATTERN + "))?|(?<filename>[^|]+?)\\s*(?:[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + ")?)?", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern PARTIAL_IMPORTS_PATTERN = Pattern.compile("[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + "$", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private final Map<Object, Template> templates = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
@@ -326,15 +326,16 @@ public class TemplateLoader {
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading an expression
 	 */
 	private TemplateRenderer loadPartial(final Stack<Loader> loaders, final TemplateLoadState state, final String tag) throws LoadException, ReflectiveOperationException {
-		final Matcher matcher;
+		int start;
+		int end = tag.length();
 		final String indentation;
 
-		if (tag.length() > 1 && tag.charAt(1) == '>') { // ">>" uses indentation on first line, no trailing new line
-			matcher = LOAD_PARTIAL_PATTERN.matcher(tag).region(2, tag.length());
+		if (end > 1 && tag.charAt(1) == '>') { // ">>" uses indentation on first line, no trailing new line
+			start = 2;
 			indentation = null;
 			state.setStandaloneStatus(TemplateLoadState.TAG_CHECK_TAIL_STANDALONE);
 		} else {
-			matcher = LOAD_PARTIAL_PATTERN.matcher(tag).region(1, tag.length());
+			start = 1;
 			indentation = state.removeStandaloneTagHead();
 
 			// 1) Standalone tag uses indentation for each line, no trailing new line
@@ -342,15 +343,44 @@ public class TemplateLoader {
 			state.setStandaloneStatus(indentation == null ? TemplateLoadState.TAG_CANT_BE_STANDALONE : TemplateLoadState.TAG_CHECK_TAIL_STANDALONE);
 		}
 
-		// Check if the tag matches the load partial pattern
-		if (!matcher.matches()) {
-			throw new LoadException(loaders, "Invalid load partial tag");
+		// Checks for partial invocation: [name]([arguments]), [name]|[named_expressions]
+		while (start < end && Character.isSpaceChar(tag.charAt(start))) {
+			start++;
 		}
 
-		final String expr = matcher.group("expr");
+		// Check for anonymous partial
+		if (start >= end) {
+			return new TemplateRenderer(null, indentation);
+		}
 
-		if (expr != null) {
-			final Expression expression = state.createExpression(state.toLocation(), state.createExpressionParser(new TrimmedString(0, expr), false), extensions);
+		// Check for imports
+		final Matcher matcher = PARTIAL_IMPORTS_PATTERN.matcher(tag).region(start, end);
+
+		if (matcher.find()) {
+			return loadPartial(loaders, state, indentation, tag.substring(start, matcher.start()).trim(), null, matcher.group("imports"));
+		}
+
+		final Object location = state.toLocation();
+		Expression argumentsExpression = null;
+
+		// Find arguments
+		for (int i = start; (i = tag.indexOf('(', i + 1)) >= 0; ) {
+			try {
+				argumentsExpression = state.createExpression(location, state.createExpressionParser(new TrimmedString(i, tag.substring(i)), true), extensions);
+				end = i;
+				break;
+			} catch (final RuntimeException e) {
+				// Ignore and try next match
+			}
+		}
+
+		final Expression arguments = argumentsExpression;
+		final String name = tag.substring(start, end);
+
+		// Check for expression partial: ('a' + 'b')
+		if (tag.charAt(start) == '(') {
+			final Expression expression = state.createExpression(location, state.createExpressionParser(new TrimmedString(start, name), false), extensions);
+
 			return new TemplateRenderer(new Template(null, "[Deferred]"), null) {
 				@Override
 				public void render(RenderContext context, Writer writer) throws IOException {
@@ -359,32 +389,39 @@ public class TemplateLoader {
 						return;
 					}
 					try {
-						new TemplateRenderer(indentation, isStandalone(), loadPartial(loaders, state, tag.replace(expr, result.toString()))).render(context, writer);
-					} catch (LoadException | ReflectiveOperationException e) {
-						throw new HaltRenderingException("Failed to load partial from expression " + expr + ". " + e.getMessage());
+						final TemplateRenderer renderer = loadPartial(loaders, state, indentation, result.toString(), arguments, null);
+						renderer.setStandalone(isStandalone());
+						renderer.render(context, writer);
+					} catch (final LoadException e) {
+						throw new HaltRenderingException("Failed to load partial from expression \"" + name + "\": " + e.getMessage());
 					}
 				}
 			};
 		}
 
-		final String matchedName = matcher.group("name");
-		final String name = matchedName != null ? matchedName : matcher.group("filename");
+		// Load partial by name
+		return loadPartial(loaders, state, indentation, name.trim(), arguments, null);
+	}
 
-		// Check for anonymous partials
-		if (name == null) {
-			return new TemplateRenderer(null, indentation);
-		}
-
-		// Try to load inline partial
-		final String imports = matcher.group("imports");
-
+	/**
+	 * Loads the given partial by name.
+	 *
+	 * @param loaders the current stack of loaders
+	 * @param state the load state of the template
+	 * @param indentation the indentation to apply to the partial
+	 * @param name the name of the partial to load
+	 * @param arguments the optional expression used to evaluate arguments
+	 * @param imports the optional string of imports
+	 * @return the template renderer associated with the loaded partial
+	 * @throws LoadException if an error is encountered while loading the partial
+	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading an expression
+	 */
+	private TemplateRenderer loadPartial(final Stack<Loader> loaders, final TemplateLoadState state, final String indentation, final String name, final Expression arguments, final String imports) throws LoadException {
 		if (imports == null) {
 			final Template localPartial = state.getLocalPartials().get(name);
 
 			if (localPartial != null) {
-				final String arguments = matcher.group("arguments");
-
-				return new TemplateRenderer(localPartial, indentation, arguments == null ? null : state.createExpression(state.toLocation(), state.createExpressionParser(new TrimmedString(matcher.start(2), arguments.trim()), true), extensions));
+				return new TemplateRenderer(localPartial, indentation, arguments);
 			}
 		}
 
@@ -406,7 +443,7 @@ public class TemplateLoader {
 			}
 		}
 
-		return new TemplateRenderer(partial, indentation);
+		return new TemplateRenderer(partial, indentation, arguments);
 	}
 
 	/**
@@ -636,7 +673,7 @@ public class TemplateLoader {
 					final Object location = state.toLocation();
 
 					// Load the annotation arguments
-					state.getSections().push(new Section(state.getSections().peek(), sectionName, location, arguments == null ? null : state.createExpression(location, state.createExpressionParser(new TrimmedString(annotation.start(2), arguments.trim()), true), extensions), sectionName.substring(1), true));
+					state.getSections().push(new Section(state.getSections().peek(), sectionName, location, arguments == null ? null : state.createExpression(location, state.createExpressionParser(new TrimmedString(annotation.start("arguments"), arguments.trim()), true), extensions), sectionName.substring(1), true));
 				} else { // Start a new section
 					final Object location = state.toLocation();
 

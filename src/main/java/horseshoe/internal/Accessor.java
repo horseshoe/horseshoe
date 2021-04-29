@@ -140,6 +140,16 @@ public abstract class Accessor {
 			return matcher.start(group);
 		}
 
+		/**
+		 * Returns the start index of the subsequence captured by the given group during this match.
+		 *
+		 * @param name the name of a named-capturing group in this matcher's pattern
+		 * @return the index of the first character captured by the group, or -1 if the match was successful but the group itself did not match anything
+		 */
+		public int start(String name) {
+			return matcher.start(name);
+		}
+
 		@Override
 		public int end() {
 			return matcher.end();
@@ -148,6 +158,16 @@ public abstract class Accessor {
 		@Override
 		public int end(int group) {
 			return matcher.end(group);
+		}
+
+		/**
+		 * Returns the offset after the last character of the subsequence captured by the given group during this match.
+		 *
+		 * @param name the name of a named-capturing group in this matcher's pattern
+		 * @return the offset after the last character captured by the group, or -1 if the match was successful but the group itself did not match anything
+		 */
+		public int end(String name) {
+			return matcher.end(name);
 		}
 
 		@Override

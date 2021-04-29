@@ -22,11 +22,6 @@ class TemplateRenderer extends TagRenderer {
 		this(template, indentation, null);
 	}
 
-	TemplateRenderer(final String indentation, final boolean standalone, final TemplateRenderer deferred) {
-		this(deferred.template, indentation, deferred.expression);
-		setStandalone(standalone);
-	}
-
 	@Override
 	public void render(final RenderContext context, final Writer writer) throws IOException {
 		final Template renderTemplate = template == null ? context.getSectionPartials().peek() : template;
