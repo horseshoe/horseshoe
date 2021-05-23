@@ -875,15 +875,15 @@ public final class MethodBuilder {
 			stackSize += methodStackOffset;
 			maxStackSize = Math.max(maxStackSize, stackSize);
 			return append(INVOKESTATIC, B0, B0);
+		} else if (Modifier.isPrivate(modifiers) || superCall) {
+			stackSize += methodStackOffset - 1;
+			maxStackSize = Math.max(maxStackSize, stackSize);
+			return append(INVOKESPECIAL, B0, B0);
 		} else if (Modifier.isInterface(method.getDeclaringClass().getModifiers())) {
 			final int stackOffset = methodStackOffset - 1;
 			stackSize += stackOffset;
 			maxStackSize = Math.max(maxStackSize, stackSize);
 			return append(INVOKEINTERFACE, B0, B0, (byte)(getStackSize(method.getReturnType()) - stackOffset), B0);
-		} else if (Modifier.isPrivate(modifiers) || superCall) {
-			stackSize += methodStackOffset - 1;
-			maxStackSize = Math.max(maxStackSize, stackSize);
-			return append(INVOKESPECIAL, B0, B0);
 		}
 
 		stackSize += methodStackOffset - 1;

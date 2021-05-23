@@ -49,6 +49,7 @@ class TemplateRenderer extends TagRenderer {
 		} else if (isStandalone()) {
 			context.getIndentation().push(context.getIndentation().peek() + indentation);
 		} else {
+			writer.write(context.getIndentation().peek());
 			writer.write(indentation);
 			context.getIndentation().push("");
 		}

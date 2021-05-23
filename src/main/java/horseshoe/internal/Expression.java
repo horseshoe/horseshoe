@@ -50,8 +50,8 @@ public final class Expression {
 	private static final Method IDENTIFIER_FIND_VALUE_METHOD = getMethod(Identifier.class, "findValue", RenderContext.class, int.class, Object[].class);
 	private static final Method IDENTIFIER_GET_ROOT_VALUE = getMethod(Identifier.class, "getRootValue", RenderContext.class);
 	private static final Method IDENTIFIER_GET_ROOT_VALUE_METHOD = getMethod(Identifier.class, "getRootValue", RenderContext.class, Object[].class);
-	private static final Method IDENTIFIER_GET_VALUE = getMethod(Identifier.class, "getValue", Object.class, boolean.class);
-	private static final Method IDENTIFIER_GET_VALUE_METHOD = getMethod(Identifier.class, "getValue", Object.class, boolean.class, Object[].class);
+	private static final Method IDENTIFIER_GET_VALUE = getMethod(Identifier.class, "getValue", Object.class, Object.class, boolean.class);
+	private static final Method IDENTIFIER_GET_VALUE_METHOD = getMethod(Identifier.class, "getValue", Object.class, Object.class, boolean.class, Object[].class);
 	private static final Method ITERABLE_ITERATOR = getMethod(Iterable.class, "iterator");
 	private static final Method ITERATOR_HAS_NEXT = getMethod(Iterator.class, "hasNext");
 	private static final Method ITERATOR_NEXT = getMethod(Iterator.class, "next");
@@ -339,10 +339,10 @@ public final class Expression {
 				state.getOperands().push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(skipFunc)));
 
 				if (lastOperator.has(Operator.SAFE)) {
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(SWAP).pushConstant(lastOperator.has(Operator.IGNORE_FAILURES))));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(SWAP, ACONST_NULL).pushConstant(lastOperator.has(Operator.IGNORE_FAILURES))));
 					state.getOperands().push(new Operand(Object.class, objectBuilder.addCode(DUP).addBranch(IFNULL, skipFunc)));
 				} else {
-					state.getOperands().push(new Operand(Object.class, objectBuilder.pushConstant(lastOperator.has(Operator.IGNORE_FAILURES))));
+					state.getOperands().push(new Operand(Object.class, objectBuilder.addCode(ACONST_NULL).pushConstant(lastOperator.has(Operator.IGNORE_FAILURES))));
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder()));
 				}
 
@@ -371,9 +371,9 @@ public final class Expression {
 				if (operator.has(Operator.SAFE)) {
 					// Create a new output formed by invoking identifiers[index].getValue(object)
 					final Label end = state.getOperands().peek().builder.newLabel();
-					state.getOperands().push(new Operand(Object.class, identifier, state.getOperands().pop().toObject().addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
+					state.getOperands().push(new Operand(Object.class, identifier, state.getOperands().pop().toObject().addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP, ACONST_NULL).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
 				} else {
-					state.getOperands().push(new Operand(Object.class, identifier, state.getOperands().pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE)));
+					state.getOperands().push(new Operand(Object.class, identifier, state.getOperands().pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP, ACONST_NULL).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE)));
 				}
 			} else { // Check for a local or template binding
 				final Operator operator = Operator.get(matcher.group("assignment"), true);
@@ -1117,7 +1117,7 @@ public final class Expression {
 
 			// Load the identifiers and invoke identifiers[index].getValue(object)
 			for (int i = 1; i < names.length; i++) {
-				state.getOperands().peek().builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(names[i])))).addCode(AALOAD, SWAP).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE);
+				state.getOperands().peek().builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(names[i])))).addCode(AALOAD, SWAP, ACONST_NULL).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE);
 			}
 		} else { // Tokenize the entire expression, using the shunting yard algorithm
 			int initializeBindingsStart = 0;

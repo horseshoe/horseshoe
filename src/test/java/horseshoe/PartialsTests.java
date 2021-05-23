@@ -240,6 +240,7 @@ class PartialsTests {
 	@Test
 	void testInlinePartialIndentation() throws IOException, LoadException {
 		assertEquals("ab" + LS + "\tab" + LS, Template.load("{{< a }}\na{{# b }}b{{/ b }}\n{{/}}\n{{> a }}\n\t{{> a }}\n").render(Collections.singletonMap("b", true), new StringWriter()).toString());
+		assertEquals("\t\t\ta", Template.load("{{< a }}a{{/}}\n{{< b }}\n\t{{> a }}{{/}}\n\t\t{{> b }}").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test

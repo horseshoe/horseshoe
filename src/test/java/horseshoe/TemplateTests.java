@@ -240,6 +240,11 @@ class TemplateTests {
 	}
 
 	@Test
+	void testRepeatedStreamingSection() throws IOException, LoadException {
+		assertEquals("a, b" + LS + "a; b" + LS, new TemplateLoader().load("Repeated Streaming Section", "{{# ['a', 'b', 'c'] #? c -> c[0] < 'c'[0] }}{{.}}{{# .hasNext }}, {{/}}{{/}}\n{{#}}{{.}}{{# .hasNext }}; {{/}}{{/}}\n").render(Collections.emptyMap(), new java.io.StringWriter()).toString());
+	}
+
+	@Test
 	void testRootIdentifiers() throws IOException, LoadException {
 		assertEquals("Root Local Root Root", new TemplateLoader().load("Root", "{{#[\"Value\":\"Local\"]}}{{\\Value}} {{Value}} {{/Value}}{{#/.}} {{Value}}{{/}}{{/}}").render(Collections.<String, Object>singletonMap("Value", "Root"), new java.io.StringWriter()).toString());
 	}

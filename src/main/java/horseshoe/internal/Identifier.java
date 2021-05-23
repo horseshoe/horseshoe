@@ -127,7 +127,7 @@ public final class Identifier {
 					}
 				}
 			} else if (context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT) {
-				return getValue(context.getSectionData().peekBase().data, false);
+				return getValue(context.getSectionData().peekBase().data, object, skippedAccessor);
 			}
 		}
 
@@ -181,7 +181,7 @@ public final class Identifier {
 					}
 				}
 			} else if (context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT) {
-				return getValue(context.getSectionData().peekBase().data, false, parameters);
+				return getValue(context.getSectionData().peekBase().data, object, skippedAccessor, parameters);
 			}
 		}
 
@@ -198,8 +198,19 @@ public final class Identifier {
 	 * @param object the object to get the type of
 	 * @return the name of the type for the specified object, or "null" if the object is null
 	 */
-	private String getObjectType(final Object object) {
+	private static String getObjectType(final Object object) {
 		return object == null ? "null" : object.getClass().getName();
+	}
+
+	/**
+	 * Gets the string name of the type of an object, or the name of the object class if the original object is null.
+	 *
+	 * @param originalObject the original object to get the type of
+	 * @param objectClass the object class to use if the original object is null
+	 * @return the name of the type for the specified object, or the name of the object class if the original object is null
+	 */
+	private static String getObjectType(final Object originalObject, final Class<?> objectClass) {
+		return originalObject == null ? objectClass.getName() : getObjectType(originalObject);
 	}
 
 	/**
@@ -244,7 +255,7 @@ public final class Identifier {
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object getRootValue(final RenderContext context) throws Throwable {
-		return getValue(context.getSectionData().peekBase().data, false);
+		return getValue(context.getSectionData().peekBase().data, null, false);
 	}
 
 	/**
@@ -256,18 +267,19 @@ public final class Identifier {
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object getRootValue(final RenderContext context, final Object... parameters) throws Throwable {
-		return getValue(context.getSectionData().peekBase().data, false, parameters);
+		return getValue(context.getSectionData().peekBase().data, null, false, parameters);
 	}
 
 	/**
 	 * Gets the value of the identifier given the context object.
 	 *
 	 * @param context the context object to evaluate
+	 * @param originalContext the original context object
 	 * @param ignoreFailures true to return null for failures, false to throw exceptions
 	 * @return the result of the evaluation
 	 * @throws Throwable if accessing the value throws
 	 */
-	public Object getValue(final Object context, final boolean ignoreFailures) throws Throwable {
+	public Object getValue(final Object context, final Object originalContext, final boolean ignoreFailures) throws Throwable {
 		if (context == null) {
 			return throwException(ignoreFailures, NullPointerException.class, "Field \"" + name + "\" not found in null object");
 		}
@@ -280,7 +292,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
-				return throwException(ignoreFailures, NoSuchFieldException.class, "Field \"" + name + "\" not found in " + objectClass.getName() + " object");
+				return throwException(ignoreFailures, NoSuchFieldException.class, "Field \"" + name + "\" not found in " + getObjectType(originalContext, objectClass) + " object");
 			}
 
 			accessorDatabase.put(lookupClass, accessor);
@@ -293,12 +305,13 @@ public final class Identifier {
 	 * Evaluates the method identifier given the context object and parameters.
 	 *
 	 * @param context the context object to evaluate
+	 * @param originalContext the original context object
 	 * @param ignoreFailures true to return null for failures, false to throw exceptions
 	 * @param parameters the parameters used to evaluate the object
 	 * @return the result of the evaluation
 	 * @throws Throwable if accessing the value throws
 	 */
-	public Object getValue(final Object context, final boolean ignoreFailures, final Object... parameters) throws Throwable {
+	public Object getValue(final Object context, final Object originalContext, final boolean ignoreFailures, final Object... parameters) throws Throwable {
 		if (context == null) {
 			return throwException(ignoreFailures, NullPointerException.class, "Method \"" + name + "\" not found in null object");
 		}
@@ -311,7 +324,7 @@ public final class Identifier {
 			accessor = Accessor.FACTORY.create(context, this);
 
 			if (accessor == null) {
-				return throwException(ignoreFailures, NoSuchMethodException.class, "Method \"" + name + "\" not found in " + objectClass.getName() + " object");
+				return throwException(ignoreFailures, NoSuchMethodException.class, "Method \"" + name + "\" not found in " + getObjectType(originalContext, objectClass) + " object");
 			}
 
 			accessorDatabase.put(lookupClass, accessor);

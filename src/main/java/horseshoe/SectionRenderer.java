@@ -5,6 +5,7 @@ import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -325,20 +326,21 @@ public class SectionRenderer implements Renderer {
 			unwrappedData = ((Stream<?>) unwrappedData).iterator();
 		}
 
-		Object cache = unwrappedData;
-
 		if (unwrappedData == null) {
 			renderInverted(context, writer);
 		} else if (unwrappedData instanceof Iterable) {
-			dispatchIteratorData(context, ((Iterable<?>) unwrappedData).iterator(), writer);
+			if (section.cacheResult() && !(unwrappedData instanceof Collection)) {
+				unwrappedData = new Reiterable<>(((Iterable<?>) unwrappedData).iterator());
+				dispatchIteratorData(context, (Iterator<?>) unwrappedData, writer);
+			} else {
+				dispatchIteratorData(context, ((Iterable<?>) unwrappedData).iterator(), writer);
+			}
 		} else if (unwrappedData instanceof Iterator) {
 			if (section.cacheResult()) {
-				final Iterator<?> reiterator = new Reiterable<>((Iterator<?>) unwrappedData);
-				dispatchIteratorData(context, reiterator, writer);
-				cache = reiterator;
-			} else {
-				dispatchIteratorData(context, (Iterator<?>) unwrappedData, writer);
+				unwrappedData = new Reiterable<>((Iterator<?>) unwrappedData);
 			}
+
+			dispatchIteratorData(context, (Iterator<?>) unwrappedData, writer);
 		} else if (unwrappedData.getClass().isArray()) {
 			dispatchArray(context, unwrappedData, writer);
 		} else if (!dispatchPrimitiveData(context, unwrappedData, writer)) {
@@ -348,7 +350,7 @@ public class SectionRenderer implements Renderer {
 		}
 
 		if (section.cacheResult()) {
-			context.setRepeatedSectionData(cache);
+			context.setRepeatedSectionData(unwrappedData);
 		}
 	}
 
