@@ -10,6 +10,7 @@ public final class Identifier {
 
 	public static final int UNSTATED_BACKREACH = -1;
 	public static final int NOT_A_METHOD = -1;
+	public static final Object NULL_ORIGINAL_CONTEXT = new Object();
 
 	private static final String LETTER_CHARACTERS = "\\p{Lu}\\p{Ll}\\p{Lt}\\p{Lm}\\p{Lo}"; // Character.isLetter()
 	private static final String CHARACTERS = LETTER_CHARACTERS + // Derived from Character.isJavaIdentifierPart()
@@ -127,7 +128,7 @@ public final class Identifier {
 					}
 				}
 			} else if (context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT) {
-				return getValue(context.getSectionData().peekBase().data, object, skippedAccessor);
+				return getValue(context.getSectionData().peekBase().data, object == null ? NULL_ORIGINAL_CONTEXT : object, skippedAccessor);
 			}
 		}
 
@@ -181,7 +182,7 @@ public final class Identifier {
 					}
 				}
 			} else if (context.getSettings().getContextAccess() == ContextAccess.CURRENT_AND_ROOT) {
-				return getValue(context.getSectionData().peekBase().data, object, skippedAccessor, parameters);
+				return getValue(context.getSectionData().peekBase().data, object == null ? NULL_ORIGINAL_CONTEXT : object, skippedAccessor, parameters);
 			}
 		}
 
@@ -210,7 +211,11 @@ public final class Identifier {
 	 * @return the name of the type for the specified object, or the name of the object class if the original object is null
 	 */
 	private static String getObjectType(final Object originalObject, final Class<?> objectClass) {
-		return originalObject == null ? objectClass.getName() : getObjectType(originalObject);
+		if (originalObject == null) {
+			return objectClass.getName();
+		}
+
+		return NULL_ORIGINAL_CONTEXT.equals(originalObject) ? "null" : getObjectType(originalObject);
 	}
 
 	/**
@@ -255,7 +260,7 @@ public final class Identifier {
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object getRootValue(final RenderContext context) throws Throwable {
-		return getValue(context.getSectionData().peekBase().data, null, false);
+		return getValue(context.getSectionData().peekBase().data, NULL_ORIGINAL_CONTEXT, false);
 	}
 
 	/**
@@ -267,7 +272,7 @@ public final class Identifier {
 	 * @throws Throwable if accessing the value throws
 	 */
 	public Object getRootValue(final RenderContext context, final Object... parameters) throws Throwable {
-		return getValue(context.getSectionData().peekBase().data, null, false, parameters);
+		return getValue(context.getSectionData().peekBase().data, NULL_ORIGINAL_CONTEXT, false, parameters);
 	}
 
 	/**

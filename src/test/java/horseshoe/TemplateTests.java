@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 
+import horseshoe.Settings.ContextAccess;
 import horseshoe.internal.Expression;
 
 import org.junit.jupiter.api.Test;
@@ -98,6 +99,12 @@ class TemplateTests {
 	@Test
 	void testEmpty() throws IOException, LoadException {
 		assertEquals("", new TemplateLoader().load("Empty", "{{}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+	}
+
+	@Test
+	void testErrorMessages() throws IOException, LoadException {
+		assertEquals(LS, Template.load("{{# [ null ] }}\n{{ nonExistant() }}\n{{/}}").render(new Settings().setContextAccess(ContextAccess.CURRENT_AND_ROOT), Collections.singletonMap("key", "value"), new java.io.StringWriter()).toString());
+		assertEquals(LS, Template.load("{{# [ 'key': 'value' ] }}\n{{ nonExistant() }}\n{{/}}").render(new Settings().setContextAccess(ContextAccess.CURRENT_AND_ROOT), Collections.singletonMap("key", "value"), new java.io.StringWriter()).toString());
 	}
 
 	/**
