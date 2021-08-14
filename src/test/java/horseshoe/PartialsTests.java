@@ -142,17 +142,17 @@ class PartialsTests {
 
 	@Test
 	void testSectionPartial2() throws IOException, LoadException {
-		assertEquals("<p>" + LS + "\tTest" + LS + "paragraph </p>", new TemplateLoader().load("p", "<p>\n\t{{>>}}\n</p>", "{{#> p }}\nTest\nparagraph {{/ p }}\n").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("<p>" + LS + "\tTest" + LS + "paragraph </p>", new TemplateLoader().load("p", "<p>\n\t{{>>}}\n</p>", "{{#> p }}\nTest\nparagraph {{/ p }}").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
 	void testSectionPartial3() throws IOException, LoadException {
-		assertEquals("<p>" + LS + "\tTest" + LS + "\tparagraph" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}<ul><li>Item</li></ul>\n").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("<p>" + LS + "\tTest" + LS + "\tparagraph" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}\n<ul><li>Item</li></ul>\n").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
 	void testSectionPartial4() throws IOException, LoadException {
-		assertEquals("<p>" + LS + "\tTest" + LS + "paragraph" + LS + "1" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}1\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}<ul><li>Item</li></ul>\n").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("<p>" + LS + "\tTest" + LS + "paragraph" + LS + "1" + LS + "</p><ul><li>Item</li></ul>" + LS, new TemplateLoader().load("p", "<p>\n\t{{>}}1\n</p>", "{{#> p }}\nTest\nparagraph\n {{/ p }}\n<ul><li>Item</li></ul>\n").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
@@ -270,6 +270,11 @@ class PartialsTests {
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("a", loadMap("b", 4), "b", 2), "b", 3), writer);
 		assertEquals("3" + LS + "2" + LS + "4" + LS, writer.toString());
+	}
+
+	@Test
+	void testInlineSectionPartialNewLine() throws IOException, LoadException {
+		assertEquals("1" + LS + "2" + LS, Template.load("{{< a }}{{>}}{{/}}\n{{# 1..2 }}\n{{#> a }}{{.}}{{/}}\n{{/}}\n").render(Collections.singletonMap("b", true), new StringWriter()).toString());
 	}
 
 	@Test

@@ -85,15 +85,21 @@ public class Template {
 	 * @param name the name of the template
 	 * @param identifier the identifier of the template
 	 * @param index the index of the template partial, or 0 to indicate top-level template
+	 * @param parameters the names of the parameters for the template, or null if the template is not a local partial
 	 */
 	Template(final String name, final Object identifier, final int index, final List<String> parameters) {
 		this.identifier = identifier;
-		this.section = new Section(null, name == null ? "[Anonymous]" : name, identifier, null, null, true);
+		this.section = new Section(null, name == null ? "[Anonymous]" : name, identifier, null, null, true, parameters != null);
 		this.index = index;
-		this.parameters = parameters;
 
-		for (final String parameterName : parameters) {
-			bindings.put(parameterName, new TemplateBinding(parameterName, index, bindings.size()));
+		if (parameters == null) {
+			this.parameters = Collections.emptyList();
+		} else {
+			this.parameters = parameters;
+
+			for (final String parameterName : parameters) {
+				bindings.put(parameterName, new TemplateBinding(parameterName, index, bindings.size()));
+			}
 		}
 	}
 
@@ -105,7 +111,7 @@ public class Template {
 	 * @param index the index of the template partial, or 0 to indicate top-level template
 	 */
 	Template(final String name, final Object identifier, final int index) {
-		this(name, identifier, index, Collections.emptyList());
+		this(name, identifier, index, null);
 	}
 
 	/**

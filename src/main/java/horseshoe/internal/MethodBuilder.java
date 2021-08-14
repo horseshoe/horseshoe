@@ -1562,7 +1562,7 @@ public final class MethodBuilder {
 
 		if (member instanceof Field) { // Field
 			return constantPool.add(member, FIELD_CONSTANT, B0, B0, B0, B0);
-		} else if ((member.getDeclaringClass().getModifiers() & Modifier.INTERFACE) != 0) { // Interface method
+		} else if (Modifier.isInterface(member.getDeclaringClass().getModifiers())) { // Interface method
 			return constantPool.add(member, IMETHOD_CONSTANT, B0, B0, B0, B0);
 		}
 

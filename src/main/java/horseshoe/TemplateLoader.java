@@ -381,7 +381,7 @@ public class TemplateLoader {
 		if (tag.charAt(start) == '(') {
 			final Expression expression = state.createExpression(location, state.createExpressionParser(new TrimmedString(start, name), false), extensions);
 
-			return new TemplateRenderer(new Template(null, "[Deferred]"), null) {
+			return new TemplateRenderer(new Template(null, state.toLocation()), null) {
 				@Override
 				public void render(RenderContext context, Writer writer) throws IOException {
 					final Object result = expression.evaluate(context);
@@ -542,7 +542,7 @@ public class TemplateLoader {
 
 				StaticContentRenderer.create(state.getRenderLists().peek(), lines);
 			} else {
-				StaticContentRenderer.create(state.getRenderLists().peek(), lines, state.getRenderLists().peek().isEmpty() && state.getSections().peek().getParent() == null);
+				StaticContentRenderer.create(state.getRenderLists().peek(), lines, state.getRenderLists().peek().isEmpty() && state.getSections().peek().isLocalPartial());
 			}
 		}
 
@@ -740,7 +740,7 @@ public class TemplateLoader {
 					throw new LoadException(loaders, "Section close tag mismatch, expecting close tag for section " + section);
 				}
 
-				if (state.getSections().pop().getParent() == null) { // Null parent means top-level, which indicates an inline partial
+				if (state.getSections().pop().isLocalPartial()) { // Check if the section is a local partial
 					state.removeStandaloneTagHead();
 					state.setStandaloneStatus(TemplateLoadState.TAG_CHECK_TAIL_STANDALONE)
 							.getTemplateBindings().pop();

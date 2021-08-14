@@ -15,6 +15,7 @@ final class Section {
 	private final Expression expression;
 	private final String annotation;
 	private final boolean isInvisible;
+	private final boolean isLocalPartial;
 	private boolean cacheResult = false;
 	private boolean useCache = false;
 	private final List<Renderer> renderList = new ArrayList<>();
@@ -71,18 +72,34 @@ final class Section {
 	 * @param expression the expression for the section
 	 * @param annotation the name of the annotation for the section, or null if no annotation exists
 	 * @param isInvisible true if the section is not visible to backreach, otherwise false
+	 * @param isLocalPartial true if the section is a local partial, otherwise false
 	 */
-	public Section(final Section parent, final String name, final Object location, final Expression expression, final String annotation, final boolean isInvisible) {
+	Section(final Section parent, final String name, final Object location, final Expression expression, final String annotation, final boolean isInvisible, final boolean isLocalPartial) {
 		this.parent = parent;
 		this.name = Objects.requireNonNull(name, "Encountered null section name");
 		this.location = location;
 		this.expression = expression;
 		this.annotation = annotation;
 		this.isInvisible = isInvisible;
+		this.isLocalPartial = isLocalPartial;
 
 		if (parent != null) {
 			parent.children.add(this);
 		}
+	}
+
+	/**
+	 * Creates a new section using the specified expression and specified writer.
+	 *
+	 * @param parent the parent of the section, or null if the section is a top-level section
+	 * @param name the name for the section
+	 * @param location the location of the section
+	 * @param expression the expression for the section
+	 * @param annotation the name of the annotation for the section, or null if no annotation exists
+	 * @param isInvisible true if the section is not visible to backreach, otherwise false
+	 */
+	public Section(final Section parent, final String name, final Object location, final Expression expression, final String annotation, final boolean isInvisible) {
+		this(parent, name, location, expression, annotation, isInvisible, false);
 	}
 
 	/**
@@ -142,15 +159,6 @@ final class Section {
 	}
 
 	/**
-	 * Gets the parent of the section.
-	 *
-	 * @return the parent of the section, null if top-level
-	 */
-	Section getParent() {
-		return parent;
-	}
-
-	/**
 	 * Gets the list of renderers associated with the section.
 	 *
 	 * @return the list of renderers associated with the section
@@ -175,6 +183,15 @@ final class Section {
 	 */
 	private boolean isRepeat() {
 		return name.isEmpty();
+	}
+
+	/**
+	 * Checks if the section is a local partial.
+	 *
+	 * @return true if the section is a local partial, otherwise false
+	 */
+	boolean isLocalPartial() {
+		return isLocalPartial;
 	}
 
 	/**
