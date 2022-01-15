@@ -113,7 +113,7 @@ Explicit levels within the context stack can be referenced by prefixing an ident
 Unescaped content (`{{{ content }}}`, `{{& content }}`) is the same as normal content in Horseshoe, since content is not escaped by default. It only differs from normal content if content escaping is enabled. The tag can either start with a `{` and end with a `}` or simply start with a `&`.
 
 #### Partials
-Partial tags (`{{> partial }}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++ but providing appropriate scoping. The partial template is loaded either from the specified filename or the corresponding template from the template loader. If the lookup name is not known until render-time, its value can be computed with a [expression](#expressions) surrounded by parentheses (`{{> (expression) }}`). Once loaded, the partial is placed into the current template.
+Partial tags (`{{> partial }}`) are similar to partial tags in Mustache. They function similarly to a `#include` directive in C++ but providing appropriate scoping. The partial template is loaded either from the specified filename or the corresponding template from the template loader. If the lookup name is not known until render-time, its value can be computed with a [expression](#expressions) surrounded by parentheses (`{{> (expression) }}`). Once loaded, the partial is expanded into the current template.
 
 If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. <b>Using a double arrow partial tag (`{{>> partial }}`) will avoid applying the indentation to every line but will still ignore the trailing whitespace and newline after the partial.</b>
 
@@ -219,13 +219,14 @@ Inline partial tags (`{{< partial }}`) define a partial template inline in the c
 
 Inline partials can have named parameters ([template bindings](#template-bindings)). The first parameter can be specified as a literal `.` to indicate the value will be pushed onto the context stack.
 
-Inline partials can only be included (using a [partial tag](#partials)) from the declaring template. This prevents naming collisions with inline partials in other templates. Passing arguments to an inline partial or computing its name is done as an [expression](#expressions) surrounded by parentheses. For example,
+<b>Closing tags for inline partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows inline partials to end without a trailing newline and not cause an output line in the current template.
+
+Inline partials can be expanded using a [partial tag](#partials). An inline partial from an external template can be expanded by specifying the name of the external template followed by a `/` before the name of the inline partial. Passing arguments to an inline partial is done using an [expression](#expressions) surrounded by parentheses. Computing the name of an inline partial can also be done using a parenthesized [expression](#expressions). For example,
 ```horseshoe
 {{> MyPartial(1 + 1, 'second arg') }}
+{{> OtherTemplateFile.U/MyPartial(1 + 1, 'second arg') }}
 {{> ('My' + 'Partial')(1 + 1, 'second arg') }}
 ```
-
-<b>Closing tags for inline partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows inline partials to end without a trailing newline and not cause an output line in the current template.
 
 #### Section Partials
 Section partial tags (`{{#> partial }}`) apply a partial template to the nested section. This provides some functionality similar to a Mustache lambda, except that no code is used to render the section. It is all within the confines of the Horseshoe template.

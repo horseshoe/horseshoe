@@ -42,6 +42,7 @@ public class Template {
 	private final int index;
 	private final List<String> parameters;
 	private final Map<String, TemplateBinding> bindings = new LinkedHashMap<>();
+	private final Map<String, Template> localPartials = new LinkedHashMap<>();
 	private final Map<String, Expression> rootExpressions = new LinkedHashMap<>();
 
 	/**
@@ -149,6 +150,15 @@ public class Template {
 	 */
 	public final Object getIdentifier() {
 		return identifier;
+	}
+
+	/**
+	 * Gets the local partials for the template.
+	 *
+	 * @return the local partials for the template
+	 */
+	Map<String, Template> getLocalPartials() {
+		return localPartials;
 	}
 
 	/**

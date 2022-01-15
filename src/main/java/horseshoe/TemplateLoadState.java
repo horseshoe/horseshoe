@@ -28,7 +28,6 @@ final class TemplateLoadState {
 	private final Stack<Section> sections = new Stack<>();
 	private final Map<Identifier, Identifier> allIdentifiers = new HashMap<>();
 
-	private final Map<String, Template> localPartials = new HashMap<>();
 	private final Map<String, Expression> namedExpressions = new HashMap<>();
 	private final Stack<Map<String, TemplateBinding>> templateBindings = new Stack<>();
 	private final Stack<List<Renderer>> renderLists = new Stack<>();
@@ -98,15 +97,6 @@ final class TemplateLoadState {
 	}
 
 	/**
-	 * Gets the local partials for the state.
-	 *
-	 * @return the local partials for the state
-	 */
-	Map<String, Template> getLocalPartials() {
-		return localPartials;
-	}
-
-	/**
 	 * Gets the named expressions for the state.
 	 *
 	 * @return the named expressions for the state
@@ -149,6 +139,15 @@ final class TemplateLoadState {
 	 */
 	int getTagCount() {
 		return tagCount;
+	}
+
+	/**
+	 * Gets the template being loaded.
+	 *
+	 * @return the template being loaded
+	 */
+	Template getTemplate() {
+		return template;
 	}
 
 	/**

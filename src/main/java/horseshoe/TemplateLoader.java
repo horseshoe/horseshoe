@@ -39,6 +39,20 @@ public class TemplateLoader {
 	private static final String IDENTIFIER_PARENS = IDENTIFIER_PARENS_PATTERN.toString().replace("(?<name>", "(?:");
 	private static final Pattern PARTIAL_IMPORTS_PATTERN = Pattern.compile("[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + "$", Pattern.UNICODE_CHARACTER_CLASS);
 
+	/**
+	 * Normalizes a path by attempting to convert the path to a real path on the filesystem. If the path cannot be converted to a real path, then it is made absolute and normalized.
+	 *
+	 * @param path the path to normalize
+	 * @return the real path or absolute, normalized path
+	 */
+	private static Path normalize(final Path path) {
+		try {
+			return path.toRealPath();
+		} catch (IOException e) {
+			return path.toAbsolutePath().normalize();
+		}
+	}
+
 	private final Map<Object, Template> templates = new HashMap<>();
 	private final List<Path> includeDirectories = new ArrayList<>();
 	private Charset charset = StandardCharsets.UTF_8;
@@ -87,7 +101,7 @@ public class TemplateLoader {
 	 */
 	public TemplateLoader(final Iterable<? extends Path> includeDirectories) {
 		for (final Path path : includeDirectories) {
-			this.includeDirectories.add(path);
+			this.includeDirectories.add(normalize(path));
 		}
 	}
 
@@ -178,7 +192,7 @@ public class TemplateLoader {
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
 	public final Template load(final Path file, final Charset charset) throws IOException, LoadException {
-		final Path absoluteFile = file.toAbsolutePath().normalize();
+		final Path absoluteFile = normalize(file);
 
 		try (final Loader loader = new Loader(absoluteFile, charset)) {
 			return loadTemplate(new Template(file.toString(), absoluteFile), loader, new Stack<>());
@@ -418,7 +432,7 @@ public class TemplateLoader {
 	 */
 	private TemplateRenderer loadPartial(final Stack<Loader> loaders, final TemplateLoadState state, final String indentation, final String name, final Expression arguments, final String imports) throws LoadException {
 		if (imports == null) {
-			final Template localPartial = state.getLocalPartials().get(name);
+			final Template localPartial = state.getTemplate().getLocalPartials().get(name);
 
 			if (localPartial != null) {
 				return new TemplateRenderer(localPartial, indentation, arguments);
@@ -450,48 +464,54 @@ public class TemplateLoader {
 	 * Tries to load the specified template by file. If the template is already loaded, the previously loaded instance is returned and all settings are ignored.
 	 *
 	 * @param name the name of the template to load
-	 * @param absoluteFile the absolute, normalized template file to load
+	 * @param file the template file to load
 	 * @param loaders the stack of items being loaded
 	 * @return the loader if the file can be loaded, otherwise null
 	 * @throws IOException if there is an IOException when loading from a file
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	private Template loadTemplate(final String name, final Path absoluteFile, final Stack<Loader> loaders) throws IOException, LoadException {
-		final Template cachedTemplate = get(absoluteFile);
+	private Template loadTemplate(final String name, final Path file, final Stack<Loader> loaders) throws IOException, LoadException {
+		String partialName = null;
+		Path normalizedFile = normalize(file);
+		final Template cachedTemplate = get(normalizedFile);
 
 		if (cachedTemplate != null) {
 			return cachedTemplate;
 		}
 
-		// Ensure the file exists and access is not prevented via partial path traversal before loading from file
-		if (!absoluteFile.toFile().isFile()) {
-			return null;
-		} else if (getPreventPartialPathTraversal() && (loaders.isEmpty() || loaders.peekBase().getFile() == null || !absoluteFile.startsWith(loaders.peekBase().getFile().getParent()))) {
-			boolean matches = false;
+		// Ensure the file exists
+		if (!normalizedFile.toFile().isFile()) {
+			final Path parent = file.getParent();
 
-			// Check if the file begins with the directory of one of the include directories
-			for (final Path directory : includeDirectories) {
-				if (absoluteFile.startsWith(directory.toAbsolutePath().normalize())) {
-					matches = true;
-					break;
-				}
-			}
-
-			if (!matches) {
+			if (parent == null || !parent.toFile().isFile()) {
 				return null;
 			}
+
+			partialName = file.getFileName().toString();
+			normalizedFile = normalize(parent);
 		}
 
-		try (Loader loader = new Loader(absoluteFile, charset)) {
-			return loadTemplate(new Template(name, absoluteFile), loader, loaders);
+		// Ensure file access is not prevented via partial path traversal before loading from file
+		if (getPreventPartialPathTraversal() &&
+				(loaders.isEmpty() || loaders.peekBase().getFile() == null || !normalizedFile.startsWith(loaders.peekBase().getFile().getParent())) &&
+				includeDirectories.stream().noneMatch(normalizedFile::startsWith)) {
+			return null;
 		}
+
+		final Template template = new Template(name, normalizedFile);
+
+		try (Loader loader = new Loader(normalizedFile, charset)) {
+			loadTemplate(template, loader, loaders);
+		}
+
+		return partialName == null ? template : template.getLocalPartials().get(partialName);
 	}
 
 	/**
-	 * Loads the list of actions to be performed when rendering the template.
+	 * Loads a template using the specified loader.
 	 *
 	 * @param template the template to load
-	 * @param loader the item being loaded
+	 * @param loader the loader used to load the template
 	 * @param loaders the stack of items being loaded
 	 * @return the loaded template
 	 * @throws IOException if an error is encountered while reading from a file or stream
@@ -612,7 +632,7 @@ public class TemplateLoader {
 				if (extensions.contains(Extension.INLINE_PARTIALS)) {
 					final Template partial = parsePartialSignature(Utilities.trim(tag, 1).string, state);
 
-					if (state.getLocalPartials().put(partial.getSection().getName(), partial) != null) {
+					if (state.getTemplate().getLocalPartials().put(partial.getSection().getName(), partial) != null) {
 						throw new IllegalStateException("Inline partial \"" + partial.getSection().getName() + "\" is already defined");
 					}
 
@@ -874,7 +894,7 @@ public class TemplateLoader {
 	 * @return this loader
 	 */
 	public final TemplateLoader put(final Path file, final Template template) {
-		putTemplate(file.toAbsolutePath().normalize(), template);
+		putTemplate(normalize(file), template);
 		return this;
 	}
 
@@ -932,7 +952,7 @@ public class TemplateLoader {
 	 * @throws IOException if there is an IOException when loading from a file
 	 * @throws LoadException if a Horseshoe error is encountered while loading the template
 	 */
-	protected Template tryLoad(final String name, final Stack<Loader> loaders) throws IOException, LoadException {
+	private Template tryLoad(final String name, final Stack<Loader> loaders) throws IOException, LoadException {
 		// Try to load the template by file
 		final Path file = Paths.get(name);
 
@@ -942,7 +962,7 @@ public class TemplateLoader {
 
 		// Try to load the template relative to the current template
 		if (!loaders.isEmpty() && loaders.peek().getFile() != null) {
-			final Template relativeTemplate = loadTemplate(name, loaders.peek().getFile().resolveSibling(file).toAbsolutePath().normalize(), loaders);
+			final Template relativeTemplate = loadTemplate(name, loaders.peek().getFile().resolveSibling(file), loaders);
 
 			if (relativeTemplate != null) {
 				return relativeTemplate;
@@ -951,7 +971,7 @@ public class TemplateLoader {
 
 		// Try to load the template from the list of include directories
 		for (final Path directory : includeDirectories) {
-			final Template includeTemplate = loadTemplate(name, directory.resolve(file).toAbsolutePath().normalize(), loaders);
+			final Template includeTemplate = loadTemplate(name, directory.resolve(file), loaders);
 
 			if (includeTemplate != null) {
 				return includeTemplate;

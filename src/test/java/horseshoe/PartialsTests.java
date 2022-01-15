@@ -52,11 +52,11 @@ class PartialsTests {
 		final Path path2 = Paths.get("DELETE_ME2.test");
 
 		try {
-			Files.write(path, ("{{>" + path2.toAbsolutePath() + "}}" + LS).getBytes(StandardCharsets.UTF_16BE));
-			Files.write(path2, ("It Works!" + LS).getBytes(StandardCharsets.UTF_8));
+			Files.write(path, ("{{>" + path2.toAbsolutePath() + "/Nested(5)}}" + LS + "{{>" + path2.toAbsolutePath() + "}}" + LS).getBytes(StandardCharsets.UTF_16BE));
+			Files.write(path2, ("It Works!" + LS + "{{< Nested(a) }}" + LS + "Nested Partial {{ a }}" + LS + "{{/ Nested }}").getBytes(StandardCharsets.UTF_8));
 			final TemplateLoader loader = new TemplateLoader();
 			loader.put(loader.load(path.toAbsolutePath().normalize(), StandardCharsets.UTF_16BE));
-			assertEquals("It Works!" + LS, loader.load(path, StandardCharsets.UTF_16BE).render(Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("Nested Partial 5" + LS + "It Works!" + LS, loader.load(path, StandardCharsets.UTF_16BE).render(Collections.emptyMap(), new StringWriter()).toString());
 		} finally {
 			Files.delete(path);
 			Files.delete(path2);
@@ -105,6 +105,7 @@ class PartialsTests {
 			Files.write(path2, ("It Doesn't Work" + LS).getBytes(StandardCharsets.UTF_8));
 			assertEquals("It Doesn't Work" + LS, Template.load(path2).render(null, new StringWriter()).toString());
 			assertThrows(LoadException.class, () -> new TemplateLoader().load(path, StandardCharsets.UTF_16LE));
+			assertThrows(LoadException.class, () -> Template.load("{{>" + path2.toAbsolutePath().getRoot() + "}}" + LS));
 		} finally {
 			Files.delete(path);
 			Files.delete(path2);
