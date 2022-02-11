@@ -391,6 +391,14 @@ class ExpressionTests {
 		assertEquals("good", createExpression("(null.?toString()) ?? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("good", createExpression("(7.?badMethod()) ?? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("7", createExpression("(7?.toString()) ?? \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+		assertEquals("", createExpression("null ?? null", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+	}
+
+	@Test
+	void testIfPresentOperator() throws ReflectiveOperationException {
+		assertEquals("123", createExpression("\"abc\" !? \"123\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+		assertEquals("", createExpression("\"abc\" !? null", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+		assertEquals("", createExpression("null !? \"123\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 	}
 
 	@Test

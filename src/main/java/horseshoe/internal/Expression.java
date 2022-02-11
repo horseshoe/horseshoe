@@ -896,6 +896,12 @@ public final class Expression {
 				state.getOperands().push(new Operand(Object.class, new Operand(Object.class, left.toObject().addCode(DUP)).toBoolean().addBranch(IFNE, end).addCode(POP).append(right.toObject()).updateLabel(end)));
 				break;
 			}
+			case "!?": {
+				final Label end = left.builder.newLabel();
+
+				state.getOperands().push(new Operand(Object.class, new Operand(Object.class, left.toObject().addCode(DUP)).toBoolean().addBranch(IFEQ, end).addCode(POP).append(right.toObject()).updateLabel(end)));
+				break;
+			}
 			case "?": {
 				if (!Entry.class.equals(right.type)) {
 					throw new IllegalStateException("Incomplete ternary operator, missing \":\"");
