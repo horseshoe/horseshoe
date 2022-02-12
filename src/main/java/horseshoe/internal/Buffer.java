@@ -63,9 +63,7 @@ public final class Buffer {
 
 		for (int i = index; i <= end; i++) {
 			// Find first character
-			while (data[i] != first && ++i <= end);
-
-			if (i <= end) {
+			if (data[i] == first) {
 				final int matchEnd = i + value.length();
 				int j = i + 1;
 

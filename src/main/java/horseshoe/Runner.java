@@ -190,12 +190,7 @@ public class Runner {
 					final int indexToUpdate = list.size();
 
 					list.add(null);
-					((Alias)value).updaters.add(new AliasUpdater() {
-						@Override
-						public void update(final Object value) {
-							list.set(indexToUpdate, value);
-						}
-					});
+					((Alias)value).updaters.add(newValue -> list.set(indexToUpdate, newValue));
 				} else {
 					list.add(value);
 				}
@@ -266,12 +261,7 @@ public class Runner {
 				final Object value = parseNode();
 
 				if (value instanceof Alias) {
-					((Alias)value).updaters.add(new AliasUpdater() {
-						@Override
-						public void update(final Object value) {
-							map.put(key, value);
-						}
-					});
+					((Alias)value).updaters.add(newValue -> map.put(key, newValue));
 				} else {
 					map.put(key, value);
 				}
@@ -304,14 +294,7 @@ public class Runner {
 					return aliasValue;
 				}
 
-				Alias alias = unresolvedAliases.get(aliasName);
-
-				if (alias == null) {
-					alias = new Alias();
-					unresolvedAliases.put(aliasName, alias);
-				}
-
-				return alias;
+				return unresolvedAliases.computeIfAbsent(aliasName, name -> new Alias());
 			}
 
 			final Object value = parseValue();

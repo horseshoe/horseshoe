@@ -105,11 +105,11 @@ public abstract class Logger {
 		return new Logger() {
 			@Override
 			public void log(Level level, Throwable error, String message, Object... params) {
-				final LogRecord record = new LogRecord(level, message);
+				final LogRecord event = new LogRecord(level, message);
 
-				record.setThrown(error);
-				record.setParameters(params);
-				logger.log(record);
+				event.setThrown(error);
+				event.setParameters(params);
+				logger.log(event);
 			}
 		};
 	}

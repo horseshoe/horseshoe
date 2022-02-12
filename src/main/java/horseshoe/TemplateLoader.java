@@ -12,6 +12,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -147,7 +148,7 @@ public class TemplateLoader {
 	 *
 	 * @return the set of enabled Horseshoe extensions
 	 */
-	public final EnumSet<Extension> getExtensions() {
+	public final Set<Extension> getExtensions() {
 		return extensions;
 	}
 
@@ -922,13 +923,13 @@ public class TemplateLoader {
 	}
 
 	/**
-	 * Sets the enabled Horseshoe extensions. The extensions to be enabled should be bit-wise OR'd together.
+	 * Sets the enabled Horseshoe extensions.
 	 *
-	 * @param extensions the bit-wise OR of the enabled Horseshoe extensions
+	 * @param extensions the set of enabled Horseshoe extensions
 	 * @return this object
 	 */
-	public final TemplateLoader setExtensions(final EnumSet<Extension> extensions) {
-		this.extensions = extensions;
+	public final TemplateLoader setExtensions(final Set<Extension> extensions) {
+		this.extensions = EnumSet.copyOf(extensions);
 		return this;
 	}
 

@@ -58,12 +58,7 @@ public class Settings {
 	/**
 	 * The escape function that does not escape any characters, returning the same string that was passed to it.
 	 */
-	public static final EscapeFunction EMPTY_ESCAPE_FUNCTION = new EscapeFunction() {
-		@Override
-		public String escape(final String raw) {
-			return raw;
-		}
-	};
+	public static final EscapeFunction EMPTY_ESCAPE_FUNCTION = raw -> raw;
 
 	/**
 	 * The escape function that escapes a string as HTML, specifically the &amp;, &lt;, &gt;, ", and ' characters.

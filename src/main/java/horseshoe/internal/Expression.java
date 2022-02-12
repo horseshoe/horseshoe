@@ -6,7 +6,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -155,12 +154,9 @@ public final class Expression {
 	static {
 		final StringBuilder allOperators = new StringBuilder();
 		final StringBuilder assignmentOperators = new StringBuilder();
-		final Set<Operator> patterns = new TreeSet<>(new Comparator<Operator>() {
-			@Override
-			public int compare(final Operator o1, final Operator o2) {
-				final int lengthDiff = o2.getString().length() - o1.getString().length();
-				return lengthDiff == 0 ? o1.getString().compareTo(o2.getString()) : lengthDiff;
-			}
+		final Set<Operator> patterns = new TreeSet<>((o1, o2) -> {
+			final int lengthDiff = o2.getString().length() - o1.getString().length();
+			return lengthDiff == 0 ? o1.getString().compareTo(o2.getString()) : lengthDiff;
 		});
 
 		// Get each operator, ordered by length
