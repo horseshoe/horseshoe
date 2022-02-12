@@ -306,7 +306,7 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 | 12 | a <code>&#124;</code> b \(Bitwise Or\) | Left&nbsp;to&nbsp;right |
 | 13 | a <code>&amp;&amp;</code> b \(Logical And\) | Left&nbsp;to&nbsp;right |
 | 14 | a <code>&#124;&#124;</code> b \(Logical Or\) | Left&nbsp;to&nbsp;right |
-| 15 | a <code>?:</code> b \(Conditional\), <br>a <code>??</code> b \(Conditional \- Alternate\), <br>a <code>?</code> b \(Ternary\), <br>a <code>:</code> b \(Pair / Range\), <br>a <code>:&lt;</code> \(Backward Range\) | Right&nbsp;to&nbsp;left |
+| 15 | a <code>?:</code> b \(Elvis\), <br>a <code>??</code> b \(Null Coalescing\), <br>a <code>\!:</code> b \(Inverted Elvis\), <br>a <code>\!?</code> b \(Non\-null Coalescing\), <br>a <code>?</code> b \(Ternary\), <br>a <code>:</code> b \(Pair / Range\), <br>a <code>:&lt;</code> \(Backward Range\) | Right&nbsp;to&nbsp;left |
 | 16 | <code>☠</code> a \(Die\), <br><code>\~:&lt;</code> a \(Die \- Alternate\), <br><code>\#^</code> a \(Return\) | Left&nbsp;to&nbsp;right |
 | 17 | a <code>\#&gt;</code> b \(Streaming Remap\), <br>a <code>\#\.</code> b \(Streaming Remap \- Alternate\), <br>a <code>\#&#124;</code> b \(Streaming Flatten Remap\), <br>a <code>\#?</code> b \(Streaming Filter\), <br>a <code>\#&lt;</code> b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
 | 18 | a <code>=</code> b \(Bind Local Name\) | Right&nbsp;to&nbsp;left |
@@ -314,6 +314,17 @@ Regular expression literals use the form `~/[Pattern]/`, where `[Pattern]` is a 
 | 20 | a <code>;</code> b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
 
 Many operators support more operand types than traditional programming languages. Addition and subtraction can be applied to lists, maps, and sets as well as numeric primitives. Also, comparison operators can be used to compare enumerations with strings as well as comparing numeric primitives, strings, and any comparable objects.
+
+##### Ternary Operator
+The ternary operator and ternary-related operators (Elvis and Null-coalescing operators) are used to emulate "if-then-else" logic. The ternary operator is actually a trinary operator that takes the following form: `[condition] ? [true-result] : [false-result]`. It is a short-circuiting operation, so only one of `[true-result]` or `[false-result]` is evaluated.
+
+The ternary-related operators compress the ternary operator into a binary operation, with each operand evaluated at most once. The following table shows the ternary equivalent of each ternary-related operator, assuming that `a` is only evaluated once:
+| Expression | Ternary Equivalent |
+| ---------- | ------------------ |
+| `a ?? b` | `a != null ? a : b` |
+| `a ?: b` | `a ? a : b` |
+| `a !? b` | `a == null ? null : b` |
+| `a !: b` | `!a ? a : b` |
 
 ##### Safe and Nullable Operators
 Safe operators return `null` rather than throwing an exception if the left hand side of the operation is `null`. A safe operator is equivalent to prefixing the operation with a `null` check that short circuits the operation by returning `null`. Essentially, `lhs == null ? null : (lhs <op> rhs)`.

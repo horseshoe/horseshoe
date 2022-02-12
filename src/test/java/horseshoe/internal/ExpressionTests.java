@@ -384,9 +384,6 @@ class ExpressionTests {
 
 	@Test
 	void testSafeOperators() throws ReflectiveOperationException {
-		assertEquals("good", createExpression("null ?? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
-		assertEquals("good", createExpression("\"good\" ?: \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
-		assertEquals("good", createExpression("false ?: \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("good", createExpression("(null?.toString()) ?? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("good", createExpression("(null.?toString()) ?? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("good", createExpression("(7.?badMethod()) ?? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
@@ -416,7 +413,7 @@ class ExpressionTests {
 	}
 
 	@Test
-	void testTernary() throws ReflectiveOperationException {
+	void testTernaryOperators() throws ReflectiveOperationException {
 		assertEquals("a", createExpression("true ? \"a\" : 5", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("4", createExpression("false ? \"b\" : (1.0; 4)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
 		assertEquals("isZero", createExpression("0L * 5.6 ? \"notZero\" : \"isZero\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
@@ -428,6 +425,23 @@ class ExpressionTests {
 		assertEquals("bad", createExpression("pain > 5 ? pain > 8 ? 'extreme' : 'bad' : pain < 2 ? 'good' : 'moderate'", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("pain", 7))).toString());
 		assertEquals("moderate", createExpression("pain > 5 ? pain > 8 ? 'extreme' : 'bad' : pain < 2 ? 'good' : 'moderate'", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("pain", 4))).toString());
 		assertEquals("low", createExpression("pain > 5 ? pain > 8 ? 'extreme' : 'bad' : pain < 2 ? 'low' : 'moderate'", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.singletonMap("pain", 0))).toString());
+	}
+
+	@Test
+	void testTernaryRelatedOperators() throws ReflectiveOperationException {
+		assertEquals("good", createExpression("null ?? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals(Boolean.FALSE, createExpression("false ?? \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("good", createExpression("\"good\" ?? \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("good", createExpression("null ?: \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("good", createExpression("\"good\" ?: \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("good", createExpression("false ?: \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+
+		assertEquals(null, createExpression("null !? \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("good", createExpression("false !? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("good", createExpression("\"bad\" !? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals(null, createExpression("null !: \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("good", createExpression("\"bad\" !: \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals(Boolean.FALSE, createExpression("false !: \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 	}
 
 }
