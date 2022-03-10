@@ -13,7 +13,7 @@ repositories {
 
 checkstyle {
 	configDirectory = file("${projectDir}/config/checkstyle")
-	toolVersion = 'latest.release'
+	toolVersion = '9.3'
 }
 
 compileJava {

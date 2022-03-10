@@ -280,7 +280,7 @@ In order to support rendering the nested section, the referenced partial templat
 ```
 results in
 
-<pre>---a---, ---b---, ---c---`</pre>
+<pre>---a---, ---b---, ---c---</pre>
 
 <b>Closing tags for section partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows section partials to end without a trailing newline and not cause an output line in the current template.
 
