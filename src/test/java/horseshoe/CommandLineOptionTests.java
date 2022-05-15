@@ -77,21 +77,9 @@ class CommandLineOptionTests {
 	}
 
 	@Test
-	void testBadSet2() {
-		final Iterator<?> it = new OptionSet().iterator();
-		assertThrows(RuntimeException.class, () -> it.remove());
-	}
-
-	@Test
 	void testBadSet3() {
 		final Iterator<?> it = new OptionSet().parse();
 		assertThrows(NoSuchElementException.class, () -> it.next());
-	}
-
-	@Test
-	void testBadSet4() {
-		final Iterator<?> it = new OptionSet().parse();
-		assertThrows(RuntimeException.class, () -> it.remove());
 	}
 
 	@Test

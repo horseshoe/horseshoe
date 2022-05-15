@@ -3,12 +3,10 @@ package horseshoe.internal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -18,7 +16,7 @@ class StreamableTests {
 	private static <T> int count(final Streamable<T> streamable) {
 		int i = 0;
 
-		for (final Iterator<T> it = streamable.iterator(); it.hasNext(); it.next()) {
+		for (final Iterator<T> it = streamable.stream(); it.hasNext(); it.next()) {
 			i++;
 		}
 
@@ -26,7 +24,7 @@ class StreamableTests {
 	}
 
 	private static <T> Streamable<T> remap(final Streamable<T> streamable) {
-		for (final Iterator<T> it = streamable.iterator(); it.hasNext(); ) {
+		for (final Iterator<T> it = streamable.stream(); it.hasNext(); ) {
 			streamable.add(it.next());
 		}
 
@@ -40,8 +38,6 @@ class StreamableTests {
 
 	@Test
 	void testArray2() {
-		assertTrue(Streamable.of().isEmpty());
-		assertFalse(Streamable.of("Not Empty", "Has 2 Items").isEmpty());
 		assertEquals(2, count(remap(Streamable.of("Test", null))));
 	}
 
@@ -66,7 +62,6 @@ class StreamableTests {
 		final Iterator<?> it = Streamable.ofUnknown("Test").iterator();
 
 		it.next();
-		it.remove();
 		assertThrows(NoSuchElementException.class, () -> it.next());
 	}
 
@@ -93,9 +88,9 @@ class StreamableTests {
 	@SuppressWarnings("unchecked")
 	@Test
 	void testFlatMap() {
-		final Streamable<Object> streamable = (Streamable<Object>)Streamable.ofUnknown(Arrays.asList(Arrays.asList(1, 2), new Object[] { 3, 4 }));
+		final Streamable<Object> streamable = (Streamable<Object>)Streamable.ofUnknown(Arrays.asList(Arrays.asList(1, 2), new Object[] { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 }));
 
-		streamable.forEach(a -> {
+		streamable.stream().forEachRemaining(a -> {
 			if (a instanceof Iterable) {
 				streamable.flatAdd((Iterable<Object>)a);
 			} else if (a instanceof Object[]) {
@@ -105,8 +100,8 @@ class StreamableTests {
 			}
 		});
 
-		final Object[] results = new Object[] { 1, 2, 3, 4 };
-		final Iterator<Object> it = streamable.iterator();
+		final Object[] results = new Object[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+		final Iterator<Object> it = streamable.stream();
 
 		for (final Object result : results) {
 			assertEquals(result, it.next());
@@ -117,8 +112,6 @@ class StreamableTests {
 
 	@Test
 	void testNull() {
-		assertTrue(Streamable.ofUnknown(null).isEmpty());
-		assertFalse(Streamable.ofUnknown("Not Empty").isEmpty());
 		assertEquals(0, count(remap(Streamable.ofUnknown(null))));
 	}
 
@@ -131,7 +124,7 @@ class StreamableTests {
 	void testOveradd() {
 		final Streamable<Object> streamable = remap(Streamable.of(Arrays.asList("Test", "Test 2", 5, (Object)null)));
 
-		for (final Iterator<Object> it = streamable.iterator(); it.hasNext(); it.remove()) {
+		for (final Iterator<Object> it = streamable.stream(); it.hasNext(); ) {
 			streamable.add(it.next());
 			streamable.add(0);
 		}
@@ -159,8 +152,8 @@ class StreamableTests {
 		assertEquals("[ 1, 2, null ]", Streamable.of(Arrays.asList("1", 2, null)).toString());
 		assertEquals("[ ]", Streamable.of(Arrays.asList()).toString());
 		assertEquals("[ 1 ]", Streamable.of(Arrays.asList("1")).toString());
-		assertEquals("Test", Streamable.of("Test").toString());
-		assertEquals(Objects.toString(null), Streamable.of((Object)null).toString());
+		assertEquals("[ Test ]", Streamable.of("Test").toString());
+		assertEquals("[ ]", Streamable.of((Object)null).toString());
 	}
 
 }

@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -14,210 +13,122 @@ import java.util.stream.Stream;
  *
  * @param <T> the type of items contained in the streamable
  */
-public abstract class Streamable<T> implements Iterable<T> {
+public final class Streamable<T> implements Iterable<T> {
 
-	/**
-	 * A streamable sequence enables chaining over an iterable type.
-	 *
-	 * @param <T> the type of items contained in the streamable sequence
-	 */
-	static final class StreamableSequence<T> extends Streamable<T> {
+	private static final Object[] EMPTY_ARRAY = new Object[0];
 
-		private T[] array;
-		private T[] iteratorArray;
-		private int size = 0;
-		private Iterator<T> initialIterator = null;
+	private T[] array;
+	private Iterator<T> initialIterator = null;
+	private int initialSize = 0;
+	private int size = 0;
 
-		@SuppressWarnings("unchecked")
-		private StreamableSequence(final T[] array) {
-			this.array = array;
-			this.iteratorArray = (T[])new Object[array.length];
-			this.size = array.length;
-		}
+	private Streamable(final T[] array) {
+		this.array = array;
+		this.size = array.length;
+	}
 
-		@SuppressWarnings("unchecked")
-		StreamableSequence(final int initialSize, final Iterator<T> iterator) {
-			this.array = (T[])new Object[initialSize];
-			this.iteratorArray = (T[])new Object[initialSize];
-			this.initialIterator = iterator;
-		}
+	@SuppressWarnings("unchecked")
+	private Streamable(final Iterator<T> iterator) {
+		this.array = (T[]) EMPTY_ARRAY;
+		this.initialIterator = iterator;
+	}
 
-		@Override
-		public void add(final T value) {
-			if (size == array.length) {
-				array = Arrays.copyOf(array, array.length * 2);
-			}
-
-			array[size++] = value;
-		}
-
-		@Override
-		public boolean isEmpty() {
-			return size == 0;
-		}
-
-		@Override
-		public Iterator<T> iterator() {
-			final Iterator<T> oldIterator = initialIterator;
-
-			if (oldIterator != null) {
-				initialIterator = null;
-				return oldIterator;
-			}
-
-			final T[] oldArray = array;
-			final Iterator<T> it = new Iterator<T>() {
-				private final int iteratorSize = size;
-				private int index = 0;
-
-				@Override
-				public boolean hasNext() {
-					return index < iteratorSize;
-				}
-
-				@Override
-				public T next() {
-					if (!hasNext()) {
-						throw new NoSuchElementException();
-					}
-
-					return iteratorArray[index++];
-				}
-
-				@Override
-				public void remove() {
-					// All values are automatically removed and must be re-added manually on every iteration
-				}
-			};
-
-			array = iteratorArray;
-			iteratorArray = oldArray;
-			size = 0;
-			return it;
-		}
-
-		@Override
-		public String toString() {
-			final StringBuilder builder = new StringBuilder("[");
-			final Iterator<T> iter = iterator();
-
-			if (iter.hasNext()) {
-				builder.append(' ').append(iter.next());
-				while (iter.hasNext()) {
-					builder.append(", ").append(iter.next());
-				}
-			}
-
-			return builder.append(" ]").toString();
-		}
-
+	private Streamable(final Iterator<T> iterator, final int initialSize) {
+		this(iterator);
+		this.initialSize = initialSize;
 	}
 
 	/**
-	 * A streamable value enables chaining over an optional value.
+	 * Adds a value to the streamable.
 	 *
-	 * @param <T> the type of item contained in the streamable value
+	 * @param value the value to add
 	 */
-	static final class StreamableValue<T> extends Streamable<T> {
-
-		private T value;
-
-		StreamableValue(final T value) {
-			this.value = value;
+	public void add(final T value) {
+		if (size == array.length) {
+			array = Arrays.copyOf(array, array.length == 0 ? Math.max(8, initialSize) : array.length * 2);
 		}
 
-		@Override
-		public void add(final T value) {
-			this.value = value;
-		}
+		array[size++] = value;
+	}
 
-		@Override
-		public boolean isEmpty() {
-			return value == null;
-		}
+	@Override
+	public Iterator<T> iterator() {
+		final Iterator<T> oldIterator = initialIterator;
 
-		@Override
-		public Iterator<T> iterator() {
+		if (oldIterator != null) {
+			initialIterator = null;
 			return new Iterator<T>() {
-				boolean hasNext = (value != null);
-
 				@Override
 				public boolean hasNext() {
-					return hasNext;
+					return oldIterator.hasNext();
 				}
 
 				@Override
 				public T next() {
-					if (!hasNext) {
-						throw new NoSuchElementException();
-					}
+					final T item = oldIterator.next();
 
-					final T oldValue = value;
-
-					hasNext = false;
-					value = null;
-					return oldValue;
-				}
-
-				@Override
-				public void remove() {
-					// All values are automatically removed and must be re-added manually on every iteration
+					add(item);
+					return item;
 				}
 			};
 		}
 
-		@Override
-		public String toString() {
-			return Objects.toString(value);
-		}
+		return new Iterator<T>() {
+			private final T[] itArray = array;
+			private final int itSize = size;
+			private int index = 0;
 
+			@Override
+			public boolean hasNext() {
+				return index < itSize;
+			}
+
+			@Override
+			public T next() {
+				if (!hasNext()) {
+					throw new NoSuchElementException();
+				}
+
+				return itArray[index++];
+			}
+		};
 	}
 
 	/**
-	 * Creates a streamable of the specified value.
+	 * Streams the data. All existing data will be cleared.
 	 *
-	 * @param value the value to reiterate
-	 * @return a streamable of the specified value
+	 * @return an iterator to the stream
 	 */
 	@SuppressWarnings("unchecked")
-	static Streamable<Object> create(final Object value) {
-		if (value instanceof Collection) {
-			return Streamable.of((Collection<Object>)value);
-		} else if (value instanceof Stream) {
-			return new StreamableSequence<>(8, ((Stream<Object>)value).iterator());
-		} else if (value instanceof Iterable) {
-			return Streamable.of((Iterable<Object>)value);
-		} else if (value instanceof Iterator) {
-			return Streamable.of((Iterator<Object>)value);
-		} else if (value.getClass().isArray()) {
-			if (value.getClass().getComponentType().isPrimitive()) {
-				final Object[] array = new Object[Array.getLength(value)];
+	public Iterator<T> stream() {
+		final Iterator<T> oldIterator = initialIterator;
 
-				for (int i = 0; i < array.length; i++) {
-					array[i] = Array.get(value, i);
-				}
-
-				return Streamable.of(array);
-			}
-
-			final Object[] original = (Object[])value;
-			return Streamable.of(Arrays.copyOf(original, original.length));
-		} else if (value instanceof Optional) {
-			return Streamable.of(((Optional<Object>)value).orElse(null));
+		if (oldIterator != null) {
+			initialIterator = null;
+			return oldIterator;
 		}
 
-		return Streamable.of(value);
+		final Iterator<T> it = iterator();
+
+		initialSize = array.length;
+		array = (T[]) EMPTY_ARRAY;
+		size = 0;
+		return it;
 	}
 
-	/**
-	 * Returns a streamable of the specified value.
-	 *
-	 * @param <T> the type of streamable item
-	 * @param value the value to stream
-	 * @return a streamable of the specified type
-	 */
-	public static <T> Streamable<T> of(final T value) {
-		return new StreamableValue<>(value);
+	@Override
+	public String toString() {
+		final StringBuilder builder = new StringBuilder("[");
+		final Iterator<T> iter = iterator();
+
+		if (iter.hasNext()) {
+			builder.append(' ').append(iter.next());
+			while (iter.hasNext()) {
+				builder.append(", ").append(iter.next());
+			}
+		}
+
+		return builder.append(" ]").toString();
 	}
 
 	/**
@@ -228,7 +139,7 @@ public abstract class Streamable<T> implements Iterable<T> {
 	 * @return a streamable of the specified type
 	 */
 	public static <T> Streamable<T> of(final Collection<T> collection) {
-		return new StreamableSequence<>(collection.size(), collection.iterator());
+		return new Streamable<>(collection.iterator(), collection.size());
 	}
 
 	/**
@@ -250,7 +161,19 @@ public abstract class Streamable<T> implements Iterable<T> {
 	 * @return a streamable of the specified type
 	 */
 	public static <T> Streamable<T> of(final Iterator<T> iterator) {
-		return new StreamableSequence<>(8, iterator);
+		return new Streamable<>(iterator);
+	}
+
+	/**
+	 * Returns a streamable of the specified value.
+	 *
+	 * @param <T> the type of streamable item
+	 * @param value the value to stream
+	 * @return a streamable of the specified type
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> Streamable<T> of(final T value) {
+		return new Streamable<>((T[]) (value == null ? EMPTY_ARRAY : new Object[]{value}));
 	}
 
 	/**
@@ -262,7 +185,7 @@ public abstract class Streamable<T> implements Iterable<T> {
 	 */
 	@SafeVarargs
 	public static <T> Streamable<T> of(final T... values) {
-		return new StreamableSequence<>(Arrays.copyOf(values, values.length));
+		return new Streamable<>(values);
 	}
 
 	/**
@@ -274,20 +197,35 @@ public abstract class Streamable<T> implements Iterable<T> {
 	@SuppressWarnings("unchecked")
 	public static Streamable<Object> ofUnknown(final Object value) {
 		if (value == null) {
-			return new StreamableValue<>(null);
+			return new Streamable<>(EMPTY_ARRAY);
 		} else if (value instanceof Streamable) {
-			return (Streamable<Object>)value;
+			return (Streamable<Object>) value;
+		} else if (value.getClass().isArray()) {
+			if (value.getClass().getComponentType().isPrimitive()) {
+				final Object[] array = new Object[Array.getLength(value)];
+
+				for (int i = 0; i < array.length; i++) {
+					array[i] = Array.get(value, i);
+				}
+
+				return Streamable.of(array);
+			}
+
+			return Streamable.of((Object[]) value);
+		} else if (value instanceof Optional) {
+			return Streamable.of(((Optional<Object>) value).orElse(null));
+		} else if (value instanceof Collection) {
+			return Streamable.of((Collection<Object>) value);
+		} else if (value instanceof Stream) {
+			return new Streamable<>(((Stream<Object>) value).iterator());
+		} else if (value instanceof Iterable) {
+			return Streamable.of((Iterable<Object>) value);
+		} else if (value instanceof Iterator) {
+			return Streamable.of((Iterator<Object>) value);
 		}
 
-		return create(value);
+		return Streamable.of(value);
 	}
-
-	/**
-	 * Adds a value to the streamable.
-	 *
-	 * @param value the value to add
-	 */
-	public abstract void add(final T value);
 
 	/**
 	 * Adds values in an iterable to the streamable.
@@ -310,12 +248,5 @@ public abstract class Streamable<T> implements Iterable<T> {
 			add(item);
 		}
 	}
-
-	/**
-	 * Checks if the streamable is empty.
-	 *
-	 * @return true if the streamable is empty, otherwise false
-	 */
-	public abstract boolean isEmpty();
 
 }

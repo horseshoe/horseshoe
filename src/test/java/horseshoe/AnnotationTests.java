@@ -261,7 +261,7 @@ class AnnotationTests {
 	void testFileUpdateAnnotation() throws IOException, LoadException, InterruptedException {
 		final Path path = Paths.get("DELETE_ME.test");
 		final Path path2 = Paths.get("TEMP_DIR", "DELETE_ME.test");
-		final Path pathNull = Paths.get("null");
+		final Path path3 = Paths.get("3");
 
 		try (final WatchService watcher = FileSystems.getDefault().newWatchService()) {
 			Files.write(path, "T ".getBytes(StandardCharsets.UTF_8));
@@ -278,9 +278,10 @@ class AnnotationTests {
 			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
 
-			new TemplateLoader().load("File Update", "{{# @File(null) }}\nTest 1\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
-			assertEquals("Test 1" + LS, new String(Files.readAllBytes(pathNull), StandardCharsets.UTF_8));
+			new TemplateLoader().load("File Update", "{{#@File(" + path3 + ", 'Bad Option')}}\nTest 3\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			assertEquals("Test 3" + LS, new String(Files.readAllBytes(path3), StandardCharsets.UTF_8));
 
+			assertEquals("NoFile", Template.load("{{# @File(null) }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 			assertEquals("NoFile", Template.load("{{# @File() }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 			assertEquals("NoFile", Template.load("{{# @File }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 			assertThrows(LoadException.class, () -> Template.load("{{# @File('Test') + '1' }}Bad{{^}}NoFile{{/}}"));
@@ -304,7 +305,7 @@ class AnnotationTests {
 			Files.deleteIfExists(path);
 			Files.deleteIfExists(path2);
 			Files.deleteIfExists(path2.getParent());
-			Files.deleteIfExists(pathNull);
+			Files.deleteIfExists(path3);
 		}
 	}
 

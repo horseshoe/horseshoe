@@ -54,7 +54,6 @@ class StackTests {
 
 		for (final Iterator<Object> it = objects.iterator(); it.hasNext(); ) {
 			assertEquals("Test", it.next());
-			assertThrows(UnsupportedOperationException.class, () -> it.remove());
 		}
 	}
 

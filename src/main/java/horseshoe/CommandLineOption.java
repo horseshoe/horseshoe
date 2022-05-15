@@ -93,11 +93,6 @@ final class CommandLineOption {
 
 					return allOptions[index++];
 				}
-
-				@Override
-				public void remove() {
-					throw new UnsupportedOperationException();
-				}
 			};
 		}
 
@@ -193,11 +188,6 @@ final class CommandLineOption {
 					}
 
 					throw new IllegalArgumentException("Option -" + shortName + " expecting argument " + option.argumentName);
-				}
-
-				@Override
-				public void remove() {
-					throw new UnsupportedOperationException();
 				}
 			};
 		}

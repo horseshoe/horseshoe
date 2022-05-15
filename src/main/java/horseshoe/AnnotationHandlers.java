@@ -80,41 +80,16 @@ public final class AnnotationHandlers {
 			this.defaultCharset = defaultCharset;
 		}
 
-		@Override
-		public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
-			final Map<?, ?> properties;
-			final File file;
-
-			if (args == null || args.length == 0) {
-				throw new IllegalArgumentException("No filename specified for \"File\" annotation");
-			} else if (args.length > 1) {
-				properties = args[1] instanceof Map ? (Map<?, ?>) args[1] : Collections.emptyMap();
-				file = rootDir.resolve(Paths.get(String.valueOf(args[0]))).toFile();
-			} else if (args[0] instanceof Map) {
-				properties = (Map<?, ?>) args[0];
-				file = rootDir.resolve(Paths.get(String.valueOf(properties.get("name")))).toFile();
-			} else {
-				properties = Collections.emptyMap();
-				file = rootDir.resolve(Paths.get(String.valueOf(args[0]))).toFile();
-			}
-
-			// Load properties
-			Charset charset = defaultCharset;
-			Update update = Update.UPDATE;
-
-			final Object encoding = properties.get("encoding");
-
-			if (encoding != null) {
-				charset = Charset.forName(encoding.toString());
-			}
-
-			if (Operands.convertToBoolean(properties.get("overwrite"))) {
-				update = Update.OVERWRITE;
-			} else if (Operands.convertToBoolean(properties.get("append"))) {
-				update = Update.APPEND;
-			}
-
-			// Create the directory if it doesn't exist, and then return the writer
+		/**
+		 * Creates the parent directory if it doesn't exist, then creates and returns the writer.
+		 *
+		 * @param file the file to be updated by the writer
+		 * @param charset the charset to use when writing to the file
+		 * @param update the update method for the file
+		 * @return the writer for the specified {@code file}
+		 * @throws IOException if the directory or file cannot be created
+		 */
+		private static Writer createWriter(final File file, final Charset charset, final Update update) throws IOException {
 			final File directory = file.getParentFile();
 
 			if (directory != null && !directory.isDirectory() && !directory.mkdirs()) {
@@ -122,6 +97,50 @@ public final class AnnotationHandlers {
 			}
 
 			return new OutputStreamWriter(new BufferedFileUpdateStream(file, update), charset);
+		}
+
+		@Override
+		public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
+			Map<?, ?> properties = null;
+			final Object filename;
+
+			if (args == null || args.length == 0 || args[0] == null) {
+				filename = null;
+			} else if (args[0] instanceof String || !(args[0] instanceof Map)) {
+				filename = args[0];
+
+				if (args.length > 1 && args[1] instanceof Map) {
+					properties = (Map<?, ?>) args[1];
+				}
+			} else {
+				properties = (Map<?, ?>) args[0];
+				filename = properties.get("name");
+			}
+
+			if (filename == null) {
+				throw new IllegalArgumentException("No filename specified for \"File\" annotation");
+			}
+
+			final File file = rootDir.resolve(Paths.get(filename.toString())).toFile();
+			Charset charset = defaultCharset;
+			Update update = Update.UPDATE;
+
+			// Load properties
+			if (properties != null) {
+				final Object encoding = properties.get("encoding");
+
+				if (encoding != null) {
+					charset = Charset.forName(encoding.toString());
+				}
+
+				if (Operands.convertToBoolean(properties.get("overwrite"))) {
+					update = Update.OVERWRITE;
+				} else if (Operands.convertToBoolean(properties.get("append"))) {
+					update = Update.APPEND;
+				}
+			}
+
+			return createWriter(file, charset, update);
 		}
 
 	}

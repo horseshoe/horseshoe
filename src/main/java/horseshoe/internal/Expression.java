@@ -51,7 +51,6 @@ public final class Expression {
 	private static final Method IDENTIFIER_GET_ROOT_VALUE_METHOD = getMethod(Identifier.class, "getRootValue", RenderContext.class, Object[].class);
 	private static final Method IDENTIFIER_GET_VALUE = getMethod(Identifier.class, "getValue", Object.class, Object.class, boolean.class);
 	private static final Method IDENTIFIER_GET_VALUE_METHOD = getMethod(Identifier.class, "getValue", Object.class, Object.class, boolean.class, Object[].class);
-	private static final Method ITERABLE_ITERATOR = getMethod(Iterable.class, "iterator");
 	private static final Method ITERATOR_HAS_NEXT = getMethod(Iterator.class, "hasNext");
 	private static final Method ITERATOR_NEXT = getMethod(Iterator.class, "next");
 	private static final Constructor<?> LINKED_HASH_MAP_CTOR_INT = getConstructor(LinkedHashMap.class, int.class);
@@ -96,6 +95,7 @@ public final class Expression {
 	private static final Method STREAMABLE_FLAT_ADD_ARRAY = getMethod(Streamable.class, "flatAdd", Object[].class);
 	private static final Method STREAMABLE_FLAT_ADD_ITERABLE = getMethod(Streamable.class, "flatAdd", Iterable.class);
 	private static final Method STREAMABLE_OF_UNKNOWN = getMethod(Streamable.class, "ofUnknown", Object.class);
+	private static final Method STREAMABLE_STREAM = getMethod(Streamable.class, "stream");
 	private static final Method STRING_BUILDER_APPEND_STRING = getMethod(StringBuilder.class, "append", String.class);
 	private static final Constructor<?> STRING_BUILDER_INIT_STRING = getConstructor(StringBuilder.class, String.class);
 	private static final Method STRING_VALUE_OF = getMethod(String.class, "valueOf", Object.class);
@@ -958,7 +958,7 @@ public final class Expression {
 			// Streaming Operations
 			case "#>":
 			case "#.": { // Remap
-				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
+				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_STREAM);
 				final Label startOfLoop = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
 
@@ -968,7 +968,7 @@ public final class Expression {
 				break;
 			}
 			case "#|": { // Flat remap
-				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
+				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_STREAM);
 				final Label startOfLoop = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
 				final Label notNull = mb.newLabel();
@@ -984,7 +984,7 @@ public final class Expression {
 				break;
 			}
 			case "#?": { // Filter
-				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(ITERABLE_ITERATOR);
+				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_STREAM);
 				final Label startOfLoop = mb.newLabel();
 				final Label readdObject = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
@@ -996,7 +996,7 @@ public final class Expression {
 				break;
 			}
 			case "#<": { // Reduction
-				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addInvoke(ITERABLE_ITERATOR).addCode(ACONST_NULL);
+				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addInvoke(STREAMABLE_STREAM).addCode(ACONST_NULL);
 				final Label startOfLoop = mb.newLabel();
 				final Label endOfLoop = mb.newLabel();
 

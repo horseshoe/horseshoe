@@ -12,15 +12,15 @@ class SectionTests {
 
 	@Test
 	void testReiterator() {
-		final SectionRenderer.Reiterable<Integer> reiterable = new SectionRenderer.Reiterable<>(new ArrayList<>(Arrays.asList(1, 2, 3, 4, 5)).iterator());
+		final SectionRenderer.Reiterator<Integer> reiterator = new SectionRenderer.Reiterator<>(new ArrayList<>(Arrays.asList(1, 2, 3, 4, 5)).iterator());
 
-		while (reiterable.hasNext()) {
-			reiterable.next();
+		while (reiterator.hasNext()) {
+			reiterator.next();
 		}
 
-		reiterable.remove();
+		reiterator.remove();
 
-		assertIterableEquals(Arrays.asList(1, 2, 3, 4), reiterable);
+		assertIterableEquals(Arrays.asList(1, 2, 3, 4), reiterator.getContainer());
 	}
 
 	@Test

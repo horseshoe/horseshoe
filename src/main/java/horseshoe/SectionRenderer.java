@@ -3,9 +3,7 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -15,12 +13,16 @@ public class SectionRenderer implements Renderer {
 
 	private final Section section;
 
-	static class Reiterable<T> implements Iterable<T>, Iterator<T> {
-		private final ArrayList<T> reiterableList = new ArrayList<>();
+	static class Reiterator<T> implements Iterator<T> {
+		private final ArrayList<T> container = new ArrayList<>();
 		private final Iterator<T> iterator;
 
-		public Reiterable(final Iterator<T> iterator) {
+		public Reiterator(final Iterator<T> iterator) {
 			this.iterator = iterator;
+		}
+
+		public Iterable<T> getContainer() {
+			return container;
 		}
 
 		@Override
@@ -32,19 +34,13 @@ public class SectionRenderer implements Renderer {
 		public T next() {
 			final T item = iterator.next();
 
-			reiterableList.add(item);
+			container.add(item);
 			return item;
 		}
 
 		@Override
 		public void remove() {
-			iterator.remove();
-			reiterableList.remove(reiterableList.size() - 1);
-		}
-
-		@Override
-		public Iterator<T> iterator() {
-			return reiterableList.iterator();
+			container.remove(container.size() - 1);
 		}
 	}
 
@@ -322,28 +318,19 @@ public class SectionRenderer implements Renderer {
 			unwrappedData = data;
 		}
 
-		if (unwrappedData instanceof Stream<?>) {
-			unwrappedData = ((Stream<?>) unwrappedData).iterator();
-		}
-
 		if (unwrappedData == null) {
 			renderInverted(context, writer);
+		} else if (dispatchPrimitiveData(context, unwrappedData, writer)) {
+			// Matched primitive data, so no additional dispatching is needed.
 		} else if (unwrappedData instanceof Iterable) {
-			if (section.cacheResult() && !(unwrappedData instanceof Collection)) {
-				unwrappedData = new Reiterable<>(((Iterable<?>) unwrappedData).iterator());
-				dispatchIteratorData(context, (Iterator<?>) unwrappedData, writer);
-			} else {
-				dispatchIteratorData(context, ((Iterable<?>) unwrappedData).iterator(), writer);
-			}
+			dispatchIteratorData(context, ((Iterable<?>) unwrappedData).iterator(), false, writer);
+		} else if (unwrappedData instanceof Stream) {
+			unwrappedData = dispatchIteratorData(context, ((Stream<?>) unwrappedData).iterator(), section.cacheResult(), writer);
 		} else if (unwrappedData instanceof Iterator) {
-			if (section.cacheResult()) {
-				unwrappedData = new Reiterable<>((Iterator<?>) unwrappedData);
-			}
-
-			dispatchIteratorData(context, (Iterator<?>) unwrappedData, writer);
+			unwrappedData = dispatchIteratorData(context, ((Iterator<?>) unwrappedData), section.cacheResult(), writer);
 		} else if (unwrappedData.getClass().isArray()) {
 			dispatchArray(context, unwrappedData, writer);
-		} else if (!dispatchPrimitiveData(context, unwrappedData, writer)) {
+		} else {
 			context.getSectionData().push(new SectionRenderData(unwrappedData));
 			renderSection(context, writer);
 			context.getSectionData().pop();
@@ -358,36 +345,50 @@ public class SectionRenderer implements Renderer {
 	 * Dispatches iterator data for rendering.
 	 *
 	 * @param context the render context
-	 * @param it the iterator to render
+	 * @param iterator the iterator to render
+	 * @param createReiterable true to create and return a reiterable, otherwise false
 	 * @param writer the writer used for rendering
+	 * @return the reiterable if created, otherwise null
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	final void dispatchIteratorData(final RenderContext context, final Iterator<?> it, final Writer writer) throws IOException {
-		if (!it.hasNext()) {
+	private final <T> Iterable<T> dispatchIteratorData(final RenderContext context, final Iterator<T> iterator, final boolean createReiterable, final Writer writer) throws IOException {
+		if (!iterator.hasNext()) {
 			renderInverted(context, writer);
-			return;
+			return null;
 		}
 
+		final Iterable<T> reiterable;
+		final Iterator<T> it;
+
+		// Check if the iterator's data will be reused
+		if (createReiterable) {
+			final Reiterator<T> reiterator = new Reiterator<>(iterator);
+			reiterable = reiterator.getContainer();
+			it = reiterator;
+		} else {
+			reiterable = null;
+			it = iterator;
+		}
+
+		// Iterate through all data items
 		final SectionRenderData renderData = new SectionRenderData();
+
+		renderData.hasNext = true;
 		context.getSectionData().push(renderData);
 
-		for (renderData.hasNext = true; true; renderData.index++) {
-			renderData.data = it.next();
-
-			if (!it.hasNext()) {
-				renderData.hasNext = false;
-				renderSection(context, writer);
-				break;
-			}
-
+		for (renderData.data = it.next(); it.hasNext(); renderData.index++, renderData.data = it.next()) {
 			renderSection(context, writer);
 		}
 
+		renderData.hasNext = false;
+		renderSection(context, writer);
 		context.getSectionData().pop();
+
+		return reiterable;
 	}
 
 	/**
-	 * Attempts to dispatch primitive data for rendering.
+	 * Attempts to dispatch primitive data (boolean, number, or character) for rendering.
 	 *
 	 * @param context the render context
 	 * @param data the data to render
@@ -396,30 +397,24 @@ public class SectionRenderer implements Renderer {
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
 	private boolean dispatchPrimitiveData(final RenderContext context, final Object data, final Writer writer) throws IOException {
+		final boolean isZero;
+
 		if (data instanceof Boolean) {
-			if (((Boolean)data).booleanValue()) {
+			if (((Boolean) data).booleanValue()) {
 				renderSection(context, writer);
 			} else {
 				renderInverted(context, writer);
 			}
 
 			return true;
-		}
-
-		final boolean isZero;
-
-		if (data instanceof Number) {
-			if (data instanceof Double || data instanceof Float) {
-				isZero = ((Number)data).doubleValue() == 0.0;
-			} else if (data instanceof BigDecimal) {
-				isZero = BigDecimal.ZERO.compareTo((BigDecimal)data) == 0;
-			} else if (data instanceof BigInteger) {
-				isZero = BigInteger.ZERO.equals(data);
+		} else if (data instanceof Number) {
+			if (data instanceof BigDecimal) {
+				isZero = BigDecimal.ZERO.compareTo((BigDecimal) data) == 0;
 			} else {
-				isZero = ((Number)data).longValue() == 0;
+				isZero = ((Number) data).doubleValue() == 0.0;
 			}
 		} else if (data instanceof Character) {
-			isZero = (((Character)data).charValue() == 0);
+			isZero = (((Character) data).charValue() == 0);
 		} else {
 			return false;
 		}

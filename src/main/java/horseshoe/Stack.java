@@ -29,11 +29,6 @@ public final class Stack<T> implements Iterable<T> {
 
 			return array[--index];
 		}
-
-		@Override
-		public void remove() {
-			throw new UnsupportedOperationException();
-		}
 	}
 
 	/**

@@ -221,23 +221,7 @@ public final class Operands {
 	 * @return the result of the operation
 	 */
 	public static int compare(final Number left, final Number right) {
-		if (left instanceof Long) {
-			if (right instanceof Double) {
-				return Double.compare(((Long)left).longValue(), ((Double)right).doubleValue());
-			}
-
-			return Long.compare(((Long)left).longValue(), right.longValue());
-		} else if (left instanceof Integer) {
-			if (right instanceof Long) {
-				return Long.compare(((Integer)left).intValue(), ((Long)right).longValue());
-			} else if (right instanceof Integer) {
-				return Integer.compare(((Integer)left).intValue(), ((Integer)right).intValue());
-			}
-
-			return Double.compare(((Integer)left).intValue(), ((Double)right).doubleValue());
-		}
-
-		return Double.compare(((Double)left).doubleValue(), right.doubleValue());
+		return Double.compare(left.doubleValue(), right.doubleValue());
 	}
 
 	/**
@@ -250,25 +234,20 @@ public final class Operands {
 		if (object == null) {
 			return false;
 		} else if (object instanceof Number) {
-			final Number number = toNumeric(object);
-
-			if (number instanceof Double) {
-				return ((Double)number).doubleValue() != 0.0 && !((Double)number).isNaN();
-			}
-
-			return number.longValue() != 0;
+			return ((Number) object).doubleValue() != 0.0 &&
+					(!(object instanceof Double) || !((Double) object).isNaN());
 		} else if (object instanceof CharSequence) {
-			return ((CharSequence)object).length() != 0;
+			return ((CharSequence) object).length() != 0;
 		} else if (object instanceof Collection) {
-			return !((Collection<?>)object).isEmpty();
+			return !((Collection<?>) object).isEmpty();
 		} else if (object instanceof Map) {
-			return !((Map<?, ?>)object).isEmpty();
+			return !((Map<?, ?>) object).isEmpty();
 		} else if (object.getClass().isArray()) {
 			return Array.getLength(object) != 0;
 		} else if (object instanceof Boolean) {
-			return ((Boolean)object).booleanValue();
+			return ((Boolean) object).booleanValue();
 		} else if (object instanceof Character) {
-			return ((Character)object).charValue() != 0;
+			return ((Character) object).charValue() != 0;
 		}
 
 		return true;

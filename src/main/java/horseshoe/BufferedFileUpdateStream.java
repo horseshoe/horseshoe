@@ -24,9 +24,23 @@ public class BufferedFileUpdateStream extends OutputStream {
 	private final byte[] buffer;
 	private int count = 0;
 
+	/**
+	 * The update method for the file.
+	 */
 	public enum Update {
+		/**
+		 * The file contents will only be modified if the contents changes.
+		 */
 		UPDATE,
+
+		/**
+		 * The file contents will be updated by appending to the end of the existing file.
+		 */
 		APPEND,
+
+		/**
+		 * The file will be truncated and the contents replaced.
+		 */
 		OVERWRITE
 	}
 
