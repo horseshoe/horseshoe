@@ -328,12 +328,19 @@ String literals are sequences of characters wrapped in either single quotes or d
 | `\n` | Newline |
 | `\f` | Form feed |
 | `\r` | Carriage return |
+| `\$` | Dollar sign (`$`) |
 | `\{` | Open curly brace (`{`) |
 | `\}` | Close curly brace (`}`) |
 | `\0` | Null (Octal escape sequences not supported) |
 | `\xh...` | Unicode character with hex code point `h...` |
 | `\uhhhh` | Unicode character with hex code point `hhhh` |
 | `\Uhhhhhhhh` | Unicode character with hex code point `hhhhhhhh` |
+
+##### String Interpolation
+
+String interpolation is used to embed expressions within a double-quoted string literal using a placeholder. Each placeholder starts with a dollar sign (`$`) and is followed by either an identifier name or curly braces (`{`, `}`) surrounding a Horseshoe expression. If a dollar sign (`$`) is not followed by an identifier name or curly braces (`{`, `}`), it is treated as a literal dollar sign (`$`). All these characters can be escaped by prepending the character with a backslash (`\`).
+
+For example, `"String interpolation can be done using $[identifier] ($identifier) or \${ [expression] } (${ 5 + 2 }), but is ignored for the literal \"$4.50\"."` results in `String interpolation can be done using $[identifier] (null) or ${ [expression] } (7), but is ignored for the literal "$4.50".`.
 
 #### Class Literals
 

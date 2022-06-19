@@ -138,12 +138,12 @@ class LoaderTests {
 			assertEquals("", loader.next("a"));
 			assertTrue(loader.hasNext());
 			assertEquals(4, loader.getLine());
-			assertEquals(1, loader.getColumn());
+			assertEquals(0, loader.getIndex());
 
 			assertEquals("", loader.next("a"));
 			assertFalse(loader.hasNext());
 			assertEquals(4, loader.getLine());
-			assertEquals(2, loader.getColumn());
+			assertEquals(1, loader.getIndex());
 		}
 
 		try (final Loader loader = new Loader("NewLineDelimitersTest", new StringReader("a\r\n\r\n\r\na"))) {
@@ -156,12 +156,12 @@ class LoaderTests {
 			assertEquals("\n", loader.next("a"));
 			assertTrue(loader.hasNext());
 			assertEquals(4, loader.getLine());
-			assertEquals(1, loader.getColumn());
+			assertEquals(0, loader.getIndex());
 
 			assertEquals("", loader.next("a"));
 			assertFalse(loader.hasNext());
 			assertEquals(5, loader.getLine()); // Should be line 4, but the delimiter messes with the lines
-			assertEquals(2, loader.getColumn());
+			assertEquals(1, loader.getIndex());
 		}
 	}
 

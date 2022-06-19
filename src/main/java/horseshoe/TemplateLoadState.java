@@ -80,11 +80,11 @@ final class TemplateLoadState {
 	 * Create a new expression parser from the load state.
 	 *
 	 * @param expression the trimmed expression string
-	 * @param parseAsMethodCall true if the expression should be parsed as a method call invocation (no starting "(", ends with ")", returns array object), otherwise false
+	 * @param parseAsCall true if the expression should be parsed as a call invocation (no starting "(", ends with ")", returns array object), otherwise false
 	 * @return the new expression parser
 	 */
-	ExpressionParseState createExpressionParser(final TrimmedString expression, final boolean parseAsMethodCall) {
-		return new ExpressionParseState(expression.start, expression.string, parseAsMethodCall, getNamedExpressions(), allIdentifiers, templateBindings);
+	ExpressionParseState createExpressionParser(final TrimmedString expression, final boolean parseAsCall) {
+		return new ExpressionParseState(expression.start, expression.string, parseAsCall, getNamedExpressions(), allIdentifiers, templateBindings);
 	}
 
 	/**

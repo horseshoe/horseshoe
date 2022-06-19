@@ -26,7 +26,7 @@ public class LoadException extends Exception {
 
 		if (it.hasNext()) {
 			Loader frame = it.next();
-			sb.append(", at character ").append(frame.getColumn()).append(" of (").append(frame.getName()).append(':').append(frame.getLine()).append(')');
+			sb.append(", at index ").append(frame.getIndex()).append(" of (").append(frame.getName()).append(':').append(frame.getLine()).append(')');
 
 			while (it.hasNext()) {
 				frame = it.next();

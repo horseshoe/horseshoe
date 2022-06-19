@@ -1,7 +1,7 @@
 package horseshoe.internal;
 
+import static horseshoe.internal.Operator.CALL;
 import static horseshoe.internal.Operator.LEFT_EXPRESSION;
-import static horseshoe.internal.Operator.METHOD_CALL;
 import static horseshoe.internal.Operator.RIGHT_EXPRESSION;
 import static horseshoe.internal.Operator.X_RIGHT_EXPRESSIONS;
 
@@ -45,7 +45,7 @@ class GenerateOperatorTableTest {
 				final String operatorOutput = "<code>" + escapeMarkdown(operator.getString()) + "</code>";
 				sb.append(separator);
 
-				if (operator.has(LEFT_EXPRESSION) || operator.has(METHOD_CALL)) {
+				if (operator.has(LEFT_EXPRESSION) || operator.has(CALL)) {
 					sb.append("a ").append(operatorOutput);
 
 					if (operator.has(X_RIGHT_EXPRESSIONS)) {

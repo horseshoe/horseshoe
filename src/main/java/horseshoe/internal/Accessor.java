@@ -1291,7 +1291,7 @@ public abstract class Accessor {
 		 */
 		public static void getPublicMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
 			for (final Method method : parent.getMethods()) {
-				if (Modifier.isStatic(method.getModifiers()) == isStatic && !method.isSynthetic() && method.getParameterTypes().length == parameterCount && signature.matches(method)) {
+				if (Modifier.isStatic(method.getModifiers()) == isStatic && !method.isSynthetic() && method.getParameterCount() == parameterCount && signature.matches(method)) {
 					methodHandles.add(LOOKUP.unreflect(method).asSpreader(Object[].class, parameterCount));
 
 					if (parameterCount == 0) {
@@ -1449,7 +1449,7 @@ public abstract class Accessor {
 
 			// Find all matching methods in the first public ancestor class, including all interfaces along the way
 			for (final Constructor<?> constructor : type.getConstructors()) {
-				if (constructor.getParameterTypes().length == parameterCount && signature.matchesParameters(constructor.getParameterTypes())) {
+				if (constructor.getParameterCount() == parameterCount && signature.matchesParameters(constructor.getParameterTypes())) {
 					try {
 						methodHandles.add(LOOKUP.unreflectConstructor(constructor).asSpreader(Object[].class, parameterCount));
 

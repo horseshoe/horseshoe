@@ -253,29 +253,6 @@ public final class Identifier {
 	}
 
 	/**
-	 * Gets the value of the identifier from the root context object.
-	 *
-	 * @param context the context object used to get the value of the identifier
-	 * @return the value of the identifier
-	 * @throws Throwable if accessing the value throws
-	 */
-	public Object getRootValue(final RenderContext context) throws Throwable {
-		return getValue(context.getSectionData().peekBase().data, NULL_ORIGINAL_CONTEXT, false);
-	}
-
-	/**
-	 * Gets the value of the identifier from the root context object.
-	 *
-	 * @param context the context object used to get the value of the identifier
-	 * @param parameters the parameters used to evaluate the object
-	 * @return the value of the identifier
-	 * @throws Throwable if accessing the value throws
-	 */
-	public Object getRootValue(final RenderContext context, final Object... parameters) throws Throwable {
-		return getValue(context.getSectionData().peekBase().data, NULL_ORIGINAL_CONTEXT, false, parameters);
-	}
-
-	/**
 	 * Gets the value of the identifier given the context object.
 	 *
 	 * @param context the context object to evaluate

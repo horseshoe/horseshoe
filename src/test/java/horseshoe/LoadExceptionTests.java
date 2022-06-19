@@ -22,7 +22,7 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(4, e.getLoaders().get(0).getLine());
-			assertEquals(3, e.getLoaders().get(0).getColumn());
+			assertEquals(2, e.getLoaders().get(0).getIndex());
 		}
 	}
 
@@ -39,7 +39,7 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(5, e.getLoaders().get(0).getLine());
-			assertEquals(3, e.getLoaders().get(0).getColumn());
+			assertEquals(2, e.getLoaders().get(0).getIndex());
 		}
 	}
 
@@ -51,7 +51,7 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(1, e.getLoaders().get(0).getLine());
-			assertEquals(37, e.getLoaders().get(0).getColumn());
+			assertEquals(36, e.getLoaders().get(0).getIndex());
 		}
 	}
 
@@ -63,7 +63,7 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(4, e.getLoaders().get(0).getLine());
-			assertEquals(4, e.getLoaders().get(0).getColumn());
+			assertEquals(3, e.getLoaders().get(0).getIndex());
 		}
 	}
 
@@ -75,7 +75,7 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(5, e.getLoaders().get(0).getLine());
-			assertEquals(5, e.getLoaders().get(0).getColumn());
+			assertEquals(4, e.getLoaders().get(0).getIndex());
 		}
 	}
 
@@ -87,7 +87,7 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(3, e.getLoaders().get(0).getLine());
-			assertEquals(3, e.getLoaders().get(0).getColumn());
+			assertEquals(2, e.getLoaders().get(0).getIndex());
 		}
 	}
 
@@ -99,7 +99,7 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(2, e.getLoaders().get(0).getLine());
-			assertEquals(3, e.getLoaders().get(0).getColumn());
+			assertEquals(2, e.getLoaders().get(0).getIndex());
 		}
 	}
 
@@ -111,7 +111,7 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(2, e.getLoaders().get(0).getLine());
-			assertEquals(3, e.getLoaders().get(0).getColumn());
+			assertEquals(2, e.getLoaders().get(0).getIndex());
 		}
 	}
 
@@ -123,7 +123,7 @@ class LoadExceptionTests {
 		} catch (final LoadException e) {
 			System.err.println(e.getMessage());
 			assertEquals(2, e.getLoaders().get(0).getLine());
-			assertEquals(3, e.getLoaders().get(0).getColumn());
+			assertEquals(2, e.getLoaders().get(0).getIndex());
 		}
 	}
 

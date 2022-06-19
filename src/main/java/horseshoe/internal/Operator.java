@@ -52,7 +52,7 @@ final class Operator {
 	public static final int RIGHT_EXPRESSION    = 0x00000002; // Has an expression on the right
 	public static final int X_RIGHT_EXPRESSIONS = 0x00000004; // Has 0 or more comma-separated expressions on the right
 
-	public static final int METHOD_CALL         = 0x00000010; // Is a method call (starts with '.', ends with '(')
+	public static final int CALL                = 0x00000010; // Is a call (starts with '.', ends with '(')
 	public static final int KNOWN_OBJECT        = 0x00000020; // Has an associated known object
 	public static final int RIGHT_ASSOCIATIVITY = 0x00000040; // Is evaluated right to left
 	public static final int ALLOW_PAIRS         = 0x00000080; // Can contain pairs
@@ -84,7 +84,7 @@ final class Operator {
 		operators.add(new Operator("[",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS, "Lookup", "]", 0, 1));
 		operators.add(new Operator("?[",     0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS | SAFE, "Safe Lookup", "]", 0, 1));
 		operators.add(new Operator("[?",     0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | ALLOW_PAIRS | IGNORE_FAILURES, "Nullable Lookup", "]", 0, 1));
-		operators.add(createMethod("(", true));
+		operators.add(createCall("(", true));
 		operators.add(new Operator("(",      0,  RIGHT_EXPRESSION, "Parentheses", ")", 0, 1));
 		operators.add(new Operator("~@",     0,  RIGHT_EXPRESSION, "Get Class"));
 		operators.add(new Operator(".",      0,  LEFT_EXPRESSION | RIGHT_EXPRESSION | NAVIGATION, "Navigate"));
@@ -170,14 +170,14 @@ final class Operator {
 	}
 
 	/**
-	 * Gets the operator for the specified method name.
+	 * Gets the operator for the specified call.
 	 *
-	 * @param name the name of the method
-	 * @param hasObject true if the method has an identified object, false if the object cannot be determined based on the context
-	 * @return the operator for the specified method name
+	 * @param name the identifier of the call
+	 * @param hasObject true if the call has an identified object, false if the object cannot be determined based on the context
+	 * @return the operator for the specified call
 	 */
-	public static Operator createMethod(final String name, final boolean hasObject) {
-		return new Operator(name, 0, METHOD_CALL | X_RIGHT_EXPRESSIONS | (hasObject ? KNOWN_OBJECT : 0), "Call Method", ")", 0, 0);
+	public static Operator createCall(final String name, final boolean hasObject) {
+		return new Operator(name, 0, CALL | X_RIGHT_EXPRESSIONS | (hasObject ? KNOWN_OBJECT : 0), "Call Method", ")", 0, 0);
 	}
 
 	/**

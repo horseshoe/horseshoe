@@ -1185,7 +1185,7 @@ public final class MethodBuilder {
 	 * @return the container for the bytecode of the new class
 	 * @throws ReflectiveOperationException if an exception is thrown while generating the bytecode
 	 */
-	final BytecodeContainer build(final String name, final Class<?> base, final boolean isStatic, final String methodName, final Class<?> returnType, final Class<?>... parameterTypes) throws ReflectiveOperationException {
+	BytecodeContainer build(final String name, final Class<?> base, final boolean isStatic, final String methodName, final Class<?> returnType, final Class<?>... parameterTypes) throws ReflectiveOperationException {
 		if (stackSize != 0) {
 			throw new IllegalStateException("Stack size is not zero: " + stackSize);
 		}
@@ -1375,7 +1375,7 @@ public final class MethodBuilder {
 	 * @return the container for the bytecode of the new class
 	 * @throws ReflectiveOperationException if an exception is thrown while creating the bytecode
 	 */
-	final <T> BytecodeContainer build(final String name, final Class<T> base) throws ReflectiveOperationException {
+	<T> BytecodeContainer build(final String name, final Class<T> base) throws ReflectiveOperationException {
 		Method method = null;
 
 		if (base.isInterface()) { // This method is implementing an interface
@@ -1673,6 +1673,15 @@ public final class MethodBuilder {
 		}
 
 		return 1;
+	}
+
+	/**
+	 * Tests if the builder is empty.
+	 *
+	 * @return true if the builder is empty, otherwise false
+	 */
+	public boolean isEmpty() {
+		return length == 0;
 	}
 
 	/**

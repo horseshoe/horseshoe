@@ -301,6 +301,14 @@ class ExpressionTests {
 	}
 
 	@Test
+	void testObjectMethods() throws ReflectiveOperationException {
+		assertTrue((Boolean) createExpression("'a'.equals('a')", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertFalse((Boolean) createExpression("'a'.equals('b')", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertFalse((Boolean) createExpression("~@Object.new().equals(~@Object.new())", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals(Integer.class, createExpression("''.hashCode().getClass()", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+	}
+
+	@Test
 	void testOperand() throws ReflectiveOperationException {
 		assertEquals("", new Operand(Object.class, null).toString());
 		assertNotEquals("", new Operand(Object.class, new MethodBuilder().pushConstant(0)).toString());
@@ -403,6 +411,16 @@ class ExpressionTests {
 		assertThrows(NullPointerException.class, () -> evaluateExpression(createExpression("cb + ab", EMPTY_EXPRESSIONS_MAP, true), context));
 		assertThrows(NullPointerException.class, () -> evaluateExpression(createExpression("ab + cb", EMPTY_EXPRESSIONS_MAP, true), context));
 		assertEquals("54", createExpression("5.toString() + 4.toString()", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
+	}
+
+	@Test
+	void testStringInterpolation() throws ReflectiveOperationException {
+		assertEquals("$ 1.00, $2.50", createExpression("\"$ 1.00, $2.50\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("ab $cd$ e $", createExpression("blah = 'cd'; \"ab \\$$blah\\$ e $\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertThrows(IllegalStateException.class, () -> createExpression("\"${blah\\}\"", EMPTY_EXPRESSIONS_MAP, true));
+		assertEquals("ab $cd$ e 11", createExpression("blah = 'cd'; \"ab \\$${ blah }\\$ e ${ 5 + 6 }\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("ab $cd$ e 11", createExpression("blah = 'cd'; \"ab \\$${ blah }\\$ e ${ \\\"${5 + 6\\}\\\" }\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("String interpolation can be done using $[identifier] (null) or ${ [expression] } ([ 7 ]), but is ignored for the literal \"$4.50\".", createExpression("\"String interpolation can be done using $[identifier] ($identifier) or \\${ [expression] } (${ \\{ 5 \\} #. t -> t + 2 }), but is ignored for the literal \\\"$4.50\\\".\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 	}
 
 	@Test

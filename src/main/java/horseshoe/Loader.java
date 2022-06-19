@@ -34,23 +34,21 @@ public final class Loader implements AutoCloseable {
 	private final Location nextLocation = new Location();
 
 	private static class Location {
-		public static final int FIRST_COLUMN = 1;
-
 		private int line;
-		private int column;
+		private int index;
 
-		public Location(final int line, final int column) {
+		public Location(final int line, final int index) {
 			this.line = line;
-			this.column = column;
+			this.index = index;
 		}
 
 		public Location() {
-			this(1, FIRST_COLUMN);
+			this(1, 0);
 		}
 
 		public void set(final Location other) {
 			line = other.line;
-			column = other.column;
+			index = other.index;
 		}
 	}
 
@@ -154,12 +152,12 @@ public final class Loader implements AutoCloseable {
 	}
 
 	/**
-	 * Gets the column within the current line being loaded.
+	 * Gets the index within the current line being loaded.
 	 *
-	 * @return the column within the current line being loaded
+	 * @return the index within the current line being loaded
 	 */
-	public int getColumn() {
-		return location.column;
+	public int getIndex() {
+		return location.index;
 	}
 
 	/**
@@ -244,18 +242,18 @@ public final class Loader implements AutoCloseable {
 		final String value;
 
 		location.set(nextLocation);
-		nextLocation.column += bufferOffset - range.start;
+		nextLocation.index += bufferOffset - range.start;
 
 		if (stringToLoad != null) {
 			for (Range eolRange = Utilities.findNewLine(stringToLoad, range.start, bufferOffset);
 					eolRange != null;
-					nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(stringToLoad, eolRange.end, bufferOffset));
+					nextLocation.line++, nextLocation.index = bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(stringToLoad, eolRange.end, bufferOffset));
 
 			value = stringToLoad.substring(range.start, range.end);
 		} else {
 			for (Range eolRange = Utilities.findNewLine(streamBuffer.getData(), range.start, bufferOffset);
 					eolRange != null;
-					nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset));
+					nextLocation.line++, nextLocation.index = bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset));
 
 			value = streamBuffer.substring(range.start, range.end);
 		}
@@ -276,12 +274,12 @@ public final class Loader implements AutoCloseable {
 		int startOfLine = range.start;
 
 		location.set(nextLocation);
-		nextLocation.column += bufferOffset - range.start;
+		nextLocation.index += bufferOffset - range.start;
 
 		if (stringToLoad != null) {
 			for (Range eolRange = Utilities.findNewLine(stringToLoad, range.start, bufferOffset);
 					eolRange != null;
-					startOfLine = eolRange.end, nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(stringToLoad, eolRange.end, bufferOffset)) {
+					startOfLine = eolRange.end, nextLocation.line++, nextLocation.index = bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(stringToLoad, eolRange.end, bufferOffset)) {
 				if (startOfLine <= range.end) {
 					final int newLineStart = Math.min(eolRange.start, range.end);
 					final int newLineEnd = Math.min(eolRange.end, range.end);
@@ -299,7 +297,7 @@ public final class Loader implements AutoCloseable {
 
 		for (Range eolRange = Utilities.findNewLine(streamBuffer.getData(), range.start, bufferOffset);
 				eolRange != null;
-				startOfLine = eolRange.end, nextLocation.line++, nextLocation.column = Location.FIRST_COLUMN + bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset)) {
+				startOfLine = eolRange.end, nextLocation.line++, nextLocation.index = bufferOffset - eolRange.end, eolRange = Utilities.findNewLine(streamBuffer.getData(), eolRange.end, bufferOffset)) {
 			if (startOfLine <= range.end) {
 				final int newLineStart = Math.min(eolRange.start, range.end);
 				final int newLineEnd = Math.min(eolRange.end, range.end);

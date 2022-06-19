@@ -16,7 +16,7 @@ import horseshoe.internal.MethodBuilder.Label;
 
 final class Operand {
 
-	private static final Set<Class<?>> ALLOWED_TYPES = Collections.unmodifiableSet(new HashSet<Class<?>>(Arrays.asList(
+	public static final Set<Class<?>> ALLOWED_TYPES = Collections.unmodifiableSet(new HashSet<Class<?>>(Arrays.asList(
 			boolean.class, int.class, long.class, double.class, Double.class, Integer.class, Object.class, String.class, StringBuilder.class, Entry.class)));
 
 	// Reflected Methods

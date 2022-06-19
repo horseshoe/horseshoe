@@ -367,7 +367,7 @@ class OperandsTests {
 		final Operator plus = Operator.get("+", true);
 		assertThrows(UnsupportedOperationException.class, () -> plus.withLocalBindingIndex(-1));
 		assertThrows(UnsupportedOperationException.class, () -> plus.withRightExpressions(2));
-		assertEquals("m: 2", Operator.createMethod("m", true).withRightExpressions(2).toString());
+		assertEquals("m: 2", Operator.createCall("m", true).withRightExpressions(2).toString());
 	}
 
 	@Test

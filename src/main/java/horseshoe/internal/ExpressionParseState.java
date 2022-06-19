@@ -18,15 +18,15 @@ public final class ExpressionParseState {
 
 	private final int startIndex;
 	private final String expressionString;
-	private final boolean methodCall;
+	private final boolean isCall;
 	private Evaluation evaluation = Evaluation.EVALUATE_AND_RENDER;
 	private String bindingName = null;
 	private final Map<String, Expression> namedExpressions;
 	private final Map<Identifier, Identifier> allIdentifiers;
 	private final Stack<Map<String, TemplateBinding>> templateBindings;
-	private final CacheList<Expression> expressions = new CacheList<>();
-	private final CacheList<Identifier> identifiers = new CacheList<>();
-	private final CacheList<String> localBindings = new CacheList<>();
+	private final CacheList<Expression> expressions;
+	private final CacheList<Identifier> identifiers;
+	private final CacheList<String> localBindings;
 	private final Stack<Operand> operands = new Stack<>();
 	private final Stack<Operator> operators = new Stack<>();
 
@@ -35,18 +35,49 @@ public final class ExpressionParseState {
 	 *
 	 * @param startIndex the starting index of the trimmed string within the tag
 	 * @param expressionString the string representation of the expression
-	 * @param methodCall true if the expression should be parsed as a method call invocation (no starting "(", ends with ")", returns array object), otherwise false
+	 * @param isCall true if the expression should be parsed as a call invocation (no starting "(", ends with ")", returns array object), otherwise false
+	 * @param namedExpressions the set of named expressions that can be used in the expression
+	 * @param allIdentifiers the set of all identifiers that can be used as a cache in the expression
+	 * @param templateBindings the set of all bindings used in the template
+	 * @param expressions the cache of all expressions used in the template
+	 * @param identifiers the cache of all identifiers used in the template
+	 * @param localBindings the cache of all local bindings used in the template
+	 */
+	private ExpressionParseState(final int startIndex, final String expressionString, final boolean isCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings, final CacheList<Expression> expressions, final CacheList<Identifier> identifiers, final CacheList<String> localBindings) {
+		this.startIndex = startIndex;
+		this.expressionString = expressionString;
+		this.isCall = isCall;
+		this.namedExpressions = namedExpressions;
+		this.allIdentifiers = allIdentifiers;
+		this.templateBindings = templateBindings;
+		this.expressions = expressions;
+		this.identifiers = identifiers;
+		this.localBindings = localBindings;
+	}
+
+	/**
+	 * Creates a new expression parse state.
+	 *
+	 * @param startIndex the starting index of the trimmed string within the tag
+	 * @param expressionString the string representation of the expression
+	 * @param isCall true if the expression should be parsed as a call invocation (no starting "(", ends with ")", returns array object), otherwise false
 	 * @param namedExpressions the set of named expressions that can be used in the expression
 	 * @param allIdentifiers the set of all identifiers that can be used as a cache in the expression
 	 * @param templateBindings the set of all bindings used in the template
 	 */
-	public ExpressionParseState(final int startIndex, final String expressionString, final boolean methodCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings) {
-		this.startIndex = startIndex;
-		this.expressionString = expressionString;
-		this.methodCall = methodCall;
-		this.namedExpressions = namedExpressions;
-		this.allIdentifiers = allIdentifiers;
-		this.templateBindings = templateBindings;
+	public ExpressionParseState(final int startIndex, final String expressionString, final boolean isCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings) {
+		this(startIndex, expressionString, isCall, namedExpressions, allIdentifiers, templateBindings, new CacheList<>(), new CacheList<>(), new CacheList<>());
+	}
+
+	/**
+	 * Creates a new nested expression parse state.
+	 *
+	 * @param startIndex the starting index of the trimmed string within the tag
+	 * @param expressionString the string representation of the expression
+	 * @return the empty nested expression parse state
+	 */
+	public ExpressionParseState createNestedState(final int startIndex, final String expressionString) {
+		return new ExpressionParseState(startIndex, expressionString, false, namedExpressions, allIdentifiers, templateBindings, expressions, identifiers, localBindings);
 	}
 
 	/**
@@ -189,12 +220,12 @@ public final class ExpressionParseState {
 	}
 
 	/**
-	 * Checks if the expression should be parsed as a method call invocation (no starting "(", ends with ")", returns array object).
+	 * Checks if the expression should be parsed as a call invocation (no starting "(", ends with ")", returns array object).
 	 *
-	 * @return true if the expression should be parsed as a method call invocation
+	 * @return true if the expression should be parsed as a call invocation
 	 */
-	public boolean isMethodCall() {
-		return methodCall;
+	public boolean isCall() {
+		return isCall;
 	}
 
 	/**

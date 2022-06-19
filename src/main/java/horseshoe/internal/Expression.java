@@ -26,11 +26,13 @@ import horseshoe.SectionRenderData;
 import horseshoe.Stack;
 import horseshoe.internal.ExpressionParseState.Evaluation;
 import horseshoe.internal.MethodBuilder.Label;
+import horseshoe.internal.Utilities.TrimmedString;
 
 public final class Expression {
 
 	private static final Expression[] EMPTY_EXPRESSIONS = { };
 	private static final Identifier[] EMPTY_IDENTIFIERS = { };
+	private static final Operator START_OPERATOR = Operator.get("(", false);
 
 	private static final Expression EXPRESSION_BEING_CREATED = new Expression();
 
@@ -47,16 +49,18 @@ public final class Expression {
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING = getConstructor(HaltRenderingException.class, String.class);
 	private static final Method IDENTIFIER_FIND_VALUE = getMethod(Identifier.class, "findValue", RenderContext.class, int.class);
 	private static final Method IDENTIFIER_FIND_VALUE_METHOD = getMethod(Identifier.class, "findValue", RenderContext.class, int.class, Object[].class);
-	private static final Method IDENTIFIER_GET_ROOT_VALUE = getMethod(Identifier.class, "getRootValue", RenderContext.class);
-	private static final Method IDENTIFIER_GET_ROOT_VALUE_METHOD = getMethod(Identifier.class, "getRootValue", RenderContext.class, Object[].class);
 	private static final Method IDENTIFIER_GET_VALUE = getMethod(Identifier.class, "getValue", Object.class, Object.class, boolean.class);
 	private static final Method IDENTIFIER_GET_VALUE_METHOD = getMethod(Identifier.class, "getValue", Object.class, Object.class, boolean.class, Object[].class);
+	private static final Field IDENTIFIER_NULL_ORIGINAL_CONTEXT = getField(Identifier.class, "NULL_ORIGINAL_CONTEXT");
 	private static final Method ITERATOR_HAS_NEXT = getMethod(Iterator.class, "hasNext");
 	private static final Method ITERATOR_NEXT = getMethod(Iterator.class, "next");
 	private static final Constructor<?> LINKED_HASH_MAP_CTOR_INT = getConstructor(LinkedHashMap.class, int.class);
 	private static final Constructor<?> LINKED_HASH_SET_CTOR_INT = getConstructor(LinkedHashSet.class, int.class);
 	private static final Method LIST_ADD = getMethod(List.class, "add", Object.class);
 	private static final Method MAP_PUT = getMethod(Map.class, "put", Object.class, Object.class);
+	private static final Method OBJECT_EQUALS = getMethod(Object.class, "equals", Object.class);
+	private static final Method OBJECT_GET_CLASS = getMethod(Object.class, "getClass");
+	private static final Method OBJECT_HASH_CODE = getMethod(Object.class, "hashCode");
 	private static final Method OBJECT_TO_STRING = getMethod(Object.class, "toString");
 	private static final Method OPERANDS_ADD = getMethod(Operands.class, "add", Object.class, Object.class);
 	private static final Method OPERANDS_AND = getMethod(Operands.class, "and", Number.class, Number.class);
@@ -97,6 +101,7 @@ public final class Expression {
 	private static final Method STREAMABLE_OF_UNKNOWN = getMethod(Streamable.class, "ofUnknown", Object.class);
 	private static final Method STREAMABLE_STREAM = getMethod(Streamable.class, "stream");
 	private static final Method STRING_BUILDER_APPEND_STRING = getMethod(StringBuilder.class, "append", String.class);
+	private static final Method STRING_BUILDER_APPEND_OBJECT = getMethod(StringBuilder.class, "append", Object.class);
 	private static final Constructor<?> STRING_BUILDER_INIT_STRING = getConstructor(StringBuilder.class, String.class);
 	private static final Method STRING_VALUE_OF = getMethod(String.class, "valueOf", Object.class);
 	private static final Method UTILITIES_REQUIRE_NON_NULL_TO_STRING = getMethod(Utilities.class, "requireNonNullToString", Object.class);
@@ -106,15 +111,17 @@ public final class Expression {
 	public static final Pattern COMMENT_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "++", Pattern.UNICODE_CHARACTER_CLASS);
 	public static final Pattern COMMENTS_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "*+", Pattern.UNICODE_CHARACTER_CLASS);
 
-	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[-+]Infinity|[-+]?(?:[0-9][0-9_']*[fFdD]|(?:[0-9][0-9_']*[.]?[eE][-+]?[0-9_']+|[0-9][0-9_']*[.][0-9_']+(?:[eE][-+]?[0-9_']+)?|0[xX](?:[0-9A-Fa-f_']+[.]?|[0-9A-Fa-f_']+[.][0-9A-Fa-f_']+)[pP][-+]?[0-9_']+)[fFdD]?))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[-+]Infinity|[-+]?(?:\\d[\\d_']*[fFdD]|(?:\\d[\\d_']*[.]?[eE][-+]?[\\d_']+|\\d[\\d_']*[.][\\d_']+(?:[eE][-+]?[\\d_']+)?|0[xX](?:[\\dA-Fa-f_']+[.]?|[\\dA-Fa-f_']+[.][\\dA-Fa-f_']+)[pP][-+]?[\\d_']+)[fFdD]?))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>" + Identifier.PATTERN + "|`(?:[^`]|``)++`|[.][.]|[.])\\s*" + COMMENTS_PATTERN + "(?<isMethod>[(])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern IDENTIFIER_SHORT_PATTERN = Pattern.compile("(?<identifier>" + Identifier.PATTERN + ")", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_WITH_PREFIX_PATTERN;
-	private static final Pattern LONG_PATTERN = Pattern.compile("(?:(?<hexsign>[-+]?)0[xX](?<hexadecimal>[0-9A-Fa-f_']+)|(?<decimal>[-+]?[0-9][0-9_']*))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern LONG_PATTERN = Pattern.compile("(?:(?<hexsign>[-+]?)0[xX](?<hexadecimal>[\\dA-Fa-f_']+)|(?<decimal>[-+]?\\d[\\d_']*))(?<isLong>[lL])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern NAMED_EXPRESSION_PARAMETER_PATTERN = Pattern.compile("(?:,\\s*" + COMMENTS_PATTERN + "(?:(?<parameter>" + Identifier.PATTERN + ")\\s*" + COMMENTS_PATTERN + ")?)", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern NAMED_EXPRESSION_PATTERN = Pattern.compile(COMMENTS_PATTERN + "(?<name>" + Identifier.PATTERN + ")\\s*" + COMMENTS_PATTERN + "(?:[(]\\s*" + COMMENTS_PATTERN + "(?:(?<firstParameter>[.]|" + Identifier.PATTERN + ")\\s*" + COMMENTS_PATTERN + ")?(?<remainingParameters>" + NAMED_EXPRESSION_PARAMETER_PATTERN + "+)?[)]\\s*" + COMMENTS_PATTERN + "[-=]>|(?<assignment>:=))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern OPERATOR_PATTERN;
 	private static final Pattern REGEX_PATTERN = Pattern.compile("~/(?<nounicode>\\(\\?-U\\))?(?<regex>(?:[^/\\\\]|\\\\.)*+)/\\s*", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<string>(?:[^\"\\\\]|\\\\[\\\\\"'btnfr{}0]|\\\\x[0-9A-Fa-f]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*+)\"|'(?<unescapedString>(?:[^']|'')*+)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern STRING_PATTERN = Pattern.compile("(?:\"(?<doubleString>(?:[^\"\\\\]|\\\\[\\\\\"`'btnfr${}0]|\\\\x[\\dA-Fa-f]|\\\\u[\\dA-Fa-f]{4}|\\\\U[\\dA-Fa-f]{8})*+)\"|'(?<singleString>(?:[^']|'')*+)')\\s*", Pattern.UNICODE_CHARACTER_CLASS);
+	private static final Pattern END_OF_STRING_TEMPLATE_PATTERN = Pattern.compile("(?:[^}\\\\]|\\\\.)++(?=})");
 	private static final Pattern TRAILING_IDENTIFIER_PATTERN = Pattern.compile(COMMENTS_PATTERN + "(((?<name>" + Identifier.PATTERN + ")\\s*" + COMMENTS_PATTERN + ")?[-=]>\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private static final byte[] CHAR_VALUE = new byte[] {
@@ -327,34 +334,43 @@ public final class Expression {
 		} else if (isMethod) { // Process the method call
 			final String name = identifierText.startsWith("`") ? identifierText.substring(1, identifierText.length() - 1).replace("``", "`") : identifierText;
 
+			// Methods are formed by pushing multiple operands on the stack:
+			//  1) Cleanup code after the invocation, possibly null
+			//  2) Code to invoke the call using the identifier when the stack looks like: identifier, target object, argument array
+			//  3) Context object used as first argument to the call
+			//  4) Target object on which the call was invoked, which may be a duplicate of the context object
+			//  5) Parameters are pushed on later
 			if (lastNavigation) {
-				// Create a new output formed by invoking identifiers[index].getValue(object, ...)
+				// Create a new invocation of identifier.getValue(object, null, ignoreFailures, arguments)
 				final MethodBuilder objectBuilder = state.getOperands().pop().toObject();
-				final Label skipFunc = objectBuilder.newLabel();
+				final MethodBuilder call = new MethodBuilder().addCode(ACONST_NULL, SWAP).pushConstant(lastOperator.has(Operator.IGNORE_FAILURES)).addCode(SWAP).addInvoke(IDENTIFIER_GET_VALUE_METHOD);
 
-				state.getOperands().push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_VALUE_METHOD).updateLabel(skipFunc)));
-
-				if (lastOperator.has(Operator.SAFE)) {
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(SWAP, ACONST_NULL).pushConstant(lastOperator.has(Operator.IGNORE_FAILURES))));
-					state.getOperands().push(new Operand(Object.class, objectBuilder.addCode(DUP).addBranch(IFNULL, skipFunc)));
-				} else {
-					state.getOperands().push(new Operand(Object.class, objectBuilder.addCode(ACONST_NULL).pushConstant(lastOperator.has(Operator.IGNORE_FAILURES))));
+				if (lastOperator.has(Operator.SAFE) || lastOperator.has(Operator.IGNORE_FAILURES)) {
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder()));
-				}
-
-				return state.getOperators().push(Operator.createMethod(name, true)).peek();
-			} else {
-				// Create a new output formed by invoking identifiers[index].getRootValue(context, ...) or identifiers[index].findValue(context, backreach, ...)
-				if (isRoot) {
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_GET_ROOT_VALUE_METHOD)));
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT)));
+					objectBuilder.addCode(DUP).addBranch(IFNULL, state.getOperands().peek().builder.newLabel());
 				} else {
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addInvoke(IDENTIFIER_FIND_VALUE_METHOD)));
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach)));
+					state.getOperands().push(null);
 				}
 
-				state.getOperands().push(new Operand(Object.class, new MethodBuilder()));
-				return state.getOperators().push(Operator.createMethod(name, backreach >= 0)).peek();
+				state.getOperands().push(new Operand(Object.class, call));
+				state.getOperands().push(new Operand(Object.class, objectBuilder));
+				state.getOperands().push(state.getOperands().peek());
+				return state.getOperators().push(Operator.createCall(name, true)).peek();
+			} else {
+				// Create a new invocation of identifier.getValue(object, Identifier.NULL_ORIGINAL_CONTEXT, false, arguments) or identifier.findValue(context, backreach, arguments)
+				state.getOperands().push(null);
+
+				if (isRoot) {
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addFieldAccess(IDENTIFIER_NULL_ORIGINAL_CONTEXT, true).addCode(SWAP).pushConstant(false).addCode(SWAP).addInvoke(IDENTIFIER_GET_VALUE_METHOD)));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
+					state.getOperands().push(state.getOperands().peek());
+				} else {
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().pushConstant(backreach).addCode(SWAP).addInvoke(IDENTIFIER_FIND_VALUE_METHOD)));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT)));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach < 0 ? 0 : backreach).pushConstant(name).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true))); // Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name).data
+				}
+
+				return state.getOperators().push(Operator.createCall(name, backreach >= 0)).peek();
 			}
 		} else { // Process the identifier
 			final String name = identifierText.startsWith("`") ? identifierText.substring(1, identifierText.length() - 1).replace("``", "`") : identifierText;
@@ -373,8 +389,6 @@ public final class Expression {
 				}
 			} else { // Check for a local or template binding
 				final Operator operator = Operator.get(matcher.group("assignment"), true);
-				final Integer bindingIndex;
-				final TemplateBinding templateBinding;
 
 				// Look-ahead for an assignment operation
 				if (operator != null) {
@@ -384,20 +398,8 @@ public final class Expression {
 
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name))));
 					return state.getOperators().push(operator).peek();
-				} else if (backreach < 0 && (bindingIndex = state.getLocalBindings().get(name)) != null) { // Check for a local binding
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL + bindingIndex)));
-				} else if (backreach < 0 && (templateBinding = state.getTemplateBinding(name)) != null) { // Check for a template binding
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).addCode(AALOAD)));
 				} else { // Resolve the identifier
-					final Identifier identifier = state.getCachedIdentifier(new Identifier(name));
-					final int index = state.getIdentifiers().getOrAdd(identifier);
-
-					// Create a new output formed by invoking identifiers[index].getRootValue(context) or identifiers[index].findValue(context, backreach)
-					if (isRoot) {
-						state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_GET_ROOT_VALUE)));
-					} else {
-						state.getOperands().push(new Operand(Object.class, backreach >= 0 ? null : identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
-					}
+					parseSimpleIdentifier(state, name, backreach, isRoot);
 				}
 			}
 		}
@@ -447,67 +449,158 @@ public final class Expression {
 	}
 
 	/**
-	 * Parse a string literal, substituting character escape sequences as necessary.
+	 * Parse a simple identifier.
 	 *
-	 * @param matcher the matcher with the current string literal matched
-	 * @return the parsed string representation of the string literal
+	 * @param state the parse state
+	 * @param name the name of the identifier
+	 * @param backreach the backreach for the identifier, or less than 0 to indicate an unspecified backreach
+	 * @param isRoot true if the identifier is prefixed with a root indicator
 	 */
-	private static String parseStringLiteral(final Matcher matcher) {
-		final String string = matcher.group("string");
-		int backslash = 0;
+	private static void parseSimpleIdentifier(final ExpressionParseState state, final String name, final int backreach, final boolean isRoot) {
+		final Integer bindingIndex;
+		final TemplateBinding templateBinding;
 
-		if (string == null || (backslash = string.indexOf('\\')) < 0) {
-			return string == null ? matcher.group("unescapedString").replace("''", "'") : string;
+		if (backreach < 0 && (bindingIndex = state.getLocalBindings().get(name)) != null) { // Check for a local binding
+			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL + bindingIndex)));
+		} else if (backreach < 0 && (templateBinding = state.getTemplateBinding(name)) != null) { // Check for a template binding
+			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).addCode(AALOAD)));
+		} else { // Resolve the identifier
+			final Identifier identifier = state.getCachedIdentifier(new Identifier(name));
+			final int index = state.getIdentifiers().getOrAdd(identifier);
+
+			if (isRoot) { // Create invocation identifiers[index].getValue(context.getSectionData().peekBase().data, NULL_ORIGINAL_CONTEXT, false)
+				state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addFieldAccess(IDENTIFIER_NULL_ORIGINAL_CONTEXT, true).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE)));
+			} else { // Create invocation identifiers[index].findValue(context, backreach)
+				state.getOperands().push(new Operand(Object.class, backreach >= 0 ? null : identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
+			}
+		}
+	}
+
+	/**
+	 * Parse a string literal, substituting character escape sequences as necessary, and adding it to the parse state.
+	 *
+	 * @param state the parse state
+	 * @param matcher the matcher with the current string literal matched
+	 */
+	private static void parseStringLiteral(final ExpressionParseState state, final Matcher matcher) {
+		final MethodBuilder builder = new MethodBuilder();
+		final String singleString = matcher.group("singleString");
+
+		if (singleString != null) {
+			state.getOperands().push(new Operand(String.class, builder.pushConstant(singleString.replace("''", "'"))));
+			return;
 		}
 
-		// Find escape sequences and replace them with the proper character
+		final String string = matcher.group("doubleString");
+		int interpolation = string.indexOf('$'); // Stores the index of the next "$" or closing interpolation "}"
+		int backslash = string.indexOf('\\'); // Stores the index of the next "\"
+
+		if (interpolation < 0 && backslash < 0) {
+			state.getOperands().push(new Operand(String.class, builder.pushConstant(string)));
+			return;
+		}
+
+		// Find escape sequences and process string interpolation
 		final StringBuilder sb = new StringBuilder(string.length());
+		final int stringStart = state.getIndex(matcher) + 1; // + 1 for '"' character
 		int start = 0;
+		int interpolationStart = 0;
 
 		do {
-			sb.append(string, start, backslash);
-			assert backslash + 1 < string.length() : "Invalid string literal accepted with trailing \"\\\""; // According to the pattern, a backslash must be followed by a character
-			start = backslash + 2;
+			if (Integer.compareUnsigned(backslash, interpolation) < 0) { // Found escape sequence
+				sb.append(string, start, backslash);
+				assert backslash + 1 < string.length() : "Invalid string literal accepted with trailing \"\\\""; // According to the pattern, a backslash must be followed by a character
+				start = backslash + 2;
 
-			switch (string.charAt(backslash + 1)) {
-				case 'b':
-					sb.append('\b');
-					break;
-				case 't':
-					sb.append('\t');
-					break;
-				case 'n':
-					sb.append('\n');
-					break;
-				case 'f':
-					sb.append('\f');
-					break;
-				case 'r':
-					sb.append('\r');
-					break;
-				case '0': // Only allow zero, not the octal escape of C, C++, Java, etc.
-					sb.appendCodePoint(0);
-					break;
-				case 'x':
-					start = parseStringLiteralHex(sb, string, start);
-					break;
-				case 'u':
-					assert backslash + 5 < string.length() : "Invalid string literal accepted with trailing \"\\u\""; // According to the pattern, \\u must be followed by 4 digits
-					sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 6), 16));
-					start = backslash + 6;
-					break;
-				case 'U':
-					assert backslash + 9 < string.length() : "Invalid string literal accepted with trailing \"\\U\""; // According to the pattern, \\U must be followed by 8 digits
-					sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 10), 16));
-					start = backslash + 10;
-					break;
-				default:
-					sb.append(string.charAt(backslash + 1));
-					break;
+				switch (string.charAt(backslash + 1)) {
+					case 'b':
+						sb.append('\b');
+						break;
+					case 't':
+						sb.append('\t');
+						break;
+					case 'n':
+						sb.append('\n');
+						break;
+					case 'f':
+						sb.append('\f');
+						break;
+					case 'r':
+						sb.append('\r');
+						break;
+					case '0': // Only allow zero, not the octal escape of C, C++, Java, etc.
+						sb.appendCodePoint(0);
+						break;
+					case 'x':
+						start = parseStringLiteralHex(sb, string, start);
+						break;
+					case 'u':
+						assert backslash + 5 < string.length() : "Invalid string literal accepted with trailing \"\\u\""; // According to the pattern, \\u must be followed by 4 digits
+						sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 6), 16));
+						start = backslash + 6;
+						break;
+					case 'U':
+						assert backslash + 9 < string.length() : "Invalid string literal accepted with trailing \"\\U\""; // According to the pattern, \\U must be followed by 8 digits
+						sb.appendCodePoint(Integer.parseInt(string.substring(backslash + 2, backslash + 10), 16));
+						start = backslash + 10;
+						break;
+					default:
+						sb.append(string.charAt(backslash + 1));
+						break;
+				}
+
+				backslash = string.indexOf('\\', start);
+			} else if (interpolation < start) { // "\$"
+				interpolation = string.indexOf('$', start);
+			} else if (string.charAt(interpolation) == '}') { // End of "${...}" expression
+				final TrimmedString expression = Utilities.trim(sb.append(string, start, interpolation).toString(), 0);
+				final ExpressionParseState templateState = state.createNestedState(interpolationStart + expression.start, expression.string);
+
+				sb.setLength(0);
+				processExpression(templateState, COMMENT_PATTERN.matcher(expression.string), START_OPERATOR, expression.string.length());
+				builder.append(templateState.getOperands().pop().toObject()).addInvoke(STRING_BUILDER_APPEND_OBJECT);
+				assert templateState.getOperands().isEmpty();
+				start = interpolation + 1;
+				interpolation = string.indexOf('$', start);
+			} else if (interpolation + 1 >= string.length()) { // Ends with "$"
+				break;
+			} else { // Found "$"
+				if (builder.isEmpty()) {
+					builder.pushNewObject(StringBuilder.class).addCode(DUP).pushConstant(sb.append(string, start, interpolation).toString()).addInvoke(STRING_BUILDER_INIT_STRING);
+				} else {
+					builder.pushConstant(sb.append(string, start, interpolation).toString()).addInvoke(STRING_BUILDER_APPEND_STRING);
+				}
+
+				sb.setLength(0);
+				final Matcher interpolationMatcher = IDENTIFIER_SHORT_PATTERN.matcher(string);
+
+				if (string.charAt(interpolation + 1) == '{') { // Start of "${...}" expression
+					if (!interpolationMatcher.usePattern(END_OF_STRING_TEMPLATE_PATTERN).region(interpolation + 2, string.length()).lookingAt()) {
+						throw new IllegalStateException("Invalid string interpolation expression \"" + string.substring(interpolation) + "\"");
+					}
+
+					start = interpolation + 2;
+					interpolationStart = stringStart + start;
+					interpolation = interpolationMatcher.end();
+				} else if (interpolationMatcher.region(interpolation + 1, string.length()).lookingAt()) { // Found "$[identifier]"
+					parseSimpleIdentifier(state, interpolationMatcher.group(), Identifier.UNSTATED_BACKREACH, false);
+					builder.append(state.getOperands().pop().builder).addInvoke(STRING_BUILDER_APPEND_OBJECT);
+					start = interpolationMatcher.end();
+					interpolation = string.indexOf('$', start);
+				} else { // Stray "$", e.g. "$50.00"
+					start = interpolation;
+					interpolation = string.indexOf('$', start + 1);
+				}
 			}
-		} while ((backslash = string.indexOf('\\', start)) >= 0);
+		} while (interpolation >= 0 || backslash >= 0);
 
-		return sb.append(string, start, string.length()).toString();
+		final String lastString = sb.append(string, start, string.length()).toString();
+
+		if (builder.isEmpty()) {
+			state.getOperands().push(new Operand(String.class, builder.pushConstant(lastString)));
+		} else {
+			state.getOperands().push(new Operand(String.class, builder.pushConstant(lastString).addInvoke(STRING_BUILDER_APPEND_STRING).addInvoke(OBJECT_TO_STRING)));
+		}
 	}
 
 	/**
@@ -570,7 +663,7 @@ public final class Expression {
 				state.getOperands().push(new Operand(int.class, new MethodBuilder().pushConstant((int)value)));
 			}
 		} else if (!hasLeftExpression && matcher.usePattern(STRING_PATTERN).lookingAt()) { // String literal
-			state.getOperands().push(new Operand(String.class, new MethodBuilder().pushConstant(parseStringLiteral(matcher))));
+			parseStringLiteral(state, matcher);
 		} else if (!hasLeftExpression && matcher.usePattern(REGEX_PATTERN).lookingAt()) { // Regular expression literal ("nounicode" hack is to support broken Java runtime library implementations)
 			state.getOperands().push(new Operand(Object.class, new MethodBuilder().pushConstant(Pattern.compile(matcher.group("regex")).pattern()).pushConstant(matcher.group("nounicode") == null ? Pattern.UNICODE_CHARACTER_CLASS : 0).addInvoke(PATTERN_COMPILE)));
 		} else if (matcher.usePattern(OPERATOR_PATTERN).lookingAt()) { // Operator
@@ -601,12 +694,12 @@ public final class Expression {
 	}
 
 	/**
-	 * Processes the method call. The operand stack will be updated with the results of evaluating the operator.
+	 * Processes a call, which may be either a named expression call or a method call. The operand stack will be updated with the results of evaluating the operator.
 	 *
 	 * @param state the parse state
-	 * @param operator the method call operator
+	 * @param operator the call operator
 	 */
-	private static void processMethodCall(final ExpressionParseState state, final Operator operator) {
+	private static void processCall(final ExpressionParseState state, final Operator operator) {
 		final int parameterCount = operator.getRightExpressions();
 		final Expression namedExpression;
 
@@ -621,22 +714,7 @@ public final class Expression {
 			state.getOperands().pop(parameterCount).push(new Operand(Object.class, mb));
 			return;
 		} else if (operator.has(Operator.KNOWN_OBJECT) || (namedExpression = state.getNamedExpressions().get(operator.getString())) == null) {
-			// Create the identifier, then get and invoke the appropriate method
-			final int index = state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(operator.getString(), parameterCount)));
-			final MethodBuilder methodResult = state.getOperands().peek(parameterCount).builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).append(state.getOperands().peek(parameterCount + 1).builder);
-
-			if (parameterCount == 0) {
-				methodResult.addCode(ACONST_NULL);
-			} else {
-				methodResult.pushNewObject(Object.class, parameterCount);
-			}
-
-			// Convert all parameters to objects and store them in the array
-			for (int i = 0; i < parameterCount; i++) {
-				methodResult.addCode(DUP).pushConstant(i).append(state.getOperands().peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
-			}
-
-			state.getOperands().push(new Operand(Object.class, methodResult.append(state.getOperands().pop(parameterCount + 2).pop().builder)));
+			processMethodCall(state, operator);
 			return;
 		}
 
@@ -665,7 +743,122 @@ public final class Expression {
 			expressionResult.addInvoke(EXPRESSION_EVALUATE);
 		}
 
-		state.getOperands().pop(parameterCount + 3).push(new Operand(Object.class, expressionResult));
+		state.getOperands().pop(parameterCount + 4).push(new Operand(Object.class, expressionResult));
+	}
+
+	/**
+	 * Processes an expression.
+	 *
+	 * @param state the parse state
+	 * @param matcher the matcher used to process the expression
+	 * @param lastOperator the last operator that was parsed
+	 * @param end the ending index of the expression in the matcher
+	 */
+	private static void processExpression(final ExpressionParseState state, final Matcher matcher, final Operator lastOperator, final int end) {
+		Operator previousOperator = lastOperator;
+
+		// Loop through all tokens
+		for (; matcher.regionStart() < end; matcher.region(matcher.end(), end)) {
+			previousOperator = parseToken(state, matcher, previousOperator);
+		}
+
+		// Push everything to the output queue
+		while (!state.getOperators().isEmpty()) {
+			Operator operator = state.getOperators().pop();
+
+			if (operator.getClosingString() != null) {
+				throw new IllegalStateException("Unexpected end of expression, expecting \"" + operator.getClosingString() + "\" (unmatched \"" + operator.getString() + "\")");
+			} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS) && (previousOperator == null || !previousOperator.has(Operator.RIGHT_EXPRESSION | Operator.X_RIGHT_EXPRESSIONS))) { // Process multi-argument operators, but allow trailing commas
+				operator = operator.addRightExpression();
+			} else if (previousOperator != null && previousOperator.has(Operator.RIGHT_EXPRESSION)) {
+				if (previousOperator.has(Operator.IGNORE_TRAILING)) {
+					previousOperator = null;
+					continue;
+				} else {
+					throw new IllegalStateException("Unexpected end of expression");
+				}
+			}
+
+			state.getOperators().push(operator);
+			processOperation(state);
+		}
+
+		if (state.getOperands().isEmpty()) {
+			throw new IllegalStateException("Unexpected empty expression");
+		}
+	}
+
+	/**
+	 * Processes the method call. The operand stack will be updated with the results of evaluating the operator.
+	 *
+	 * @param state the parse state
+	 * @param operator the method call operator
+	 */
+	private static void processMethodCall(final ExpressionParseState state, final Operator operator) {
+		final int parameterCount = operator.getRightExpressions();
+
+		// Check Object methods
+		final Method method;
+
+		switch (operator.getString()) {
+			case "equals":
+				method = OBJECT_EQUALS;
+				break;
+			case "getClass":
+				method = OBJECT_GET_CLASS;
+				break;
+			case "hashCode":
+				method = OBJECT_HASH_CODE;
+				break;
+			case "toString":
+				method = OBJECT_TO_STRING;
+				break;
+			default:
+				method = null;
+				break;
+		}
+
+		if (method != null && parameterCount == method.getParameterCount()) {
+			final MethodBuilder methodResult = state.getOperands().peek(parameterCount).builder;
+
+			for (int i = 0; i < parameterCount; i++) {
+				methodResult.append(state.getOperands().peek(parameterCount - 1 - i).toObject());
+			}
+
+			final Operand end = state.getOperands().pop(parameterCount + 3).pop();
+			final Class<?> returnType = Operand.ALLOWED_TYPES.contains(method.getReturnType()) ? method.getReturnType() : Object.class;
+
+			if (end != null) { // Safe navigation, so the result must be object
+				state.getOperands().push(new Operand(Object.class, new Operand(returnType, methodResult.addInvoke(method)).toObject().append(end.builder)));
+			} else {
+				state.getOperands().push(new Operand(returnType, methodResult.addInvoke(method)));
+			}
+
+			return;
+		}
+
+		// Create the identifier, then get and invoke the appropriate method
+		final int index = state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(operator.getString(), parameterCount)));
+		final MethodBuilder methodResult = state.getOperands().peek(parameterCount + 1).builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP);
+
+		if (parameterCount == 0) {
+			methodResult.addCode(ACONST_NULL);
+		} else {
+			methodResult.pushNewObject(Object.class, parameterCount);
+		}
+
+		// Convert all parameters to objects and store them in the array
+		for (int i = 0; i < parameterCount; i++) {
+			methodResult.addCode(DUP).pushConstant(i).append(state.getOperands().peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
+		}
+
+		final MethodBuilder call = state.getOperands().pop(parameterCount + 2).pop().builder;
+		final Operand end = state.getOperands().pop();
+		state.getOperands().push(new Operand(Object.class, methodResult.append(call)));
+
+		if (end != null) {
+			state.getOperands().peek().builder.append(end.builder);
+		}
 	}
 
 	/**
@@ -679,8 +872,8 @@ public final class Expression {
 
 		if (operator.has(Operator.NAVIGATION)) { // Navigation operator is handled during parsing
 			return;
-		} else if (operator.has(Operator.METHOD_CALL)) { // Check for a method call
-			processMethodCall(state, operator);
+		} else if (operator.has(Operator.CALL)) { // Check for a call
+			processCall(state, operator);
 			return;
 		} else if (operator.has(Operator.RIGHT_EXPRESSION)) {
 			right = state.getOperands().pop();
@@ -1061,7 +1254,7 @@ public final class Expression {
 			if (!state.getOperators().isEmpty() && state.getOperators().peek().has(Operator.X_RIGHT_EXPRESSIONS) && ",".equals(token)) {
 				state.getOperators().push(state.getOperators().pop().addRightExpression());
 				return operator;
-			} else if (state.getOperators().isEmpty() && state.isMethodCall()) {
+			} else if (state.getOperators().isEmpty() && state.isCall()) {
 				throw new IllegalStateException("Unexpected \"" + token + "\", expecting end of expression (index " + state.getIndex(matcher) + ")");
 			} else if (operator.has(Operator.TRAILING_IDENTIFIER)) { // Check for streaming operations w/ 'x -> ...'
 				matcher.region(matcher.end(), matcher.regionEnd()).usePattern(TRAILING_IDENTIFIER_PATTERN).lookingAt();
@@ -1076,7 +1269,7 @@ public final class Expression {
 			state.getOperators().push(operator);
 			return operator;
 		} else if (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION) || lastOperator.getString().startsWith(":")) { // Check if this token ends an expression on the stack
-			if (lastOperator != null && !lastOperator.has(Operator.METHOD_CALL) && lastOperator.getString().startsWith(":")) { // ":" can have an optional right expression
+			if (lastOperator != null && !lastOperator.has(Operator.CALL) && lastOperator.getString().startsWith(":")) { // ":" can have an optional right expression
 				if (":<".equals(lastOperator.getString())) {
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addFieldAccess(ACCESSOR_TO_BEGINNING, true)));
 					state.getOperators().pop(1).push(Operator.get(":", true));
@@ -1138,7 +1331,7 @@ public final class Expression {
 			int initializeBindingsStart = 0;
 			final int end = state.getExpressionString().length();
 			final Matcher matcher = NAMED_EXPRESSION_PATTERN.matcher(state.getExpressionString());
-			Operator lastOperator = Operator.get("(", false);
+			Operator lastOperator = START_OPERATOR;
 
 			if (matcher.lookingAt()) {
 				if (matcher.group("assignment") != null) {
@@ -1156,46 +1349,19 @@ public final class Expression {
 				}
 
 				matcher.region(matcher.end(), end);
-			} else if (state.isMethodCall()) {
-				lastOperator = Operator.createMethod("", false);
+			} else if (state.isCall()) {
+				lastOperator = Operator.createCall("", false);
 				state.getOperators().push(lastOperator);
 				matcher.region(1, end);
 			}
 
-			// Loop through all tokens
-			for (; matcher.regionStart() < end; matcher.region(matcher.end(), end)) {
-				lastOperator = parseToken(state, matcher, lastOperator);
-			}
-
-			// Push everything to the output queue
-			while (!state.getOperators().isEmpty()) {
-				Operator operator = state.getOperators().pop();
-
-				if (operator.getClosingString() != null) {
-					throw new IllegalStateException("Unexpected end of expression, expecting \"" + operator.getClosingString() + "\" (unmatched \"" + operator.getString() + "\")");
-				} else if (operator.has(Operator.X_RIGHT_EXPRESSIONS) && (lastOperator == null || !lastOperator.has(Operator.RIGHT_EXPRESSION | Operator.X_RIGHT_EXPRESSIONS))) { // Process multi-argument operators, but allow trailing commas
-					operator = operator.addRightExpression();
-				} else if (lastOperator != null && lastOperator.has(Operator.RIGHT_EXPRESSION)) {
-					if (lastOperator.has(Operator.IGNORE_TRAILING)) {
-						lastOperator = null;
-						continue;
-					} else {
-						throw new IllegalStateException("Unexpected end of expression");
-					}
-				}
-
-				state.getOperators().push(operator);
-				processOperation(state);
-			}
+			// Process the expression
+			processExpression(state, matcher, lastOperator, end);
 
 			// Initialize all local bindings to null
 			for (int i = initializeBindingsStart; i < state.getLocalBindings().size(); i++) {
 				mb.addCode(ACONST_NULL).addAccess(ASTORE, Evaluable.FIRST_LOCAL + i);
 			}
-		}
-
-		if (state.getOperands().isEmpty()) {
-			throw new IllegalStateException("Unexpected empty expression");
 		}
 
 		addReturn(mb, state, state.getOperands().pop());

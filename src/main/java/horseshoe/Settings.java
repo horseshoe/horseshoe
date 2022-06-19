@@ -158,6 +158,7 @@ public class Settings {
 				Character.class,
 				Boolean.class,
 
+				Object.class,
 				Math.class,
 				StrictMath.class,
 				Enum.class,
@@ -202,7 +203,7 @@ public class Settings {
 		public ClassMap() {
 		}
 
-		public ClassMap(final Collection<? extends Class<?>> collection) {
+		public ClassMap(final Collection<Class<?>> collection) {
 			this();
 			addAll(collection);
 		}
