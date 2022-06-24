@@ -203,6 +203,16 @@ class TemplateTests {
 	}
 
 	@Test
+	void testObjectMethods() throws IOException, LoadException {
+		assertEquals("Test", new TemplateLoader().load("Object Method Test", "{{#[null]}}{{#[null]}}{{toString()}}{{/}}{{/}}").render(new Settings().setContextAccess(ContextAccess.FULL), "Test", new java.io.StringWriter()).toString());
+		assertEquals("Test", new TemplateLoader().load("Object Method Test", "{{#'Test'}}{{#[null]}}{{#[null]}}{{toString()}}{{/}}{{/}}{{/}}").render(new Settings().setContextAccess(ContextAccess.FULL), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("Test 2", new TemplateLoader().load("Object Method Test", "{{#'Test'}}{{#'Test 2'}}{{#[null]}}{{toString()}}{{/}}{{/}}{{/}}").render(new Settings().setContextAccess(ContextAccess.FULL), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("Test", new TemplateLoader().load("Object Method Test", "{{#'Test 2'}}{{#[null]}}{{toString()}}{{/}}{{/}}").render(new Settings().setContextAccess(ContextAccess.CURRENT_AND_ROOT), "Test", new java.io.StringWriter()).toString());
+		assertEquals("", new TemplateLoader().load("Object Method Test", "{{#'Test'}}{{#'Test 2'}}{{#[null]}}{{toString()}}{{/}}{{/}}{{/}}").render(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+		assertEquals("Test", new TemplateLoader().load("Object Method Test", "{{#'Test'}}{{toString()}}{{/}}").render(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
+	}
+
+	@Test
 	void testPatternLookup() throws IOException, LoadException {
 		assertEquals("One, Two, Three, One", new TemplateLoader().load("Pattern Lookup Test", "{{# 'One Two Three'[~/[A-Z][a-z]+/] }}{{.}}{{# .hasNext }}, {{/}}{{/}}, {{ 'One Two Three'[~/[A-Z][a-z]+/] }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals(", ", new TemplateLoader().load("Pattern Lookup Test", "{{# 'One Two Three'[~/[A-Z][a-z]+[A-Z]/] }}{{.}}{{# .hasNext }}, {{/}}{{/}}, {{ 'One Two Three'[~/[A-Z][a-z]+[A-Z]/] }}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());

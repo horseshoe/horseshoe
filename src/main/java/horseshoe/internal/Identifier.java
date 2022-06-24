@@ -87,6 +87,30 @@ public final class Identifier {
 	}
 
 	/**
+	 * Finds the first non-null object given the context.
+	 *
+	 * @param context the context object used to find the first non-null object
+	 * @return the first non-null object
+	 */
+	public static Object findObject(final RenderContext context) {
+		final Object object = context.getSectionData().peek().data;
+
+		if (object != null || context.getSettings().getContextAccess() == ContextAccess.CURRENT) {
+			return object;
+		} else if (context.getSettings().getContextAccess() == ContextAccess.FULL) {
+			for (int i = 1; i < context.getSectionData().size() - 1; i++) {
+				final Object backreachObject = context.getSectionData().peek(i).data;
+
+				if (backreachObject != null) {
+					return backreachObject;
+				}
+			}
+		}
+
+		return context.getSectionData().peekBase().data;
+	}
+
+	/**
 	 * Finds and gets the value of the identifier given the context object.
 	 *
 	 * @param context the context object used to get the value of the identifier

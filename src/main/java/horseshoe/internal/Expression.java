@@ -47,6 +47,7 @@ public final class Expression {
 	private static final Method EXPRESSION_EVALUATE = getMethod(Expression.class, "evaluate", RenderContext.class, Object[].class);
 	private static final Method EXPRESSION_PEEK_STACK = getMethod(Expression.class, "peekStack", Stack.class, int.class, String.class);
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING = getConstructor(HaltRenderingException.class, String.class);
+	private static final Method IDENTIFIER_FIND_OBJECT = getMethod(Identifier.class, "findObject", RenderContext.class);
 	private static final Method IDENTIFIER_FIND_VALUE = getMethod(Identifier.class, "findValue", RenderContext.class, int.class);
 	private static final Method IDENTIFIER_FIND_VALUE_METHOD = getMethod(Identifier.class, "findValue", RenderContext.class, int.class, Object[].class);
 	private static final Method IDENTIFIER_GET_VALUE = getMethod(Identifier.class, "getValue", Object.class, Object.class, boolean.class);
@@ -367,7 +368,12 @@ public final class Expression {
 				} else {
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().pushConstant(backreach).addCode(SWAP).addInvoke(IDENTIFIER_FIND_VALUE_METHOD)));
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT)));
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach < 0 ? 0 : backreach).pushConstant(name).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true))); // Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name).data
+
+					if (backreach >= 0) {
+						state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(name).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true))); // Expression.peekStack(context.getSectionData(), backreach, name).data
+					} else {
+						state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_FIND_OBJECT)));
+					}
 				}
 
 				return state.getOperators().push(Operator.createCall(name, backreach >= 0)).peek();

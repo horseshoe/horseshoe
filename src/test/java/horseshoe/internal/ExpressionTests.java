@@ -420,7 +420,7 @@ class ExpressionTests {
 		assertThrows(IllegalStateException.class, () -> createExpression("\"${blah\\}\"", EMPTY_EXPRESSIONS_MAP, true));
 		assertEquals("ab $cd$ e 11", createExpression("blah = 'cd'; \"ab \\$${ blah }\\$ e ${ 5 + 6 }\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertEquals("ab $cd$ e 11", createExpression("blah = 'cd'; \"ab \\$${ blah }\\$ e ${ \\\"${5 + 6\\}\\\" }\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
-		assertEquals("String interpolation can be done using $[identifier] (null) or ${ [expression] } ([ 7 ]), but is ignored for the literal \"$4.50\".", createExpression("\"String interpolation can be done using $[identifier] ($identifier) or \\${ [expression] } (${ \\{ 5 \\} #. t -> t + 2 }), but is ignored for the literal \\\"$4.50\\\".\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals("String interpolation can be done using $[identifier] (null) or ${ [expression] } (7), but is ignored for the literal \"$4.50\".", createExpression("\"String interpolation can be done using $[identifier] ($identifier) or \\${ [expression] } (${ sum = 0; \\{ 5, 2 \\} #< t -> sum = sum + t }), but is ignored for the literal \\\"$4.50\\\".\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 	}
 
 	@Test
