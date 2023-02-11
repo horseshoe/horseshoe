@@ -1106,7 +1106,7 @@ public final class Expression {
 			case "!:": {
 				final Label end = left.builder.newLabel();
 
-				state.getOperands().push(new Operand(Object.class, new Operand(Object.class, left.toObject().addCode(DUP)).toBoolean().addBranch(IFEQ, end).addCode(POP).append(right.toObject()).updateLabel(end)));
+				state.getOperands().push(new Operand(Object.class, new Operand(Object.class, left.toObject().addCode(ACONST_NULL, SWAP)).toBoolean().addBranch(IFEQ, end).addCode(POP).append(right.toObject()).updateLabel(end)));
 				break;
 			}
 

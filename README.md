@@ -388,10 +388,10 @@ The ternary-related operators perform the same "if-then-else" logic while only u
 
 | Expression | Ternary Equivalent |
 | ---------- | ------------------ |
-| `a ?? b` | `a != null ? a : b` |
 | `a ?: b` | `a ? a : b` |
+| `a ?? b` | `a != null ? a : b` |
+| `a !: b` | `!a ? null : b` |
 | `a !? b` | `a == null ? null : b` |
-| `a !: b` | `!a ? a : b` |
 
 ##### Safe and Nullable Operators
 

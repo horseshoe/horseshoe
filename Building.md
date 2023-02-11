@@ -1,6 +1,6 @@
 # Horseshoe
 
-Horseshoe is written entirely in Java and uses the gradle build system. The exact dependencies needed can be found in [Airpower.ps1](Airpower.ps1) and the [Dockerfile](Dockerfile)
+Horseshoe is written entirely in Java and uses the gradle build system. The exact build dependencies and their versions can be found in [Airpower.ps1](Airpower.ps1) and the [Dockerfile](Dockerfile)
 
 ## Windows (Airpower)
 

@@ -464,7 +464,7 @@ class ExpressionTests {
 		assertEquals("good", createExpression("\"bad\" !? \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertEquals(null, createExpression("null !: \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 		assertEquals("good", createExpression("\"bad\" !: \"good\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
-		assertEquals(Boolean.FALSE, createExpression("false !: \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
+		assertEquals(null, createExpression("false !: \"bad\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())));
 	}
 
 }
