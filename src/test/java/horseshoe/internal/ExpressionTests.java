@@ -404,6 +404,11 @@ class ExpressionTests {
 	}
 
 	@Test
+	void testStreamingOperators() throws ReflectiveOperationException {
+		assertEquals("[ a, b, d, e ]", createExpression("['a', 'b', ['c': ['d', 'e']]] #| s -> ~@String.isInstance(s) ? [s] : s['c'] #. s -> s.charAt(0)", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.<String, Object>emptyMap())).toString());
+	}
+
+	@Test
 	void testStringConcatenation() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("cb", "bc");
 		assertEquals("abcd \\\"\'\b\t\n\f\rƪāĂ\t", createExpression("\"\" + \"a\" + cb + \"d \\\\\\\"\\\'\\b\\t\\n\\f\\r\\x1Aa\\u0101\\U00000102\\x9\"", EMPTY_EXPRESSIONS_MAP, true).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
