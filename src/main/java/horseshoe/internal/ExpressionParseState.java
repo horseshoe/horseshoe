@@ -1,8 +1,10 @@
 package horseshoe.internal;
 
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.regex.Matcher;
 
+import horseshoe.Extension;
 import horseshoe.Stack;
 
 /**
@@ -18,9 +20,11 @@ public final class ExpressionParseState {
 
 	private final int startIndex;
 	private final String expressionString;
+	private final EnumSet<Extension> extensions;
 	private final boolean isCall;
 	private Evaluation evaluation = Evaluation.EVALUATE_AND_RENDER;
 	private String bindingName = null;
+	private String callName = null;
 	private final Map<String, Expression> namedExpressions;
 	private final Map<Identifier, Identifier> allIdentifiers;
 	private final Stack<Map<String, TemplateBinding>> templateBindings;
@@ -35,6 +39,7 @@ public final class ExpressionParseState {
 	 *
 	 * @param startIndex the starting index of the trimmed string within the tag
 	 * @param expressionString the string representation of the expression
+	 * @param extensions the set of extensions currently in use
 	 * @param isCall true if the expression should be parsed as a call invocation (no starting "(", ends with ")", returns array object), otherwise false
 	 * @param namedExpressions the set of named expressions that can be used in the expression
 	 * @param allIdentifiers the set of all identifiers that can be used as a cache in the expression
@@ -43,9 +48,10 @@ public final class ExpressionParseState {
 	 * @param identifiers the cache of all identifiers used in the template
 	 * @param localBindings the cache of all local bindings used in the template
 	 */
-	private ExpressionParseState(final int startIndex, final String expressionString, final boolean isCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings, final CacheList<Expression> expressions, final CacheList<Identifier> identifiers, final CacheList<String> localBindings) {
+	private ExpressionParseState(final int startIndex, final String expressionString, final EnumSet<Extension> extensions, final boolean isCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings, final CacheList<Expression> expressions, final CacheList<Identifier> identifiers, final CacheList<String> localBindings) {
 		this.startIndex = startIndex;
 		this.expressionString = expressionString;
+		this.extensions = extensions;
 		this.isCall = isCall;
 		this.namedExpressions = namedExpressions;
 		this.allIdentifiers = allIdentifiers;
@@ -60,13 +66,14 @@ public final class ExpressionParseState {
 	 *
 	 * @param startIndex the starting index of the trimmed string within the tag
 	 * @param expressionString the string representation of the expression
+	 * @param extensions the set of extensions currently in use
 	 * @param isCall true if the expression should be parsed as a call invocation (no starting "(", ends with ")", returns array object), otherwise false
 	 * @param namedExpressions the set of named expressions that can be used in the expression
 	 * @param allIdentifiers the set of all identifiers that can be used as a cache in the expression
 	 * @param templateBindings the set of all bindings used in the template
 	 */
-	public ExpressionParseState(final int startIndex, final String expressionString, final boolean isCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings) {
-		this(startIndex, expressionString, isCall, namedExpressions, allIdentifiers, templateBindings, new CacheList<>(), new CacheList<>(), new CacheList<>());
+	public ExpressionParseState(final int startIndex, final String expressionString, final EnumSet<Extension> extensions, final boolean isCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings) {
+		this(startIndex, expressionString, extensions, isCall, namedExpressions, allIdentifiers, templateBindings, new CacheList<>(), new CacheList<>(), new CacheList<>());
 	}
 
 	/**
@@ -77,7 +84,16 @@ public final class ExpressionParseState {
 	 * @return the empty nested expression parse state
 	 */
 	public ExpressionParseState createNestedState(final int startIndex, final String expressionString) {
-		return new ExpressionParseState(startIndex, expressionString, false, namedExpressions, allIdentifiers, templateBindings, expressions, identifiers, localBindings);
+		return new ExpressionParseState(startIndex, expressionString, extensions, false, namedExpressions, allIdentifiers, templateBindings, expressions, identifiers, localBindings);
+	}
+
+	/**
+	 * Gets the binding name associated with the expression.
+	 *
+	 * @return the binding name associated with the expression
+	 */
+	public String getBindingName() {
+		return bindingName;
 	}
 
 	/**
@@ -91,12 +107,12 @@ public final class ExpressionParseState {
 	}
 
 	/**
-	 * Gets the binding name associated with the expression.
+	 * Gets the call name associated with the expression.
 	 *
-	 * @return the binding name associated with the expression
+	 * @return the call name associated with the expression
 	 */
-	public String getBindingName() {
-		return bindingName;
+	public String getCallName() {
+		return callName;
 	}
 
 	/**
@@ -124,6 +140,15 @@ public final class ExpressionParseState {
 	 */
 	public String getExpressionString() {
 		return expressionString;
+	}
+
+	/**
+	 * Gets the set of extensions currently in use.
+	 *
+	 * @return the set of extensions currently in use
+	 */
+	public EnumSet<Extension> getExtensions() {
+		return extensions;
 	}
 
 	/**
@@ -220,7 +245,7 @@ public final class ExpressionParseState {
 	}
 
 	/**
-	 * Checks if the expression should be parsed as a call invocation (no starting "(", ends with ")", returns array object).
+	 * Checks if the expression should be parsed as a call invocation (starts "(", ends with ")", returns array object).
 	 *
 	 * @return true if the expression should be parsed as a call invocation
 	 */
@@ -236,6 +261,17 @@ public final class ExpressionParseState {
 	 */
 	public ExpressionParseState setBindingName(final String bindingName) {
 		this.bindingName = bindingName;
+		return this;
+	}
+
+	/**
+	 * Sets the call name associated with the expression.
+	 *
+	 * @param callName the call name associated with the expression
+	 * @return this parse state
+	 */
+	public ExpressionParseState setCallName(final String callName) {
+		this.callName = callName;
 		return this;
 	}
 

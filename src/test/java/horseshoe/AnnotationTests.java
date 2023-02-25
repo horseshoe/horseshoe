@@ -281,10 +281,13 @@ class AnnotationTests {
 			new TemplateLoader().load("File Update", "{{#@File(" + path3 + ", 'Bad Option')}}\nTest 3\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 3" + LS, new String(Files.readAllBytes(path3), StandardCharsets.UTF_8));
 
-			assertEquals("NoFile", Template.load("{{# @File(null) }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
-			assertEquals("NoFile", Template.load("{{# @File() }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("NoFile", Template.load("{{# @File(null) }}Bad{{^^ @File }}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("NoFile", Template.load("{{# @`File`() }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 			assertEquals("NoFile", Template.load("{{# @File }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
-			assertThrows(LoadException.class, () -> Template.load("{{# @File('Test') + '1' }}Bad{{^}}NoFile{{/}}"));
+
+			assertEquals("Good", Template.load("{{# true ?: @File }}Good{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("NoFile", Template.load("{{# true !: @File }}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+			assertEquals("NoFile", Template.load("{{# @File('Test') + '1' }}{{.}}Bad{{^}}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 			final WatchKey watchKey1 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
@@ -326,7 +329,7 @@ class AnnotationTests {
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final TemplateLoader loader = new TemplateLoader();
-		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}{{#@Inner}}789{{/}}456{{/}}cd");
+		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}{{#@Inner}}789{{/}}456{{/@Test(\"value123\")}}cd");
 		final MapAnnotation testMapAnnotation = new MapAnnotation();
 		final MapAnnotation innerMapAnnotation = new MapAnnotation();
 		final Map<String, AnnotationHandler> annotations = new LinkedHashMap<>();

@@ -192,9 +192,8 @@ class MethodBuilderTests {
 			}
 
 			try {
-				final MethodBuilder mb = new MethodBuilder();
-				final Label label = mb.newLabel();
-				assertNotNull(mb.addBranch((byte)i, label).updateLabel(label).toString());
+				final Label label = new Label();
+				assertNotNull(new MethodBuilder().addBranch((byte)i, label).updateLabel(label).toString());
 			} catch (final RuntimeException e) {
 				// Many failures expected
 			}
@@ -224,10 +223,8 @@ class MethodBuilderTests {
 
 		// Test Number.class to Boolean.class
 		final String name = getClass().getName() + "$" + CLASS_COUNTER.getAndIncrement();
-		final MethodBuilder mb = new MethodBuilder();
-		final Label fail = mb.newLabel();
-
-		mb.pushConstant(Long.MIN_VALUE).addPrimitiveConversion(long.class, Long.class).addPrimitiveConversion(Number.class, boolean.class).addBranch(IFEQ, fail)
+		final Label fail = new Label();
+		final MethodBuilder mb = new MethodBuilder().pushConstant(Long.MIN_VALUE).addPrimitiveConversion(long.class, Long.class).addPrimitiveConversion(Number.class, boolean.class).addBranch(IFEQ, fail)
 				.pushConstant(0.8f).addPrimitiveConversion(float.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFEQ, fail)
 				.pushConstant(-2000).addPrimitiveConversion(int.class, Object.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFEQ, fail)
 				.pushConstant(6.7).addPrimitiveConversion(double.class, Number.class).addPrimitiveConversion(Number.class, Boolean.class).addPrimitiveConversion(Boolean.class, boolean.class).addBranch(IFEQ, fail)

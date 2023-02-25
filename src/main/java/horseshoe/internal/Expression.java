@@ -20,9 +20,12 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import horseshoe.AnnotationHandler;
+import horseshoe.Extension;
 import horseshoe.HaltRenderingException;
 import horseshoe.RenderContext;
 import horseshoe.SectionRenderData;
+import horseshoe.SectionRenderer;
 import horseshoe.Stack;
 import horseshoe.internal.ExpressionParseState.Evaluation;
 import horseshoe.internal.MethodBuilder.Label;
@@ -58,6 +61,7 @@ public final class Expression {
 	private static final Constructor<?> LINKED_HASH_MAP_CTOR_INT = getConstructor(LinkedHashMap.class, int.class);
 	private static final Constructor<?> LINKED_HASH_SET_CTOR_INT = getConstructor(LinkedHashSet.class, int.class);
 	private static final Method LIST_ADD = getMethod(List.class, "add", Object.class);
+	private static final Method MAP_GET = getMethod(Map.class, "get", Object.class);
 	private static final Method MAP_PUT = getMethod(Map.class, "put", Object.class, Object.class);
 	private static final Method OBJECT_EQUALS = getMethod(Object.class, "equals", Object.class);
 	private static final Method OBJECT_GET_CLASS = getMethod(Object.class, "getClass");
@@ -84,6 +88,7 @@ public final class Expression {
 	private static final Method OPERANDS_SUBTRACT = getMethod(Operands.class, "subtract", Object.class, Object.class);
 	private static final Method OPERANDS_XOR = getMethod(Operands.class, "xor", Number.class, Number.class);
 	private static final Method PATTERN_COMPILE = getMethod(Pattern.class, "compile", String.class, int.class);
+	private static final Method RENDER_CONTEXT_GET_ANNOTATION_MAP = getMethod(RenderContext.class, "getAnnotationMap");
 	private static final Method RENDER_CONTEXT_GET_INDENTATION = getMethod(RenderContext.class, "getIndentation");
 	private static final Method RENDER_CONTEXT_GET_SECTION_DATA = getMethod(RenderContext.class, "getSectionData");
 	private static final Method RENDER_CONTEXT_GET_TEMPLATE_BINDINGS = getMethod(RenderContext.class, "getTemplateBindings", int.class);
@@ -91,6 +96,7 @@ public final class Expression {
 	private static final Field SECTION_RENDER_DATA_DATA = getField(SectionRenderData.class, "data");
 	private static final Field SECTION_RENDER_DATA_HAS_NEXT = getField(SectionRenderData.class, "hasNext");
 	private static final Field SECTION_RENDER_DATA_INDEX = getField(SectionRenderData.class, "index");
+	private static final Method SECTION_RENDERER_CREATE_ANNOTATION_DATA = getMethod(SectionRenderer.class, "createAnnotationData", AnnotationHandler.class, Object[].class);
 	private static final Method SET_ADD = getMethod(Set.class, "add", Object.class);
 	private static final Method STACK_PEEK = getMethod(Stack.class, "peek");
 	private static final Method STACK_PEEK_BASE = getMethod(Stack.class, "peekBase");
@@ -135,6 +141,7 @@ public final class Expression {
 	private final Object location;
 	private final String originalString;
 	private final String name;
+	private final String callName;
 	private final Expression[] expressions;
 	private final Identifier[] identifiers;
 	private final Evaluable evaluable;
@@ -188,7 +195,7 @@ public final class Expression {
 		// Add comma as a separator
 		final String nonAssignmentOperators = allOperators.append(',').toString();
 
-		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<backreach>[.]?[/\\\\]|(?:[.][.][/\\\\])+)?)(?<internal>[.](?![.]))?" + IDENTIFIER_PATTERN + "(?:" + COMMENTS_PATTERN + "(?!" + nonAssignmentOperators + ")(?<assignment>" + assignmentOperators.substring(1) + ")\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
+		IDENTIFIER_WITH_PREFIX_PATTERN = Pattern.compile("(?:(?<backreach>[.]?[/\\\\]|(?:[.][.][/\\\\])+)?(?<internal>[.](?![.]))?|(?<isAnnotation>@)?)" + IDENTIFIER_PATTERN + "(?:" + COMMENTS_PATTERN + "(?!" + nonAssignmentOperators + ")(?<assignment>" + assignmentOperators.substring(1) + ")\\s*)?", Pattern.UNICODE_CHARACTER_CLASS);
 		OPERATOR_PATTERN = Pattern.compile("(?<operator>" + nonAssignmentOperators + ")\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	}
 
@@ -271,6 +278,28 @@ public final class Expression {
 
 			if (backreachString == null) {
 				if (!isInternal) {
+					if (matcher.group("isAnnotation") != null) {
+						if (!state.getExtensions().contains(Extension.ANNOTATIONS)) {
+							throw new IllegalStateException("Invalid identifier \"" + identifierText + "\"");
+						}
+
+						final String name = identifierText.startsWith("`") ? identifierText.substring(1, identifierText.length() - 1).replace("``", "`") : identifierText;
+
+						if (!isMethod) {
+							final Label endLabel = new Label();
+							state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_ANNOTATION_MAP).pushConstant(name).addInvoke(MAP_GET).addCode(DUP).addBranch(IFNULL, endLabel).addCast(AnnotationHandler.class).addCode(ACONST_NULL).addInvoke(SECTION_RENDERER_CREATE_ANNOTATION_DATA).updateLabel(endLabel)));
+							return null;
+						}
+
+						final String annotation = "@" + name;
+
+						if (matcher.start() == 0) {
+							state.setCallName(annotation);
+						}
+
+						return state.getOperators().push(Operator.createCall(annotation, false)).peek();
+					}
+
 					// Check for literals
 					switch (identifierText) {
 						case "true":
@@ -372,6 +401,10 @@ public final class Expression {
 					if (backreach >= 0) {
 						state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(name).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true))); // Expression.peekStack(context.getSectionData(), backreach, name).data
 					} else {
+						if (matcher.start() == 0) {
+							state.setCallName(name);
+						}
+
 						state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_FIND_OBJECT)));
 					}
 				}
@@ -709,8 +742,7 @@ public final class Expression {
 		final int parameterCount = operator.getRightExpressions();
 		final Expression namedExpression;
 
-		if (operator.getString().isEmpty()) {
-			// Parsing the expression as a method call, so return array with arguments
+		if (operator.getString().isEmpty()) { // Parsing the expression as a method call, so return array with arguments
 			final MethodBuilder mb = new MethodBuilder().pushNewObject(Object.class, parameterCount);
 
 			for (int i = 0; i < parameterCount; i++) {
@@ -718,6 +750,16 @@ public final class Expression {
 			}
 
 			state.getOperands().pop(parameterCount).push(new Operand(Object.class, mb));
+			return;
+		} else if (operator.getString().startsWith("@")) { // Parsing Annotation
+			final Label endLabel = new Label();
+			final MethodBuilder mb = new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_ANNOTATION_MAP).pushConstant(operator.getString().substring(1)).addInvoke(MAP_GET).addCode(DUP).addBranch(IFNULL, endLabel).addCast(AnnotationHandler.class).pushNewObject(Object.class, parameterCount);
+
+			for (int i = 0; i < parameterCount; i++) {
+				mb.addCode(DUP).pushConstant(i).append(state.getOperands().peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
+			}
+
+			state.getOperands().pop(parameterCount).push(new Operand(Object.class, mb.addInvoke(SECTION_RENDERER_CREATE_ANNOTATION_DATA).updateLabel(endLabel)));
 			return;
 		} else if (operator.has(Operator.KNOWN_OBJECT) || (namedExpression = state.getNamedExpressions().get(operator.getString())) == null) {
 			processMethodCall(state, operator);
@@ -1157,24 +1199,22 @@ public final class Expression {
 			// Streaming Operations
 			case "#>":
 			case "#.": { // Remap
-				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_STREAM);
-				final Label startOfLoop = mb.newLabel();
-				final Label endOfLoop = mb.newLabel();
+				final Label startOfLoop = new Label();
+				final Label endOfLoop = new Label();
 
-				state.getOperands().push(new Operand(Object.class, mb.addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
+				state.getOperands().push(new Operand(Object.class, left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_STREAM).updateLabel(startOfLoop).addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP2).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex())
 						.append(right.toObject()).addInvoke(STREAMABLE_ADD).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
 			case "#|": { // Flat remap
-				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_STREAM);
-				final Label startOfLoop = mb.newLabel();
-				final Label endOfLoop = mb.newLabel();
-				final Label notNull = mb.newLabel();
-				final Label notIterable = mb.newLabel();
-				final Label notArray = mb.newLabel();
+				final Label startOfLoop = new Label();
+				final Label endOfLoop = new Label();
+				final Label notNull = new Label();
+				final Label notIterable = new Label();
+				final Label notArray = new Label();
 
-				state.getOperands().push(new Operand(Object.class, mb.addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
+				state.getOperands().push(new Operand(Object.class, left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_STREAM).updateLabel(startOfLoop).addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP2).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex())
 						.append(right.toObject()).addCode(DUP).addBranch(IFNONNULL, notNull).addCode(POP2).addGoto(startOfLoop, -2)
 						.updateLabel(notNull).addCode(DUP).addInstanceOfCheck(Iterable.class).addBranch(IFEQ, notIterable).addCast(Iterable.class).addInvoke(STREAMABLE_FLAT_ADD_ITERABLE).addGoto(startOfLoop, -2)
@@ -1183,23 +1223,21 @@ public final class Expression {
 				break;
 			}
 			case "#?": { // Filter
-				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_STREAM);
-				final Label startOfLoop = mb.newLabel();
-				final Label readdObject = mb.newLabel();
-				final Label endOfLoop = mb.newLabel();
+				final Label startOfLoop = new Label();
+				final Label readdObject = new Label();
+				final Label endOfLoop = new Label();
 
-				state.getOperands().push(new Operand(Object.class, mb.addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
+				state.getOperands().push(new Operand(Object.class, left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addCode(DUP).addInvoke(STREAMABLE_STREAM).updateLabel(startOfLoop).addCode(DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP2).addInvoke(ITERATOR_NEXT).addCode(DUP).addAccess(ASTORE, operator.getLocalBindingIndex())
 						.append(right.toBoolean()).addBranch(IFNE, readdObject).addCode(POP2).addGoto(startOfLoop, -2)
 						.updateLabel(readdObject).addInvoke(STREAMABLE_ADD).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
 				break;
 			}
 			case "#<": { // Reduction
-				final MethodBuilder mb = left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addInvoke(STREAMABLE_STREAM).addCode(ACONST_NULL);
-				final Label startOfLoop = mb.newLabel();
-				final Label endOfLoop = mb.newLabel();
+				final Label startOfLoop = new Label();
+				final Label endOfLoop = new Label();
 
-				state.getOperands().push(new Operand(Object.class, mb.addCode(SWAP, DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
+				state.getOperands().push(new Operand(Object.class, left.toObject().addInvoke(STREAMABLE_OF_UNKNOWN).addInvoke(STREAMABLE_STREAM).addCode(ACONST_NULL).updateLabel(startOfLoop).addCode(SWAP, DUP).addInvoke(ITERATOR_HAS_NEXT).addBranch(IFEQ, endOfLoop)
 						.addCode(DUP).addInvoke(ITERATOR_NEXT).addAccess(ASTORE, operator.getLocalBindingIndex()).addCode(SWAP, POP)
 						.append(right.toObject()).addGoto(startOfLoop, 0).updateLabel(endOfLoop).addCode(POP)));
 				break;
@@ -1270,6 +1308,8 @@ public final class Expression {
 					state.getOperators().push(operator.withLocalBindingIndex(Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name)));
 					return operator;
 				}
+			} else if (state.getOperators().isEmpty()) {
+				state.setCallName(null);
 			}
 
 			state.getOperators().push(operator);
@@ -1314,16 +1354,15 @@ public final class Expression {
 	 *
 	 * @param location the location of the expression
 	 * @param state the parse state for the expression
-	 * @param horseshoeExpressions true to parse as a horseshoe expression, false to parse as a Mustache variable list
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	public static Expression create(final Object location, final ExpressionParseState state, final boolean horseshoeExpressions) throws ReflectiveOperationException {
+	public static Expression create(final Object location, final ExpressionParseState state) throws ReflectiveOperationException {
 		final MethodBuilder mb = new MethodBuilder();
 		String expressionName = null;
 
 		if (".".equals(state.getExpressionString())) {
 			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
-		} else if (!horseshoeExpressions) {
+		} else if (!state.getExtensions().contains(Extension.EXPRESSIONS)) {
 			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(state.getExpressionString(), -1);
 
 			// Push a new operand formed by invoking identifiers[index].getValue(context, backreach, access)
@@ -1400,6 +1439,7 @@ public final class Expression {
 		this.location = null;
 		this.originalString = "";
 		this.name = null;
+		this.callName = null;
 		this.expressions = EMPTY_EXPRESSIONS;
 		this.identifiers = EMPTY_IDENTIFIERS;
 		this.evaluable = null;
@@ -1418,6 +1458,7 @@ public final class Expression {
 		this.location = location;
 		this.originalString = state.getExpressionString();
 		this.name = expressionName;
+		this.callName = state.getCallName();
 		this.expressions = (cache != null && state.getExpressions().equalsArray(cache.expressions) ? cache.expressions : state.getExpressions().toArray(Expression.class, EMPTY_EXPRESSIONS));
 		this.identifiers = (cache != null && state.getIdentifiers().equalsArray(cache.identifiers) ? cache.identifiers : state.getIdentifiers().toArray(Identifier.class, EMPTY_IDENTIFIERS));
 		this.evaluable = evaluable;
@@ -1433,6 +1474,15 @@ public final class Expression {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Gets the call name of the expression.
+	 *
+	 * @return the call name of the expression
+	 */
+	public String getCallName() {
+		return callName;
 	}
 
 	/**

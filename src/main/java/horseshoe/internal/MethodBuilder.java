@@ -568,6 +568,13 @@ public final class MethodBuilder {
 		}
 
 		/**
+		 * Creates a new label.
+		 */
+		public Label() {
+			this(new Location(null, 0, 0));
+		}
+
+		/**
 		 * Adds a reference to the label.
 		 *
 		 * @param builder the builder that references the label
@@ -576,6 +583,10 @@ public final class MethodBuilder {
 		 * @return this label
 		 */
 		private Label addReference(final MethodBuilder builder, final int offset, final int updateOffset) {
+			if (target.container == null) {
+				target.update(builder, offset);
+			}
+
 			references.add(new Location(builder, offset, updateOffset));
 			builder.labels.add(this);
 			return this;

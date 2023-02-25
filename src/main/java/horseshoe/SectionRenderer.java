@@ -13,6 +13,32 @@ public class SectionRenderer implements Renderer {
 
 	private final Section section;
 
+	/**
+	 * An AnnotationData is used to invoke an annotation with the specified arguments.
+	 */
+	private static final class AnnotationData {
+
+		public final AnnotationHandler handler;
+		public final Object[] args;
+
+		/**
+		 * Creates AnnotationData consisting of the handler and arguments used to invoke the annotation.
+		 *
+		 * @param handler the annotation handler
+		 * @param args the arguments passed to the annotation
+		 */
+		public AnnotationData(final AnnotationHandler handler, final Object[] args) {
+			this.handler = handler;
+			this.args = args;
+		}
+
+		@Override
+		public String toString() {
+			throw new IllegalArgumentException("Annotations cannot be used in expressions");
+		}
+
+	}
+
 	static class Reiterator<T> implements Iterator<T> {
 		private final ArrayList<T> container = new ArrayList<>();
 		private final Iterator<T> iterator;
@@ -51,6 +77,43 @@ public class SectionRenderer implements Renderer {
 	 */
 	SectionRenderer(final Section section) {
 		this.section = section;
+	}
+
+	/**
+	 * Creates AnnotationData consisting of the handler and arguments used to invoke the annotation.
+	 *
+	 * @param handler the annotation handler
+	 * @param args the arguments passed to the annotation
+	 * @return an object containing the annotation data
+	 */
+	public static Object createAnnotationData(final AnnotationHandler handler, final Object[] args) {
+		return new AnnotationData(handler, args);
+	}
+
+	/**
+	 * Dispatches an annotation for rendering.
+	 *
+	 * @param context the render context
+	 * @param data the annotation data used to render the section
+	 * @param writer the writer used for rendering
+	 * @throws IOException if an error occurs while writing to the writer
+	 */
+	private void dispatchAnnotation(final RenderContext context, final AnnotationData data, final Writer writer) throws IOException {
+		final Writer annotationWriter;
+
+		try {
+			annotationWriter = data.handler.getWriter(writer, data.args);
+		} catch (final Exception e) {
+			context.getSettings().getLogger().log(Level.WARNING, "Encountered exception with annotation section " + section, e);
+			renderInverted(context, writer);
+			return;
+		}
+
+		if (annotationWriter == null || annotationWriter == writer) { // If the writer is not changed then render the actions using the current writer
+			renderSection(context, writer);
+		} else { // Otherwise, render the actions using the new writer and close it when finished
+			renderAndCloseWriter(context, annotationWriter);
+		}
 	}
 
 	/**
@@ -312,7 +375,10 @@ public class SectionRenderer implements Renderer {
 	void dispatchData(final RenderContext context, final Object data, final Writer writer) throws IOException {
 		Object unwrappedData;
 
-		if (data instanceof Optional<?>) {
+		if (data instanceof AnnotationData) {
+			dispatchAnnotation(context, (AnnotationData) data, writer);
+			return;
+		} else if (data instanceof Optional<?>) {
 			unwrappedData = ((Optional<?>) data).orElse(null);
 		} else {
 			unwrappedData = data;
@@ -435,36 +501,7 @@ public class SectionRenderer implements Renderer {
 		final int contextSize = context.getSectionData().size();
 
 		try {
-			if (section.getAnnotation() == null) { // Dispatch the data as normal, if not an annotation
-				dispatchData(context, section.useCache() ? context.getRepeatedSectionData() : section.getExpression().evaluate(context), writer);
-				return;
-			}
-
-			final AnnotationHandler annotationProcessor = context.getAnnotationMap().get(section.getAnnotation());
-			Object[] args = null;
-
-			// Render inverted actions if the annotation processor is not available or the expression evaluates to null
-			if (annotationProcessor == null ||
-					(section.getExpression() != null && (args = (Object[]) section.getExpression().evaluate(context)) == null)) {
-				renderInverted(context, writer);
-				return;
-			}
-
-			final Writer annotationWriter;
-
-			try {
-				annotationWriter = annotationProcessor.getWriter(writer, args);
-			} catch (final Exception e) {
-				context.getSettings().getLogger().log(Level.WARNING, "Encountered exception with annotation section " + section, e);
-				renderInverted(context, writer);
-				return;
-			}
-
-			if (annotationWriter == null || annotationWriter == writer) { // If the writer is not changed then render the actions using the current writer
-				renderSection(context, writer);
-			} else { // Otherwise, render the actions using the new writer and close it when finished
-				renderAndCloseWriter(context, annotationWriter);
-			}
+			dispatchData(context, section.useCache() ? context.getRepeatedSectionData() : section.getExpression().evaluate(context), writer);
 		} catch (final IOException e) { // Bubble up the exception, only logging at the lowest level
 			if (contextSize + (section.isInvisible() ? 0 : 1) == context.getSectionData().size()) {
 				context.getSettings().getLogger().log(Level.SEVERE, "Encountered exception while rendering section " + section, e);

@@ -94,6 +94,11 @@ public class NamedExpressionTests {
 	}
 
 	@Test
+	void testNamedExpressionsCalls() throws IOException, LoadException {
+		assertEquals("3", Template.load("{{a()->1}}{{b()->2}}{{c()->a()+b()}}{{c()}}").render(Collections.emptyMap(), new StringWriter()).toString());
+	}
+
+	@Test
 	void testNamedExpressionsWithArgs() throws IOException, LoadException {
 		assertEquals(", , , c, c", Template.load("{{func(., /*no-arg*/ ,c)->c}}" + LS + "{{func()}}, {{func('a')}}, {{func('a','b')}}, {{func('a','b','c')}}, {{func('a','b','c','d')}}").render(Collections.emptyMap(), new StringWriter()).toString());
 		assertThrows(LoadException.class, () -> Template.load("{{func(c, /*no-arg*/ ,.)->c}}" + LS + "{{func()}}, {{func('a')}}, {{func('a','b')}}, {{func('a','b','c')}}, {{func('a','b','c','d')}}"));

@@ -61,13 +61,12 @@ final class TemplateLoadState {
 	 * Create a new expression checking the cache to see if it already exists.
 	 *
 	 * @param location the location of the expression
-	 * @param expression the trimmed expression string
-	 * @param extensions the set of extensions currently in use
+	 * @param parseState the parse state used to create the expression
 	 * @return the new expression
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	Expression createExpression(final Object location, final ExpressionParseState parseState, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
-		final Expression expression = Expression.create(location, parseState, extensions.contains(Extension.EXPRESSIONS));
+	Expression createExpression(final Object location, final ExpressionParseState parseState) throws ReflectiveOperationException {
+		final Expression expression = Expression.create(location, parseState);
 
 		if (sections.size() == 1) {
 			template.getRootExpressions().put(expression.getName(), expression);
@@ -80,11 +79,23 @@ final class TemplateLoadState {
 	 * Create a new expression parser from the load state.
 	 *
 	 * @param expression the trimmed expression string
-	 * @param parseAsCall true if the expression should be parsed as a call invocation (no starting "(", ends with ")", returns array object), otherwise false
+	 * @param extensions the set of extensions currently in use
+	 * @param isCall true if the expression should be parsed as part of a call invocation (starts "(", ends with ")", returns array object)
 	 * @return the new expression parser
 	 */
-	ExpressionParseState createExpressionParser(final TrimmedString expression, final boolean parseAsCall) {
-		return new ExpressionParseState(expression.start, expression.string, parseAsCall, getNamedExpressions(), allIdentifiers, templateBindings);
+	ExpressionParseState createExpressionParser(final TrimmedString expression, final EnumSet<Extension> extensions, final boolean isCall) {
+		return new ExpressionParseState(expression.start, expression.string, extensions, isCall, getNamedExpressions(), allIdentifiers, templateBindings);
+	}
+
+	/**
+	 * Create a new expression parser from the load state.
+	 *
+	 * @param expression the trimmed expression string
+	 * @param extensions the set of extensions currently in use
+	 * @return the new expression parser
+	 */
+	ExpressionParseState createExpressionParser(final TrimmedString expression, final EnumSet<Extension> extensions) {
+		return createExpressionParser(expression, extensions, false);
 	}
 
 	/**

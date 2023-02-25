@@ -30,7 +30,6 @@ import horseshoe.internal.Utilities.TrimmedString;
 public class TemplateLoader {
 
 	private static final Pattern SET_DELIMITER_PATTERN = Pattern.compile("=\\s*(?<start>[^\\s]+)\\s+(?<end>[^\\s]+)\\s*=", Pattern.UNICODE_CHARACTER_CLASS);
-	private static final Pattern ANNOTATION_PATTERN = Pattern.compile("(?<name>@" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN + "(?s:(?<arguments>[(].*?[)]\\s*" + Expression.COMMENTS_PATTERN + "))?", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private static final Pattern INLINE_PARTIAL_NAME_PATTERN = Pattern.compile(Expression.COMMENTS_PATTERN + "(?<name>" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern INLINE_PARTIAL_PARAMETER_PATTERN = Pattern.compile("\\s*" + Expression.COMMENTS_PATTERN + "(?<parameter>[.]|" + Identifier.PATTERN + ")\\s*" + Expression.COMMENTS_PATTERN, Pattern.UNICODE_CHARACTER_CLASS);
@@ -381,7 +380,7 @@ public class TemplateLoader {
 		// Find arguments
 		for (int i = start; (i = tag.indexOf('(', i + 1)) >= 0; ) {
 			try {
-				argumentsExpression = state.createExpression(location, state.createExpressionParser(new TrimmedString(i, tag.substring(i)), true), extensions);
+				argumentsExpression = state.createExpression(location, state.createExpressionParser(new TrimmedString(i, tag.substring(i)), extensions, true));
 				end = i;
 				break;
 			} catch (final RuntimeException e) {
@@ -394,7 +393,7 @@ public class TemplateLoader {
 
 		// Check for expression partial: ('a' + 'b')
 		if (tag.charAt(start) == '(') {
-			final Expression expression = state.createExpression(location, state.createExpressionParser(new TrimmedString(start, name), false), extensions);
+			final Expression expression = state.createExpression(location, state.createExpressionParser(new TrimmedString(start, name), extensions));
 
 			return new TemplateRenderer(new Template(null, state.toLocation()), null) {
 				@Override
@@ -682,23 +681,9 @@ public class TemplateLoader {
 
 				if (expression.string.isEmpty() && extensions.contains(Extension.REPEATED_SECTIONS)) { // Repeat the previous section
 					state.getSections().push(Section.repeat(state.getSections().peek(), state.toLocation()));
-				} else if (!expression.string.isEmpty() && expression.string.charAt(0) == '@' && extensions.contains(Extension.ANNOTATIONS)) { // Annotation section
-					final Matcher annotation = ANNOTATION_PATTERN.matcher(tag).region(expression.start, tag.length());
-
-					if (!annotation.matches()) {
-						throw new LoadException(loaders, "Invalid annotation format");
-					}
-
-					final String sectionName = annotation.group("name");
-					final String arguments = annotation.group("arguments");
-					final Object location = state.toLocation();
-
-					// Load the annotation arguments
-					state.getSections().push(new Section(state.getSections().peek(), sectionName, location, arguments == null ? null : state.createExpression(location, state.createExpressionParser(new TrimmedString(annotation.start("arguments"), arguments.trim()), true), extensions), sectionName.substring(1), true));
 				} else { // Start a new section
 					final Object location = state.toLocation();
-
-					state.getSections().push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(expression, false), extensions)));
+					state.getSections().push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(expression, extensions))));
 				}
 
 				// Add a new render section action
@@ -722,7 +707,7 @@ public class TemplateLoader {
 					if (elseIf) { // "else if" tag
 						final Object location = state.toLocation();
 
-						state.getSections().pop(1).push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(Utilities.trim(tag, 2), false), extensions)));
+						state.getSections().pop(1).push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(Utilities.trim(tag, 2), extensions))));
 						previousSection.getInvertedRenderList().add(new SectionRenderer(state.getSections().peek()));
 						state.getRenderLists().push(state.getSections().peek().getRenderList());
 						return null;
@@ -730,7 +715,8 @@ public class TemplateLoader {
 						final Section section = state.getSections().peek();
 						final String expressionString = expression.string.substring(1).trim();
 
-						if (!section.getName().contentEquals(expressionString)) {
+						if (!expressionString.equals(section.getName()) &&
+								(section.getName().isEmpty() || !expressionString.equals(section.getExpression().getCallName()))) {
 							throw new LoadException(loaders, "Section else tag mismatch, expecting else tag for section " + section);
 						}
 					}
@@ -739,7 +725,7 @@ public class TemplateLoader {
 				} else { // Start a new inverted section
 					final Object location = state.toLocation();
 
-					state.getSections().push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(expression, false), extensions)));
+					state.getSections().push(new Section(state.getSections().peek(), location, state.createExpression(location, state.createExpressionParser(expression, extensions))));
 					state.getRenderLists().peek().add(new SectionRenderer(state.getSections().peek()));
 					state.getRenderLists().push(state.getSections().peek().getInvertedRenderList());
 				}
@@ -753,7 +739,8 @@ public class TemplateLoader {
 
 				if (state.getSections().size() <= 1) { // There should always be at least one section on the stack (the template root section)
 					throw new LoadException(loaders, "Section close tag without matching section start tag");
-				} else if ((!expression.string.isEmpty() || !extensions.contains(Extension.EMPTY_END_TAGS)) && !section.getName().contentEquals(expression.string)) {
+				} else if ((!expression.string.isEmpty() || !extensions.contains(Extension.EMPTY_END_TAGS)) && !expression.string.equals(section.getName()) &&
+						(section.getName().isEmpty() || !expression.string.equals(section.getExpression().getCallName()))) {
 					if (!expression.string.isEmpty() && extensions.contains(Extension.SMART_END_TAGS)) {
 						break;
 					}
@@ -785,7 +772,7 @@ public class TemplateLoader {
 			case '{': // Unescaped content tag
 			case '&':
 				state.setStandaloneStatus(TemplateLoadState.TAG_CANT_BE_STANDALONE) // Content tags cannot be stand-alone tags
-					.getRenderLists().peek().add(new DynamicContentRenderer(state.createExpression(state.toLocation(), state.createExpressionParser(Utilities.trim(tag, 1), false), extensions), false));
+					.getRenderLists().peek().add(new DynamicContentRenderer(state.createExpression(state.toLocation(), state.createExpressionParser(Utilities.trim(tag, 1), extensions)), false));
 				return null;
 
 			default:
@@ -793,8 +780,8 @@ public class TemplateLoader {
 		}
 
 		// Load the expression
-		final ExpressionParseState parseState = state.createExpressionParser(Utilities.trim(tag, 0), false);
-		final Expression expression = state.createExpression(state.toLocation(), parseState, extensions);
+		final ExpressionParseState parseState = state.createExpressionParser(Utilities.trim(tag, 0), extensions);
+		final Expression expression = state.createExpression(state.toLocation(), parseState);
 
 		switch (parseState.getEvaluation()) {
 			case EVALUATE:

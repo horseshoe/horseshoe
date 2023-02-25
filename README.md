@@ -214,16 +214,16 @@ Repeated section tags (`{{#}}`) are used to duplicate the previous section at th
 
 #### Annotations
 
-Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are section tags that begin with an at sign (`@`). The parameters are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler. If the expression fails to parse or results in `null` then the section will <b>not</b> be rendered and the corresponding empty [inverted section](#inverted-sections) <b>will</b> be rendered, if it exists. Annotations do not affect the context stack and are not considered in scope for repeated sections.
+Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are identifiers that begin with an at sign (`@`) and are used to redirect the output of a section. If the annotation does not exist, then the resulting value is `null`. Otherwise, the arguments are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler (`null` if the parentheses and argument list are omitted), which returns a new writer. <b>A `null` annotation or one that returns a `null` writer will cause the corresponding [inverted section](#inverted-sections) to be rendered, if it exists.</b> Annotations do not affect the context stack, and output redirection only occurs for the scope of a section.
 
 Built-in annotations include the following:
 
 | Annotation | Description |
 | ---------- | ----------- |
 | `@Null` | Discards rendered output. |
-| `@StdErr` | Sends rendered output to stderr. |
-| `@StdOut` | Sends rendered output to stdout. |
-| `@File('name': [filename], 'encoding': 'UTF-16', 'overwrite': false, 'append')` | Sends rendered output to the file with the specified name, using the specified encoding. <b>If overwrite is false (or omitted) then the file is only modified if the rendered output is different from the current contents of the file.</b> If append is specified as true then the rendered output is appended to the file. |
+| `@StdErr` | Sends rendered output to stderr using the default system character encoding. |
+| `@StdOut` | Sends rendered output to stdout using the default system character encoding. |
+| `@File('name': [filename], 'encoding': 'UTF-8', 'overwrite': false, 'append': false)` | Sends rendered output to the file with the specified name, using the specified encoding (defaults to 'UTF-8'). <b>If overwrite is false (or omitted) then the file is only modified if the rendered output is different from the current contents of the file.</b> If append is specified as true then the rendered output is appended to the file. |
 
 #### Inverted Sections
 
@@ -392,6 +392,8 @@ The ternary-related operators perform the same "if-then-else" logic while only u
 | `a ?? b` | `a != null ? a : b` |
 | `a !: b` | `!a ? null : b` |
 | `a !? b` | `a == null ? null : b` |
+
+For example, the equivalent of `if (a) { 'a is true' }` is `a !: 'a is true'`.
 
 ##### Safe and Nullable Operators
 

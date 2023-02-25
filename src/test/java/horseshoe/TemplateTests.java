@@ -127,6 +127,12 @@ class TemplateTests {
 		assertEquals("Hello, world!", writer.toString());
 	}
 
+	@Test
+	void testInvertedSectionBad() throws IOException, LoadException {
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Invert Test", "{{^5}}{{/6}}"));
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Else Test", "{{#5}}{{^^6}}{{/}}"));
+	}
+
 	private static final class CountingLogger extends Logger {
 
 		private int count = 0;
@@ -254,6 +260,12 @@ class TemplateTests {
 	@Test
 	void testRepeatedSection2() throws IOException, LoadException {
 		assertEquals("Names:" + LS + " - John Doe" + LS + " - Jane Doey" + LS + LS + "All:" + LS + " - John Doe, Jane Doey" + LS, new TemplateLoader().load("Repeated Section", "Names:\n{{#people}}\n{{#['first':firstName, 'last':lastname, 'full':firstName + ' ' + lastName]}}\n - {{full}}\n{{/}}\n{{/}}\n\nAll:\n - {{#}}{{#}}{{full}}{{/}}{{#.hasNext}}, {{/}}{{/}}\n").render(Helper.loadMap("people", Helper.loadList(Helper.loadMap("firstName", "John", "lastName", "Doe"), Helper.loadMap("firstName", "Jane", "lastName", "Doey"))), new java.io.StringWriter()).toString());
+	}
+
+	@Test
+	void testRepeatedSectionBad() throws IOException, LoadException {
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Repeat Test", "{{#5}}{{/}}{{#}}{{/5}}"));
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Repeat Test", "{{#5}}{{/}}{{#}}{{^^5}}{{/}}"));
 	}
 
 	@Test
