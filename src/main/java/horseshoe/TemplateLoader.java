@@ -11,18 +11,13 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import horseshoe.internal.Expression;
-import horseshoe.internal.ExpressionParseState;
-import horseshoe.internal.Identifier;
-import horseshoe.internal.ParsedLine;
-import horseshoe.internal.Utilities;
-import horseshoe.internal.Utilities.TrimmedString;
+import horseshoe.Utilities.TrimmedString;
+import horseshoe.util.Identifier;
 
 /**
  * The TemplateLoader class is used to load any number of {@link Template}s before rendering. Various properties can be configured to load templates with different settings.
@@ -39,22 +34,8 @@ public class TemplateLoader {
 	private static final String IDENTIFIER_PARENS = IDENTIFIER_PARENS_PATTERN.toString().replace("(?<name>", "(?:");
 	private static final Pattern PARTIAL_IMPORTS_PATTERN = Pattern.compile("[|]\\s*" + Expression.COMMENTS_PATTERN + "(?<imports>|[*]|" + IDENTIFIER_PARENS + "(?:,\\s*" + Expression.COMMENTS_PATTERN + IDENTIFIER_PARENS + ")*)\\s*" + Expression.COMMENTS_PATTERN + "$", Pattern.UNICODE_CHARACTER_CLASS);
 
-	/**
-	 * Normalizes a path by attempting to convert the path to a real path on the filesystem. If the path cannot be converted to a real path, then it is made absolute and normalized.
-	 *
-	 * @param path the path to normalize
-	 * @return the real path or absolute, normalized path
-	 */
-	private static Path normalize(final Path path) {
-		try {
-			return path.toRealPath();
-		} catch (IOException e) {
-			return path.toAbsolutePath().normalize();
-		}
-	}
-
-	private final Map<Object, Template> templates = new HashMap<>();
-	private final List<Path> includeDirectories = new ArrayList<>();
+	private final HashMap<Object, Template> templates = new HashMap<>();
+	private final ArrayList<Path> includeDirectories = new ArrayList<>();
 	private Charset charset = StandardCharsets.UTF_8;
 	private boolean preventPartialPathTraversal = true;
 	private EnumSet<Extension> extensions = EnumSet.allOf(Extension.class);
@@ -86,6 +67,20 @@ public class TemplateLoader {
 	 */
 	public static TemplateLoader newMustacheLoader() {
 		return new TemplateLoader().setExtensions(EnumSet.noneOf(Extension.class));
+	}
+
+	/**
+	 * Normalizes a path by attempting to convert the path to a real path on the filesystem. If the path cannot be converted to a real path, then it is made absolute and normalized.
+	 *
+	 * @param path the path to normalize
+	 * @return the real path or absolute, normalized path
+	 */
+	private static Path normalize(final Path path) {
+		try {
+			return path.toRealPath();
+		} catch (IOException e) {
+			return path.toAbsolutePath().normalize();
+		}
 	}
 
 	/**
@@ -247,7 +242,7 @@ public class TemplateLoader {
 			throw new IllegalArgumentException("At least one template must be specified");
 		}
 
-		final List<Loadable> loadables = new ArrayList<>();
+		final ArrayList<Loadable> loadables = new ArrayList<>();
 		Template lastTemplate = null;
 		int i;
 
@@ -397,7 +392,7 @@ public class TemplateLoader {
 
 			return new TemplateRenderer(new Template(null, state.toLocation()), null) {
 				@Override
-				public void render(RenderContext context, Writer writer) throws IOException {
+				public void render(final RenderContext context, final Writer writer) throws IOException {
 					final Object result = expression.evaluate(context);
 					if (result == null) {
 						return;
@@ -528,7 +523,7 @@ public class TemplateLoader {
 		state.getRenderLists().push(template.getSection().getRenderList());
 
 		// Parse first static content
-		List<ParsedLine> lines = loader.nextLines(state.getDelimiter().start);
+		ArrayList<ParsedLine> lines = loader.nextLines(state.getDelimiter().start);
 		StaticContentRenderer.create(state.getRenderLists().peek(), lines, true);
 
 		// Parse all tags
@@ -593,7 +588,7 @@ public class TemplateLoader {
 		}
 
 		final String parameters = matcher.group("parameters");
-		final List<String> parameterNames = new ArrayList<>();
+		final ArrayList<String> parameterNames = new ArrayList<>();
 
 		if (parameters != null) {
 			for (final Matcher parameterMatcher = INLINE_PARTIAL_PARAMETER_PATTERN.matcher(parameters); parameterMatcher.find(); ) {

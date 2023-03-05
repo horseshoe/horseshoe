@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe.util;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;

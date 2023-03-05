@@ -20,7 +20,6 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import horseshoe.BufferedFileUpdateStream.Update;
@@ -56,7 +55,7 @@ class AnnotationTests {
 	}
 
 	private static final class MapAnnotation implements AnnotationHandler {
-		final Map<String, String> map = new LinkedHashMap<>();
+		final LinkedHashMap<String, String> map = new LinkedHashMap<>();
 
 		@Override
 		public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
@@ -332,7 +331,7 @@ class AnnotationTests {
 		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}{{#@Inner}}789{{/}}456{{/@Test(\"value123\")}}cd");
 		final MapAnnotation testMapAnnotation = new MapAnnotation();
 		final MapAnnotation innerMapAnnotation = new MapAnnotation();
-		final Map<String, AnnotationHandler> annotations = new LinkedHashMap<>();
+		final LinkedHashMap<String, AnnotationHandler> annotations = new LinkedHashMap<>();
 		annotations.put("Test", testMapAnnotation);
 		annotations.put("Inner", innerMapAnnotation);
 		template.render(settings, Collections.emptyMap(), writer, annotations);

@@ -8,11 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Random;
-
-import horseshoe.internal.Buffer;
-import horseshoe.internal.ParsedLine;
 
 import org.junit.jupiter.api.Test;
 
@@ -129,7 +126,7 @@ class LoaderTests {
 	@Test
 	void testNewLineDelimiters() throws IOException {
 		try (final Loader loader = new Loader("NewLineDelimitersTest", "a\r\n\r\n\ra")) {
-			final List<ParsedLine> lines = loader.nextLines("\n\r\n\r");
+			final ArrayList<ParsedLine> lines = loader.nextLines("\n\r\n\r");
 
 			assertEquals(1, lines.size());
 			assertEquals("a", lines.get(0).getLine());
@@ -147,7 +144,7 @@ class LoaderTests {
 		}
 
 		try (final Loader loader = new Loader("NewLineDelimitersTest", new StringReader("a\r\n\r\n\r\na"))) {
-			final List<ParsedLine> lines = loader.nextLines("\r\n\r\n\r"); // It can be problematic if a delimiter ends with '\r' (incorrect line & column numbers), so we just assume it will never happen, but test it here just for fun.
+			final ArrayList<ParsedLine> lines = loader.nextLines("\r\n\r\n\r"); // It can be problematic if a delimiter ends with '\r' (incorrect line & column numbers), so we just assume it will never happen, but test it here just for fun.
 
 			assertEquals(1, lines.size());
 			assertEquals("a", lines.get(0).getLine());

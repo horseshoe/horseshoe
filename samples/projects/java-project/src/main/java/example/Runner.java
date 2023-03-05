@@ -9,7 +9,7 @@ public class Runner {
 
 	static final Path outputFile = Paths.get("build/generated/HelloWorld.txt");
 
-	public static void main(final String[] args) throws Exception {
+	public static void main(final String[] args) {
 		final Settings settings = new Settings();
 		final TemplateLoader loader = new TemplateLoader();
 		final Template t = loader.load(Paths.get("../../data/HelloWorld.U"));

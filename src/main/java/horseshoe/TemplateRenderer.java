@@ -2,9 +2,9 @@ package horseshoe;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.List;
+import java.util.ArrayList;
 
-import horseshoe.internal.Expression;
+import horseshoe.util.SectionRenderData;
 
 class TemplateRenderer extends TagRenderer {
 
@@ -40,7 +40,7 @@ class TemplateRenderer extends TagRenderer {
 			}
 
 			if (bindings != null) {
-				System.arraycopy(args, 0, bindings, 0, Math.min(args.length, renderTemplate.getParameters().size()));
+				System.arraycopy(args, 0, bindings, 0, Math.min(args.length, renderTemplate.getParameterCount()));
 			}
 		}
 
@@ -78,7 +78,7 @@ class TemplateRenderer extends TagRenderer {
 	 * @param writer the writer to use for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	private static void renderActions(final List<Renderer> actions, final RenderContext context, final Writer writer) throws IOException {
+	private static void renderActions(final ArrayList<Renderer> actions, final RenderContext context, final Writer writer) throws IOException {
 		for (final Renderer action : actions) {
 			action.render(context, writer);
 		}

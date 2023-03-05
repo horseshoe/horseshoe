@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,17 +18,14 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import horseshoe.Extension;
-import horseshoe.HaltRenderingException;
-import horseshoe.Helper;
-import horseshoe.RenderContext;
-import horseshoe.Settings;
 import horseshoe.Settings.ContextAccess;
-import horseshoe.Stack;
+import horseshoe.bytecode.MethodBuilder;
+import horseshoe.util.Identifier;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,7 +33,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class ExpressionTests {
 
-	private static final Map<String, Expression> EMPTY_EXPRESSIONS_MAP = Collections.<String, Expression>emptyMap();
+	private static final HashMap<String, Expression> EMPTY_EXPRESSIONS_MAP = new HashMap<>();
 
 	/**
 	 * Creates a new expression.
@@ -46,10 +43,11 @@ class ExpressionTests {
 	 * @param extensions the extensions used to create the expression
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	public static Expression createExpression(final String expression, final Map<String, Expression> namedExpressions, final StackTraceElement[] stackTrace, final int topOfStack, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
+	private static Expression createExpression(final String expression, final HashMap<String, Expression> namedExpressions, final StackTraceElement[] stackTrace, final int topOfStack, final EnumSet<Extension> extensions) throws ReflectiveOperationException {
 		final String location = stackTrace.length >= topOfStack ? stackTrace[topOfStack].getFileName() + ":" + stackTrace[topOfStack].getLineNumber() : "[Unknown]";
 		final ExpressionParseState parseState = new ExpressionParseState(0, expression, extensions, false, namedExpressions, new HashMap<>(), new Stack<>());
 
+		assertTrue(EMPTY_EXPRESSIONS_MAP.isEmpty());
 		return Expression.create(location, parseState);
 	}
 
@@ -60,7 +58,7 @@ class ExpressionTests {
 	 * @param namedExpressions the map used to lookup named expressions
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	public static Expression createExpression(final String expression, final Map<String, Expression> namedExpressions) throws ReflectiveOperationException {
+	private static Expression createExpression(final String expression, final HashMap<String, Expression> namedExpressions) throws ReflectiveOperationException {
 		return createExpression(expression, namedExpressions, new Throwable().getStackTrace(), 1, EnumSet.allOf(Extension.class));
 	}
 
@@ -72,8 +70,8 @@ class ExpressionTests {
 	 * @return the result of the {@code Expression}, if no exception is thrown
 	 * @throws Throwable an exception thrown by the evaluated {@code Expression}
 	 */
-	public static Object evaluateExpression(final Expression expression, final Map<String, Object> context) throws Throwable {
-		class ThrowableLogger extends horseshoe.Logger {
+	private static Object evaluateExpression(final Expression expression, final Map<String, Object> context) throws Throwable {
+		class ThrowableLogger extends Logger {
 			private Throwable lastError;
 
 			@Override
@@ -93,6 +91,16 @@ class ExpressionTests {
 		}
 
 		return result;
+	}
+
+	/**
+	 * Evaluates the consumer using the supplied object.
+	 *
+	 * @param t the object supplied to the consumer
+	 * @param consumer the consumer to evaluate
+	 */
+	private static <T> void with(T t, Consumer<T> consumer) {
+		consumer.accept(t);
 	}
 
 	@Test
@@ -135,7 +143,8 @@ class ExpressionTests {
 	@Test
 	void testCallParsing() throws ReflectiveOperationException {
 		assertEquals("@File", createExpression("@File('Test')", EMPTY_EXPRESSIONS_MAP).getCallName());
-		assertThrows(IllegalStateException.class, () -> createExpression("@File('Test')", EMPTY_EXPRESSIONS_MAP, new Throwable().getStackTrace(), 0, EnumSet.complementOf(EnumSet.of(Extension.ANNOTATIONS))));
+		final EnumSet<Extension> noAnnotations = EnumSet.complementOf(EnumSet.of(Extension.ANNOTATIONS));
+		with(new Throwable().getStackTrace(), st -> assertThrows(IllegalStateException.class, () -> createExpression("@File('Test')", EMPTY_EXPRESSIONS_MAP, st, 0, noAnnotations)));
 	}
 
 	@Test
@@ -191,9 +200,9 @@ class ExpressionTests {
 
 	@Test
 	void testIn() throws ReflectiveOperationException {
-		assertTrue((Boolean)createExpression("'Test' in ['Test', 'Retest']", EMPTY_EXPRESSIONS_MAP).evaluate());
-		assertFalse((Boolean)createExpression("'test' in ['Test', 'Retest']", EMPTY_EXPRESSIONS_MAP).evaluate());
-		assertTrue((Boolean)createExpression("'Test' in (['Test', 'Retest'] #? x -> x != null)", EMPTY_EXPRESSIONS_MAP).evaluate());
+		assertTrue((Boolean)createExpression("'Test' in ['Test', 'Retest']", EMPTY_EXPRESSIONS_MAP).evaluate(new RenderContext()));
+		assertFalse((Boolean)createExpression("'test' in ['Test', 'Retest']", EMPTY_EXPRESSIONS_MAP).evaluate(new RenderContext()));
+		assertTrue((Boolean)createExpression("'Test' in (['Test', 'Retest'] #? x -> x != null)", EMPTY_EXPRESSIONS_MAP).evaluate(new RenderContext()));
 	}
 
 	@Test
@@ -351,7 +360,7 @@ class ExpressionTests {
 	@Test
 	void testPlusOperatorIterables() throws ReflectiveOperationException {
 		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
-		final Map<String, Object> context = new HashMap<>();
+		final HashMap<String, Object> context = new HashMap<>();
 		context.put("arr", new int[] { 1, 2, 3, 4 });
 		assertEquals(Arrays.asList(1, 2, 3, 4), createExpression("(arr #? a -> a < 2) + (arr #? a -> a >= 2)", EMPTY_EXPRESSIONS_MAP).evaluate(new RenderContext(settings, context)));
 		context.put("col", Arrays.asList(2, 3));
@@ -366,13 +375,13 @@ class ExpressionTests {
 
 	@Test
 	void testPlusOperatorMap() throws ReflectiveOperationException {
-		final Map<Integer, Integer> map = new LinkedHashMap<>();
+		final LinkedHashMap<Integer, Integer> map = new LinkedHashMap<>();
 		map.put(5, 6);
 		map.put(7, 8);
-		final Map<String, Object> context = new HashMap<>();
+		final HashMap<String, Object> context = new HashMap<>();
 		context.put("map", map);
 		context.put("arr", new int[] { 1, 2, 3 });
-		final Map<Integer, Integer> expected = new LinkedHashMap<>();
+		final LinkedHashMap<Integer, Integer> expected = new LinkedHashMap<>();
 		expected.put(1, 1);
 		expected.put(2, 2);
 		expected.put(3, 3);
@@ -430,9 +439,9 @@ class ExpressionTests {
 	void testStringConcatenation() throws ReflectiveOperationException {
 		final Map<String, Object> context = Helper.loadMap("cb", "bc");
 		assertEquals("abcd \\\"\'\b\t\n\f\rƪāĂ\t", createExpression("\"\" + \"a\" + cb + \"d \\\\\\\"\\\'\\b\\t\\n\\f\\r\\x1Aa\\u0101\\U00000102\\x9\"", EMPTY_EXPRESSIONS_MAP).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
-		assertThrows(NullPointerException.class, () -> evaluateExpression(createExpression("\"a\" + ab", EMPTY_EXPRESSIONS_MAP), context));
-		assertThrows(NullPointerException.class, () -> evaluateExpression(createExpression("cb + ab", EMPTY_EXPRESSIONS_MAP), context));
-		assertThrows(NullPointerException.class, () -> evaluateExpression(createExpression("ab + cb", EMPTY_EXPRESSIONS_MAP), context));
+		with(createExpression("\"a\" + ab", EMPTY_EXPRESSIONS_MAP), e -> assertThrows(NullPointerException.class, () -> evaluateExpression(e, context)));
+		with(createExpression("cb + ab", EMPTY_EXPRESSIONS_MAP), e -> assertThrows(NullPointerException.class, () -> evaluateExpression(e, context)));
+		with(createExpression("ab + cb", EMPTY_EXPRESSIONS_MAP), e -> assertThrows(NullPointerException.class, () -> evaluateExpression(e, context)));
 		assertEquals("54", createExpression("5.toString() + 4.toString()", EMPTY_EXPRESSIONS_MAP).evaluate(new RenderContext(new Settings().setContextAccess(ContextAccess.CURRENT), context)).toString());
 	}
 

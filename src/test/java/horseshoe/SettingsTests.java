@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 
@@ -30,9 +29,9 @@ class SettingsTests {
 		final Settings settings = new Settings().setContextAccess(ContextAccess.FULL);
 		final Template template = new TemplateLoader().load("Context Access Full", "{{Objects.toString(\"123\")}}" +
 				"{{#map.entrySet()}}{{Objects.toString(getValue())}}{{/}}{{#789}}{{#toString()}}{{#charAt(0)}}{{nonExistantMethod()}}{{longValue()}}{{get(\"field\")}}{{#field}}{{nonExistantField}}{{testField}}{{/}}{{/}}{{/}}{{/}}");
-		final Map<String, Object> data = new LinkedHashMap<>();
+		final LinkedHashMap<String, Object> data = new LinkedHashMap<>();
 		data.put("Objects", Objects.class);
-		final Map<String, Object> map = new LinkedHashMap<>();
+		final LinkedHashMap<String, Object> map = new LinkedHashMap<>();
 		map.put("key", "value");
 		data.put("map", map);
 		data.put("field", new FieldClass());
@@ -46,9 +45,9 @@ class SettingsTests {
 		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT_AND_ROOT);
 		final Template template = new TemplateLoader().load("Context Access Root", "{{Objects.toString(\"123\")}}" +
 				"{{#map.entrySet()}}{{Objects.toString(getValue())}}{{/}}{{#789}}{{#toString()}}{{#charAt(0)}}{{longValue()}}{{entrySet()}}{{get(\"field\")}}{{#field}}{{nonExistantField}}{{testField}}{{/}}{{/}}{{/}}{{/}}");
-		final Map<String, Object> data = new LinkedHashMap<>();
+		final LinkedHashMap<String, Object> data = new LinkedHashMap<>();
 		data.put("Objects", Objects.class);
-		final Map<String, Object> map = new LinkedHashMap<>();
+		final LinkedHashMap<String, Object> map = new LinkedHashMap<>();
 		map.put("key", "value");
 		data.put("map", map);
 		data.put("field", new FieldClass());

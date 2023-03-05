@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -54,19 +54,22 @@ class OperandsTests {
 		assertEquals(" " + ' ', Operands.add(" ", ' ').toString());
 		assertEquals(' ' + " ", Operands.add(' ', " ").toString());
 
-		final Map<Integer, Integer> expectedMap = new LinkedHashMap<>();
+		final Map<Integer, Integer> singletonMap23 = Collections.singletonMap(2, 3);
+		final List<Integer> list1 = Arrays.asList(1);
+		final LinkedHashSet<Integer> set1 = new LinkedHashSet<>(list1);
+		final LinkedHashMap<Integer, Integer> expectedMap = new LinkedHashMap<>();
 
 		expectedMap.put(1, 1);
 		expectedMap.put(2, 3);
 
-		assertEquals(Arrays.asList(1, 2, 3), Operands.add(Arrays.asList(1), Arrays.asList(2, 3)));
-		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Operands.add(new LinkedHashSet<>(Arrays.asList(1)), Arrays.asList(2, 3)));
-		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Operands.add(Arrays.asList(1), new LinkedHashSet<>(Arrays.asList(2, 3, 1))));
-		assertEquals(expectedMap, Operands.add(Collections.singletonMap(1, 1), Collections.singletonMap(2, 3)));
+		assertEquals(Arrays.asList(1, 2, 3), Operands.add(list1, Arrays.asList(2, 3)));
+		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Operands.add(set1, Arrays.asList(2, 3)));
+		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3)), Operands.add(list1, new LinkedHashSet<>(Arrays.asList(2, 3, 1))));
+		assertEquals(expectedMap, Operands.add(Collections.singletonMap(1, 1), singletonMap23));
 
-		assertThrows(IllegalArgumentException.class, () -> Operands.add(new LinkedHashSet<>(Arrays.asList(1)), Collections.singletonMap(2, 3)));
-		assertThrows(IllegalArgumentException.class, () -> Operands.add(Arrays.asList(1), Collections.singletonMap(2, 3)));
-		assertThrows(IllegalArgumentException.class, () -> Operands.add(Collections.singletonMap(2, 3), Arrays.asList(1)));
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(set1, singletonMap23));
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(list1, singletonMap23));
+		assertThrows(IllegalArgumentException.class, () -> Operands.add(singletonMap23, list1));
 
 		final List<Integer> testList = Arrays.asList(1, 2, 3);
 		assertThrows(IllegalArgumentException.class, () -> Operands.add(testList, null));
@@ -113,12 +116,16 @@ class OperandsTests {
 		// Set + Iterable = Set
 		assertEquals(new LinkedHashSet<>(Arrays.asList(1, 2, 3, 4)),
 				Operands.add(new LinkedHashSet<>(Arrays.asList(1, 2)), new Iter<>(Arrays.asList(3, 4))));
+
+		final Map<Integer, Integer> singletonMap12 = Collections.singletonMap(1, 2);
+		final Iter<Integer> iter34 = new Iter<>(Arrays.asList(3, 4));
+
 		// Map + Iterable -> exception
 		assertThrows(IllegalArgumentException.class, () ->
-				Operands.add(Collections.singletonMap(1, 2), new Iter<>(Arrays.asList(3, 4))));
+				Operands.add(singletonMap12, iter34));
 		// Iterable + Map -> exception
 		assertThrows(IllegalArgumentException.class, () ->
-				Operands.add(new Iter<>(Arrays.asList(1, 2)), Collections.singletonMap(3, 4)));
+				Operands.add(iter34, singletonMap12));
 	}
 
 	@Test
@@ -138,7 +145,6 @@ class OperandsTests {
 		assertThrows(IllegalArgumentException.class, () -> Operands.compare(false, object1, object2));
 	}
 
-	@SuppressWarnings("serial")
 	@Test
 	void testBadNumbers() throws ReflectiveOperationException {
 		final Number badNumber = new Number() {
@@ -363,14 +369,6 @@ class OperandsTests {
 	}
 
 	@Test
-	void testOperatorMethods() {
-		final Operator plus = Operator.get("+", true);
-		assertThrows(UnsupportedOperationException.class, () -> plus.withLocalBindingIndex(-1));
-		assertThrows(UnsupportedOperationException.class, () -> plus.withRightExpressions(2));
-		assertEquals("m: 2", Operator.createCall("m", true).withRightExpressions(2).toString());
-	}
-
-	@Test
 	void testSubtract() {
 		final Object testObject = new Object();
 
@@ -395,7 +393,7 @@ class OperandsTests {
 
 		assertThrows(IllegalArgumentException.class, () -> Operands.subtract(' ', testObject));
 
-		final Map<Integer, Integer> startingMap = new LinkedHashMap<>();
+		final LinkedHashMap<Integer, Integer> startingMap = new LinkedHashMap<>();
 
 		startingMap.put(1, 1);
 		startingMap.put(2, 3);

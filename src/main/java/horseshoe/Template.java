@@ -4,15 +4,11 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Path;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import horseshoe.internal.Expression;
-import horseshoe.internal.TemplateBinding;
 
 /**
  * Templates represent parsed and resolved Horseshoe template files. They are loaded using the {@link TemplateLoader} class. An example of how to load and render a template is given below:
@@ -40,10 +36,10 @@ public class Template {
 	private final Object identifier;
 	private final Section section;
 	private final int index;
-	private final List<String> parameters;
-	private final Map<String, TemplateBinding> bindings = new LinkedHashMap<>();
-	private final Map<String, Template> localPartials = new LinkedHashMap<>();
-	private final Map<String, Expression> rootExpressions = new LinkedHashMap<>();
+	private final int parameterCount;
+	private final LinkedHashMap<String, TemplateBinding> bindings = new LinkedHashMap<>();
+	private final LinkedHashMap<String, Template> localPartials = new LinkedHashMap<>();
+	private final LinkedHashMap<String, Expression> rootExpressions = new LinkedHashMap<>();
 
 	/**
 	 * Loads a template from a file.
@@ -88,15 +84,15 @@ public class Template {
 	 * @param index the index of the template partial, or 0 to indicate top-level template
 	 * @param parameters the names of the parameters for the template, or null if the template is not a local partial
 	 */
-	Template(final String name, final Object identifier, final int index, final List<String> parameters) {
+	Template(final String name, final Object identifier, final int index, final ArrayList<String> parameters) {
 		this.identifier = identifier;
 		this.section = new Section(null, name == null ? "[Anonymous]" : name, identifier, null, null, true, parameters != null);
 		this.index = index;
 
 		if (parameters == null) {
-			this.parameters = Collections.emptyList();
+			this.parameterCount = 0;
 		} else {
-			this.parameters = parameters;
+			this.parameterCount = parameters.size();
 
 			for (final String parameterName : parameters) {
 				bindings.put(parameterName, new TemplateBinding(parameterName, index, bindings.size()));
@@ -130,7 +126,7 @@ public class Template {
 	 *
 	 * @return the bindings associated with the template
 	 */
-	final Map<String, TemplateBinding> getBindings() {
+	final LinkedHashMap<String, TemplateBinding> getBindings() {
 		return bindings;
 	}
 
@@ -157,17 +153,17 @@ public class Template {
 	 *
 	 * @return the local partials for the template
 	 */
-	Map<String, Template> getLocalPartials() {
+	LinkedHashMap<String, Template> getLocalPartials() {
 		return localPartials;
 	}
 
 	/**
-	 * Gets the list of parameters associated with the template.
+	 * Gets the number of parameters associated with the template.
 	 *
-	 * @return the list of parameters associated with the template
+	 * @return the number of parameters associated with the template
 	 */
-	final List<String> getParameters() {
-		return parameters;
+	final int getParameterCount() {
+		return parameterCount;
 	}
 
 	/**
@@ -175,7 +171,7 @@ public class Template {
 	 *
 	 * @return the root expressions associated with the template
 	 */
-	final Map<String, Expression> getRootExpressions() {
+	final LinkedHashMap<String, Expression> getRootExpressions() {
 		return rootExpressions;
 	}
 

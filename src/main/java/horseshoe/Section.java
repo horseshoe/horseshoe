@@ -1,15 +1,12 @@
 package horseshoe;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
-
-import horseshoe.internal.Expression;
 
 final class Section {
 
 	private final Section parent;
-	private final List<Section> children = new ArrayList<>();
+	private final ArrayList<Section> children = new ArrayList<>();
 	private final String name;
 	private final Object location;
 	private final Expression expression;
@@ -18,8 +15,8 @@ final class Section {
 	private final boolean isLocalPartial;
 	private boolean cacheResult = false;
 	private boolean useCache = false;
-	private final List<Renderer> renderList = new ArrayList<>();
-	private final List<Renderer> invertedRenderList = new ArrayList<>();
+	private final ArrayList<Renderer> renderList = new ArrayList<>();
+	private final ArrayList<Renderer> invertedRenderList = new ArrayList<>();
 
 	/**
 	 * Creates a new repeated section with the specified parent.
@@ -145,7 +142,7 @@ final class Section {
 	 *
 	 * @return the the list of inverted renderers associated with the section
 	 */
-	public List<Renderer> getInvertedRenderList() {
+	ArrayList<Renderer> getInvertedRenderList() {
 		return invertedRenderList;
 	}
 
@@ -163,7 +160,7 @@ final class Section {
 	 *
 	 * @return the list of renderers associated with the section
 	 */
-	public List<Renderer> getRenderList() {
+	ArrayList<Renderer> getRenderList() {
 		return renderList;
 	}
 

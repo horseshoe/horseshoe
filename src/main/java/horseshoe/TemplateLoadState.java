@@ -4,16 +4,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.LinkedHashMap;
 
-import horseshoe.internal.Expression;
-import horseshoe.internal.ExpressionParseState;
-import horseshoe.internal.Identifier;
-import horseshoe.internal.ParsedLine;
-import horseshoe.internal.TemplateBinding;
-import horseshoe.internal.Utilities;
-import horseshoe.internal.Utilities.TrimmedString;
+import horseshoe.Utilities.TrimmedString;
+import horseshoe.util.Identifier;
 
 final class TemplateLoadState {
 
@@ -26,14 +20,14 @@ final class TemplateLoadState {
 	private final Loader loader;
 	private final Template template;
 	private final Stack<Section> sections = new Stack<>();
-	private final Map<Identifier, Identifier> allIdentifiers = new HashMap<>();
+	private final HashMap<Identifier, Identifier> allIdentifiers = new HashMap<>();
 
-	private final Map<String, Expression> namedExpressions = new HashMap<>();
-	private final Stack<Map<String, TemplateBinding>> templateBindings = new Stack<>();
-	private final Stack<List<Renderer>> renderLists = new Stack<>();
+	private final HashMap<String, Expression> namedExpressions = new HashMap<>();
+	private final Stack<LinkedHashMap<String, TemplateBinding>> templateBindings = new Stack<>();
+	private final Stack<ArrayList<Renderer>> renderLists = new Stack<>();
 
 	private TemplateLoadState.Delimiter delimiter = new TemplateLoadState.Delimiter("{{", "}}");
-	private List<ParsedLine> priorStaticText = new ArrayList<>(Arrays.asList(EMPTY_LINE));
+	private ArrayList<ParsedLine> priorStaticText = new ArrayList<>(Arrays.asList(EMPTY_LINE));
 	private int standaloneStatus;
 	private int tagCount = 0;
 
@@ -112,7 +106,7 @@ final class TemplateLoadState {
 	 *
 	 * @return the named expressions for the state
 	 */
-	Map<String, Expression> getNamedExpressions() {
+	HashMap<String, Expression> getNamedExpressions() {
 		return namedExpressions;
 	}
 
@@ -130,7 +124,7 @@ final class TemplateLoadState {
 	 *
 	 * @return the render lists for the state
 	 */
-	Stack<List<Renderer>> getRenderLists() {
+	Stack<ArrayList<Renderer>> getRenderLists() {
 		return renderLists;
 	}
 
@@ -166,7 +160,7 @@ final class TemplateLoadState {
 	 *
 	 * @return the template bindings for the state
 	 */
-	Stack<Map<String, TemplateBinding>> getTemplateBindings() {
+	Stack<LinkedHashMap<String, TemplateBinding>> getTemplateBindings() {
 		return templateBindings;
 	}
 
@@ -176,7 +170,7 @@ final class TemplateLoadState {
 	 * @param lines the lines of the static text
 	 * @return true if the lines could be the tail end of a standalone tag, otherwise false
 	 */
-	boolean isStandaloneTagTail(final List<ParsedLine> lines) {
+	boolean isStandaloneTagTail(final ArrayList<ParsedLine> lines) {
 		final int size = lines.size();
 
 		if (size > 1) {
@@ -243,7 +237,7 @@ final class TemplateLoadState {
 	 * @param staticText the updated prior static text for the state
 	 * @return this load state
 	 */
-	TemplateLoadState updateStaticText(final List<ParsedLine> staticText) {
+	TemplateLoadState updateStaticText(final ArrayList<ParsedLine> staticText) {
 		this.tagCount++;
 		this.standaloneStatus = TAG_CAN_BE_STANDALONE;
 		this.priorStaticText = staticText;

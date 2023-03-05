@@ -18,7 +18,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
@@ -74,8 +73,8 @@ public class Runner {
 		private int index;
 		private final boolean allowRawStrings;
 		private final Matcher matcher;
-		private final Map<String, Object> anchors = new LinkedHashMap<>();
-		private final Map<String, Alias> unresolvedAliases = new LinkedHashMap<>();
+		private final LinkedHashMap<String, Object> anchors = new LinkedHashMap<>();
+		private final LinkedHashMap<String, Alias> unresolvedAliases = new LinkedHashMap<>();
 
 		/**
 		 * An alias updater is used to update the value of a previously unresolved alias in the data.
@@ -93,7 +92,7 @@ public class Runner {
 		 * An alias represents an unresolved alias in the data that will be updated when the next anchor is found.
 		 */
 		private static final class Alias {
-			public final List<AliasUpdater> updaters = new ArrayList<>();
+			final ArrayList<AliasUpdater> updaters = new ArrayList<>();
 		}
 
 		/**
@@ -174,14 +173,14 @@ public class Runner {
 		 *
 		 * @return the parsed list
 		 */
-		private List<Object> parseList() {
+		private ArrayList<Object> parseList() {
 			if (index < data.length() && data.charAt(index) == ']') {
 				index = skipWhitespace(index + 1);
 				return new ArrayList<>();
 			}
 
 			// Populate the list
-			final List<Object> list = new ArrayList<>();
+			final ArrayList<Object> list = new ArrayList<>();
 
 			do {
 				final Object value = parseNode();
@@ -240,7 +239,7 @@ public class Runner {
 			}
 
 			// Populate the map
-			final Map<String, Object> map = new LinkedHashMap<>();
+			final LinkedHashMap<String, Object> map = new LinkedHashMap<>();
 
 			do {
 				// Parse the key
@@ -276,7 +275,7 @@ public class Runner {
 		 * @return the parsed node
 		 */
 		private Object parseNode() {
-			final List<String> anchorsToSet = new ArrayList<>();
+			final ArrayList<String> anchorsToSet = new ArrayList<>();
 
 			// Find all anchors
 			for (matcher.usePattern(ANCHOR_PATTERN); matcher.region(index, data.length()).lookingAt(); index = skipWhitespace(matcher.end())) {
@@ -417,7 +416,7 @@ public class Runner {
 	 * @return the list of character set names
 	 */
 	private static Object[] getCharsetNames() {
-		final List<String> names = new ArrayList<>();
+		final ArrayList<String> names = new ArrayList<>();
 
 		for (final Field field : StandardCharsets.class.getFields()) { // Use standard charsets, too many in Charset.availableCharsets()
 			if (Charset.class.equals(field.getType())) {
@@ -459,7 +458,7 @@ public class Runner {
 		try {
 			renderTemplate(args);
 		} catch (final Throwable t) {
-			Template.LOGGER.log(Level.SEVERE, "Failed to render template: " + t.getMessage(), t);
+			Template.LOGGER.log(Level.SEVERE, t, () -> "Failed to render template: " + t.getMessage());
 			System.exit(ERROR_EXIT_CODE);
 		}
 	}
@@ -483,7 +482,7 @@ public class Runner {
 	 * @param dataMap the map used to add the data define
 	 * @param value the data define in the form "key[=value]"
 	 */
-	private static void parseDataDefine(final Map<String, Object> dataMap, final String value) {
+	private static void parseDataDefine(final LinkedHashMap<String, Object> dataMap, final String value) {
 		final int split = value.indexOf('=');
 
 		if (split < 0) {
@@ -509,9 +508,9 @@ public class Runner {
 	 */
 	private static void renderTemplate(final String[] args) throws LoadException, IOException, ClassNotFoundException {
 		final TemplateLoader loader = new TemplateLoader();
-		final Map<String, Object> globalData = new LinkedHashMap<>();
+		final LinkedHashMap<String, Object> globalData = new LinkedHashMap<>();
 		final Settings settings = new Settings();
-		final List<Template> templates = new ArrayList<>();
+		final ArrayList<Template> templates = new ArrayList<>();
 		String outputFile = null;
 		Charset stdInCharset = Charset.defaultCharset();
 		Charset stdOutCharset = Charset.defaultCharset();

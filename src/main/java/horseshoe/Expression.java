@@ -1,6 +1,6 @@
-package horseshoe.internal;
+package horseshoe;
 
-import static horseshoe.internal.MethodBuilder.*;
+import static horseshoe.bytecode.MethodBuilder.*;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -10,28 +10,33 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import horseshoe.AnnotationHandler;
-import horseshoe.Extension;
-import horseshoe.HaltRenderingException;
-import horseshoe.RenderContext;
-import horseshoe.SectionRenderData;
-import horseshoe.SectionRenderer;
-import horseshoe.Stack;
-import horseshoe.internal.ExpressionParseState.Evaluation;
-import horseshoe.internal.MethodBuilder.Label;
-import horseshoe.internal.Utilities.TrimmedString;
+import horseshoe.ExpressionParseState.Evaluation;
+import horseshoe.Utilities.TrimmedString;
+import horseshoe.bytecode.BytecodeContainer;
+import horseshoe.bytecode.MethodBuilder;
+import horseshoe.bytecode.MethodBuilder.Label;
+import horseshoe.util.Accessor;
+import horseshoe.util.Evaluable;
+import horseshoe.util.Identifier;
+import horseshoe.util.Operands;
+import horseshoe.util.SectionRenderData;
+import horseshoe.util.Streamable;
 
 public final class Expression {
+
+	private static final byte LOAD_EXPRESSIONS = ALOAD_1;
+	private static final byte LOAD_IDENTIFIERS = ALOAD_2;
+	private static final byte LOAD_CONTEXT = ALOAD_3;
+	private static final byte[] LOAD_ARGUMENTS = new byte[] { ALOAD, 4 };
+	private static final int FIRST_LOCAL = 5;
 
 	private static final Expression[] EMPTY_EXPRESSIONS = { };
 	private static final Identifier[] EMPTY_IDENTIFIERS = { };
@@ -43,12 +48,12 @@ public final class Expression {
 	private static long cacheIndex = 0;
 
 	// Reflected Methods
+	private static final Method ARRAY_LIST_ADD = getMethod(ArrayList.class, "add", Object.class);
 	private static final Constructor<?> ARRAY_LIST_CTOR_INT = getConstructor(ArrayList.class, int.class);
 	private static final Method ACCESSOR_LOOKUP = getMethod(Accessor.class, "lookup", Object.class, Object.class, boolean.class);
 	private static final Method ACCESSOR_LOOKUP_RANGE = getMethod(Accessor.class, "lookupRange", Object.class, Comparable.class, Object.class, boolean.class);
 	private static final Field ACCESSOR_TO_BEGINNING = getField(Accessor.class, "TO_BEGINNING");
 	private static final Method EXPRESSION_EVALUATE = getMethod(Expression.class, "evaluate", RenderContext.class, Object[].class);
-	private static final Method EXPRESSION_PEEK_STACK = getMethod(Expression.class, "peekStack", Stack.class, int.class, String.class);
 	private static final Constructor<?> HALT_EXCEPTION_CTOR_STRING = getConstructor(HaltRenderingException.class, String.class);
 	private static final Method IDENTIFIER_FIND_OBJECT = getMethod(Identifier.class, "findObject", RenderContext.class);
 	private static final Method IDENTIFIER_FIND_VALUE = getMethod(Identifier.class, "findValue", RenderContext.class, int.class);
@@ -56,13 +61,14 @@ public final class Expression {
 	private static final Method IDENTIFIER_GET_VALUE = getMethod(Identifier.class, "getValue", Object.class, Object.class, boolean.class);
 	private static final Method IDENTIFIER_GET_VALUE_METHOD = getMethod(Identifier.class, "getValue", Object.class, Object.class, boolean.class, Object[].class);
 	private static final Field IDENTIFIER_NULL_ORIGINAL_CONTEXT = getField(Identifier.class, "NULL_ORIGINAL_CONTEXT");
+	private static final Method IDENTIFIER_PEEK_STACK = getMethod(Identifier.class, "peekStack", Stack.class, int.class, String.class);
 	private static final Method ITERATOR_HAS_NEXT = getMethod(Iterator.class, "hasNext");
 	private static final Method ITERATOR_NEXT = getMethod(Iterator.class, "next");
 	private static final Constructor<?> LINKED_HASH_MAP_CTOR_INT = getConstructor(LinkedHashMap.class, int.class);
+	private static final Method LINKED_HASH_MAP_PUT = getMethod(LinkedHashMap.class, "put", Object.class, Object.class);
+	private static final Method LINKED_HASH_SET_ADD = getMethod(LinkedHashSet.class, "add", Object.class);
 	private static final Constructor<?> LINKED_HASH_SET_CTOR_INT = getConstructor(LinkedHashSet.class, int.class);
-	private static final Method LIST_ADD = getMethod(List.class, "add", Object.class);
 	private static final Method MAP_GET = getMethod(Map.class, "get", Object.class);
-	private static final Method MAP_PUT = getMethod(Map.class, "put", Object.class, Object.class);
 	private static final Method OBJECT_EQUALS = getMethod(Object.class, "equals", Object.class);
 	private static final Method OBJECT_GET_CLASS = getMethod(Object.class, "getClass");
 	private static final Method OBJECT_HASH_CODE = getMethod(Object.class, "hashCode");
@@ -82,6 +88,7 @@ public final class Expression {
 	private static final Method OPERANDS_NEGATE = getMethod(Operands.class, "negate", Number.class);
 	private static final Method OPERANDS_NOT = getMethod(Operands.class, "not", Number.class);
 	private static final Method OPERANDS_OR = getMethod(Operands.class, "or", Number.class, Number.class);
+	private static final Method OPERANDS_REQUIRE_NON_NULL_TO_STRING = getMethod(Operands.class, "requireNonNullToString", Object.class);
 	private static final Method OPERANDS_SHIFT_LEFT = getMethod(Operands.class, "shiftLeft", Number.class, Number.class);
 	private static final Method OPERANDS_SHIFT_RIGHT = getMethod(Operands.class, "shiftRight", Number.class, Number.class);
 	private static final Method OPERANDS_SHIFT_RIGHT_ZERO = getMethod(Operands.class, "shiftRightZero", Number.class, Number.class);
@@ -97,7 +104,6 @@ public final class Expression {
 	private static final Field SECTION_RENDER_DATA_HAS_NEXT = getField(SectionRenderData.class, "hasNext");
 	private static final Field SECTION_RENDER_DATA_INDEX = getField(SectionRenderData.class, "index");
 	private static final Method SECTION_RENDERER_CREATE_ANNOTATION_DATA = getMethod(SectionRenderer.class, "createAnnotationData", AnnotationHandler.class, Object[].class);
-	private static final Method SET_ADD = getMethod(Set.class, "add", Object.class);
 	private static final Method STACK_PEEK = getMethod(Stack.class, "peek");
 	private static final Method STACK_PEEK_BASE = getMethod(Stack.class, "peekBase");
 	private static final Method STACK_POP = getMethod(Stack.class, "pop");
@@ -111,12 +117,11 @@ public final class Expression {
 	private static final Method STRING_BUILDER_APPEND_OBJECT = getMethod(StringBuilder.class, "append", Object.class);
 	private static final Constructor<?> STRING_BUILDER_INIT_STRING = getConstructor(StringBuilder.class, String.class);
 	private static final Method STRING_VALUE_OF = getMethod(String.class, "valueOf", Object.class);
-	private static final Method UTILITIES_REQUIRE_NON_NULL_TO_STRING = getMethod(Utilities.class, "requireNonNullToString", Object.class);
 
 	// The patterns used for parsing the grammar
-	public static final Pattern SINGLE_COMMENT_PATTERN = Pattern.compile("(?:/(?s:/[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|[*].*?[*]/)\\s*)", Pattern.UNICODE_CHARACTER_CLASS);
-	public static final Pattern COMMENT_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "++", Pattern.UNICODE_CHARACTER_CLASS);
-	public static final Pattern COMMENTS_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN.pattern() + "*+", Pattern.UNICODE_CHARACTER_CLASS);
+	static final String SINGLE_COMMENT_PATTERN = "(?:/(?s:/[^\\n\\x0B\\x0C\\r\\u0085\\u2028\\u2029]*|[*].*?[*]/)\\s*)";
+	static final Pattern COMMENT_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN + "++", Pattern.UNICODE_CHARACTER_CLASS);
+	static final Pattern COMMENTS_PATTERN = Pattern.compile(SINGLE_COMMENT_PATTERN + "*+", Pattern.UNICODE_CHARACTER_CLASS);
 
 	private static final Pattern DOUBLE_PATTERN = Pattern.compile("(?<double>[-+]Infinity|[-+]?(?:\\d[\\d_']*[fFdD]|(?:\\d[\\d_']*[.]?[eE][-+]?[\\d_']+|\\d[\\d_']*[.][\\d_']+(?:[eE][-+]?[\\d_']+)?|0[xX](?:[\\dA-Fa-f_']+[.]?|[\\dA-Fa-f_']+[.][\\dA-Fa-f_']+)[pP][-+]?[\\d_']+)[fFdD]?))\\s*", Pattern.UNICODE_CHARACTER_CLASS);
 	private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("(?<identifier>" + Identifier.PATTERN + "|`(?:[^`]|``)++`|[.][.]|[.])\\s*" + COMMENTS_PATTERN + "(?<isMethod>[(])?\\s*", Pattern.UNICODE_CHARACTER_CLASS);
@@ -146,30 +151,10 @@ public final class Expression {
 	private final Identifier[] identifiers;
 	private final Evaluable evaluable;
 
-	public abstract static class Evaluable {
-		private static final byte LOAD_EXPRESSIONS = ALOAD_1;
-		private static final byte LOAD_IDENTIFIERS = ALOAD_2;
-		private static final byte LOAD_CONTEXT = ALOAD_3;
-		private static final byte[] LOAD_ARGUMENTS = new byte[] { ALOAD, 4 };
-		private static final int FIRST_LOCAL = 5;
-
-		/**
-		 * Evaluates the object using the specified parameters.
-		 *
-		 * @param expressions the expressions used to evaluate the object
-		 * @param identifiers the identifiers used to evaluate the object
-		 * @param context the context used to evaluate the object
-		 * @param arguments the arguments used to evaluate the object
-		 * @return the result of evaluating the object
-		 * @throws Exception if an error occurs while evaluating the expression
-		 */
-		public abstract Object evaluate(final Expression[] expressions, final Identifier[] identifiers, final RenderContext context, final Object[] arguments) throws Exception;
-	}
-
 	static {
 		final StringBuilder allOperators = new StringBuilder();
 		final StringBuilder assignmentOperators = new StringBuilder();
-		final Set<Operator> patterns = new TreeSet<>((o1, o2) -> {
+		final TreeSet<Operator> patterns = new TreeSet<>((o1, o2) -> {
 			final int lengthDiff = o2.getString().length() - o1.getString().length();
 			return lengthDiff == 0 ? o1.getString().compareTo(o2.getString()) : lengthDiff;
 		});
@@ -211,7 +196,7 @@ public final class Expression {
 		if (state.getBindingName() != null) {
 			final TemplateBinding templateBinding = state.getOrAddTemplateBinding(state.getBindingName());
 
-			return mb.addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).append(operand.toObject()).addCode(AASTORE, ACONST_NULL).addFlowBreakingCode(ARETURN, 0);
+			return mb.addCode(LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).append(operand.toObject()).addCode(AASTORE, ACONST_NULL).addFlowBreakingCode(ARETURN, 0);
 		} else {
 			return mb.append(operand.toObject()).addFlowBreakingCode(ARETURN, 0);
 		}
@@ -287,7 +272,7 @@ public final class Expression {
 
 						if (!isMethod) {
 							final Label endLabel = new Label();
-							state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_ANNOTATION_MAP).pushConstant(name).addInvoke(MAP_GET).addCode(DUP).addBranch(IFNULL, endLabel).addCast(AnnotationHandler.class).addCode(ACONST_NULL).addInvoke(SECTION_RENDERER_CREATE_ANNOTATION_DATA).updateLabel(endLabel)));
+							state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_ANNOTATION_MAP).pushConstant(name).addInvoke(MAP_GET).addCode(DUP).addBranch(IFNULL, endLabel).addCast(AnnotationHandler.class).addCode(ACONST_NULL).addInvoke(SECTION_RENDERER_CREATE_ANNOTATION_DATA).updateLabel(endLabel)));
 							return null;
 						}
 
@@ -333,27 +318,27 @@ public final class Expression {
 		// Process the identifier
 		if (".".equals(identifierText)) {
 			if (isRoot) {
-				state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
+				state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 			} else {
-				state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(identifierText).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
+				state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(identifierText).addInvoke(IDENTIFIER_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 			}
 		} else if ("..".equals(identifierText)) {
-			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).pushConstant(identifierText).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
+			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach + 1).pushConstant(identifierText).addInvoke(IDENTIFIER_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 		} else if (isInternal) { // Everything that starts with "." is considered internal
 			final String internalIdentifier = "." + identifierText;
 
 			switch (internalIdentifier) {
 				case ".hasNext":
-					state.getOperands().push(new Operand(boolean.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_HAS_NEXT, true)));
+					state.getOperands().push(new Operand(boolean.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(IDENTIFIER_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_HAS_NEXT, true)));
 					break;
 				case ".indentation":
-					state.getOperands().push(new Operand(String.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDENTATION).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK)));
+					state.getOperands().push(new Operand(String.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_INDENTATION).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(IDENTIFIER_PEEK_STACK)));
 					break;
 				case ".index":
-					state.getOperands().push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_INDEX, true)));
+					state.getOperands().push(new Operand(int.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(IDENTIFIER_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_INDEX, true)));
 					break;
 				case ".isFirst":
-					state.getOperands().push(new Operand(int.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_INDEX, true)));
+					state.getOperands().push(new Operand(int.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(internalIdentifier).addInvoke(IDENTIFIER_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_INDEX, true)));
 					state.getOperators().push(Operator.get("!", false));
 					processOperation(state);
 					break;
@@ -392,20 +377,20 @@ public final class Expression {
 
 				if (isRoot) {
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addFieldAccess(IDENTIFIER_NULL_ORIGINAL_CONTEXT, true).addCode(SWAP).pushConstant(false).addCode(SWAP).addInvoke(IDENTIFIER_GET_VALUE_METHOD)));
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 					state.getOperands().push(state.getOperands().peek());
 				} else {
 					state.getOperands().push(new Operand(Object.class, new MethodBuilder().pushConstant(backreach).addCode(SWAP).addInvoke(IDENTIFIER_FIND_VALUE_METHOD)));
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT)));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT)));
 
 					if (backreach >= 0) {
-						state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(name).addInvoke(EXPRESSION_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true))); // Expression.peekStack(context.getSectionData(), backreach, name).data
+						state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).pushConstant(backreach).pushConstant(name).addInvoke(IDENTIFIER_PEEK_STACK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true))); // Identifier.peekStack(context.getSectionData(), backreach, name).data
 					} else {
 						if (matcher.start() == 0) {
 							state.setCallName(name);
 						}
 
-						state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(IDENTIFIER_FIND_OBJECT)));
+						state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(IDENTIFIER_FIND_OBJECT)));
 					}
 				}
 
@@ -420,11 +405,11 @@ public final class Expression {
 				final Operator operator = state.getOperators().pop();
 
 				if (operator.has(Operator.SAFE)) {
-					// Create a new output formed by invoking identifiers[index].getValue(object)
+					// Create a new output formed by invoking identifiers[index].getValue(object, null, ignoreFailures)
 					final Label end = state.getOperands().peek().builder.newLabel();
-					state.getOperands().push(new Operand(Object.class, identifier, state.getOperands().pop().toObject().addCode(DUP).addBranch(IFNULL, end).addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP, ACONST_NULL).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
+					state.getOperands().push(new Operand(Object.class, identifier, state.getOperands().pop().toObject().addCode(DUP).addBranch(IFNULL, end).addCode(LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP, ACONST_NULL).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE).updateLabel(end)));
 				} else {
-					state.getOperands().push(new Operand(Object.class, identifier, state.getOperands().pop().toObject().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP, ACONST_NULL).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE)));
+					state.getOperands().push(new Operand(Object.class, identifier, state.getOperands().pop().toObject().addCode(LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP, ACONST_NULL).pushConstant(operator.has(Operator.IGNORE_FAILURES)).addInvoke(IDENTIFIER_GET_VALUE)));
 				}
 			} else { // Check for a local or template binding
 				final Operator operator = Operator.get(matcher.group("assignment"), true);
@@ -435,7 +420,7 @@ public final class Expression {
 						throw new IllegalStateException("Invalid assignment to non-local variable (index " + state.getIndex(matcher) + ")");
 					}
 
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name))));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ASTORE, FIRST_LOCAL + state.getLocalBindings().getOrAdd(name))));
 					return state.getOperators().push(operator).peek();
 				} else { // Resolve the identifier
 					parseSimpleIdentifier(state, name, backreach, isRoot);
@@ -458,7 +443,7 @@ public final class Expression {
 		final String remainingParameters = matcher.group("remainingParameters");
 
 		if (firstParameter != null && !".".equals(firstParameter)) {
-			initializeLocalBindings.addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(firstParameter));
+			initializeLocalBindings.addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addAccess(ASTORE, FIRST_LOCAL + state.getLocalBindings().getOrAdd(firstParameter));
 		}
 
 		if (remainingParameters == null) {
@@ -480,9 +465,9 @@ public final class Expression {
 				final Label ifNull = initializeLocalBindings.newLabel();
 				final Label end = initializeLocalBindings.newLabel();
 
-				initializeLocalBindings.addCode(Evaluable.LOAD_ARGUMENTS).addBranch(IFNULL, ifNull).pushConstant(i).addCode(Evaluable.LOAD_ARGUMENTS).addCode(ARRAYLENGTH).addBranch(IF_ICMPGE, ifNull)
-					.addCode(Evaluable.LOAD_ARGUMENTS).pushConstant(i).addCode(AALOAD).addGoto(end, 1)
-					.updateLabel(ifNull).addCode(ACONST_NULL).updateLabel(end).addAccess(ASTORE, Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name));
+				initializeLocalBindings.addCode(LOAD_ARGUMENTS).addBranch(IFNULL, ifNull).pushConstant(i).addCode(LOAD_ARGUMENTS).addCode(ARRAYLENGTH).addBranch(IF_ICMPGE, ifNull)
+					.addCode(LOAD_ARGUMENTS).pushConstant(i).addCode(AALOAD).addGoto(end, 1)
+					.updateLabel(ifNull).addCode(ACONST_NULL).updateLabel(end).addAccess(ASTORE, FIRST_LOCAL + state.getLocalBindings().getOrAdd(name));
 			}
 		}
 	}
@@ -500,17 +485,17 @@ public final class Expression {
 		final TemplateBinding templateBinding;
 
 		if (backreach < 0 && (bindingIndex = state.getLocalBindings().get(name)) != null) { // Check for a local binding
-			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, Evaluable.FIRST_LOCAL + bindingIndex)));
+			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addAccess(ALOAD, FIRST_LOCAL + bindingIndex)));
 		} else if (backreach < 0 && (templateBinding = state.getTemplateBinding(name)) != null) { // Check for a template binding
-			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).addCode(AALOAD)));
+			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).pushConstant(templateBinding.getTemplateIndex()).addInvoke(RENDER_CONTEXT_GET_TEMPLATE_BINDINGS).addInvoke(STACK_PEEK).addCast(Object[].class).pushConstant(templateBinding.getIndex()).addCode(AALOAD)));
 		} else { // Resolve the identifier
 			final Identifier identifier = state.getCachedIdentifier(new Identifier(name));
 			final int index = state.getIdentifiers().getOrAdd(identifier);
 
 			if (isRoot) { // Create invocation identifiers[index].getValue(context.getSectionData().peekBase().data, NULL_ORIGINAL_CONTEXT, false)
-				state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addFieldAccess(IDENTIFIER_NULL_ORIGINAL_CONTEXT, true).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE)));
+				state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK_BASE).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true).addFieldAccess(IDENTIFIER_NULL_ORIGINAL_CONTEXT, true).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE)));
 			} else { // Create invocation identifiers[index].findValue(context, backreach)
-				state.getOperands().push(new Operand(Object.class, backreach >= 0 ? null : identifier, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
+				state.getOperands().push(new Operand(Object.class, backreach >= 0 ? null : identifier, new MethodBuilder().addCode(LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD).addCode(LOAD_CONTEXT).pushConstant(backreach).addInvoke(IDENTIFIER_FIND_VALUE)));
 			}
 		}
 	}
@@ -716,23 +701,6 @@ public final class Expression {
 	}
 
 	/**
-	 * Peeks into a stack, but throws a human-readable exception if the depth is out-of-range.
-	 *
-	 * @param <T> the type of items in the stack
-	 * @param stack the stack to peek into
-	 * @param depth the depth to peek into the stack
-	 * @param name the name of the identifier to report in the string
-	 * @return the item at the specified point in the stack
-	 */
-	public static <T> T peekStack(final Stack<T> stack, final int depth, final String name) {
-		if (depth >= stack.size()) {
-			throw new IndexOutOfBoundsException("Failed to get \"" + name + "\" at depth " + depth + ", max depth available in current scope is " + (stack.size() - 1));
-		}
-
-		return stack.peek(depth);
-	}
-
-	/**
 	 * Processes a call, which may be either a named expression call or a method call. The operand stack will be updated with the results of evaluating the operator.
 	 *
 	 * @param state the parse state
@@ -753,7 +721,7 @@ public final class Expression {
 			return;
 		} else if (operator.getString().startsWith("@")) { // Parsing Annotation
 			final Label endLabel = new Label();
-			final MethodBuilder mb = new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_ANNOTATION_MAP).pushConstant(operator.getString().substring(1)).addInvoke(MAP_GET).addCode(DUP).addBranch(IFNULL, endLabel).addCast(AnnotationHandler.class).pushNewObject(Object.class, parameterCount);
+			final MethodBuilder mb = new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_ANNOTATION_MAP).pushConstant(operator.getString().substring(1)).addInvoke(MAP_GET).addCode(DUP).addBranch(IFNULL, endLabel).addCast(AnnotationHandler.class).pushNewObject(Object.class, parameterCount);
 
 			for (int i = 0; i < parameterCount; i++) {
 				mb.addCode(DUP).pushConstant(i).append(state.getOperands().peek(parameterCount - 1 - i).toObject()).addCode(AASTORE);
@@ -768,7 +736,7 @@ public final class Expression {
 
 		// Process the named expression
 		final int index = state.getExpressions().getOrAdd(namedExpression);
-		final MethodBuilder expressionResult = new MethodBuilder().addCode(Evaluable.LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT);
+		final MethodBuilder expressionResult = new MethodBuilder().addCode(LOAD_EXPRESSIONS).pushConstant(index).addCode(AALOAD).addCode(LOAD_CONTEXT);
 
 		// Load the arguments
 		if (parameterCount > 1) {
@@ -785,8 +753,8 @@ public final class Expression {
 
 		// Evaluate the expression (if at least one parameter, then first push the first parameter onto the context stack and pop it off after)
 		if (parameterCount > 0) {
-			expressionResult.addCode(SWAP).addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addCode(SWAP).pushNewObject(SectionRenderData.class).addCode(DUP_X1, SWAP).addInvoke(SECTION_RENDER_DATA_CTOR_DATA).addInvoke(STACK_PUSH_OBJECT).addCode(POP)
-				.addInvoke(EXPRESSION_EVALUATE).addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_POP).addCode(POP);
+			expressionResult.addCode(SWAP).addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addCode(SWAP).pushNewObject(SectionRenderData.class).addCode(DUP_X1, SWAP).addInvoke(SECTION_RENDER_DATA_CTOR_DATA).addInvoke(STACK_PUSH_OBJECT).addCode(POP)
+					.addInvoke(EXPRESSION_EVALUATE).addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_POP).addCode(POP);
 		} else {
 			expressionResult.addInvoke(EXPRESSION_EVALUATE);
 		}
@@ -887,7 +855,7 @@ public final class Expression {
 
 		// Create the identifier, then get and invoke the appropriate method
 		final int index = state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(operator.getString(), parameterCount)));
-		final MethodBuilder methodResult = state.getOperands().peek(parameterCount + 1).builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP);
+		final MethodBuilder methodResult = state.getOperands().peek(parameterCount + 1).builder.addCode(LOAD_IDENTIFIERS).pushConstant(index).addCode(AALOAD, SWAP);
 
 		if (parameterCount == 0) {
 			methodResult.addCode(ACONST_NULL);
@@ -975,9 +943,9 @@ public final class Expression {
 						final Operand first = state.getOperands().peek(i + pairs);
 
 						if (Entry.class.equals(first.type)) {
-							builder.addCode(DUP).append(first.toObject()).append(state.getOperands().peek(i + --pairs).toObject()).addInvoke(MAP_PUT).addCode(POP);
+							builder.addCode(DUP).append(first.toObject()).append(state.getOperands().peek(i + --pairs).toObject()).addInvoke(LINKED_HASH_MAP_PUT).addCode(POP);
 						} else {
-							builder.addCode(DUP).append(first.toObject()).addCode(DUP).addInvoke(MAP_PUT).addCode(POP);
+							builder.addCode(DUP).append(first.toObject()).addCode(DUP).addInvoke(LINKED_HASH_MAP_PUT).addCode(POP);
 						}
 					}
 
@@ -986,7 +954,7 @@ public final class Expression {
 					final MethodBuilder builder = new MethodBuilder().pushNewObject(ArrayList.class).addCode(DUP).pushConstant(operator.getRightExpressions()).addInvoke(ARRAY_LIST_CTOR_INT);
 
 					for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
-						builder.addCode(DUP).append(state.getOperands().peek(i).toObject()).addInvoke(LIST_ADD).addCode(POP);
+						builder.addCode(DUP).append(state.getOperands().peek(i).toObject()).addInvoke(ARRAY_LIST_ADD).addCode(POP);
 					}
 
 					state.getOperands().pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
@@ -994,7 +962,7 @@ public final class Expression {
 					final MethodBuilder builder = new MethodBuilder().pushNewObject(LinkedHashSet.class).addCode(DUP).pushConstant((operator.getRightExpressions() * 4 + 2) / 3).addInvoke(LINKED_HASH_SET_CTOR_INT);
 
 					for (int i = operator.getRightExpressions() - 1; i >= 0; i--) {
-						builder.addCode(DUP).append(state.getOperands().peek(i).toObject()).addInvoke(SET_ADD).addCode(POP);
+						builder.addCode(DUP).append(state.getOperands().peek(i).toObject()).addInvoke(LINKED_HASH_SET_ADD).addCode(POP);
 					}
 
 					state.getOperands().pop(operator.getRightExpressions()).push(new Operand(Object.class, builder));
@@ -1018,9 +986,9 @@ public final class Expression {
 				if (left == null) { // Unary +, basically do nothing except require a number
 					state.getOperands().push(new Operand(Double.class, right.toNumeric(true)));
 				} else if (StringBuilder.class.equals(left.type)) { // Check for string concatenation
-					state.getOperands().push(left).peek().builder.append(right.toObject()).addInvoke(UTILITIES_REQUIRE_NON_NULL_TO_STRING).addInvoke(STRING_BUILDER_APPEND_STRING);
+					state.getOperands().push(left).peek().builder.append(right.toObject()).addInvoke(OPERANDS_REQUIRE_NON_NULL_TO_STRING).addInvoke(STRING_BUILDER_APPEND_STRING);
 				} else if (String.class.equals(left.type) || String.class.equals(right.type) || StringBuilder.class.equals(right.type)) {
-					state.getOperands().push(new Operand(StringBuilder.class, left.toObject().pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject()).addInvoke(UTILITIES_REQUIRE_NON_NULL_TO_STRING).addInvoke(STRING_BUILDER_APPEND_STRING)));
+					state.getOperands().push(new Operand(StringBuilder.class, left.toObject().pushNewObject(StringBuilder.class).addCode(DUP_X1, SWAP).addInvoke(STRING_VALUE_OF).addInvoke(STRING_BUILDER_INIT_STRING).append(right.toObject()).addInvoke(OPERANDS_REQUIRE_NON_NULL_TO_STRING).addInvoke(STRING_BUILDER_APPEND_STRING)));
 				} else { // String concatenation, mathematical addition, collection addition, or invalid
 					state.getOperands().push(new Operand(Object.class, left.toObject().append(right.toObject()).addInvoke(OPERANDS_ADD)));
 				}
@@ -1260,10 +1228,10 @@ public final class Expression {
 
 			case "~@": // Get class
 				if (right.identifier != null) {
-					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).pushConstant(right.identifier.getName()).addInvoke(OPERANDS_GET_CLASS)));
+					state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).pushConstant(right.identifier.getName()).addInvoke(OPERANDS_GET_CLASS)));
 				} else {
 					final Label isNull = right.builder.newLabel();
-					state.getOperands().push(new Operand(Object.class, right.toObject().addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(Evaluable.LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS).updateLabel(isNull)));
+					state.getOperands().push(new Operand(Object.class, right.toObject().addCode(DUP).addBranch(IFNULL, isNull).addInvoke(OBJECT_TO_STRING).addCode(LOAD_CONTEXT).addCode(SWAP).addInvoke(OPERANDS_GET_CLASS).updateLabel(isNull)));
 				}
 
 				break;
@@ -1305,7 +1273,7 @@ public final class Expression {
 				final String name = matcher.group("name");
 
 				if (name != null) {
-					state.getOperators().push(operator.withLocalBindingIndex(Evaluable.FIRST_LOCAL + state.getLocalBindings().getOrAdd(name)));
+					state.getOperators().push(operator.withLocalBindingIndex(FIRST_LOCAL + state.getLocalBindings().getOrAdd(name)));
 					return operator;
 				}
 			} else if (state.getOperators().isEmpty()) {
@@ -1356,21 +1324,21 @@ public final class Expression {
 	 * @param state the parse state for the expression
 	 * @throws ReflectiveOperationException if an error occurs while dynamically creating and loading the expression
 	 */
-	public static Expression create(final Object location, final ExpressionParseState state) throws ReflectiveOperationException {
+	static Expression create(final Object location, final ExpressionParseState state) throws ReflectiveOperationException {
 		final MethodBuilder mb = new MethodBuilder();
 		String expressionName = null;
 
 		if (".".equals(state.getExpressionString())) {
-			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
+			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_CONTEXT).addInvoke(RENDER_CONTEXT_GET_SECTION_DATA).addInvoke(STACK_PEEK).addCast(SectionRenderData.class).addFieldAccess(SECTION_RENDER_DATA_DATA, true)));
 		} else if (!state.getExtensions().contains(Extension.EXPRESSIONS)) {
 			final String[] names = Pattern.compile("\\s*[.]\\s*", Pattern.UNICODE_CHARACTER_CLASS).split(state.getExpressionString(), -1);
 
 			// Push a new operand formed by invoking identifiers[index].getValue(context, backreach, access)
-			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(names[0])))).addCode(AALOAD).addCode(Evaluable.LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
+			state.getOperands().push(new Operand(Object.class, new MethodBuilder().addCode(LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(names[0])))).addCode(AALOAD).addCode(LOAD_CONTEXT).pushConstant(Identifier.UNSTATED_BACKREACH).addInvoke(IDENTIFIER_FIND_VALUE)));
 
-			// Load the identifiers and invoke identifiers[index].getValue(object)
+			// Load the identifiers and invoke identifiers[index].getValue(object, null, false)
 			for (int i = 1; i < names.length; i++) {
-				state.getOperands().peek().builder.addCode(Evaluable.LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(names[i])))).addCode(AALOAD, SWAP, ACONST_NULL).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE);
+				state.getOperands().peek().builder.addCode(LOAD_IDENTIFIERS).pushConstant(state.getIdentifiers().getOrAdd(state.getCachedIdentifier(new Identifier(names[i])))).addCode(AALOAD, SWAP, ACONST_NULL).pushConstant(false).addInvoke(IDENTIFIER_GET_VALUE);
 			}
 		} else { // Tokenize the entire expression, using the shunting yard algorithm
 			int initializeBindingsStart = 0;
@@ -1405,7 +1373,7 @@ public final class Expression {
 
 			// Initialize all local bindings to null
 			for (int i = initializeBindingsStart; i < state.getLocalBindings().size(); i++) {
-				mb.addCode(ACONST_NULL).addAccess(ASTORE, Evaluable.FIRST_LOCAL + i);
+				mb.addCode(ACONST_NULL).addAccess(ASTORE, FIRST_LOCAL + i);
 			}
 		}
 
@@ -1420,7 +1388,7 @@ public final class Expression {
 
 			if (cachedExpression == null) {
 				final Expression expression = new Expression(location, expressionName, state, null,
-						MethodBuilder.<Evaluable>createClass(name, Expression.class.getClassLoader(), bytecode.getBytecode()).getConstructor().newInstance());
+						MethodBuilder.<Evaluable>createClass(name, Expression.class.getClassLoader(), Expression.class.getProtectionDomain(), bytecode.getBytecode()).getConstructor().newInstance());
 
 				cache.put(bytecode, expression);
 				cacheIndex++;
@@ -1481,7 +1449,7 @@ public final class Expression {
 	 *
 	 * @return the call name of the expression
 	 */
-	public String getCallName() {
+	String getCallName() {
 		return callName;
 	}
 
@@ -1490,7 +1458,7 @@ public final class Expression {
 	 *
 	 * @return the name of the expression
 	 */
-	public String getName() {
+	String getName() {
 		return name;
 	}
 
@@ -1498,15 +1466,6 @@ public final class Expression {
 	public boolean equals(final Object obj) {
 		return this == obj ||
 			(obj instanceof Expression && originalString.equals(((Expression) obj).originalString) && Objects.equals(location, ((Expression) obj).location));
-	}
-
-	/**
-	 * Evaluates the expression using a new default render context.
-	 *
-	 * @return the evaluated expression or null if the expression could not be evaluated
-	 */
-	public Object evaluate() {
-		return evaluate(new RenderContext());
 	}
 
 	/**

@@ -20,12 +20,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 
 import horseshoe.Settings.ContextAccess;
-import horseshoe.internal.Expression;
 
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +32,7 @@ class TemplateTests {
 	private static final String LS = System.lineSeparator();
 
 	private static final class ErrorLogger extends Logger {
-		private final List<Throwable> errors = new ArrayList<>();
+		private final ArrayList<Throwable> errors = new ArrayList<>();
 
 		@Override
 		public void log(Level level, Throwable error, String message, Object... params) {
@@ -115,7 +113,7 @@ class TemplateTests {
 		final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!");
 		// final horseshoe.Template mustacheTemplate = horseshoe.TemplateLoader.newMustacheLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!");
 
-		final java.util.Map<String, Object> data = new java.util.HashMap<>();
+		final java.util.HashMap<String, Object> data = new java.util.HashMap<>();
 		data.put("salutation", "Hello");
 		data.put("recipient", "world");
 

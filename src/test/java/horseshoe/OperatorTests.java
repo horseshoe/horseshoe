@@ -1,10 +1,12 @@
-package horseshoe.internal;
+package horseshoe;
 
-import static horseshoe.internal.Operator.CALL;
-import static horseshoe.internal.Operator.LEFT_EXPRESSION;
-import static horseshoe.internal.Operator.RIGHT_EXPRESSION;
-import static horseshoe.internal.Operator.X_RIGHT_EXPRESSIONS;
+import static horseshoe.Operator.CALL;
+import static horseshoe.Operator.LEFT_EXPRESSION;
+import static horseshoe.Operator.RIGHT_EXPRESSION;
+import static horseshoe.Operator.X_RIGHT_EXPRESSIONS;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.nio.charset.StandardCharsets;
@@ -17,7 +19,7 @@ import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 
-class GenerateOperatorTableTest {
+class OperatorTests {
 
 	private static String escapeHTML(final String value) {
 		return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("|", "&#124;");
@@ -28,7 +30,7 @@ class GenerateOperatorTableTest {
 	}
 
 	@Test
-	void generateOperationTable() throws Exception {
+	void generateOperatorTable() throws Exception {
 		final String tableHeader = "| Precedence | Operators | Associativity |";
 		final StringBuilder operationTable = new StringBuilder(tableHeader).append(System.lineSeparator())
 				.append(tableHeader.replaceAll("[A-za-z]", "-")).append(System.lineSeparator());
@@ -103,6 +105,14 @@ class GenerateOperatorTableTest {
 			Files.write(readmeFile, newReadme.getBytes(StandardCharsets.UTF_8));
 			fail("Operation table updated, rerun to verify");
 		}
+	}
+
+	@Test
+	void testOperatorMethods() {
+		final Operator plus = Operator.get("+", true);
+		assertThrows(UnsupportedOperationException.class, () -> plus.withLocalBindingIndex(-1));
+		assertThrows(UnsupportedOperationException.class, () -> plus.withRightExpressions(2));
+		assertEquals("m: 2", Operator.createCall("m", true).withRightExpressions(2).toString());
 	}
 
 }

@@ -2,11 +2,8 @@ package horseshoe;
 
 import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
-
-import horseshoe.internal.Expression;
 
 /**
  * The Logger class is used to log messages during the {@link Template} rendering process.
@@ -65,7 +62,7 @@ public abstract class Logger {
 	 */
 	public static Logger filterDuplicateErrors(final Logger logger) {
 		return new Logger() {
-			private final Set<StoredError> errors = new HashSet<>();
+			private final HashSet<StoredError> errors = new HashSet<>();
 
 			@Override
 			public void log(Level level, Throwable error, String message, Object... params) {

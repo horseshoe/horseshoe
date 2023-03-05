@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
+import horseshoe.util.SectionRenderData;
+
 public class SectionRenderer implements Renderer {
 
 	private final Section section;

@@ -1,15 +1,17 @@
-package horseshoe.internal;
+package horseshoe.util;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 import horseshoe.RenderContext;
 import horseshoe.Settings.ContextAccess;
+import horseshoe.Stack;
 
 public final class Identifier {
 
 	public static final int UNSTATED_BACKREACH = -1;
-	public static final int NOT_A_METHOD = -1;
+	private static final int NOT_A_METHOD = -1;
+
 	public static final Object NULL_ORIGINAL_CONTEXT = new Object();
 
 	private static final String LETTER_CHARACTERS = "\\p{Lu}\\p{Ll}\\p{Lt}\\p{Lm}\\p{Lo}"; // Character.isLetter()
@@ -121,7 +123,7 @@ public final class Identifier {
 	public Object findValue(final RenderContext context, final int backreach) throws Throwable {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
-		final Object object = Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name).data;
+		final Object object = peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name).data;
 		final Accessor accessor = getOrAddAccessor(object);
 
 		if (accessor != null) {
@@ -175,7 +177,7 @@ public final class Identifier {
 	public Object findValue(final RenderContext context, final int backreach, final Object... parameters) throws Throwable {
 		// Try to get value at the specified scope
 		boolean skippedAccessor = false;
-		final Object object = Expression.peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name).data;
+		final Object object = peekStack(context.getSectionData(), backreach < 0 ? 0 : backreach, name).data;
 		final Accessor accessor = getOrAddAccessor(object);
 
 		if (accessor != null) {
@@ -272,7 +274,7 @@ public final class Identifier {
 	 *
 	 * @return the number of parameters for a method identifier, or -1 if the identifier is not a method
 	 */
-	public int getParameterCount() {
+	int getParameterCount() {
 		return parameterCount;
 	}
 
@@ -349,8 +351,25 @@ public final class Identifier {
 	 *
 	 * @return True if the identifier is a method, otherwise false
 	 */
-	public boolean isMethod() {
+	boolean isMethod() {
 		return parameterCount >= 0;
+	}
+
+	/**
+	 * Peeks into a stack, but throws a human-readable exception if the depth is out-of-range.
+	 *
+	 * @param <T> the type of items in the stack
+	 * @param stack the stack to peek into
+	 * @param depth the depth to peek into the stack
+	 * @param name the name of the identifier to report in the string
+	 * @return the item at the specified point in the stack
+	 */
+	public static <T> T peekStack(final Stack<T> stack, final int depth, final String name) {
+		if (depth >= stack.size()) {
+			throw new IndexOutOfBoundsException("Failed to get \"" + name + "\" at depth " + depth + ", max depth available in current scope is " + (stack.size() - 1));
+		}
+
+		return stack.peek(depth);
 	}
 
 	@Override

@@ -57,8 +57,8 @@ final class CommandLineOption {
 		 * @param options the set of options
 		 */
 		public OptionSet(final CommandLineOption... options) {
-			final Map<Character, CommandLineOption> shortMap = new HashMap<>();
-			final Map<String, CommandLineOption> longMap = new HashMap<>();
+			final HashMap<Character, CommandLineOption> shortMap = new HashMap<>();
+			final HashMap<String, CommandLineOption> longMap = new HashMap<>();
 
 			for (final CommandLineOption option : options) {
 				if (option.shortName != 0 && shortMap.put(option.shortName, option) != null) {

@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe.bytecode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -10,13 +10,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedMap;
@@ -278,76 +275,8 @@ public final class MethodBuilder {
 	private int stackSize = 0;
 	private int maxLocalVariableIndex = 0; // Always include index 0 to support "this" pointer to support non-static methods
 	private boolean requiresAlignment = false;
-	private final Set<Label> labels = new LinkedHashSet<>();
-
-	private final ConstantPool constantPool = new ConstantPool() {
-		private final Map<Object, ConstantPoolEntry> constants = new LinkedHashMap<>();
-		private byte[] constantData = new byte[256];
-		private int length = 0;
-
-		@Override
-		public ConstantPoolEntry add(final Object object, final byte... data) {
-			final ConstantPoolEntry info = new ConstantPoolEntry((short)(constants.size() + 1));
-			constants.put(object, info);
-
-			if (length + data.length > constantData.length) {
-				final byte[] newBuffer = new byte[Math.max(length + data.length, constantData.length * 2)];
-				System.arraycopy(constantData, 0, newBuffer, 0, length);
-				constantData = newBuffer;
-			}
-
-			System.arraycopy(data, 0, constantData, length, data.length);
-			length += data.length;
-
-			return info;
-		}
-
-		@Override
-		public ConstantPool clear() {
-			constants.clear();
-			length = 0;
-			return this;
-		}
-
-		@Override
-		public int count() {
-			return constants.size() + 1;
-		}
-
-		@Override
-		public ConstantPoolEntry get(final Object object) {
-			return constants.get(object);
-		}
-
-		@Override
-		public byte[] getData() {
-			return constantData;
-		}
-
-		@Override
-		public Set<Entry<Object, ConstantPoolEntry>> getEntries() {
-			return constants.entrySet();
-		}
-
-		@Override
-		public int getLength() {
-			return length;
-		}
-
-		@Override
-		public ConstantPool populate() {
-			for (final ConstantPoolEntry entry : constants.values()) {
-				for (final Location location : entry.locations) {
-					final byte[] containerData = (location.container == this ? constantData : ((MethodBuilder)location.container).bytes);
-
-					containerData[location.offset]     = (byte)(entry.index >>> 8);
-					containerData[location.offset + 1] = (byte)(entry.index);
-				}
-			}
-
-			return this;
-		}
-	};
+	private final LinkedHashSet<Label> labels = new LinkedHashSet<>();
+	private final ConstantPool constantPool = new ConstantPool();
 
 	private static class Opcode {
 		/** This value is the opcode mask for the meaning of the bytes following the opcode. */
@@ -481,7 +410,7 @@ public final class MethodBuilder {
 
 	private static final class ConstantPoolEntry {
 		private final short index;
-		private final List<Location> locations = new ArrayList<>();
+		private final ArrayList<Location> locations = new ArrayList<>();
 
 		/**
 		 * Creates a new constant pool entry.
@@ -493,7 +422,11 @@ public final class MethodBuilder {
 		}
 	}
 
-	private static interface ConstantPool {
+	private static final class ConstantPool {
+		private final LinkedHashMap<Object, ConstantPoolEntry> constants = new LinkedHashMap<>();
+		private byte[] constantData = new byte[256];
+		private int length = 0;
+
 		/**
 		 * Adds data to the constant pool. The constant pool length is automatically extended.
 		 *
@@ -501,21 +434,41 @@ public final class MethodBuilder {
 		 * @param data the data to append to the constant pool
 		 * @return the newly created data
 		 */
-		public ConstantPoolEntry add(final Object object, final byte... data);
+		ConstantPoolEntry add(final Object object, final byte... data) {
+			final ConstantPoolEntry info = new ConstantPoolEntry((short)(constants.size() + 1));
+			constants.put(object, info);
+
+			if (length + data.length > constantData.length) {
+				final byte[] newBuffer = new byte[Math.max(length + data.length, constantData.length * 2)];
+				System.arraycopy(constantData, 0, newBuffer, 0, length);
+				constantData = newBuffer;
+			}
+
+			System.arraycopy(data, 0, constantData, length, data.length);
+			length += data.length;
+
+			return info;
+		}
 
 		/**
 		 * Clears the constant pool.
 		 *
 		 * @return this constant pool
 		 */
-		public ConstantPool clear();
+		ConstantPool clear() {
+			constants.clear();
+			length = 0;
+			return this;
+		}
 
 		/**
 		 * Gets the constant pool count.
 		 *
 		 * @return the constant pool count
 		 */
-		public int count();
+		int count() {
+			return constants.size() + 1;
+		}
 
 		/**
 		 * Gets data from the constant pool.
@@ -523,40 +476,59 @@ public final class MethodBuilder {
 		 * @param object the object to lookup in the constant pool
 		 * @return the data in the constant pool, or null if it does not exist
 		 */
-		public ConstantPoolEntry get(final Object object);
+		ConstantPoolEntry get(final Object object) {
+			return constants.get(object);
+		}
 
 		/**
 		 * Gets the byte data for the constant pool.
 		 *
 		 * @return the byte data for the constant pool
 		 */
-		public byte[] getData();
+		byte[] getData() {
+			return constantData;
+		}
 
 		/**
 		 * Gets the set of all entries in the constant pool.
 		 *
 		 * @return the set of all entries in the constant pool
 		 */
-		public Set<Entry<Object, ConstantPoolEntry>> getEntries();
+		Set<Entry<Object, ConstantPoolEntry>> getEntries() {
+			return constants.entrySet();
+		}
 
 		/**
 		 * Gets the length of the constant pool.
 		 *
 		 * @return the length of the constant pool
 		 */
-		abstract int getLength();
+		int getLength() {
+			return length;
+		}
 
 		/**
 		 * Populates the data dependent on the set of constants in the constant pool.
 		 *
 		 * @return this constant pool
 		 */
-		public ConstantPool populate();
+		ConstantPool populate() {
+			for (final ConstantPoolEntry entry : constants.values()) {
+				for (final Location location : entry.locations) {
+					final byte[] containerData = (location.container == this ? constantData : ((MethodBuilder)location.container).bytes);
+
+					containerData[location.offset]     = (byte)(entry.index >>> 8);
+					containerData[location.offset + 1] = (byte)(entry.index);
+				}
+			}
+
+			return this;
+		}
 	}
 
 	public static class Label {
 		private final Location target;
-		private final List<Location> references = new ArrayList<>();
+		private final ArrayList<Location> references = new ArrayList<>();
 
 		/**
 		 * Creates a new label with the specified target.
@@ -619,7 +591,7 @@ public final class MethodBuilder {
 			for (final Location location : references) {
 				final byte[] bytes = ((MethodBuilder)location.container).bytes;
 
-				if (target.container == location.container) {
+				if (target.container == location.container) { // Intentional reference comparison
 					final int branchOffset = target.offset - location.offset;
 
 					if ((short)branchOffset != branchOffset) {
@@ -655,17 +627,6 @@ public final class MethodBuilder {
 		@Override
 		public String toString() {
 			return value;
-		}
-	}
-
-	private static final class BytecodeLoader<U> extends ClassLoader {
-		private BytecodeLoader(final ClassLoader parent) {
-			super(parent);
-		}
-
-		@SuppressWarnings("unchecked")
-		public Class<U> defineClass(final String name, final byte[] bytecode) {
-			return (Class<U>)super.defineClass(name, bytecode, 0, bytecode.length);
 		}
 	}
 
@@ -1135,7 +1096,7 @@ public final class MethodBuilder {
 
 		// Pull in constants from the other builder
 		for (final Entry<Object, ConstantPoolEntry> entry : other.constantPool.getEntries()) {
-			List<Location> newLocations = null;
+			ArrayList<Location> newLocations = null;
 
 			// Only pull in constants that modify the buffer
 			for (final Location location : entry.getValue().locations) {
@@ -1334,43 +1295,42 @@ public final class MethodBuilder {
 			maxLocalVariableSize += getStackSize(parameterType);
 		}
 
-		{ // Add the custom method
-			final int methodAccessFlags = isStatic ?
-					Modifier.PUBLIC | Modifier.STATIC :
-					Modifier.PUBLIC | Modifier.FINAL;
+		// Add the custom method
+		final int methodAccessFlags = isStatic ?
+				Modifier.PUBLIC | Modifier.STATIC :
+				Modifier.PUBLIC | Modifier.FINAL;
 
-			bytecode[methodIndex]     = (byte)(methodAccessFlags >>> 8);
-			bytecode[methodIndex + 1] = (byte)(methodAccessFlags);
+		bytecode[methodIndex]     = (byte)(methodAccessFlags >>> 8);
+		bytecode[methodIndex + 1] = (byte)(methodAccessFlags);
 
-			bytecode[methodIndex + 2] = (byte)(methodNameInfo.index >>> 8);
-			bytecode[methodIndex + 3] = (byte)(methodNameInfo.index);
-			bytecode[methodIndex + 4] = (byte)(methodSignatureInfo.index >>> 8);
-			bytecode[methodIndex + 5] = (byte)(methodSignatureInfo.index);
+		bytecode[methodIndex + 2] = (byte)(methodNameInfo.index >>> 8);
+		bytecode[methodIndex + 3] = (byte)(methodNameInfo.index);
+		bytecode[methodIndex + 4] = (byte)(methodSignatureInfo.index >>> 8);
+		bytecode[methodIndex + 5] = (byte)(methodSignatureInfo.index);
 
-			bytecode[methodIndex + 7] = 0x01; // [6] = 0
-			bytecode[methodIndex + 8] = (byte)(codeAttributeInfo.index >>> 8);
-			bytecode[methodIndex + 9] = (byte)(codeAttributeInfo.index);
+		bytecode[methodIndex + 7] = 0x01; // [6] = 0
+		bytecode[methodIndex + 8] = (byte)(codeAttributeInfo.index >>> 8);
+		bytecode[methodIndex + 9] = (byte)(codeAttributeInfo.index);
 
-			final int attributeLength = length + 12;
+		final int attributeLength = length + 12;
 
-			bytecode[methodIndex + 10] = (byte)(attributeLength >>> 24);
-			bytecode[methodIndex + 11] = (byte)(attributeLength >>> 16);
-			bytecode[methodIndex + 12] = (byte)(attributeLength >>> 8);
-			bytecode[methodIndex + 13] = (byte)(attributeLength);
+		bytecode[methodIndex + 10] = (byte)(attributeLength >>> 24);
+		bytecode[methodIndex + 11] = (byte)(attributeLength >>> 16);
+		bytecode[methodIndex + 12] = (byte)(attributeLength >>> 8);
+		bytecode[methodIndex + 13] = (byte)(attributeLength);
 
-			// Code
-			bytecode[methodIndex + 14] = (byte)(maxStackSize >>> 8);
-			bytecode[methodIndex + 15] = (byte)(maxStackSize);
-			bytecode[methodIndex + 16] = (byte)(maxLocalVariableSize >>> 8);
-			bytecode[methodIndex + 17] = (byte)(maxLocalVariableSize);
+		// Code
+		bytecode[methodIndex + 14] = (byte)(maxStackSize >>> 8);
+		bytecode[methodIndex + 15] = (byte)(maxStackSize);
+		bytecode[methodIndex + 16] = (byte)(maxLocalVariableSize >>> 8);
+		bytecode[methodIndex + 17] = (byte)(maxLocalVariableSize);
 
-			bytecode[methodIndex + 18] = (byte)(length >>> 24);
-			bytecode[methodIndex + 19] = (byte)(length >>> 16);
-			bytecode[methodIndex + 20] = (byte)(length >>> 8);
-			bytecode[methodIndex + 21] = (byte)(length);
+		bytecode[methodIndex + 18] = (byte)(length >>> 24);
+		bytecode[methodIndex + 19] = (byte)(length >>> 16);
+		bytecode[methodIndex + 20] = (byte)(length >>> 8);
+		bytecode[methodIndex + 21] = (byte)(length);
 
-			System.arraycopy(bytes, 0, bytecode, methodIndex + 22, length);
-		}
+		System.arraycopy(bytes, 0, bytecode, methodIndex + 22, length);
 
 		// Attributes [0 - 1] = 0
 
@@ -1386,7 +1346,7 @@ public final class MethodBuilder {
 	 * @return the container for the bytecode of the new class
 	 * @throws ReflectiveOperationException if an exception is thrown while creating the bytecode
 	 */
-	<T> BytecodeContainer build(final String name, final Class<T> base) throws ReflectiveOperationException {
+	public <T> BytecodeContainer build(final String name, final Class<T> base) throws ReflectiveOperationException {
 		Method method = null;
 
 		if (base.isInterface()) { // This method is implementing an interface
@@ -1439,11 +1399,12 @@ public final class MethodBuilder {
 	 * @param name the name of the new class
 	 * @param base the base class of the new class
 	 * @param loader the class loader used to load the new class
+	 * @param protectionDomain the protection domain for the new class
 	 * @return the new class
 	 * @throws ReflectiveOperationException if an exception is thrown while loading the bytecode
 	 */
-	public <T> Class<T> build(final String name, final Class<T> base, final ClassLoader loader) throws ReflectiveOperationException {
-		return createClass(name, loader, build(name, base).getBytecode());
+	public <T> Class<T> build(final String name, final Class<T> base, final ClassLoader loader, final ProtectionDomain protectionDomain) throws ReflectiveOperationException {
+		return createClass(name, loader, protectionDomain, build(name, base).getBytecode());
 	}
 
 	/**
@@ -1453,11 +1414,12 @@ public final class MethodBuilder {
 	 * @param methodName the name of the method
 	 * @param type the type signature of the method
 	 * @param loader the class loader used to load the new class
+	 * @param protectionDomain the protection domain for the new class
 	 * @return the created method
 	 * @throws ReflectiveOperationException if an exception is thrown while loading the bytecode
 	 */
-	public Method build(final String name, final String methodName, final MethodType type, final ClassLoader loader) throws ReflectiveOperationException {
-		return createClass(name, loader, build(name, Object.class, true, methodName, type.returnType(), type.parameterArray()).getBytecode()).getMethods()[0];
+	public Method build(final String name, final String methodName, final MethodType type, final ClassLoader loader, final ProtectionDomain protectionDomain) throws ReflectiveOperationException {
+		return createClass(name, loader, protectionDomain, build(name, Object.class, true, methodName, type.returnType(), type.parameterArray()).getBytecode()).getMethods()[0];
 	}
 
 	/**
@@ -1466,18 +1428,19 @@ public final class MethodBuilder {
 	 * @param <T> the type of the base class
 	 * @param name the name of the new class
 	 * @param loader the class loader used to load the new class
+	 * @param protectionDomain the protection domain for the new class
 	 * @param bytecode the bytecode for the new class
 	 * @return the new class
 	 */
-	static <T> Class<T> createClass(final String name, final ClassLoader loader, final byte[] bytecode) {
-		return AccessController.doPrivileged(
-			new PrivilegedAction<Class<T>>() {
-				@Override
-				public Class<T> run() {
-					return new BytecodeLoader<T>(loader).defineClass(name, bytecode);
-				}
+	public static <T> Class<T> createClass(final String name, final ClassLoader loader, final ProtectionDomain protectionDomain, final byte[] bytecode) {
+		return new ClassLoader(loader) {
+			@SuppressWarnings("unchecked")
+			public Class<T> loadClass() {
+				final Class<T> theClass = (Class<T>) defineClass(name, bytecode, 0, bytecode.length, protectionDomain);
+				resolveClass(theClass);
+				return theClass;
 			}
-		);
+		}.loadClass();
 	}
 
 	/**

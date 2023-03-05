@@ -1,4 +1,4 @@
-package horseshoe;
+package horseshoe.util;
 
 /**
  * Section render data are used to track details about the state of the current section being rendered.

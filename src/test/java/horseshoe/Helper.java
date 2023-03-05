@@ -50,8 +50,8 @@ public class Helper {
 	 * @param values the values that make up the map
 	 * @return the resulting map
 	 */
-	public static Map<String, Object> loadMap(final Object... values) {
-		final Map<String, Object> map = new LinkedHashMap<>();
+	public static LinkedHashMap<String, Object> loadMap(final Object... values) {
+		final LinkedHashMap<String, Object> map = new LinkedHashMap<>();
 
 		for (int i = 0; i < values.length; i += 2) {
 			map.put(values[i].toString(), values[i + 1]);

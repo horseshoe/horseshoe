@@ -165,11 +165,12 @@ The value is then rendered in place of the tag.
 There are a couple major differences from Mustache interpolation tags:
 
 - The printed values are not HTML-escaped by default, since Horseshoe is designed for generating source code rather than HTML.
-Horseshoe can be configured to escape HTML if desired.
+  Horseshoe can be configured to escape HTML if desired.
+
 - The value specified inside the content tag represents a [Horseshoe expression](#expressions).
-Note that values such as `some-content` will be interpreted as the value `some` minus the value `content` rather than the value of `some-content`.
-This setting can be changed to match the Mustache interpolation tag if desired.
-Or the value can be quoted by wrapping the value in backticks (`` `some-content` ``).
+  Note that values such as `some-content` will be interpreted as the value `some` minus the value `content` rather than the value of `some-content`.
+  This setting can be changed to match the Mustache interpolation tag if desired.
+  Or the value can be quoted by wrapping the value in backticks (`` `some-content` ``).
 
 Content tags can reference an explicit level within the context stack prefixing an identifier with `./`, `.\`, `../`, `..\`, `/`, or `\`.
 For example, `{{ ..\content }}` will render the value of `content` from one level up in the context stack.

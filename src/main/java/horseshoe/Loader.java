@@ -8,13 +8,9 @@ import java.io.Reader;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Level;
 
-import horseshoe.internal.Buffer;
-import horseshoe.internal.ParsedLine;
-import horseshoe.internal.Utilities;
-import horseshoe.internal.Utilities.Range;
+import horseshoe.Utilities.Range;
 
 /**
  * Loaders are used to parse {@link Template}s. It keeps track of the current state of the internal reader used to load the template text.
@@ -146,7 +142,7 @@ public final class Loader implements AutoCloseable {
 			try {
 				reader.close();
 			} catch (final IOException e) {
-				Template.LOGGER.log(Level.WARNING, "Failed to close reader for template \"" + name + "\"", e);
+				Template.LOGGER.log(Level.WARNING, e, () -> "Failed to close reader for template \"" + name + "\"");
 			}
 		}
 	}
@@ -268,8 +264,8 @@ public final class Loader implements AutoCloseable {
 	 * @return the list of lines up to the next matching delimiter or end-of-stream
 	 * @throws IOException if an error was encountered while trying to read more data into the buffer
 	 */
-	List<ParsedLine> nextLines(final String delimiter) throws IOException {
-		final List<ParsedLine> lines = new ArrayList<>();
+	ArrayList<ParsedLine> nextLines(final String delimiter) throws IOException {
+		final ArrayList<ParsedLine> lines = new ArrayList<>();
 		final Utilities.Range range = nextMatch(delimiter);
 		int startOfLine = range.start;
 

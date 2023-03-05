@@ -3,8 +3,6 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
-import horseshoe.internal.Expression;
-
 final class ExpressionEvaluationRenderer implements Renderer {
 
 	private final Expression expression;
@@ -14,7 +12,7 @@ final class ExpressionEvaluationRenderer implements Renderer {
 	 *
 	 * @param expression the expression to evaluate
 	 */
-	public ExpressionEvaluationRenderer(final Expression expression) {
+	ExpressionEvaluationRenderer(final Expression expression) {
 		this.expression = expression;
 	}
 

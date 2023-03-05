@@ -15,7 +15,6 @@ import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -146,7 +145,7 @@ public class Settings {
 	private final ClassMap loadableClasses = new ClassMap(DEFAULT_LOADABLE_CLASSES);
 
 	static {
-		final Set<Class<?>> defaultLoadableClasses = new HashSet<>(Arrays.asList(
+		final HashSet<Class<?>> defaultLoadableClasses = new HashSet<>(Arrays.asList(
 				Integer.class,
 				Byte.class,
 				Short.class,
@@ -197,8 +196,8 @@ public class Settings {
 	private final class ClassMap extends HashSet<Class<?>> {
 		private static final long serialVersionUID = 1L;
 
-		private final Map<String, Class<?>> qualifiedNameLookup = new ConcurrentHashMap<>();
-		private final Map<String, Class<?>> unqualifiedNameLookup = new ConcurrentHashMap<>();
+		private final ConcurrentHashMap<String, Class<?>> qualifiedNameLookup = new ConcurrentHashMap<>();
+		private final ConcurrentHashMap<String, Class<?>> unqualifiedNameLookup = new ConcurrentHashMap<>();
 
 		public ClassMap() {
 		}

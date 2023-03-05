@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 
+import horseshoe.util.SectionRenderData;
+
 public final class RenderContext {
 
 	private final Settings settings;

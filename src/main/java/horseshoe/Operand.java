@@ -1,23 +1,24 @@
-package horseshoe.internal;
+package horseshoe;
 
-import static horseshoe.internal.MethodBuilder.ICONST_0;
-import static horseshoe.internal.MethodBuilder.ICONST_1;
-import static horseshoe.internal.MethodBuilder.IFEQ;
-import static horseshoe.internal.MethodBuilder.IFNE;
+import static horseshoe.bytecode.MethodBuilder.ICONST_0;
+import static horseshoe.bytecode.MethodBuilder.ICONST_1;
+import static horseshoe.bytecode.MethodBuilder.IFEQ;
+import static horseshoe.bytecode.MethodBuilder.IFNE;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map.Entry;
-import java.util.Set;
 
-import horseshoe.internal.MethodBuilder.Label;
+import horseshoe.bytecode.MethodBuilder;
+import horseshoe.bytecode.MethodBuilder.Label;
+import horseshoe.util.Identifier;
+import horseshoe.util.Operands;
 
 final class Operand {
 
-	public static final Set<Class<?>> ALLOWED_TYPES = Collections.unmodifiableSet(new HashSet<Class<?>>(Arrays.asList(
-			boolean.class, int.class, long.class, double.class, Double.class, Integer.class, Object.class, String.class, StringBuilder.class, Entry.class)));
+	static final HashSet<Class<?>> ALLOWED_TYPES = new HashSet<>(Arrays.asList(
+			boolean.class, int.class, long.class, double.class, Double.class, Integer.class, Object.class, String.class, StringBuilder.class, Entry.class));
 
 	// Reflected Methods
 	private static final Method COMPARE = MethodBuilder.getMethod(Operands.class, "compare", boolean.class, Object.class, Object.class);

@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe.util;
 
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -39,12 +38,12 @@ public final class Operands {
 			return (String)left + right.toString();
 		} else if (left instanceof Set) {
 			if (right instanceof Collection) {
-				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
+				final LinkedHashSet<Object> result = new LinkedHashSet<>((Set<?>)left);
 
 				result.addAll((Collection<?>)right);
 				return result;
 			} else if (right instanceof Iterable) {
-				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
+				final LinkedHashSet<Object> result = new LinkedHashSet<>((Set<?>)left);
 
 				for (final Object object : (Iterable<?>)right) {
 					result.add(object);
@@ -57,19 +56,19 @@ public final class Operands {
 
 			if (right instanceof Set) {
 				final Set<?> rightSet = (Set<?>)right;
-				final Set<Object> result = new LinkedHashSet<>(leftCollection);
+				final LinkedHashSet<Object> result = new LinkedHashSet<>(leftCollection);
 
 				result.addAll(rightSet);
 				return result;
 			} else if (right instanceof Collection) {
 				final Collection<?> rightCollection = (Collection<?>)right;
-				final List<Object> result = new ArrayList<>(leftCollection.size() + rightCollection.size());
+				final ArrayList<Object> result = new ArrayList<>(leftCollection.size() + rightCollection.size());
 
 				result.addAll(leftCollection);
 				result.addAll(rightCollection);
 				return result;
 			} else if (right instanceof Iterable) {
-				final List<Object> result = new ArrayList<>(leftCollection);
+				final ArrayList<Object> result = new ArrayList<>(leftCollection);
 
 				for (final Object object : (Iterable<?>)right) {
 					result.add(object);
@@ -80,7 +79,7 @@ public final class Operands {
 		} else if (left instanceof Iterable) {
 			if (right instanceof Set) {
 				final Set<?> rightSet = (Set<?>)right;
-				final Set<Object> result = new LinkedHashSet<>(rightSet.size());
+				final LinkedHashSet<Object> result = new LinkedHashSet<>(rightSet.size());
 
 				for (final Object object : (Iterable<?>)left) {
 					result.add(object);
@@ -90,7 +89,7 @@ public final class Operands {
 				return result;
 			} else if (right instanceof Collection) {
 				final Collection<?> rightCollection = (Collection<?>)right;
-				final List<Object> result = new ArrayList<>(rightCollection.size());
+				final ArrayList<Object> result = new ArrayList<>(rightCollection.size());
 
 				for (final Object object : (Iterable<?>)left) {
 					result.add(object);
@@ -99,7 +98,7 @@ public final class Operands {
 				result.addAll(rightCollection);
 				return result;
 			} else if (right instanceof Iterable) {
-				final List<Object> result = new ArrayList<>();
+				final ArrayList<Object> result = new ArrayList<>();
 
 				for (final Object object : (Iterable<?>)left) {
 					result.add(object);
@@ -111,7 +110,7 @@ public final class Operands {
 				return result;
 			}
 		} else if (left instanceof Map && right instanceof Map) {
-			final Map<Object, Object> result = new LinkedHashMap<>((Map<?, ?>)left);
+			final LinkedHashMap<Object, Object> result = new LinkedHashMap<>((Map<?, ?>)left);
 
 			result.putAll((Map<?, ?>)right);
 			return result;
@@ -489,6 +488,20 @@ public final class Operands {
 	}
 
 	/**
+	 * Returns the result of calling {@code toString} for a non-{@code null} argument and throws an exception if object is {@code null}. Used for constructing {@link StringBuilder}s or invoking {@link StringBuilder#append(String)}.
+	 *
+	 * @param object an {@code Object}
+	 * @return the result of calling {@code toString} for a non-{@code null} argument
+	 * @throws NullPointerException if the object is {@code null}
+	 */
+	public static String requireNonNullToString(final Object object) {
+		if (object == null) {
+			throw new NullPointerException("Invalid object cannot be concatenated: null");
+		}
+		return object.toString();
+	}
+
+	/**
 	 * Performs a left shift on two integral values.
 	 *
 	 * @param left the left operand
@@ -547,36 +560,36 @@ public final class Operands {
 			}
 		} else if (left instanceof Set) {
 			if (right instanceof Collection) {
-				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
+				final LinkedHashSet<Object> result = new LinkedHashSet<>((Set<?>)left);
 
 				result.removeAll((Collection<?>)right);
 				return result;
 			} else if (right instanceof Map) {
-				final Set<Object> result = new LinkedHashSet<>((Set<?>)left);
+				final LinkedHashSet<Object> result = new LinkedHashSet<>((Set<?>)left);
 
 				result.removeAll(((Map<?, ?>)right).keySet());
 				return result;
 			}
 		} else if (left instanceof Collection) {
 			if (right instanceof Collection) {
-				final List<Object> result = new ArrayList<>((Collection<?>)left);
+				final ArrayList<Object> result = new ArrayList<>((Collection<?>)left);
 
 				result.removeAll((Collection<?>)right);
 				return result;
 			} else if (right instanceof Map) {
-				final List<Object> result = new ArrayList<>((Collection<?>)left);
+				final ArrayList<Object> result = new ArrayList<>((Collection<?>)left);
 
 				result.removeAll(((Map<?, ?>)right).keySet());
 				return result;
 			}
 		} else if (left instanceof Map) {
 			if (right instanceof Map) {
-				final Map<Object, Object> result = new LinkedHashMap<>((Map<?, ?>)left);
+				final LinkedHashMap<Object, Object> result = new LinkedHashMap<>((Map<?, ?>)left);
 
 				result.keySet().removeAll(((Map<?, ?>)right).keySet());
 				return result;
 			} else if (right instanceof Collection) {
-				final Map<Object, Object> result = new LinkedHashMap<>((Map<?, ?>)left);
+				final LinkedHashMap<Object, Object> result = new LinkedHashMap<>((Map<?, ?>)left);
 
 				result.keySet().removeAll((Collection<?>)right);
 				return result;

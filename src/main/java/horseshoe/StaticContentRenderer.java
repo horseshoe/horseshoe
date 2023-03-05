@@ -2,15 +2,13 @@ package horseshoe;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.List;
-
-import horseshoe.internal.ParsedLine;
+import java.util.ArrayList;
 
 final class StaticContentRenderer implements Renderer {
 
-	private final List<Renderer> container;
+	private final ArrayList<Renderer> container;
 	private final int containerIndex;
-	private final List<ParsedLine> lines;
+	private final ArrayList<ParsedLine> lines;
 	private final boolean followsStandaloneTag;
 	private final boolean indentFirstLine;
 
@@ -145,21 +143,21 @@ final class StaticContentRenderer implements Renderer {
 
 	}
 
-	static StaticContentRenderer create(final List<Renderer> container, final List<ParsedLine> lines) {
+	static StaticContentRenderer create(final ArrayList<Renderer> container, final ArrayList<ParsedLine> lines) {
 		final StaticContentRenderer renderer = new StaticContentRenderer(container, lines, true, false);
 
 		container.add(renderer);
 		return renderer;
 	}
 
-	static StaticContentRenderer create(final List<Renderer> container, final List<ParsedLine> lines, final boolean indentFirstLine) {
+	static StaticContentRenderer create(final ArrayList<Renderer> container, final ArrayList<ParsedLine> lines, final boolean indentFirstLine) {
 		final StaticContentRenderer renderer = new StaticContentRenderer(container, lines, false, indentFirstLine);
 
 		container.add(renderer);
 		return renderer;
 	}
 
-	private StaticContentRenderer(final List<Renderer> container, final List<ParsedLine> lines, final boolean followsStandaloneTag, final boolean indentFirstLine) {
+	private StaticContentRenderer(final ArrayList<Renderer> container, final ArrayList<ParsedLine> lines, final boolean followsStandaloneTag, final boolean indentFirstLine) {
 		this.container = container;
 		this.containerIndex = container.size();
 		this.lines = lines;

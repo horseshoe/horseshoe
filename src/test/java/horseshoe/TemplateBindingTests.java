@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.Collections;
 
 import horseshoe.Settings.ContextAccess;
-import horseshoe.internal.TemplateBinding;
 
 import org.junit.jupiter.api.Test;
 

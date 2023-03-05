@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -19,7 +19,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
@@ -27,22 +26,21 @@ import horseshoe.Helper;
 import horseshoe.LoadException;
 import horseshoe.Template;
 import horseshoe.TemplateLoader;
-import horseshoe.internal.Accessor.PatternMatcher;
+import horseshoe.util.Accessor.PatternMatcher;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class AccessorTests {
 
-	@SuppressWarnings("serial")
 	public static class TestMap extends LinkedHashMap<String, Object> {
 
 		public final String field = "Good";
 
-		public void test(final int i) {
+		public void test(final int i) { // Intentional empty method
 		}
 
-		public void test(final Map<String, Object> map) {
+		public void test(final Map<String, Object> map) { // Intentional empty method
 		}
 
 	}
@@ -86,8 +84,8 @@ class AccessorTests {
 
 	}
 
-	private static Map<Object, Object> asMap(final Object... values) {
-		final Map<Object, Object> map = new LinkedHashMap<>();
+	private static LinkedHashMap<Object, Object> asMap(final Object... values) {
+		final LinkedHashMap<Object, Object> map = new LinkedHashMap<>();
 
 		for (int i = 0; i < values.length; i += 2) {
 			map.put(values[i], values[i + 1]);
@@ -96,8 +94,8 @@ class AccessorTests {
 		return map;
 	}
 
-	private static Set<Object> asSet(final Object... values) {
-		final Set<Object> set = new LinkedHashSet<>();
+	private static LinkedHashSet<Object> asSet(final Object... values) {
+		final LinkedHashSet<Object> set = new LinkedHashSet<>();
 
 		for (int i = 0; i < values.length; i++) {
 			set.add(values[i]);
@@ -115,7 +113,7 @@ class AccessorTests {
 
 		assertTrue(((ArrayList<?>)listOneArgCtor.get(ArrayList.class, 100)).isEmpty());
 
-		final List<Integer> list = new ArrayList<>();
+		final ArrayList<Integer> list = new ArrayList<>();
 
 		list.add(1);
 		list.add(2);
@@ -126,12 +124,12 @@ class AccessorTests {
 
 	@Test
 	void testFields() throws IOException, LoadException {
-		assertEquals("", new TemplateLoader().load("Fields", "{{PrivateClassInstance.field}}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new java.io.StringWriter()).toString());
+		assertEquals("", new TemplateLoader().load("Fields", "{{PrivateClassInstance.field}}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new StringWriter()).toString());
 	}
 
 	@Test
 	void testInaccessibleMethod() throws IOException, LoadException {
-		assertEquals(ManagementFactory.getOperatingSystemMXBean().getArch(), new TemplateLoader().load("Inaccessible Method", "{{ManagementFactory.getOperatingSystemMXBean().getArch()}}").render(Helper.loadMap("ManagementFactory", ManagementFactory.class), new java.io.StringWriter()).toString());
+		assertEquals(ManagementFactory.getOperatingSystemMXBean().getArch(), new TemplateLoader().load("Inaccessible Method", "{{ManagementFactory.getOperatingSystemMXBean().getArch()}}").render(Helper.loadMap("ManagementFactory", ManagementFactory.class), new StringWriter()).toString());
 	}
 
 	private static void assertArrayEquals(final Object expected, final Object actual) {
@@ -202,11 +200,16 @@ class AccessorTests {
 		assertEquals('I', Accessor.lookup("I am Sam", 0, false));
 		assertEquals(asSet(2, 3), Accessor.lookup(asSet(14, 2, 5, 3, 1), Arrays.asList(2, 3, 4), false));
 
-		assertThrows(NullPointerException.class, () -> Accessor.lookup(null, Arrays.asList(2, 3, 4), false));
-		assertThrows(ClassCastException.class, () -> Accessor.lookup(new Object(), Arrays.asList(2, 3, 4), false));
-		assertThrows(ClassCastException.class, () -> Accessor.lookup("I am Sam", Arrays.asList("Test"), false));
-		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookup("I am Sam", Arrays.asList(100), false));
-		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookup("I am Sam", Arrays.asList(-100), false));
+		final List<Integer> list234 = Arrays.asList(2, 3, 4);
+		final List<String> listTest = Arrays.asList("Test");
+		final List<Integer> list100 = Arrays.asList(100);
+		final List<Integer> listNeg100 = Arrays.asList(-100);
+
+		assertThrows(NullPointerException.class, () -> Accessor.lookup(null, list234, false));
+		assertThrows(ClassCastException.class, () -> Accessor.lookup(this, list234, false));
+		assertThrows(ClassCastException.class, () -> Accessor.lookup("I am Sam", listTest, false));
+		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookup("I am Sam", list100, false));
+		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookup("I am Sam", listNeg100, false));
 		assertNull(Accessor.lookup(null, Arrays.asList("Test"), true));
 		assertNull(Accessor.lookup("I am Sam", Arrays.asList("Test"), true));
 		assertNull(Accessor.lookup("I am Sam", Arrays.asList(100), true));
@@ -228,14 +231,14 @@ class AccessorTests {
 		assertEquals(asSet(2, 3), Accessor.lookupRange(asSet(14, 2, 5, 3, 1), 2, 5, false));
 		assertEquals(asSet(2, 3), Accessor.lookupRange(asSet(14, 2, 5, 3, 1), 4, 1, false));
 
-		final Set<?> set = asSet("Alpha", "Bet", "Car", "dog", null);
+		final LinkedHashSet<?> set = asSet("Alpha", "Bet", "Car", "dog", null);
 		assertEquals(asSet("Car", "dog"), Accessor.lookupRange(set, "Car", null, false));
 		assertEquals(asSet("Alpha", "Bet"), Accessor.lookupRange(set, "Cabin", Accessor.TO_BEGINNING, false));
 		assertEquals(asSet("Car"), Accessor.lookupRange(set, "Car", "Cat", false));
 		assertEquals(asSet("Car"), Accessor.lookupRange(set, "Car", "Bet", false));
 		assertEquals(asSet(), Accessor.lookupRange(set, "Car", "Car", false));
 
-		final Map<?, ?> map = asMap("Alpha", "the male", "Bet", "predicting outcome for $", "Car", "automobile", "dog", "canine", null, "undefined");
+		final LinkedHashMap<?, ?> map = asMap("Alpha", "the male", "Bet", "predicting outcome for $", "Car", "automobile", "dog", "canine", null, "undefined");
 		assertEquals(asMap("Car", "automobile", "dog", "canine"), Accessor.lookupRange(map, "Car", null, false));
 		assertEquals(asMap("Alpha", "the male", "Bet", "predicting outcome for $"), Accessor.lookupRange(map, "Cabin", Accessor.TO_BEGINNING, false));
 		assertEquals(asMap("Car", "automobile"), Accessor.lookupRange(map, "Car", "Cat", false));
@@ -243,7 +246,7 @@ class AccessorTests {
 		assertEquals(asMap(), Accessor.lookupRange(map, "Car", "Car", false));
 
 		assertThrows(NullPointerException.class, () -> Accessor.lookupRange(null, 0, 1, false));
-		assertThrows(ClassCastException.class, () -> Accessor.lookupRange(new Object(), 0, 1, false));
+		assertThrows(ClassCastException.class, () -> Accessor.lookupRange(this, 0, 1, false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", -10, -1, false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", 0, -11, false));
 		assertThrows(IndexOutOfBoundsException.class, () -> Accessor.lookupRange("I am Sam!", 9, -1, false));
@@ -255,12 +258,12 @@ class AccessorTests {
 
 	@Test
 	void testMethod() throws IOException, LoadException {
-		assertEquals("Good, Bad, Good, Good", new TemplateLoader().load("Method", "{{PrivateClassInstance.testShouldWork()}}, {{PrivateClassInstance.testShouldWork(6)}}, {{PrivateClassInstance.test()}}, {{PrivateClassInstance.test(6)}}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new java.io.StringWriter()).toString());
+		assertEquals("Good, Bad, Good, Good", new TemplateLoader().load("Method", "{{PrivateClassInstance.testShouldWork()}}, {{PrivateClassInstance.testShouldWork(6)}}, {{PrivateClassInstance.test()}}, {{PrivateClassInstance.test(6)}}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new StringWriter()).toString());
 	}
 
 	@Test
 	void testNonexistantMethods() throws IOException, LoadException {
-		assertEquals(", , , , , , ", new TemplateLoader().load("Nonexistant Methods", "{{Object.nonexistantMethod(5)}}, {{TestMapInstance.test(1)}}, {{TestMapInstance.test(TestMapInstance)}}, {{TestMapInstance.test('')}}, {{TestMapInstance.nonexistantMethod(5)}}, {{PrivateClassInstance.testBad(5)}}, {{PrivateClassInstance.testBad()}}").render(Helper.loadMap("Object", ManagementFactory.class, "TestMapInstance", new TestMap(), "PrivateClassInstance", new PrivateClass()), new java.io.StringWriter()).toString());
+		assertEquals(", , , , , , ", new TemplateLoader().load("Nonexistant Methods", "{{Object.nonexistantMethod(5)}}, {{TestMapInstance.test(1)}}, {{TestMapInstance.test(TestMapInstance)}}, {{TestMapInstance.test('')}}, {{TestMapInstance.nonexistantMethod(5)}}, {{PrivateClassInstance.testBad(5)}}, {{PrivateClassInstance.testBad()}}").render(Helper.loadMap("Object", ManagementFactory.class, "TestMapInstance", new TestMap(), "PrivateClassInstance", new PrivateClass()), new StringWriter()).toString());
 	}
 
 	@Test
@@ -289,12 +292,12 @@ class AccessorTests {
 
 	@Test
 	void testStaticFields() throws IOException, LoadException {
-		assertEquals("Values: (0) " + Byte.MAX_VALUE + ", 1) " + Short.MAX_VALUE + ", 2) " + Integer.MAX_VALUE + ", 3) " + Long.MAX_VALUE + ", 4) " + Float.MAX_VALUE + ", 5) " + Double.MAX_VALUE + ", 6) , , ", new TemplateLoader().load("Static Fields", "Values: {{ .badInternal }}{{# Values }}{{# .isFirst }}({{/}}{{ .index }}) {{ .?.MAX_VALUE }}{{# .hasNext }}, {{/}}{{/}}, {{ Test.FIELD }}, {{ Private.FIELD }}").render(Helper.loadMap("Values", Helper.loadList(Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class, Object.class), "Test", TestMap.class, "Private", PrivateClass.class), new java.io.StringWriter()).toString());
+		assertEquals("Values: (0) " + Byte.MAX_VALUE + ", 1) " + Short.MAX_VALUE + ", 2) " + Integer.MAX_VALUE + ", 3) " + Long.MAX_VALUE + ", 4) " + Float.MAX_VALUE + ", 5) " + Double.MAX_VALUE + ", 6) , , ", new TemplateLoader().load("Static Fields", "Values: {{ .badInternal }}{{# Values }}{{# .isFirst }}({{/}}{{ .index }}) {{ .?.MAX_VALUE }}{{# .hasNext }}, {{/}}{{/}}, {{ Test.FIELD }}, {{ Private.FIELD }}").render(Helper.loadMap("Values", Helper.loadList(Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class, Object.class), "Test", TestMap.class, "Private", PrivateClass.class), new StringWriter()).toString());
 	}
 
 	@Test
 	void testStaticMethod() throws IOException, LoadException {
-		assertEquals("Min: 0, Min: 1.0, Min: 0, Max: 0.0, Max: " + Byte.MAX_VALUE + ", Max: , Name: " + PrivateClass.class.getName(), new TemplateLoader().load("Static Methods", "Min: {{ Math.`min:int,int`(Integer.MAX_VALUE, 0) }}, Min: {{ Math.min(1.0d, 3.4) }}, Min: {{ Math.`min:long,long`(Integer.MAX_VALUE, 0L) }}, Max: {{ Math.`max:float,float`(Integer.MIN_VALUE, 0) }}, Max: {{ Math.`max:int,int`(Integer.MIN_VALUE, Byte.MAX_VALUE) }}, Max: {{ Math.max(Integer.MIN_VALUE, newObject) }}, Name: {{ Private.getName() }}").render(Helper.loadMap("Math", Math.class, "Integer", Integer.class, "Byte", Byte.class, "newObject", new Object(), "Private", PrivateClass.class), new java.io.StringWriter()).toString());
+		assertEquals("Min: 0, Min: 1.0, Min: 0, Max: 0.0, Max: " + Byte.MAX_VALUE + ", Max: , Name: " + PrivateClass.class.getName(), new TemplateLoader().load("Static Methods", "Min: {{ Math.`min:int,int`(Integer.MAX_VALUE, 0) }}, Min: {{ Math.min(1.0d, 3.4) }}, Min: {{ Math.`min:long,long`(Integer.MAX_VALUE, 0L) }}, Max: {{ Math.`max:float,float`(Integer.MIN_VALUE, 0) }}, Max: {{ Math.`max:int,int`(Integer.MIN_VALUE, Byte.MAX_VALUE) }}, Max: {{ Math.max(Integer.MIN_VALUE, newObject) }}, Name: {{ Private.getName() }}").render(Helper.loadMap("Math", Math.class, "Integer", Integer.class, "Byte", Byte.class, "newObject", new Object(), "Private", PrivateClass.class), new StringWriter()).toString());
 	}
 
 	@Test

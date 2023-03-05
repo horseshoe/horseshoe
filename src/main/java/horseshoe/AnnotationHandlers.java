@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import horseshoe.BufferedFileUpdateStream.Update;
-import horseshoe.internal.Operands;
+import horseshoe.util.Operands;
 
 /**
  * The AnnotationHandlers class is used to create common {@link AnnotationHandler}s. It also contains the default annotation handlers map if none is specified.

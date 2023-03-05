@@ -1,6 +1,6 @@
-package horseshoe.internal;
+package horseshoe;
 
-public final class Utilities {
+final class Utilities {
 
 	private static final byte WHITESPACE_PROPERTY = 0x01;
 	private static final byte END_OF_LINE_PROPERTY = 0x02;
@@ -24,24 +24,24 @@ public final class Utilities {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	};
 
-	public static final class Range {
+	static final class Range {
 
-		public final int start;
-		public final int end;
+		final int start;
+		final int end;
 
-		public Range(final int start, final int end) {
+		Range(final int start, final int end) {
 			this.start = start;
 			this.end = end;
 		}
 
 	}
 
-	public static final class TrimmedString {
+	static final class TrimmedString {
 
-		public final int start;
-		public final String string;
+		final int start;
+		final String string;
 
-		public TrimmedString(final int start, final String string) {
+		TrimmedString(final int start, final String string) {
 			this.start = start;
 			this.string = string;
 		}
@@ -56,7 +56,7 @@ public final class Utilities {
 	 * @param end the ending index where the search will be performed
 	 * @return the character range of the next end of line sequence, or null if none could be found
 	 */
-	public static Range findNewLine(final char[] value, final int start, final int end) {
+	static Range findNewLine(final char[] value, final int start, final int end) {
 		for (int index = start; index < end; index++) {
 			final char c = value[index];
 
@@ -84,7 +84,7 @@ public final class Utilities {
 	 * @param end the ending index where the search will be performed
 	 * @return the character range of the next end of line sequence, or null if none could be found
 	 */
-	public static Range findNewLine(final String value, final int start, final int end) {
+	static Range findNewLine(final String value, final int start, final int end) {
 		return findNewLine(value.toCharArray(), start, end);
 	}
 
@@ -108,7 +108,7 @@ public final class Utilities {
 	 * @param value the string to test for all whitespace characters
 	 * @return true if all characters are whitespace characters, otherwise false
 	 */
-	public static boolean isWhitespace(final String value) {
+	static boolean isWhitespace(final String value) {
 		final int length = value.length();
 
 		for (int index = 0; index < length; index++) {
@@ -121,27 +121,13 @@ public final class Utilities {
 	}
 
 	/**
-	 * Returns the result of calling {@code toString} for a non-{@code null} argument and throws an exception if object is {@code null}. Used for constructing {@link StringBuilder}s or invoking {@link StringBuilder#append(String)}.
-	 *
-	 * @param object an {@code Object}
-	 * @return the result of calling {@code toString} for a non-{@code null} argument
-	 * @throws NullPointerException if the object is {@code null}
-	 */
-	public static String requireNonNullToString(final Object object) {
-		if (object == null) {
-			throw new NullPointerException("Invalid object cannot be concatenated: null");
-		}
-		return object.toString();
-	}
-
-	/**
 	 * Gets the trimmed string from the specified starting index.
 	 *
 	 * @param value the string to trim
 	 * @param start the starting index (inclusive) in the string
 	 * @return the trimmed string
 	 */
-	public static TrimmedString trim(final String value, final int start) {
+	static TrimmedString trim(final String value, final int start) {
 		for (int i = start; i < value.length(); i++) {
 			if (!isWhitespace(value.charAt(i))) {
 				int j;
@@ -156,7 +142,7 @@ public final class Utilities {
 	}
 
 	/**
-	 * Disables creation of the character sequence utils class.
+	 * Disables creation of the utilities class.
 	 */
 	private Utilities() {
 	}

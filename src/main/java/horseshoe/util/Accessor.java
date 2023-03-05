@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe.util;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -842,7 +842,7 @@ public abstract class Accessor {
 	@SuppressWarnings("unchecked")
 	private static Object lookupList(final List<?> context, final Object lookup) {
 		if (lookup instanceof Iterable) {
-			final List<Object> list = (lookup instanceof Collection ? new ArrayList<>(((Collection<?>)lookup).size()) : new ArrayList<>());
+			final ArrayList<Object> list = (lookup instanceof Collection ? new ArrayList<>(((Collection<?>)lookup).size()) : new ArrayList<>());
 
 			for (final Number number : (Iterable<Number>)lookup) {
 				list.add(context.get(calculateIndex(context.size(), number.intValue())));
@@ -888,7 +888,7 @@ public abstract class Accessor {
 	 */
 	private static Object lookupMap(final Map<?, ?> context, final Object lookup) {
 		if (lookup instanceof Iterable) {
-			final Map<Object, Object> map = new LinkedHashMap<>();
+			final LinkedHashMap<Object, Object> map = new LinkedHashMap<>();
 
 			for (final Object object : (Iterable<?>)lookup) {
 				final Object value = context.get(object);
@@ -913,8 +913,8 @@ public abstract class Accessor {
 	 * @return the result of the lookup
 	 */
 	@SuppressWarnings("unchecked")
-	private static <K extends Comparable<K>> Map<K, Object> lookupMapRange(final Map<K, ?> context, final K start, final Object end) {
-		final Map<K, Object> map = new LinkedHashMap<>();
+	private static <K extends Comparable<K>> LinkedHashMap<K, Object> lookupMapRange(final Map<K, ?> context, final K start, final Object end) {
+		final LinkedHashMap<K, Object> map = new LinkedHashMap<>();
 
 		if (end == null) {
 			for (final Entry<K, ?> entry : context.entrySet()) {
@@ -1005,7 +1005,7 @@ public abstract class Accessor {
 	 */
 	private static Object lookupSet(final Set<?> context, final Object lookup) {
 		if (lookup instanceof Iterable) {
-			final Set<Object> set = new LinkedHashSet<>();
+			final LinkedHashSet<Object> set = new LinkedHashSet<>();
 
 			for (final Object object : (Iterable<?>)lookup) {
 				if (context.contains(object)) {
@@ -1028,8 +1028,8 @@ public abstract class Accessor {
 	 * @return the result of the lookup
 	 */
 	@SuppressWarnings("unchecked")
-	private static <T extends Comparable<T>> Set<T> lookupSetRange(final Set<T> context, final T start, final Object end) {
-		final Set<T> set = new LinkedHashSet<>();
+	private static <T extends Comparable<T>> LinkedHashSet<T> lookupSetRange(final Set<T> context, final T start, final Object end) {
+		final LinkedHashSet<T> set = new LinkedHashSet<>();
 
 		if (end == null) {
 			for (final T entry : context) {
@@ -1177,7 +1177,7 @@ public abstract class Accessor {
 		 * @return the new accessor, or null if no method could be found
 		 */
 		public static Accessor create(final Class<?> parent, final MethodSignature signature, final int parameterCount) {
-			final Set<MethodHandle> methodHandles = new LinkedHashSet<>(2);
+			final LinkedHashSet<MethodHandle> methodHandles = new LinkedHashSet<>(2);
 
 			// Find all matching methods in the first public ancestor class, including all interfaces along the way
 			for (Class<?> ancestor = parent; true; ancestor = ancestor.getSuperclass()) {
@@ -1216,7 +1216,7 @@ public abstract class Accessor {
 		 * @throws IllegalAccessException if a matching method is found, but it cannot be accessed
 		 */
 		public static Accessor createStaticOrClass(final Class<?> parent, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
-			final List<MethodHandle> methodHandles = new ArrayList<>(2);
+			final ArrayList<MethodHandle> methodHandles = new ArrayList<>(2);
 
 			// Find all matching static methods
 			if (Modifier.isPublic(parent.getModifiers())) {
@@ -1445,7 +1445,7 @@ public abstract class Accessor {
 		 * @return the new accessor, or null if no constructor could be found
 		 */
 		private static Accessor createNewObjectAccessor(final Class<?> type, final MethodSignature signature, final int parameterCount) {
-			final List<MethodHandle> methodHandles = new ArrayList<>(2);
+			final ArrayList<MethodHandle> methodHandles = new ArrayList<>(2);
 
 			// Find all matching methods in the first public ancestor class, including all interfaces along the way
 			for (final Constructor<?> constructor : type.getConstructors()) {

@@ -1,6 +1,6 @@
-package horseshoe.internal;
+package horseshoe;
 
-public final class TemplateBinding {
+final class TemplateBinding {
 
 	private final String name;
 	private final int templateIndex;
@@ -13,7 +13,7 @@ public final class TemplateBinding {
 	 * @param templateIndex the template index of the template binding
 	 * @param index the index of the template binding within the template
 	 */
-	public TemplateBinding(final String name, final int templateIndex, final int index) {
+	TemplateBinding(final String name, final int templateIndex, final int index) {
 		this.name = name;
 		this.templateIndex = templateIndex;
 		this.index = index;
@@ -24,7 +24,7 @@ public final class TemplateBinding {
 	 *
 	 * @return the name of the template binding
 	 */
-	public String getName() {
+	String getName() {
 		return name;
 	}
 
@@ -33,7 +33,7 @@ public final class TemplateBinding {
 	 *
 	 * @return the index of the template binding
 	 */
-	public int getIndex() {
+	int getIndex() {
 		return index;
 	}
 
@@ -42,7 +42,7 @@ public final class TemplateBinding {
 	 *
 	 * @return the template index for the template binding
 	 */
-	public int getTemplateIndex() {
+	int getTemplateIndex() {
 		return templateIndex;
 	}
 

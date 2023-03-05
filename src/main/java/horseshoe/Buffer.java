@@ -1,9 +1,9 @@
-package horseshoe.internal;
+package horseshoe;
 
 /**
  * A simple buffer for loading in character data. The provided subsequence implementation wraps the data provided by the buffer class. Changes to the underlying buffer will result in changes to the subsequence object.
  */
-public final class Buffer {
+final class Buffer {
 
 	private final char[] data;
 	private int length;
@@ -14,7 +14,7 @@ public final class Buffer {
 	 * @param capacity the capacity of the buffer
 	 * @param length the length of useful data in the buffer
 	 */
-	public Buffer(final int capacity, final int length) {
+	Buffer(final int capacity, final int length) {
 		this.data = new char[capacity];
 		this.length = length;
 	}
@@ -24,7 +24,7 @@ public final class Buffer {
 	 *
 	 * @param capacity the capacity of the buffer
 	 */
-	public Buffer(final int capacity) {
+	Buffer(final int capacity) {
 		this(capacity, 0);
 	}
 
@@ -33,7 +33,7 @@ public final class Buffer {
 	 *
 	 * @return the capacity of the buffer
 	 */
-	public int capacity() {
+	int capacity() {
 		return data.length;
 	}
 
@@ -42,7 +42,7 @@ public final class Buffer {
 	 *
 	 * @return the underlying character data used as the buffer
 	 */
-	public char[] getData() {
+	char[] getData() {
 		return data;
 	}
 
@@ -53,7 +53,7 @@ public final class Buffer {
 	 * @param index the index in the buffer to begin the search
 	 * @return the next index of the specified string in the buffer, or -1 if the string could not be found
 	 */
-	public int indexOf(final String value, final int index) {
+	int indexOf(final String value, final int index) {
 		if (value.length() == 0) {
 			return index;
 		}
@@ -84,7 +84,7 @@ public final class Buffer {
 	 *
 	 * @return the length of useful data in the buffer
 	 */
-	public int length() {
+	int length() {
 		return length;
 	}
 
@@ -94,7 +94,7 @@ public final class Buffer {
 	 * @param length the length of useful data in the buffer
 	 * @return this buffer
 	 */
-	public Buffer setLength(final int length) {
+	Buffer setLength(final int length) {
 		this.length = length;
 		return this;
 	}
@@ -106,7 +106,7 @@ public final class Buffer {
 	 * @param end the ending index (exclusive) in the buffer
 	 * @return the created string
 	 */
-	public String substring(final int start, final int end) {
+	String substring(final int start, final int end) {
 		return new String(data, start, end - start);
 	}
 

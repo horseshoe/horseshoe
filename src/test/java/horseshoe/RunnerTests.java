@@ -16,7 +16,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Permission;
 import java.util.ArrayList;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -85,7 +84,7 @@ class RunnerTests {
 				.filter(path -> path.toString().endsWith(".U"))
 				.forEach(path -> {
 					final Path dataFile = path.resolveSibling(path.getFileName().toString().replace(".U", ".data"));
-					final List<String> args = new ArrayList<>();
+					final ArrayList<String> args = new ArrayList<>();
 
 					args.add("--output");
 					args.add(path.resolveSibling(Paths.get("results", path.getFileName().toString().replaceFirst("([.].*)[.]U$", "$1").replace(".U", ".txt"))).toString());

@@ -1,6 +1,6 @@
-package horseshoe.internal;
+package horseshoe.bytecode;
 
-final class BytecodeContainer {
+public final class BytecodeContainer {
 
 	private final byte[] bytecode;
 	private final int startOfName;
@@ -12,7 +12,7 @@ final class BytecodeContainer {
 	 *
 	 * @param bytecode the array used to initialize the container
 	 */
-	public BytecodeContainer(final byte[] bytecode, final int startOfName, final int endOfName) {
+	BytecodeContainer(final byte[] bytecode, final int startOfName, final int endOfName) {
 		this.bytecode = bytecode;
 		this.startOfName = startOfName;
 		this.endOfName = endOfName;

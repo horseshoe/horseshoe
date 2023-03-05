@@ -1,18 +1,18 @@
-package horseshoe.internal;
+package horseshoe;
 
 import java.util.EnumSet;
-import java.util.Map;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.regex.Matcher;
 
-import horseshoe.Extension;
-import horseshoe.Stack;
+import horseshoe.util.Identifier;
 
 /**
  * Stores the state of an expression being parsed.
  */
-public final class ExpressionParseState {
+final class ExpressionParseState {
 
-	public enum Evaluation {
+	enum Evaluation {
 		EVALUATE_AND_RENDER,
 		EVALUATE,
 		NO_EVALUATION
@@ -25,9 +25,9 @@ public final class ExpressionParseState {
 	private Evaluation evaluation = Evaluation.EVALUATE_AND_RENDER;
 	private String bindingName = null;
 	private String callName = null;
-	private final Map<String, Expression> namedExpressions;
-	private final Map<Identifier, Identifier> allIdentifiers;
-	private final Stack<Map<String, TemplateBinding>> templateBindings;
+	private final HashMap<String, Expression> namedExpressions;
+	private final HashMap<Identifier, Identifier> allIdentifiers;
+	private final Stack<LinkedHashMap<String, TemplateBinding>> templateBindings;
 	private final CacheList<Expression> expressions;
 	private final CacheList<Identifier> identifiers;
 	private final CacheList<String> localBindings;
@@ -48,7 +48,7 @@ public final class ExpressionParseState {
 	 * @param identifiers the cache of all identifiers used in the template
 	 * @param localBindings the cache of all local bindings used in the template
 	 */
-	private ExpressionParseState(final int startIndex, final String expressionString, final EnumSet<Extension> extensions, final boolean isCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings, final CacheList<Expression> expressions, final CacheList<Identifier> identifiers, final CacheList<String> localBindings) {
+	private ExpressionParseState(final int startIndex, final String expressionString, final EnumSet<Extension> extensions, final boolean isCall, final HashMap<String, Expression> namedExpressions, final HashMap<Identifier, Identifier> allIdentifiers, final Stack<LinkedHashMap<String, TemplateBinding>> templateBindings, final CacheList<Expression> expressions, final CacheList<Identifier> identifiers, final CacheList<String> localBindings) {
 		this.startIndex = startIndex;
 		this.expressionString = expressionString;
 		this.extensions = extensions;
@@ -72,7 +72,7 @@ public final class ExpressionParseState {
 	 * @param allIdentifiers the set of all identifiers that can be used as a cache in the expression
 	 * @param templateBindings the set of all bindings used in the template
 	 */
-	public ExpressionParseState(final int startIndex, final String expressionString, final EnumSet<Extension> extensions, final boolean isCall, final Map<String, Expression> namedExpressions, final Map<Identifier, Identifier> allIdentifiers, final Stack<Map<String, TemplateBinding>> templateBindings) {
+	ExpressionParseState(final int startIndex, final String expressionString, final EnumSet<Extension> extensions, final boolean isCall, final HashMap<String, Expression> namedExpressions, final HashMap<Identifier, Identifier> allIdentifiers, final Stack<LinkedHashMap<String, TemplateBinding>> templateBindings) {
 		this(startIndex, expressionString, extensions, isCall, namedExpressions, allIdentifiers, templateBindings, new CacheList<>(), new CacheList<>(), new CacheList<>());
 	}
 
@@ -83,7 +83,7 @@ public final class ExpressionParseState {
 	 * @param expressionString the string representation of the expression
 	 * @return the empty nested expression parse state
 	 */
-	public ExpressionParseState createNestedState(final int startIndex, final String expressionString) {
+	ExpressionParseState createNestedState(final int startIndex, final String expressionString) {
 		return new ExpressionParseState(startIndex, expressionString, extensions, false, namedExpressions, allIdentifiers, templateBindings, expressions, identifiers, localBindings);
 	}
 
@@ -92,7 +92,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the binding name associated with the expression
 	 */
-	public String getBindingName() {
+	String getBindingName() {
 		return bindingName;
 	}
 
@@ -101,7 +101,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the matching cached identifier
 	 */
-	public Identifier getCachedIdentifier(final Identifier identifier) {
+	Identifier getCachedIdentifier(final Identifier identifier) {
 		allIdentifiers.putIfAbsent(identifier, identifier);
 		return identifier;
 	}
@@ -111,7 +111,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the call name associated with the expression
 	 */
-	public String getCallName() {
+	String getCallName() {
 		return callName;
 	}
 
@@ -120,7 +120,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the evaluation of the expression
 	 */
-	public Evaluation getEvaluation() {
+	Evaluation getEvaluation() {
 		return evaluation;
 	}
 
@@ -129,7 +129,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the expression cache list
 	 */
-	public CacheList<Expression> getExpressions() {
+	CacheList<Expression> getExpressions() {
 		return expressions;
 	}
 
@@ -138,7 +138,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the expression string
 	 */
-	public String getExpressionString() {
+	String getExpressionString() {
 		return expressionString;
 	}
 
@@ -147,7 +147,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the set of extensions currently in use
 	 */
-	public EnumSet<Extension> getExtensions() {
+	EnumSet<Extension> getExtensions() {
 		return extensions;
 	}
 
@@ -156,7 +156,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the identifier cache list
 	 */
-	public CacheList<Identifier> getIdentifiers() {
+	CacheList<Identifier> getIdentifiers() {
 		return identifiers;
 	}
 
@@ -165,7 +165,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the index of the matcher within the tag
 	 */
-	public int getIndex(final Matcher matcher) {
+	int getIndex(final Matcher matcher) {
 		return startIndex + matcher.regionStart();
 	}
 
@@ -174,7 +174,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the identifier cache list
 	 */
-	public CacheList<String> getLocalBindings() {
+	CacheList<String> getLocalBindings() {
 		return localBindings;
 	}
 
@@ -183,7 +183,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the named expressions map
 	 */
-	public Map<String, Expression> getNamedExpressions() {
+	HashMap<String, Expression> getNamedExpressions() {
 		return namedExpressions;
 	}
 
@@ -192,7 +192,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the stack of operands currently being parsed
 	 */
-	public Stack<Operand> getOperands() {
+	Stack<Operand> getOperands() {
 		return operands;
 	}
 
@@ -201,7 +201,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return the stack of operators currently being parsed
 	 */
-	public Stack<Operator> getOperators() {
+	Stack<Operator> getOperators() {
 		return operators;
 	}
 
@@ -211,14 +211,14 @@ public final class ExpressionParseState {
 	 * @param name the name of the template binding to get or add
 	 * @return the template binding with the specified name
 	 */
-	public TemplateBinding getOrAddTemplateBinding(final String name) {
+	TemplateBinding getOrAddTemplateBinding(final String name) {
 		final TemplateBinding existingBinding = getTemplateBinding(name);
 
 		if (existingBinding != null) {
 			return existingBinding;
 		}
 
-		final Map<String, TemplateBinding> bindings = templateBindings.peek();
+		final LinkedHashMap<String, TemplateBinding> bindings = templateBindings.peek();
 		final TemplateBinding binding = new TemplateBinding(name, templateBindings.size() - 1, bindings.size());
 
 		bindings.put(name, binding);
@@ -231,8 +231,8 @@ public final class ExpressionParseState {
 	 * @param name the name of the template binding to get
 	 * @return the template binding with the specified name, or null if none exists
 	 */
-	public TemplateBinding getTemplateBinding(final String name) {
-		for (final Map<String, TemplateBinding> bindings : templateBindings) {
+	TemplateBinding getTemplateBinding(final String name) {
+		for (final LinkedHashMap<String, TemplateBinding> bindings : templateBindings) {
 			final TemplateBinding binding = bindings.get(name);
 
 			// If the binding is found, return it
@@ -249,7 +249,7 @@ public final class ExpressionParseState {
 	 *
 	 * @return true if the expression should be parsed as a call invocation
 	 */
-	public boolean isCall() {
+	boolean isCall() {
 		return isCall;
 	}
 
@@ -259,7 +259,7 @@ public final class ExpressionParseState {
 	 * @param bindingName the binding name associated with the expression
 	 * @return this parse state
 	 */
-	public ExpressionParseState setBindingName(final String bindingName) {
+	ExpressionParseState setBindingName(final String bindingName) {
 		this.bindingName = bindingName;
 		return this;
 	}
@@ -270,7 +270,7 @@ public final class ExpressionParseState {
 	 * @param callName the call name associated with the expression
 	 * @return this parse state
 	 */
-	public ExpressionParseState setCallName(final String callName) {
+	ExpressionParseState setCallName(final String callName) {
 		this.callName = callName;
 		return this;
 	}
@@ -281,7 +281,7 @@ public final class ExpressionParseState {
 	 * @param evaluation the evaluation of the expression
 	 * @return this parse state
 	 */
-	public ExpressionParseState setEvaluation(final Evaluation evaluation) {
+	ExpressionParseState setEvaluation(final Evaluation evaluation) {
 		this.evaluation = evaluation;
 		return this;
 	}

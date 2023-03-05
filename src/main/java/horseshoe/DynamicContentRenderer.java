@@ -3,8 +3,6 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
-import horseshoe.internal.Expression;
-
 final class DynamicContentRenderer implements Renderer {
 
 	private final Expression expression;

@@ -1,4 +1,4 @@
-package horseshoe.internal;
+package horseshoe;
 
 import java.lang.reflect.Array;
 import java.util.Iterator;
@@ -6,24 +6,24 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public final class CacheList<T> {
+final class CacheList<T> {
 
 	private final Map<T, T> backingSet;
-	private final Map<T, Integer> map = new LinkedHashMap<>();
+	private final LinkedHashMap<T, Integer> map = new LinkedHashMap<>();
 
 	/**
 	 * Creates a map collection using the specified backing set.
 	 *
 	 * @param backingSet the backing set for the map collection
 	 */
-	public CacheList(final Map<T, T> backingSet) {
+	CacheList(final Map<T, T> backingSet) {
 		this.backingSet = backingSet;
 	}
 
 	/**
 	 * Creates a map collection with no backing set.
 	 */
-	public CacheList() {
+	CacheList() {
 		this(null);
 	}
 
@@ -33,7 +33,7 @@ public final class CacheList<T> {
 	 * @param list the array of items to compare
 	 * @return true if this collection is empty and list is null or if they both contain the same items in the same order, otherwise false
 	 */
-	public boolean equalsArray(final T[] list) {
+	boolean equalsArray(final T[] list) {
 		if (map.size() != list.length) {
 			return false;
 		}
@@ -55,7 +55,7 @@ public final class CacheList<T> {
 	 * @param item the item to get the index of
 	 * @return the index of the specified item, or null if the item does not exist
 	 */
-	public Integer get(final T item) {
+	Integer get(final T item) {
 		return map.get(item);
 	}
 
@@ -65,7 +65,7 @@ public final class CacheList<T> {
 	 * @param item the item to get the index of
 	 * @return the index of the specified item
 	 */
-	public int getOrAdd(final T item) {
+	int getOrAdd(final T item) {
 		Integer index = map.get(item);
 
 		if (index != null) {
@@ -94,7 +94,7 @@ public final class CacheList<T> {
 	 *
 	 * @return true if the collection is empty, otherwise false
 	 */
-	public boolean isEmpty() {
+	boolean isEmpty() {
 		return map.isEmpty();
 	}
 
@@ -103,7 +103,7 @@ public final class CacheList<T> {
 	 *
 	 * @return the size of the collection
 	 */
-	public int size() {
+	int size() {
 		return map.size();
 	}
 
@@ -115,7 +115,7 @@ public final class CacheList<T> {
 	 * @return an array of all the items
 	 */
 	@SuppressWarnings("unchecked")
-	public T[] toArray(final Class<T> type, final T[] emptyArray) {
+	T[] toArray(final Class<T> type, final T[] emptyArray) {
 		if (isEmpty()) {
 			return emptyArray;
 		}

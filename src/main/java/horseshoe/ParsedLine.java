@@ -1,6 +1,6 @@
-package horseshoe.internal;
+package horseshoe;
 
-public class ParsedLine {
+final class ParsedLine {
 
 	private final String line;
 	private final String ending;
@@ -11,7 +11,7 @@ public class ParsedLine {
 	 * @param line the text of the parsed line
 	 * @param ending the line ending of the parsed line
 	 */
-	public ParsedLine(final String line, final String ending) {
+	ParsedLine(final String line, final String ending) {
 		this.line = line;
 		this.ending = ending;
 	}
@@ -21,7 +21,7 @@ public class ParsedLine {
 	 *
 	 * @return the ending of the parsed line
 	 */
-	public String getEnding() {
+	String getEnding() {
 		return ending;
 	}
 
@@ -30,7 +30,7 @@ public class ParsedLine {
 	 *
 	 * @return the text of the parsed line
 	 */
-	public String getLine() {
+	String getLine() {
 		return line;
 	}
 

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,8 +25,8 @@ public class NamedExpressionTests {
 	 * @param target the target string to split
 	 * @return the list of strings from the target that match the pattern
 	 */
-	public static List<String> split(final Pattern pattern, final String target) {
-		final List<String> list = new ArrayList<>();
+	public static ArrayList<String> split(final Pattern pattern, final String target) {
+		final ArrayList<String> list = new ArrayList<>();
 
 		for (final Matcher matcher = pattern.matcher(target); matcher.find(); matcher.region(matcher.end(), target.length())) {
 			list.add(matcher.group());
