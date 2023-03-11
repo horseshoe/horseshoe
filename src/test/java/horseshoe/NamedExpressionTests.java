@@ -70,39 +70,39 @@ public class NamedExpressionTests {
 
 	@Test
 	void testNamedExprMethodCall2() throws IOException, LoadException {
-		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{upper() -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : .}}{{upper(\"123a\").replaceAll(\"[aA]\", \"1\") + \", \" + upper(\"Abc\").replaceAll(\"[aA]\", \"1\")}}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{upper() -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : .}}{{(upper(\"123a\") + \", \" + upper(\"Abc\")).replaceAll(\"[aA]\", \"1\")}}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{ upper() -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : . }}{{ upper(\"123a\").replaceAll(\"[aA]\", \"1\") + \", \" + upper(\"Abc\").replaceAll(\"[aA]\", \"1\") }}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{ upper() -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : . }}{{ (upper(\"123a\") + \", \" + upper(\"Abc\")).replaceAll(\"[aA]\", \"1\") }}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
 	void testNamedExpressions() throws IOException, LoadException {
-		assertEquals("  Hello!" + LS, new TemplateLoader().load("Upper", "{{func()->\"Hello!\"}}" + LS + "{{<a}}" + LS + "  {{func()}}" + LS + "{{/a}}" + LS + "{{>a}}").render(Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("ORIGINAL STRING-Original string" + LS, new TemplateLoader().load("Upper", "{{upper()->toUpperCase()}}\n{{capitalize()=>substring(0, 1).toUpperCase() + substring(1).toLowerCase()}}\n{{#\"orIgInal StrIng\"}}\n{{#charAt(1)}}\n{{upper(..)}}-{{capitalize(..)}}\n{{/}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("    ORIGINAL STRING-Original String" + LS, new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{>a}}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | * }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}").load("Upper-Lower", "{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) }}\n  {{upper() + \"-\" + lower()}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("  Hello!" + LS, new TemplateLoader().load("Upper", "{{ func() -> \"Hello!\" }}" + LS + "{{< a }}" + LS + "  {{ func() }}" + LS + "{{/ a }}" + LS + "{{> a }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("ORIGINAL STRING-Original string" + LS, new TemplateLoader().load("Upper", "{{ upper() -> toUpperCase() }}\n{{ capitalize() => substring(0, 1).toUpperCase() + substring(1).toLowerCase() }}\n{{# \"orIgInal StrIng\" }}\n{{# charAt(1) }}\n{{ upper(..) }}-{{ capitalize(..) }}\n{{/}}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("    ORIGINAL STRING-Original String" + LS, new TemplateLoader().put("a", "{{ lower() -> toLowerCase() }}{{!}}").load("Upper-Lower", "{{ lower() -> toString() }}\n{{ upper() -> toUpperCase() }}\n{{# \"Original String\" }}\n  {{> a }}\n  {{ upper() + \"-\" + lower() }}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().put("a", "{{ lower() -> toLowerCase() }}{{!}}").load("Upper-Lower", "{{ lower() -> toString() }}\n{{ upper() -> toUpperCase() }}\n{{# \"Original String\" }}\n  {{> a | * }}\n  {{ upper() + \"-\" + lower() }}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("    ORIGINAL STRING-original string" + LS, new TemplateLoader().put("a", "{{ lower() -> toLowerCase() }}{{!}}").load("Upper-Lower", "{{ lower() -> toString() }}\n{{ upper() -> toUpperCase() }}\n{{# \"Original String\" }}\n  {{> a | lower ( ) }}\n  {{ upper() + \"-\" + lower() }}\n{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 
-		final TemplateLoader loader = new TemplateLoader().put("a", "{{lower()->toLowerCase()}}{{!}}");
+		final TemplateLoader loader = new TemplateLoader().put("a", "{{ lower() -> toLowerCase() }}{{!}}");
 
-		assertThrows(LoadException.class, () -> loader.load("{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | badNamedExpression() }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
-		assertThrows(LoadException.class, () -> loader.load("{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) , badNamedExpression }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
-		assertThrows(LoadException.class, () -> loader.load("{{lower()->toString()}}\n{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower ( ) lower }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
+		assertThrows(LoadException.class, () -> loader.load("{{ lower() -> toString() }}\n{{ upper() -> toUpperCase() }}\n{{# \"Original String\" }}\n  {{> a | badNamedExpression() }}\n  {{ upper() + \"-\" + lower() }}\n{{/}}"));
+		assertThrows(LoadException.class, () -> loader.load("{{ lower() -> toString() }}\n{{ upper() -> toUpperCase() }}\n{{# \"Original String\" }}\n  {{> a | lower ( ) , badNamedExpression }}\n  {{ upper() + \"-\" + lower() }}\n{{/}}"));
+		assertThrows(LoadException.class, () -> loader.load("{{ lower() -> toString() }}\n{{ upper() -> toUpperCase() }}\n{{# \"Original String\" }}\n  {{> a | lower ( ) lower }}\n  {{ upper() + \"-\" + lower() }}\n{{/}}"));
 
 		loader.put("a", "{{# false }}{{ lower() -> toLowerCase() }}{{/}}");
-		assertThrows(LoadException.class, () -> loader.load("{{upper()->toUpperCase()}}\n{{#\"Original String\"}}\n  {{> a | lower() }}\n  {{upper() + \"-\" + lower()}}\n{{/}}"));
+		assertThrows(LoadException.class, () -> loader.load("{{ upper() -> toUpperCase() }}\n{{# \"Original String\" }}\n  {{> a | lower() }}\n  {{ upper() + \"-\" + lower() }}\n{{/}}"));
 	}
 
 	@Test
 	void testNamedExpressionsCalls() throws IOException, LoadException {
-		assertEquals("3", Template.load("{{a()->1}}{{b()->2}}{{c()->a()+b()}}{{c()}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("3", Template.load("{{ a() -> 1 }}{{ b() -> 2 }}{{ c() -> a() + b() }}{{ c() }}").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
 	void testNamedExpressionsWithArgs() throws IOException, LoadException {
-		assertEquals(", , , c, c", Template.load("{{func(., /*no-arg*/ ,c)->c}}" + LS + "{{func()}}, {{func('a')}}, {{func('a','b')}}, {{func('a','b','c')}}, {{func('a','b','c','d')}}").render(Collections.emptyMap(), new StringWriter()).toString());
-		assertThrows(LoadException.class, () -> Template.load("{{func(c, /*no-arg*/ ,.)->c}}" + LS + "{{func()}}, {{func('a')}}, {{func('a','b')}}, {{func('a','b','c')}}, {{func('a','b','c','d')}}"));
-		assertEquals("abc:abc, abc:abc, a:abc, a:abc", new TemplateLoader().load("Multi-Arguments", "{{func(,,)->.+':'+..}}" + LS + "{{func2(a,b,c)->a+':'+..}}" + LS + "{{#a}}{{func(.)}}, {{func2(.)}}, {{func('a')}}, {{func2('a')}}{{/}}").render(Collections.singletonMap("a", "abc"), new StringWriter()).toString());
-		assertEquals("Test 1:true:, Test 2:false:, Test 3:true:Test", new TemplateLoader().load("Multi-Arguments", "{{ func(a, b, c) -> a + ':' + b + ':' + (c ?: '') }}" + LS + "{{# [[ 'name': 'Test 1', 'value': true ], [ 'name': 'Test 2', 'value': false ], [ 'name': 'Test 3', 'value': true, 'optional': 'Test' ]] }}{{ func(name, value, optional) }}{{# .hasNext }}, {{/}}{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals(", , , c, c", Template.load("{{ func(., /*no-arg*/ ,c) -> c }}" + LS + "{{ func() }}, {{ func('a') }}, {{ func('a', 'b') }}, {{ func('a', 'b', 'c') }}, {{ func('a', 'b', 'c', 'd') }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertThrows(LoadException.class, () -> Template.load("{{ func(c, /*no-arg*/ ,.) -> c }}" + LS + "{{ func() }}, {{ func('a') }}, {{ func('a', 'b') }}, {{ func('a', 'b', 'c') }}, {{ func('a', 'b', 'c', 'd') }}"));
+		assertEquals("abc:abc, abc:abc, a:abc, a:abc", new TemplateLoader().load("Multi-Arguments", "{{ func(,,) -> . + ':' + .. }}" + LS + "{{ func2(a, b, c) -> a + ':' + .. }}" + LS + "{{# a }}{{ func(.) }}, {{ func2(.) }}, {{ func('a') }}, {{ func2('a') }}{{/}}").render(Collections.singletonMap("a", "abc"), new StringWriter()).toString());
+		assertEquals("Test 1:true:, Test 2:false:, Test 3:true:Test", new TemplateLoader().load("Multi-Arguments", "{{ func(a, b, c) -> a + ':' + b + ':' + (c ?: '') }}" + LS + "{{# [['name': 'Test 1', 'value': true], ['name': 'Test 2', 'value': false], ['name': 'Test 3', 'value': true, 'optional': 'Test']] }}{{ func(name, value, optional) }}{{# .hasNext }}, {{/}}{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
@@ -112,7 +112,7 @@ public class NamedExpressionTests {
 
 	@Test
 	void testNamedExpressionDupParam() throws IOException, LoadException {
-		assertThrows(LoadException.class, () -> new TemplateLoader().load("Duplicate Parameter", "{{func(c,c)->c}}" + LS + "{{func()}}"));
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("Duplicate Parameter", "{{ func(c, c) -> c }}" + LS + "{{ func() }}"));
 	}
 
 	@Test
@@ -123,7 +123,7 @@ public class NamedExpressionTests {
 
 	@Test
 	void testRecursiveFibonacci() throws IOException, LoadException {
-		assertEquals("011235", new TemplateLoader().load("Test", "{{fib() -> . > 1 ? fib(. - 1) + fib(. - 2) : .}}{{fib(0)}}{{fib(1)}}{{fib(2)}}{{fib(3)}}{{fib(4)}}{{fib(5)}}").render(Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("011235", new TemplateLoader().load("Test", "{{ fib() -> . > 1 ? fib(. - 1) + fib(. - 2) : . }}{{ fib(0) }}{{ fib(1) }}{{ fib(2) }}{{ fib(3) }}{{ fib(4) }}{{ fib(5) }}").render(Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 }

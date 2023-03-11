@@ -1,8 +1,8 @@
 {{# [ true, false, 0, 1, 0xFFFFFFFFFF, 0L, 0.0, -1.0, null, "String", [1, 2, 3], [] ] }}
   {{# . }}
-{{.}} evaluates to true. Same value (for true, parent of iteration list): {{..\.}}
+{{.}} evaluates to true. Same value (for true, parent of iteration list): {{ ..\. }}
   {{^}}
-{{.}} evaluates to false. Parent value is parent of iteration list: {{..\.}}
+{{.}} evaluates to false. Parent value is parent of iteration list: {{ ..\. }}
   {{/ . }}
 {{/}}
 {{^ false }}

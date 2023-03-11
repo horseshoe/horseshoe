@@ -202,6 +202,7 @@ The new sequences are applicable for all tags.
 Here is a brief example,
 
 ```horseshoe
+{{! Spaces are allowed (but not required) after the equals sign. }}
 {{= << >> =}}
 {{ Literal template text. }}
 <<! This is a comment and the line below is an unescaped content tag. >>

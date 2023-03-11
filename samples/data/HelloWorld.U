@@ -1,3 +1,3 @@
-{{#[ "salutation": "Hello", "audience": "world" ]}}
+{{# ["salutation": "Hello", "audience": "world"] }}
 {{ salutation }}, {{ audience }}!
 {{/}}

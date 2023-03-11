@@ -174,8 +174,8 @@ class RunnerTests {
 	void testCurrentAndRootContext() throws IOException {
 		final ByteArrayOutputStream out = new ByteArrayOutputStream();
 		final Path path = Paths.get("in.test");
-		Files.write(path, ("{{#a}}\n" +
-				"<html{{#['<red>', '<blue>']}} attr=\"{{.}}\"{{/}}/>\n" +
+		Files.write(path, ("{{# a }}\n" +
+				"<html{{# ['<red>', '<blue>'] }} attr=\"{{.}}\"{{/}}/>\n" +
 				"{{ ~@UUID.fromString('01234567-89AB-CDEF-fedc-ba9876543210') }}\n" +
 				"{{# ['a': false, 'b': 'c'] }}\n" +
 				"{{# ['blah': 'override'] }}\n" +

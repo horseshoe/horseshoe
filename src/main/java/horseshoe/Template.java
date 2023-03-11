@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 /**
  * Templates represent parsed and resolved Horseshoe template files. They are loaded using the {@link TemplateLoader} class. An example of how to load and render a template is given below:
  * <pre>{@code
- * final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{{salutation}}}, {{ recipient }}!");
+ * final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{{ salutation }}}, {{ recipient }}!");
  *
  * final java.util.Map<String, Object> data = new java.util.HashMap<>();
  * data.put("salutation", "Hello");

@@ -27,8 +27,8 @@ class SettingsTests {
 	@Test
 	void testMapWithContextAccessFull() throws LoadException, IOException {
 		final Settings settings = new Settings().setContextAccess(ContextAccess.FULL);
-		final Template template = new TemplateLoader().load("Context Access Full", "{{Objects.toString(\"123\")}}" +
-				"{{#map.entrySet()}}{{Objects.toString(getValue())}}{{/}}{{#789}}{{#toString()}}{{#charAt(0)}}{{nonExistantMethod()}}{{longValue()}}{{get(\"field\")}}{{#field}}{{nonExistantField}}{{testField}}{{/}}{{/}}{{/}}{{/}}");
+		final Template template = new TemplateLoader().load("Context Access Full", "{{ Objects.toString(\"123\") }}" +
+				"{{# map.entrySet() }}{{ Objects.toString(getValue()) }}{{/}}{{# 789 }}{{# toString() }}{{# charAt(0) }}{{ nonExistantMethod() }}{{ longValue() }}{{ get(\"field\") }}{{# field }}{{ nonExistantField }}{{ testField }}{{/}}{{/}}{{/}}{{/}}");
 		final LinkedHashMap<String, Object> data = new LinkedHashMap<>();
 		data.put("Objects", Objects.class);
 		final LinkedHashMap<String, Object> map = new LinkedHashMap<>();
@@ -43,8 +43,8 @@ class SettingsTests {
 	@Test
 	void testMapWithContextAccessRoot() throws LoadException, IOException {
 		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT_AND_ROOT);
-		final Template template = new TemplateLoader().load("Context Access Root", "{{Objects.toString(\"123\")}}" +
-				"{{#map.entrySet()}}{{Objects.toString(getValue())}}{{/}}{{#789}}{{#toString()}}{{#charAt(0)}}{{longValue()}}{{entrySet()}}{{get(\"field\")}}{{#field}}{{nonExistantField}}{{testField}}{{/}}{{/}}{{/}}{{/}}");
+		final Template template = new TemplateLoader().load("Context Access Root", "{{ Objects.toString(\"123\") }}" +
+				"{{# map.entrySet() }}{{ Objects.toString(getValue()) }}{{/}}{{# 789 }}{{# toString() }}{{# charAt(0) }}{{ longValue() }}{{ entrySet() }}{{ get(\"field\") }}{{# field }}{{ nonExistantField }}{{ testField }}{{/}}{{/}}{{/}}{{/}}");
 		final LinkedHashMap<String, Object> data = new LinkedHashMap<>();
 		data.put("Objects", Objects.class);
 		final LinkedHashMap<String, Object> map = new LinkedHashMap<>();

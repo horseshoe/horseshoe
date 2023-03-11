@@ -21,7 +21,7 @@ public enum Extension {
 	EMPTY_END_TAGS,
 
 	/**
-	 * End tags ({@code {{/[SectionName]}}}) that do not match the text in start tags will be treated as Horseshoe expressions. Enabling this may result in confusing parse exceptions when loading malformed templates.
+	 * End tags ({@code {{/ [SectionName] }}}) that do not match the text in start tags will be treated as Horseshoe expressions. Enabling this may result in confusing parse exceptions when loading malformed templates.
 	 */
 	SMART_END_TAGS,
 
@@ -36,12 +36,12 @@ public enum Extension {
 	ELSE_TAGS,
 
 	/**
-	 * In-line partial tags ({@code {{<[PartialName]}}}) will be loaded and can be used later in a template.
+	 * In-line partial tags ({@code {{< [PartialName] }}}) will be loaded and can be used later in a template.
 	 */
 	INLINE_PARTIALS,
 
 	/**
-	 * Annotation section tags ({@code {{#@[AnnotationName]}}}) can be used in templates.
+	 * Annotation section tags ({@code {{# @[AnnotationName] }}}) can be used in templates.
 	 */
 	ANNOTATIONS
 

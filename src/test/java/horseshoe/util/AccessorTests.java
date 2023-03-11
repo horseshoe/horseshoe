@@ -1,6 +1,7 @@
 package horseshoe.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -124,12 +125,12 @@ class AccessorTests {
 
 	@Test
 	void testFields() throws IOException, LoadException {
-		assertEquals("", new TemplateLoader().load("Fields", "{{PrivateClassInstance.field}}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new StringWriter()).toString());
+		assertEquals("", new TemplateLoader().load("Fields", "{{ PrivateClassInstance.field }}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new StringWriter()).toString());
 	}
 
 	@Test
 	void testInaccessibleMethod() throws IOException, LoadException {
-		assertEquals(ManagementFactory.getOperatingSystemMXBean().getArch(), new TemplateLoader().load("Inaccessible Method", "{{ManagementFactory.getOperatingSystemMXBean().getArch()}}").render(Helper.loadMap("ManagementFactory", ManagementFactory.class), new StringWriter()).toString());
+		assertEquals(ManagementFactory.getOperatingSystemMXBean().getArch(), new TemplateLoader().load("Inaccessible Method", "{{ ManagementFactory.getOperatingSystemMXBean().getArch() }}").render(Helper.loadMap("ManagementFactory", ManagementFactory.class), new StringWriter()).toString());
 	}
 
 	private static void assertArrayEquals(final Object expected, final Object actual) {
@@ -258,18 +259,19 @@ class AccessorTests {
 
 	@Test
 	void testMethod() throws IOException, LoadException {
-		assertEquals("Good, Bad, Good, Good", new TemplateLoader().load("Method", "{{PrivateClassInstance.testShouldWork()}}, {{PrivateClassInstance.testShouldWork(6)}}, {{PrivateClassInstance.test()}}, {{PrivateClassInstance.test(6)}}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new StringWriter()).toString());
+		assertEquals("Good, Bad, Good, Good", new TemplateLoader().load("Method", "{{ PrivateClassInstance.testShouldWork() }}, {{ PrivateClassInstance.testShouldWork(6) }}, {{ PrivateClassInstance.test() }}, {{ PrivateClassInstance.test(6) }}").render(Helper.loadMap("PrivateClassInstance", new PrivateClass()), new StringWriter()).toString());
 	}
 
 	@Test
 	void testNonexistantMethods() throws IOException, LoadException {
-		assertEquals(", , , , , , ", new TemplateLoader().load("Nonexistant Methods", "{{Object.nonexistantMethod(5)}}, {{TestMapInstance.test(1)}}, {{TestMapInstance.test(TestMapInstance)}}, {{TestMapInstance.test('')}}, {{TestMapInstance.nonexistantMethod(5)}}, {{PrivateClassInstance.testBad(5)}}, {{PrivateClassInstance.testBad()}}").render(Helper.loadMap("Object", ManagementFactory.class, "TestMapInstance", new TestMap(), "PrivateClassInstance", new PrivateClass()), new StringWriter()).toString());
+		assertEquals(", , , , , , , ", new TemplateLoader().load("Nonexistant Methods", "{{ ~@Object.new().nonexistantMethod() }}, {{ Object.nonexistantMethod(5) }}, {{ TestMapInstance.test(1) }}, {{ TestMapInstance.test(TestMapInstance) }}, {{ TestMapInstance.test('') }}, {{ TestMapInstance.nonexistantMethod(5) }}, {{ PrivateClassInstance.testBad(5) }}, {{ PrivateClassInstance.testBad() }}").render(Helper.loadMap("Object", ManagementFactory.class, "TestMapInstance", new TestMap(), "PrivateClassInstance", new PrivateClass()), new StringWriter()).toString());
 	}
 
 	@Test
 	void testPatternMatcher() throws IOException, LoadException {
 		final PatternMatcher matcher = PatternMatcher.fromInput(Pattern.compile("(?<first>[A-Z])[a-z]+"), "Test One");
 
+		assertNotNull(matcher);
 		assertEquals(0, matcher.start());
 		assertEquals(0, matcher.start(1));
 		assertEquals(0, matcher.start("first"));

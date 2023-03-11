@@ -71,11 +71,11 @@ class PartialsDirectoryTests {
 			new TestSet("./test1/test3", "../test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "This partial renders text!") }, false, null),
 			new TestSet("./test1/test2", "../test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "This partial renders text!") }, true, null),
 			new TestSet("./test1/test2", "../test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "This partial renders text!") }, false, null),
-			new TestSet("./test1/test3", "../test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{>../test2/Partial2}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, LoadException.class),
-			new TestSet("./test1", "test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{#true}}{{>../test2/Partial2}}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, null),
-			new TestSet("./test1", "test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{#true}}{{>../test2/Partial2}}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, false, null),
-			new TestSet("./test1", "test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "{{#true}}{{>../test2/Partial2}}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, null),
-			new TestSet("./test1", "test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "{{#true}}{{>../test2/Partial2}}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, false, null),
+			new TestSet("./test1/test3", "../test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{> ../test2/Partial2 }}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, LoadException.class),
+			new TestSet("./test1", "test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{# true }}{{> ../test2/Partial2 }}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, null),
+			new TestSet("./test1", "test3/Partial", new PartialFile[] { new PartialFile(new File("test1/test3/Partial"), "{{# true }}{{> ../test2/Partial2 }}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, false, null),
+			new TestSet("./test1", "test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "{{# true }}{{> ../test2/Partial2 }}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, true, null),
+			new TestSet("./test1", "test2/Partial", new PartialFile[] { new PartialFile(new File("test1/test2/Partial"), "{{# true }}{{> ../test2/Partial2 }}{{/}}"), new PartialFile(new File("test1/test2/Partial2"), "This partial renders text!") }, false, null),
 		};
 
 		for (int i = 0; i < testSets.length; i++) {
@@ -104,7 +104,7 @@ class PartialsDirectoryTests {
 		Template template = null;
 
 		try {
-			Files.write(testFile, ("{{>" + set.partialNavigationPath + "}}").getBytes(StandardCharsets.UTF_8));
+			Files.write(testFile, ("{{> " + set.partialNavigationPath + " }}").getBytes(StandardCharsets.UTF_8));
 			template = loader.load(testFile);
 		} catch (final LoadException e) {
 			if (set.expectedException == null || !set.expectedException.isInstance(e)) {

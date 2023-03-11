@@ -105,7 +105,7 @@ class AnnotationTests {
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final TemplateLoader loader = new TemplateLoader();
-		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}{{/@Test}}cd");
+		final Template template = loader.load("AnnotationsTests", "ab{{# @Test(\"value123\") }}{{/ @Test }}cd");
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
 		assertEquals("value123", mapAnnotation.map.keySet().stream().findFirst().get());
@@ -118,7 +118,7 @@ class AnnotationTests {
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final TemplateLoader loader = new TemplateLoader();
-		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}456{{^}}789{{/}}cd");
+		final Template template = loader.load("AnnotationsTests", "ab{{# @Test(\"value123\") }}456{{^}}789{{/}}cd");
 		final MapAnnotation mapAnnotation = new MapAnnotation();
 		template.render(settings, Collections.emptyMap(), writer, Collections.singletonMap("Test", mapAnnotation));
 		assertEquals("456", mapAnnotation.map.get("value123"));
@@ -127,7 +127,7 @@ class AnnotationTests {
 
 	@Test
 	void testCloseException() throws IOException, LoadException {
-		assertDoesNotThrow(() -> new TemplateLoader().load("Exception Writer", "a{{#@Test}}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
+		assertDoesNotThrow(() -> new TemplateLoader().load("Exception Writer", "a{{# @Test }}b{{^}}d{{/}}c").render(new Settings(), Collections.emptyMap(), new StringWriter(), Collections.singletonMap("Test", new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
 				return new TestWriter() {
@@ -142,7 +142,7 @@ class AnnotationTests {
 
 	@Test
 	void testException() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Exception Writer", "a{{#@Test}}{{#true}}b{{/}}{{^}}d{{/}}c");
+		final Template template = new TemplateLoader().load("Exception Writer", "a{{# @Test }}{{# true }}b{{/}}{{^}}d{{/}}c");
 		final AnnotationHandler handler = new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
@@ -160,7 +160,7 @@ class AnnotationTests {
 
 	@Test
 	void testExceptionWithCloseException() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Exception Writer", "a{{#true}}{{#@Test}}b{{^}}d{{/}}{{/}}c");
+		final Template template = new TemplateLoader().load("Exception Writer", "a{{# true }}{{# @Test }}b{{^}}d{{/}}{{/}}c");
 		final AnnotationHandler handler = new AnnotationHandler() {
 			@Override
 			public Writer getWriter(final Writer writer, final Object[] args) throws IOException {
@@ -264,20 +264,20 @@ class AnnotationTests {
 
 		try (final WatchService watcher = FileSystems.getDefault().newWatchService()) {
 			Files.write(path, "T ".getBytes(StandardCharsets.UTF_8));
-			new TemplateLoader().load("File Update", "{{#@File('" + path.toAbsolutePath() + "', { })}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{# @File('" + path.toAbsolutePath() + "', { })}}\nTest 1\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
 			Files.write(path, "Test".getBytes(StandardCharsets.UTF_8));
-			new TemplateLoader().load("File Update", "{{#@File(\"" + path + "\", { 'append': false })}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{# @File(\"" + path + "\", { 'append': false })}}\nTest 1\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
-			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{# @File('" + path2 + "', 'Bad Option') }}\nTest 1\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
 
-			new TemplateLoader().load("File Update", "{{#@File('" + path2 + "', 'Bad Option')}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{# @File('" + path2 + "', 'Bad Option') }}\nTest 1\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path2), StandardCharsets.UTF_8));
 
-			new TemplateLoader().load("File Update", "{{#@File(" + path3 + ", 'Bad Option')}}\nTest 3\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{# @File(" + path3 + ", 'Bad Option') }}\nTest 3\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 3" + LS, new String(Files.readAllBytes(path3), StandardCharsets.UTF_8));
 
 			assertEquals("NoFile", Template.load("{{# @File(null) }}Bad{{^^ @File }}NoFile{{/}}").render(Collections.emptyMap(), new StringWriter()).toString());
@@ -290,18 +290,18 @@ class AnnotationTests {
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 			final WatchKey watchKey1 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
-			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{# @File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 			assertFalse(watchKey1.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
 
 			Files.write(path, ("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 			final WatchKey watchKey2 = Paths.get(".").register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
-			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'overwrite': true})}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{# @File({\"name\":\"" + path + "\", 'overwrite': true})}}\nTest 1\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 			assertTrue(watchKey2.pollEvents().stream().anyMatch(event -> event.kind().equals(StandardWatchEventKinds.ENTRY_MODIFY) && path.equals(event.context())));
 
 			Files.write(path, ("Test 1" + LS + "Test 2").getBytes(StandardCharsets.UTF_8));
-			new TemplateLoader().load("File Update", "{{#@File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/@File}}\n").render(Collections.emptyMap(), new StringWriter());
+			new TemplateLoader().load("File Update", "{{# @File({\"name\":\"" + path + "\", 'append': false})}}\nTest 1\n{{/ @File }}\n").render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 		} finally {
 			Files.deleteIfExists(path);
@@ -313,7 +313,7 @@ class AnnotationTests {
 
 	@Test
 	void testMissingAnnotation() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Missing Annotation", "{{#@Missing(\"blah\")}}\nGood things are happening!\nMore good things!\n{{^}}\n{{#@Test}}\nEngine does not support @missing.\n{{/}}\n{{/@Missing}}\n");
+		final Template template = new TemplateLoader().load("Missing Annotation", "{{# @Missing(\"blah\") }}\nGood things are happening!\nMore good things!\n{{^}}\n{{# @Test }}\nEngine does not support @missing.\n{{/}}\n{{/ @Missing }}\n");
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final MapAnnotation mapAnnotation = new MapAnnotation();
@@ -328,7 +328,7 @@ class AnnotationTests {
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final TemplateLoader loader = new TemplateLoader();
-		final Template template = loader.load("AnnotationsTests", "ab{{#@Test(\"value123\")}}{{#@Inner}}789{{/}}456{{/@Test(\"value123\")}}cd");
+		final Template template = loader.load("AnnotationsTests", "ab{{# @Test(\"value123\") }}{{# @Inner }}789{{/}}456{{/ @Test(\"value123\") }}cd");
 		final MapAnnotation testMapAnnotation = new MapAnnotation();
 		final MapAnnotation innerMapAnnotation = new MapAnnotation();
 		final LinkedHashMap<String, AnnotationHandler> annotations = new LinkedHashMap<>();
@@ -352,7 +352,7 @@ class AnnotationTests {
 
 	@Test
 	void testOutputMapping() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Output Mapping", "Good things are happening!\n{{#@Test}}\nThis should output to map annotation.\n{{/}}\nGood things are happening again!\n");
+		final Template template = new TemplateLoader().load("Output Mapping", "Good things are happening!\n{{# @Test }}\nThis should output to map annotation.\n{{/}}\nGood things are happening again!\n");
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 		final MapAnnotation mapAnnotation = new MapAnnotation();
@@ -368,7 +368,7 @@ class AnnotationTests {
 		final Path path = Paths.get("DELETE_ME.test");
 
 		try {
-			final Template template = new TemplateLoader().load("Output Remapping", "{{#@File(\"" + path + "\")}}\nTest 1\n{{/}}\n{{#@File({\"name\":\"" + path + "\", \"encoding\": \"ASCII\", 'append': true})}}\nGood things are happening!\nMore good things!\n{{/@File}}\n{{#@StdErr}}\nThis should print to stderr\n{{/}}\n");
+			final Template template = new TemplateLoader().load("Output Remapping", "{{# @File(\"" + path + "\") }}\nTest 1\n{{/}}\n{{# @File({\"name\":\"" + path + "\", \"encoding\": \"ASCII\", 'append': true}) }}\nGood things are happening!\nMore good things!\n{{/ @File }}\n{{# @StdErr }}\nThis should print to stderr\n{{/}}\n");
 			template.render(Collections.emptyMap(), new StringWriter());
 			assertEquals("Test 1" + LS + "Good things are happening!" + LS + "More good things!" + LS, new String(Files.readAllBytes(path), StandardCharsets.US_ASCII));
 		} finally {
@@ -378,7 +378,7 @@ class AnnotationTests {
 
 	@Test
 	void testSameWriter() throws IOException, LoadException {
-		final Template template = new TemplateLoader().load("Same Writer", "a{{#@Test}}b{{^}}d{{/}}c");
+		final Template template = new TemplateLoader().load("Same Writer", "a{{# @Test }}b{{^}}d{{/}}c");
 		final Settings settings = new Settings();
 		final StringWriter writer = new StringWriter();
 
