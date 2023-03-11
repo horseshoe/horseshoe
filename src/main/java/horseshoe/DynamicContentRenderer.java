@@ -3,7 +3,7 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
-final class DynamicContentRenderer implements Renderer {
+final class DynamicContentRenderer extends Renderer {
 
 	private final Expression expression;
 	private final boolean escaped;
@@ -14,13 +14,13 @@ final class DynamicContentRenderer implements Renderer {
 	 * @param expression the expression for the dynamic content
 	 * @param escaped true if the rendered content will be escaped, otherwise false
 	 */
-	public DynamicContentRenderer(final Expression expression, final boolean escaped) {
+	DynamicContentRenderer(final Expression expression, final boolean escaped) {
 		this.expression = expression;
 		this.escaped = escaped;
 	}
 
 	@Override
-	public void render(final RenderContext context, final Writer writer) throws IOException {
+	void render(final RenderContext context, final Writer writer) throws IOException {
 		final Object value = expression.evaluate(context);
 
 		if (value != null) {

@@ -23,7 +23,7 @@ class TemplateRenderer extends TagRenderer {
 	}
 
 	@Override
-	public void render(final RenderContext context, final Writer writer) throws IOException {
+	void render(final RenderContext context, final Writer writer) throws IOException {
 		final Template renderTemplate = template == null ? context.getSectionPartials().peek() : template;
 		final int bindingsSize = renderTemplate.getBindings().size();
 		final Object[] bindings = bindingsSize == 0 ? null : new Object[bindingsSize];

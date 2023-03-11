@@ -22,8 +22,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 
-import horseshoe.BufferedFileUpdateStream.Update;
-
 import org.junit.jupiter.api.Test;
 
 class AnnotationTests {
@@ -184,10 +182,10 @@ class AnnotationTests {
 	private static final class FileTest {
 		public final String initial;
 		public final String write;
-		public final Update update;
+		public final FileModification update;
 		public final String result;
 
-		public FileTest(final String initial, final String write, final Update update, final String result) {
+		public FileTest(final String initial, final String write, final FileModification update, final String result) {
 			this.initial = initial;
 			this.write = write;
 			this.update = update;
@@ -195,7 +193,7 @@ class AnnotationTests {
 		}
 
 		public FileTest(final String initial, final String write) {
-			this(initial, write, Update.UPDATE, write);
+			this(initial, write, FileModification.UPDATE, write);
 		}
 	}
 
@@ -208,7 +206,7 @@ class AnnotationTests {
 
 			Files.write(path, ("Test 1" + LS + "Test 3" + LS).getBytes(StandardCharsets.UTF_8));
 
-			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), Update.UPDATE, bigBuf.length() - 1)) {
+			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), FileModification.UPDATE, bigBuf.length() - 1)) {
 				os.flush();
 				os.write(("Test 1" + LS).getBytes(StandardCharsets.UTF_8));
 				os.flush();
@@ -220,14 +218,14 @@ class AnnotationTests {
 
 			assertEquals("Test 1" + LS + "Test 2" + bigBuf, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
-			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), Update.OVERWRITE, bigBuf.length())) {
+			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), FileModification.OVERWRITE, bigBuf.length())) {
 				os.write(("Test" + LS).getBytes(StandardCharsets.UTF_8));
 				os.write(bigBuf.getBytes(StandardCharsets.UTF_8));
 			}
 
 			assertEquals("Test" + LS + bigBuf, new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
 
-			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), Update.OVERWRITE, bigBuf.length())) {
+			try (final OutputStream os = new BufferedFileUpdateStream(path.toFile(), FileModification.OVERWRITE, bigBuf.length())) {
 				os.write(bigBuf.getBytes(StandardCharsets.UTF_8));
 				os.write('1');
 			}
@@ -236,9 +234,9 @@ class AnnotationTests {
 
 			for (final FileTest test : new FileTest[] {
 					new FileTest("Test" + LS, ""),
-					new FileTest("Test" + LS, "", Update.APPEND, "Test" + LS),
-					new FileTest("Test" + LS, "Test 2", Update.APPEND, "Test" + LS + "Test 2"),
-					new FileTest("Test" + LS, "Test 2", Update.OVERWRITE, "Test 2"),
+					new FileTest("Test" + LS, "", FileModification.APPEND, "Test" + LS),
+					new FileTest("Test" + LS, "Test 2", FileModification.APPEND, "Test" + LS + "Test 2"),
+					new FileTest("Test" + LS, "Test 2", FileModification.OVERWRITE, "Test 2"),
 					new FileTest("Test" + LS, new String(new byte[65536], StandardCharsets.US_ASCII).replace('\0', ' ')),
 			}) {
 				Files.write(path, test.initial.getBytes(StandardCharsets.UTF_8));

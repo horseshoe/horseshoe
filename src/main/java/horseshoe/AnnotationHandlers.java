@@ -14,11 +14,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import horseshoe.BufferedFileUpdateStream.Update;
 import horseshoe.util.Operands;
 
 /**
- * The AnnotationHandlers class is used to create common {@link AnnotationHandler}s. It also contains the default annotation handlers map if none is specified.
+ * The {@link AnnotationHandlers} class is used to create common {@link AnnotationHandler}s.
+ * It also contains the default annotation handlers map if none is specified.
  */
 public final class AnnotationHandlers {
 
@@ -85,18 +85,18 @@ public final class AnnotationHandlers {
 		 *
 		 * @param file the file to be updated by the writer
 		 * @param charset the charset to use when writing to the file
-		 * @param update the update method for the file
+		 * @param modificationSetting the modification setting for the file
 		 * @return the writer for the specified {@code file}
 		 * @throws IOException if the directory or file cannot be created
 		 */
-		private static Writer createWriter(final File file, final Charset charset, final Update update) throws IOException {
+		private static Writer createWriter(final File file, final Charset charset, final FileModification modificationSetting) throws IOException {
 			final File directory = file.getParentFile();
 
 			if (directory != null && !directory.isDirectory() && !directory.mkdirs()) {
 				throw new IOException("Failed to create directory " + directory.toString());
 			}
 
-			return new OutputStreamWriter(new BufferedFileUpdateStream(file, update), charset);
+			return new OutputStreamWriter(new BufferedFileUpdateStream(file, modificationSetting), charset);
 		}
 
 		@Override
@@ -123,7 +123,7 @@ public final class AnnotationHandlers {
 
 			final File file = rootDir.resolve(Paths.get(filename.toString())).toFile();
 			Charset charset = defaultCharset;
-			Update update = Update.UPDATE;
+			FileModification modificationSetting = FileModification.UPDATE;
 
 			// Load properties
 			if (properties != null) {
@@ -134,13 +134,13 @@ public final class AnnotationHandlers {
 				}
 
 				if (Operands.convertToBoolean(properties.get("overwrite"))) {
-					update = Update.OVERWRITE;
+					modificationSetting = FileModification.OVERWRITE;
 				} else if (Operands.convertToBoolean(properties.get("append"))) {
-					update = Update.APPEND;
+					modificationSetting = FileModification.APPEND;
 				}
 			}
 
-			return createWriter(file, charset, update);
+			return createWriter(file, charset, modificationSetting);
 		}
 
 	}

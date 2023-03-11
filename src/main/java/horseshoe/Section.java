@@ -25,7 +25,7 @@ final class Section {
 	 * @param location the location of the section
 	 * @return the repeated section
 	 */
-	public static Section repeat(final Section parent, final Object location) {
+	static Section repeat(final Section parent, final Object location) {
 		Section repeatContainer = parent;
 		int nested = 0;
 		int skipChildrenSize = 0;
@@ -95,7 +95,7 @@ final class Section {
 	 * @param annotation the name of the annotation for the section, or null if no annotation exists
 	 * @param isInvisible true if the section is not visible to backreach, otherwise false
 	 */
-	public Section(final Section parent, final String name, final Object location, final Expression expression, final String annotation, final boolean isInvisible) {
+	Section(final Section parent, final String name, final Object location, final Expression expression, final String annotation, final boolean isInvisible) {
 		this(parent, name, location, expression, annotation, isInvisible, false);
 	}
 
@@ -106,7 +106,7 @@ final class Section {
 	 * @param location the location of the section
 	 * @param expression the expression for the section
 	 */
-	public Section(final Section parent, final Object location, final Expression expression) {
+	Section(final Section parent, final Object location, final Expression expression) {
 		this(parent, expression.toString(), location, expression, null, false);
 	}
 
@@ -115,7 +115,7 @@ final class Section {
 	 *
 	 * @return true if the section should cache the result of the expression for later use
 	 */
-	public boolean cacheResult() {
+	boolean cacheResult() {
 		return cacheResult;
 	}
 
@@ -124,7 +124,7 @@ final class Section {
 	 *
 	 * @return the name of the annotation for the section, or null if no annotation exists
 	 */
-	public String getAnnotation() {
+	String getAnnotation() {
 		return annotation;
 	}
 
@@ -133,7 +133,7 @@ final class Section {
 	 *
 	 * @return the expression associated with the section, or null if one does not exist
 	 */
-	public Expression getExpression() {
+	Expression getExpression() {
 		return expression;
 	}
 
@@ -151,7 +151,7 @@ final class Section {
 	 *
 	 * @return the name of the section
 	 */
-	public String getName() {
+	String getName() {
 		return name;
 	}
 
@@ -169,7 +169,7 @@ final class Section {
 	 *
 	 * @return true if the section is invisible, otherwise false
 	 */
-	public boolean isInvisible() {
+	boolean isInvisible() {
 		return isInvisible;
 	}
 
@@ -196,7 +196,7 @@ final class Section {
 	 *
 	 * @return true if the section should use a cached result rather than the result of an expression
 	 */
-	public boolean useCache() {
+	boolean useCache() {
 		return useCache;
 	}
 

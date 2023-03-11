@@ -5,7 +5,8 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * LoadExceptions can occur if an error is encountered while loading a {@link Template}. A LoadException can be used to determine the exact location and scope in a template that an error occurred.
+ * {@link LoadException}s can occur if an error is encountered while loading a {@link Template}.
+ * A {@link LoadException} can be used to determine the exact location and scope in a template that an error occurred.
  */
 public class LoadException extends Exception {
 

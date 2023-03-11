@@ -4,7 +4,8 @@ import java.io.IOException;
 import java.io.Writer;
 
 /**
- * An AnnotationHandler is used to process annotations within {@link Template}s. Annotations can be used to replace or supplement the writer used to render a section.
+ * An {@link AnnotationHandler} is used to process annotations within {@link Template}s.
+ * Annotations can be used to replace or supplement the writer used to render a section.
  */
 public interface AnnotationHandler {
 
@@ -16,6 +17,6 @@ public interface AnnotationHandler {
 	 * @return the writer to use for the annotated section, or null to indicate that the writer should not be changed
 	 * @throws IOException if an I/O error occurs while manipulating the writer
 	 */
-	public Writer getWriter(final Writer writer, final Object[] args) throws IOException;
+	Writer getWriter(final Writer writer, final Object[] args) throws IOException;
 
 }

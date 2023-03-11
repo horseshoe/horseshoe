@@ -23,13 +23,12 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import horseshoe.BufferedFileUpdateStream.Update;
 import horseshoe.CommandLineOption.ArgumentPair;
 import horseshoe.CommandLineOption.OptionSet;
-import horseshoe.Settings.ContextAccess;
 
 /**
- * The runner enables rendering Horseshoe templates via the command line. While not as full-featured as the software library, several options can be changed using command line arguments.
+ * The {@link Runner} enables rendering Horseshoe {@link Template}s via the command line.
+ * While not as full-featured as the software library, several options can be changed using command line arguments.
  */
 public class Runner {
 
@@ -42,7 +41,7 @@ public class Runner {
 			CommandLineOption.ofName("disable-extensions", "Disables all Horseshoe extensions."),
 			CommandLineOption.ofName("html", "Enables HTML escaping of rendered content."),
 			CommandLineOption.ofNameWithArgument("add-class", "class", "Adds <class> as a loadable class in the template using the ~@'java.lang.System'.currentTimeMillis() syntax."),
-			CommandLineOption.ofNameWithArgument("access", "level", "Changes the access to <level>. Valid values are " + join(", ", Settings.ContextAccess.class.getEnumConstants()) + ". The default value is " + new Settings().getContextAccess() + "."),
+			CommandLineOption.ofNameWithArgument("access", "level", "Changes the access to <level>. Valid values are " + join(", ", ContextAccess.class.getEnumConstants()) + ". The default value is " + new Settings().getContextAccess() + "."),
 			CommandLineOption.ofNameWithArgument('D', "define", "entry", "Adds <entry> to the global data map in the form key=value (value defaults to true when not specified). The value is parsed as JSON, with some YAML features allowed: anchors, aliases, and plain single-line scalars. This option may be specified multiple times."),
 			CommandLineOption.ofNameWithArgument('d', "data-file", "file", "Adds the contents of <file> to the global data map. The file is parsed as a UTF-8 JSON object, with some YAML-like features allowed: anchors, aliases, and plain single-line scalars. All members of the JSON object are added to the map. This option may be specified multiple times."),
 			CommandLineOption.ofNameWithArgument('I', "include", "directory", "Adds <directory> to the list of directories to be included when searching for partials. This option may be specified multiple times."),
@@ -203,7 +202,7 @@ public class Runner {
 		 *
 		 * @return the parsed map
 		 */
-		public Map<String, Object> parseAsMap() {
+		Map<String, Object> parseAsMap() {
 			if (index >= data.length() || data.charAt(index) != '{') {
 				throw new IllegalStateException("Failed to find starting object character \"{\" at offset " + index);
 			}
@@ -220,7 +219,7 @@ public class Runner {
 		 *
 		 * @return the parsed value
 		 */
-		public Object parseAsValue() {
+		Object parseAsValue() {
 			final Object value = parseNode();
 
 			requireEnd();
@@ -578,7 +577,7 @@ public class Runner {
 		}
 
 		// Render the templates
-		try (final Writer writer = outputFile == null ? new OutputStreamWriter(System.out, stdOutCharset) : new OutputStreamWriter(new BufferedFileUpdateStream(new File(outputFile), Update.UPDATE), outputCharset)) {
+		try (final Writer writer = outputFile == null ? new OutputStreamWriter(System.out, stdOutCharset) : new OutputStreamWriter(new BufferedFileUpdateStream(new File(outputFile), FileModification.UPDATE), outputCharset)) {
 			for (final Template template : templates) {
 				template.render(settings, globalData, writer);
 			}

@@ -3,8 +3,8 @@ package horseshoe.util;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 
+import horseshoe.ContextAccess;
 import horseshoe.RenderContext;
-import horseshoe.Settings.ContextAccess;
 import horseshoe.Stack;
 
 public final class Identifier {

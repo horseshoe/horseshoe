@@ -30,6 +30,10 @@ import horseshoe.util.Operands;
 import horseshoe.util.SectionRenderData;
 import horseshoe.util.Streamable;
 
+/**
+ * {@link Expression}s are evaluated to populate output content when a {@link Template} is rendered.
+ * They are created when a {@link Template} is parsed and cannot be directly instantiated.
+ */
 public final class Expression {
 
 	private static final byte LOAD_EXPRESSIONS = ALOAD_1;

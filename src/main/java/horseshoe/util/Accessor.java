@@ -237,12 +237,12 @@ public abstract class Accessor {
 	}
 
 	private static final class Range {
-		public final int start;
-		public final int end;
-		public final int size;
-		public final int increment;
+		final int start;
+		final int end;
+		final int size;
+		final int increment;
 
-		public Range(final int start, final Object end, final int length) {
+		Range(final int start, final Object end, final int length) {
 			this.start = calculateIndex(length, start);
 
 			if (end == null) {
@@ -1176,7 +1176,7 @@ public abstract class Accessor {
 		 * @param parameterCount the number of parameters that the method takes
 		 * @return the new accessor, or null if no method could be found
 		 */
-		public static Accessor create(final Class<?> parent, final MethodSignature signature, final int parameterCount) {
+		static Accessor create(final Class<?> parent, final MethodSignature signature, final int parameterCount) {
 			final LinkedHashSet<MethodHandle> methodHandles = new LinkedHashSet<>(2);
 
 			// Find all matching methods in the first public ancestor class, including all interfaces along the way
@@ -1215,7 +1215,7 @@ public abstract class Accessor {
 		 * @return the new accessor, or null if no method could be found
 		 * @throws IllegalAccessException if a matching method is found, but it cannot be accessed
 		 */
-		public static Accessor createStaticOrClass(final Class<?> parent, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
+		static Accessor createStaticOrClass(final Class<?> parent, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
 			final ArrayList<MethodHandle> methodHandles = new ArrayList<>(2);
 
 			// Find all matching static methods
@@ -1263,7 +1263,7 @@ public abstract class Accessor {
 		 * @param signature the method signature
 		 * @param parameterCount the parameter count of the method
 		 */
-		public static void getPublicInterfaceMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final MethodSignature signature, final int parameterCount) {
+		static void getPublicInterfaceMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final MethodSignature signature, final int parameterCount) {
 			for (final Class<?> iface : parent.getInterfaces()) {
 				try {
 					getPublicMethods(methodHandles, iface, false, signature, parameterCount);
@@ -1289,7 +1289,7 @@ public abstract class Accessor {
 		 * @param parameterCount the parameter count of the method
 		 * @throws IllegalAccessException if a matching method is found, but it cannot be accessed
 		 */
-		public static void getPublicMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
+		static void getPublicMethods(final Collection<MethodHandle> methodHandles, final Class<?> parent, final boolean isStatic, final MethodSignature signature, final int parameterCount) throws IllegalAccessException {
 			for (final Method method : parent.getMethods()) {
 				if (Modifier.isStatic(method.getModifiers()) == isStatic && !method.isSynthetic() && method.getParameterCount() == parameterCount && signature.matches(method)) {
 					methodHandles.add(LOOKUP.unreflect(method).asSpreader(Object[].class, parameterCount));
@@ -1479,7 +1479,7 @@ public abstract class Accessor {
 		 * @return the new accessor, or null if no field could be found
 		 * @throws IllegalAccessException if a matching field is found, but it cannot be accessed
 		 */
-		public static Accessor createStaticFieldAccessor(final Class<?> parent, final String fieldName) throws IllegalAccessException {
+		static Accessor createStaticFieldAccessor(final Class<?> parent, final String fieldName) throws IllegalAccessException {
 			// Get public static fields only from the current class if it is public
 			if (Modifier.isPublic(parent.getModifiers())) {
 				for (final Field field : parent.getFields()) {

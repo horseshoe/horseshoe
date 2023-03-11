@@ -8,9 +8,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * A {@link BufferedFileUpdateStream} may not modify the underlying file if the contents written are the same as the current file contents depending on the update settings. It is a single threaded buffered stream.
+ * A {@link BufferedFileUpdateStream} is a single-threaded, buffered file stream that, by default, only updates the content if the existing content does not match.
+ * The {@link FileModification} settings can be modified to support appending to or overwriting the existing file content.
  *
- * <p>It is not necessary to wrap the output stream in a buffered stream or writer, as it is already buffered. For example:
+ * <p>It is not necessary to wrap the output stream in a buffered stream or writer, as it is already buffered.
+ * For example:
  *
  * <pre>
  * Writer out
@@ -24,27 +26,8 @@ public class BufferedFileUpdateStream extends OutputStream {
 	private final byte[] buffer;
 	private int count = 0;
 
-	/**
-	 * The update method for the file.
-	 */
-	public enum Update {
-		/**
-		 * The file contents will only be modified if the contents changes.
-		 */
-		UPDATE,
-
-		/**
-		 * The file contents will be updated by appending to the end of the existing file.
-		 */
-		APPEND,
-
-		/**
-		 * The file will be truncated and the contents replaced.
-		 */
-		OVERWRITE
-	}
-
 	private class CompareOutputStream extends OutputStream {
+
 		private final File file;
 		private final InputStream inputStream;
 		private final byte[] buffer;
@@ -141,22 +124,23 @@ public class BufferedFileUpdateStream extends OutputStream {
 
 			truncateSize += len;
 		}
+
 	}
 
 	/**
 	 * Creates a new buffered file update stream.
 	 *
 	 * @param file the file to update
-	 * @param update the update settings to use when writing to the file
+	 * @param modificationSetting the modification setting to use when writing to the file
 	 * @param bufferSize the size of the buffer used to write and/or read from the file
 	 * @throws IOException if an exception occurs while opening the file
 	 */
-	public BufferedFileUpdateStream(final File file, final Update update, int bufferSize) throws IOException {
+	public BufferedFileUpdateStream(final File file, final FileModification modificationSetting, int bufferSize) throws IOException {
 		this.buffer = new byte[bufferSize];
 
 		try {
-			if (update != Update.OVERWRITE && file.canRead()) {
-				this.outputStream = new CompareOutputStream(file, update == Update.APPEND);
+			if (modificationSetting != FileModification.OVERWRITE && file.canRead()) {
+				this.outputStream = new CompareOutputStream(file, modificationSetting == FileModification.APPEND);
 				return;
 			}
 		} catch (final SecurityException e) { // Ignore any security error, although it will probably just get thrown again when the output stream is created
@@ -170,11 +154,11 @@ public class BufferedFileUpdateStream extends OutputStream {
 	 * Creates a new buffered file update stream using the default buufer size.
 	 *
 	 * @param file the file to update
-	 * @param update the update settings to use when writing to the file
+	 * @param modificationSetting the modification setting to use when writing to the file
 	 * @throws IOException if an exception occurs while opening the file
 	 */
-	public BufferedFileUpdateStream(final File file, final Update update) throws IOException {
-		this(file, update, 8192);
+	public BufferedFileUpdateStream(final File file, final FileModification modificationSetting) throws IOException {
+		this(file, modificationSetting, 8192);
 	}
 
 	@Override

@@ -11,7 +11,11 @@ import java.util.stream.Stream;
 
 import horseshoe.util.SectionRenderData;
 
-public class SectionRenderer implements Renderer {
+/**
+ * {@link SectionRenderer}s are used to populate output content for a section.
+ * They are created when a {@link Template} is parsed and cannot be directly instantiated.
+ */
+public class SectionRenderer extends Renderer {
 
 	private final Section section;
 
@@ -29,7 +33,7 @@ public class SectionRenderer implements Renderer {
 		 * @param handler the annotation handler
 		 * @param args the arguments passed to the annotation
 		 */
-		public AnnotationData(final AnnotationHandler handler, final Object[] args) {
+		AnnotationData(final AnnotationHandler handler, final Object[] args) {
 			this.handler = handler;
 			this.args = args;
 		}
@@ -45,11 +49,11 @@ public class SectionRenderer implements Renderer {
 		private final ArrayList<T> container = new ArrayList<>();
 		private final Iterator<T> iterator;
 
-		public Reiterator(final Iterator<T> iterator) {
+		Reiterator(final Iterator<T> iterator) {
 			this.iterator = iterator;
 		}
 
-		public Iterable<T> getContainer() {
+		Iterable<T> getContainer() {
 			return container;
 		}
 
@@ -499,7 +503,7 @@ public class SectionRenderer implements Renderer {
 	}
 
 	@Override
-	public final void render(final RenderContext context, final Writer writer) throws IOException {
+	final void render(final RenderContext context, final Writer writer) throws IOException {
 		final int contextSize = context.getSectionData().size();
 
 		try {

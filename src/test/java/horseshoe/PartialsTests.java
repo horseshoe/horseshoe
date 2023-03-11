@@ -24,7 +24,7 @@ class PartialsTests {
 
 	@Test
 	void testIndentation() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.put("f", "With a new line!\n")
 				.put("g", "A{{!}} simple {{!}}test!\n{{! Should not show up even as empty line. }}\n\t{{> f }}\nAnd another.\n")
@@ -36,7 +36,7 @@ class PartialsTests {
 
 	@Test
 	void testIndentation2() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.put("f", "With a new line!\n")
 				.put("g", "A{{!}} simp\n\nle\n {{!}}\ntest!\n{{! Should not show up even as empty line. }}\n\t{{> f }}\nAnd another.\n")
@@ -115,7 +115,7 @@ class PartialsTests {
 
 	@Test
 	void testNestedPartials() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("f", "{{# a }}{{> g }}{{ b }}{{/ a }}{{^ a }}{{ x }}{{/ a }}",
 					"g", new StringReader("{{# x }}{{> f }}{{ x }}{{/ x }}"),
@@ -127,7 +127,7 @@ class PartialsTests {
 
 	@Test
 	void testRecursivePartial() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("f", "{{ b }}{{# a }}{{> f }}{{/ a }}",
 					new StringReader("{{> f }}"));
@@ -189,7 +189,7 @@ class PartialsTests {
 
 	@Test
 	void testInlinePartials() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{< g }}{{# a }}{{ b }}{{ x }}{{/ a }}{{/ g }}{{> g }}{{# a }}{{> g }}{{/ a }}");
 		final StringWriter writer = new StringWriter();
@@ -199,7 +199,7 @@ class PartialsTests {
 
 	@Test
 	void testInlinePartials2() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{< a }}{{ b }}{{ x }}{{/ a }}{{< g }}{{# a }}{{> a }}{{/ a }}{{/ g }}{{> g }}{{# a }}{{> g }}{{/ a }}");
 		final StringWriter writer = new StringWriter();
@@ -214,7 +214,7 @@ class PartialsTests {
 
 	@Test
 	void testInlinePartials4() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.FULL);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.FULL);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{< a }}{{>}}{{/ a }}{{< b }}hello{{/ b }}{{#> a }}{{> b }}{{/ a }}");
 		final StringWriter writer = new StringWriter();
@@ -246,7 +246,7 @@ class PartialsTests {
 
 	@Test
 	void testInlineRecursivePartialIndentation() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = Template.load("{{< g }}\n{{ x }}:\n{{# a }}\n\t{{> g }}\n{{/ a }}\n{{/ g }}\n\t{{> g }}\n");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, loadMap("a", loadMap("a", loadMap("x", 3), "x", 2), "x", 1), writer);
@@ -255,7 +255,7 @@ class PartialsTests {
 
 	@Test
 	void testInlineRecursivePartialIndentation2() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{< g }}\n{{ x }}:\n{{# a }}\n\t{{>> g }} a\n{{/ a }}\n{{/ g }}\n\t{{> g }} a\n");
 		final StringWriter writer = new StringWriter();
@@ -265,7 +265,7 @@ class PartialsTests {
 
 	@Test
 	void testInlineRecursivePartial() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{< f }}\n{{ b }}\n{{# a }}\n{{> f }}\n{{/ a }}\n{{/ f }}\n{{> f }}");
 		final StringWriter writer = new StringWriter();
@@ -280,7 +280,7 @@ class PartialsTests {
 
 	@Test
 	void testInlineBadRecursivePartial() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("Test", "{{< f }}\n{{ b }}{{> Test }}\n{{/ f }}\n{{> f }}");
 		final StringWriter writer = new StringWriter();
@@ -295,7 +295,7 @@ class PartialsTests {
 
 	@Test
 	void testClashingPartialsAndData() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader()
 				.load("f", "bad",
 					"f", "{{ f.b }}",

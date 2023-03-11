@@ -3,7 +3,7 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
-final class ExpressionEvaluationRenderer implements Renderer {
+final class ExpressionEvaluationRenderer extends Renderer {
 
 	private final Expression expression;
 
@@ -17,7 +17,7 @@ final class ExpressionEvaluationRenderer implements Renderer {
 	}
 
 	@Override
-	public void render(final RenderContext context, final Writer writer) throws IOException {
+	void render(final RenderContext context, final Writer writer) throws IOException {
 		expression.evaluate(context);
 	}
 

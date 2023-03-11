@@ -14,20 +14,20 @@ import java.util.regex.Pattern;
  */
 final class CommandLineOption {
 
-	public final char shortName;
-	public final boolean hasArgument;
-	public final String longName;
-	public final boolean hasLongOptionalArgument;
-	public final String argumentName;
-	public final String description;
+	final char shortName;
+	final boolean hasArgument;
+	final String longName;
+	final boolean hasLongOptionalArgument;
+	final String argumentName;
+	final String description;
 
 	/**
 	 * An argument pair is a an option with an associated argument.
 	 */
 	static final class ArgumentPair {
 
-		public final CommandLineOption option;
-		public final String argument;
+		final CommandLineOption option;
+		final String argument;
 
 		/**
 		 * Creates a new option / argument pair.
@@ -35,7 +35,7 @@ final class CommandLineOption {
 		 * @param option the option of the pair
 		 * @param argument the argument of the pair
 		 */
-		public ArgumentPair(final CommandLineOption option, final String argument) {
+		ArgumentPair(final CommandLineOption option, final String argument) {
 			this.option = option;
 			this.argument = argument;
 		}
@@ -56,7 +56,7 @@ final class CommandLineOption {
 		 *
 		 * @param options the set of options
 		 */
-		public OptionSet(final CommandLineOption... options) {
+		OptionSet(final CommandLineOption... options) {
 			final HashMap<Character, CommandLineOption> shortMap = new HashMap<>();
 			final HashMap<String, CommandLineOption> longMap = new HashMap<>();
 
@@ -102,7 +102,7 @@ final class CommandLineOption {
 		 * @param args the arguments to parse
 		 * @return an iterator over the option and argument pairs
 		 */
-		public Iterator<ArgumentPair> parse(final String... args) {
+		Iterator<ArgumentPair> parse(final String... args) {
 			return new Iterator<ArgumentPair>() {
 				private boolean doneParsingOptions = false;
 				private int index = 0;
@@ -197,7 +197,7 @@ final class CommandLineOption {
 		 *
 		 * @param stream the stream used to print the options
 		 */
-		public void print(final PrintStream stream) {
+		void print(final PrintStream stream) {
 			final String indent = new String(new char[2]).replace('\0', ' ');
 			final String descriptionIndent = new String(new char[6]).replace('\0', ' ');
 			final int maxDescriptionLength = 80 - descriptionIndent.length();
@@ -253,7 +253,7 @@ final class CommandLineOption {
 	 * @param description a description of the option
 	 * @return the new option
 	 */
-	public static CommandLineOption ofName(final char shortName, final String description) {
+	static CommandLineOption ofName(final char shortName, final String description) {
 		return ofName(shortName, null, description);
 	}
 
@@ -265,7 +265,7 @@ final class CommandLineOption {
 	 * @param description a description of the option
 	 * @return the new option
 	 */
-	public static CommandLineOption ofName(final char shortName, final String longName, final String description) {
+	static CommandLineOption ofName(final char shortName, final String longName, final String description) {
 		return new CommandLineOption(shortName, false, longName, false, null, description);
 	}
 
@@ -276,7 +276,7 @@ final class CommandLineOption {
 	 * @param description a description of the option
 	 * @return the new option
 	 */
-	public static CommandLineOption ofName(final String longName, final String description) {
+	static CommandLineOption ofName(final String longName, final String description) {
 		return ofName((char)0, longName, description);
 	}
 
@@ -288,7 +288,7 @@ final class CommandLineOption {
 	 * @param description a description of the option
 	 * @return the new option
 	 */
-	public static CommandLineOption ofNameWithArgument(final char shortName, final String argumentName, final String description) {
+	static CommandLineOption ofNameWithArgument(final char shortName, final String argumentName, final String description) {
 		return ofNameWithArgument(shortName, null, argumentName, description);
 	}
 
@@ -301,7 +301,7 @@ final class CommandLineOption {
 	 * @param description a description of the option
 	 * @return the new option
 	 */
-	public static CommandLineOption ofNameWithArgument(final char shortName, final String longName, final String argumentName, final String description) {
+	static CommandLineOption ofNameWithArgument(final char shortName, final String longName, final String argumentName, final String description) {
 		return new CommandLineOption(shortName, true, longName, false, argumentName, description);
 	}
 
@@ -313,7 +313,7 @@ final class CommandLineOption {
 	 * @param description a description of the option
 	 * @return the new option
 	 */
-	public static CommandLineOption ofNameWithArgument(final String longName, final String argumentName, final String description) {
+	static CommandLineOption ofNameWithArgument(final String longName, final String argumentName, final String description) {
 		return ofNameWithArgument((char)0, longName, argumentName, description);
 	}
 
@@ -325,7 +325,7 @@ final class CommandLineOption {
 	 * @param description a description of the option
 	 * @return the new option
 	 */
-	public static CommandLineOption ofNameWithOptionalArgument(final String longName, final String argumentName, final String description) {
+	static CommandLineOption ofNameWithOptionalArgument(final String longName, final String argumentName, final String description) {
 		return new CommandLineOption((char)0, false, longName, true, argumentName, description);
 	}
 
@@ -335,7 +335,7 @@ final class CommandLineOption {
 	 * @param stream the stream used to print the option
 	 * @return the original stream parameter
 	 */
-	public PrintStream toOptionString(final PrintStream stream) {
+	PrintStream toOptionString(final PrintStream stream) {
 		if (shortName != 0) {
 			stream.append('-').append(shortName);
 

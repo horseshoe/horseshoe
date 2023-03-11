@@ -10,8 +10,6 @@ import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import horseshoe.Settings.ContextAccess;
-
 import org.junit.jupiter.api.Test;
 
 public class NamedExpressionTests {
@@ -56,12 +54,12 @@ public class NamedExpressionTests {
 
 	@Test
 	void testNamedExprScope() throws IOException, LoadException {
-		assertEquals("Good, Good", new TemplateLoader().load("Test", "{{# true }}{{ Good() -> 'Good' }}{{ Good() }}{{/}}, {{ Good() }}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("Good, Good", new TemplateLoader().load("Test", "{{# true }}{{ Good() -> 'Good' }}{{ Good() }}{{/}}, {{ Good() }}").render(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test
 	void testNamedExprMethodCall() throws IOException, LoadException {
-		final Settings settings = new Settings().setContextAccess(Settings.ContextAccess.CURRENT);
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT);
 		final Template template = new TemplateLoader().load("Test", "{{ returnArg() -> . }}{{ (returnArg('123') + '4').replace('1', '2') }}");
 		final StringWriter writer = new StringWriter();
 		template.render(settings, Collections.emptyMap(), writer);
@@ -70,8 +68,8 @@ public class NamedExpressionTests {
 
 	@Test
 	void testNamedExprMethodCall2() throws IOException, LoadException {
-		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{ upper() -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : . }}{{ upper(\"123a\").replaceAll(\"[aA]\", \"1\") + \", \" + upper(\"Abc\").replaceAll(\"[aA]\", \"1\") }}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
-		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{ upper() -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : . }}{{ (upper(\"123a\") + \", \" + upper(\"Abc\")).replaceAll(\"[aA]\", \"1\") }}").render(new Settings().setContextAccess(Settings.ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{ upper() -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : . }}{{ upper(\"123a\").replaceAll(\"[aA]\", \"1\") + \", \" + upper(\"Abc\").replaceAll(\"[aA]\", \"1\") }}").render(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
+		assertEquals("1231, 1BCD", new TemplateLoader().load("Test", "{{ upper() -> ./substring(0, 1) == \"A\" ? ./toUpperCase() + \"D\" : . }}{{ (upper(\"123a\") + \", \" + upper(\"Abc\")).replaceAll(\"[aA]\", \"1\") }}").render(new Settings().setContextAccess(ContextAccess.CURRENT), Collections.emptyMap(), new StringWriter()).toString());
 	}
 
 	@Test

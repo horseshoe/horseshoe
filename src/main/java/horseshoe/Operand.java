@@ -31,14 +31,14 @@ final class Operand {
 	 * The type associated with the operand.
 	 * NOTE: A class of {@link Double} indicates any potential floating-point {@link Number}, and a class of {@link Integer} indicates any potential integral {@link Number} (including {@link Long}).
 	 */
-	public final Class<?> type;
+	final Class<?> type;
 
 	/**
 	 * The identifier associated with the operand if one exists, otherwise null.
 	 */
-	public final Identifier identifier;
+	final Identifier identifier;
 
-	public final MethodBuilder builder;
+	final MethodBuilder builder;
 
 	/**
 	 * Creates a new operand of the specified type using the builder.

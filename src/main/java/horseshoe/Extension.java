@@ -1,7 +1,7 @@
 package horseshoe;
 
 /**
- * A Horseshoe extension is an option that extends the core Mustache functionality.
+ * Options that affect Horseshoe extensions to core Mustache functionality.
  */
 public enum Extension {
 

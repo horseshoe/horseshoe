@@ -23,7 +23,6 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.Spliterators;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
@@ -35,7 +34,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
- * The Settings class allows configuring different properties that are used when rendering a {@link Template}.
+ * The {@link Settings} class allows configuring different properties that are used when rendering a {@link Template}.
  */
 public class Settings {
 
@@ -47,12 +46,7 @@ public class Settings {
 	/**
 	 * The logger that consumes all messages without reporting them.
 	 */
-	public static final Logger EMPTY_LOGGER = new Logger() {
-		@Override
-		public void log(final Level level, final Throwable error, final String message, final Object... params) {
-			// Intentionally left empty
-		}
-	};
+	public static final Logger EMPTY_LOGGER = (level, error, message, params) -> { /* Intentionally left empty */ };
 
 	/**
 	 * The escape function that does not escape any characters, returning the same string that was passed to it.
@@ -199,10 +193,10 @@ public class Settings {
 		private final ConcurrentHashMap<String, Class<?>> qualifiedNameLookup = new ConcurrentHashMap<>();
 		private final ConcurrentHashMap<String, Class<?>> unqualifiedNameLookup = new ConcurrentHashMap<>();
 
-		public ClassMap() {
+		ClassMap() {
 		}
 
-		public ClassMap(final Collection<Class<?>> collection) {
+		ClassMap(final Collection<Class<?>> collection) {
 			this();
 			addAll(collection);
 		}
@@ -225,7 +219,7 @@ public class Settings {
 			super.clear();
 		}
 
-		public Class<?> get(final String name) {
+		Class<?> get(final String name) {
 			if (allowUnqualifiedClassNames()) {
 				final Class<?> type = unqualifiedNameLookup.get(name);
 
@@ -274,39 +268,6 @@ public class Settings {
 
 			return false;
 		}
-	}
-
-	/**
-	 * An enumeration used to control access when checking identifiers in expressions.
-	 */
-	public enum ContextAccess {
-		/**
-		 * The context access that allows access to all section scopes when resolving an identifier in an expression.
-		 */
-		FULL,
-
-		/**
-		 * The context access that allows access to the current section scope and the root-level section scope when resolving an identifier in an expression.
-		 */
-		CURRENT_AND_ROOT,
-
-		/**
-		 * The context access that allows access to only the current section scope when resolving an identifier in an expression.
-		 */
-		CURRENT
-	}
-
-	/**
-	 * An EscapeFunction is used to escape dynamic content (interpolated text) before it is rendered as output.
-	 */
-	public static interface EscapeFunction {
-		/**
-		 * Escapes the specified string.
-		 *
-		 * @param raw the raw string to escape
-		 * @return the escaped string
-		 */
-		String escape(String raw);
 	}
 
 	/**

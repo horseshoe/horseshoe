@@ -23,7 +23,6 @@ import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import horseshoe.Settings.ContextAccess;
 import horseshoe.bytecode.MethodBuilder;
 import horseshoe.util.Identifier;
 
@@ -71,7 +70,7 @@ class ExpressionTests {
 	 * @throws Throwable an exception thrown by the evaluated {@code Expression}
 	 */
 	private static Object evaluateExpression(final Expression expression, final Map<String, Object> context) throws Throwable {
-		class ThrowableLogger extends Logger {
+		class ThrowableLogger implements Logger {
 			private Throwable lastError;
 
 			@Override

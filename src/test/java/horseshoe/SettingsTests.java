@@ -9,8 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.logging.Level;
 
-import horseshoe.Settings.ContextAccess;
-
 import org.junit.jupiter.api.Test;
 
 class SettingsTests {

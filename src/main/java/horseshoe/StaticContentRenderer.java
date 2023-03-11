@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 
-final class StaticContentRenderer implements Renderer {
+final class StaticContentRenderer extends Renderer {
 
 	private final ArrayList<Renderer> container;
 	private final int containerIndex;
@@ -12,25 +12,25 @@ final class StaticContentRenderer implements Renderer {
 	private final boolean followsStandaloneTag;
 	private final boolean indentFirstLine;
 
-	private static final class EmptyRenderer implements Renderer {
+	private static final class EmptyRenderer extends Renderer {
 
 		@Override
-		public void render(final RenderContext context, final Writer writer) throws IOException {
+		void render(final RenderContext context, final Writer writer) throws IOException {
 			// No content is rendered
 		}
 
 	}
 
-	private static class SingleLineNoIndentRenderer implements Renderer {
+	private static class SingleLineNoIndentRenderer extends Renderer {
 
 		private final String line;
 
-		public SingleLineNoIndentRenderer(final String line) {
+		SingleLineNoIndentRenderer(final String line) {
 			this.line = line;
 		}
 
 		@Override
-		public void render(final RenderContext context, final Writer writer) throws IOException {
+		void render(final RenderContext context, final Writer writer) throws IOException {
 			writer.write(line);
 		}
 
@@ -38,28 +38,28 @@ final class StaticContentRenderer implements Renderer {
 
 	private static final class SingleLineRenderer extends SingleLineNoIndentRenderer {
 
-		public SingleLineRenderer(final String line) {
+		SingleLineRenderer(final String line) {
 			super(line);
 		}
 
 		@Override
-		public void render(final RenderContext context, final Writer writer) throws IOException {
+		void render(final RenderContext context, final Writer writer) throws IOException {
 			writer.write(context.getIndentation().peek());
 			super.render(context, writer);
 		}
 
 	}
 
-	private static class MultiLineNoIndentNoLastRenderer implements Renderer {
+	private static class MultiLineNoIndentNoLastRenderer extends Renderer {
 
 		protected final ParsedLine[] lines;
 
-		public MultiLineNoIndentNoLastRenderer(final ParsedLine[] lines) {
+		MultiLineNoIndentNoLastRenderer(final ParsedLine[] lines) {
 			this.lines = lines;
 		}
 
 		@Override
-		public void render(final RenderContext context, final Writer writer) throws IOException {
+		void render(final RenderContext context, final Writer writer) throws IOException {
 			final String indentation = context.getIndentation().peek();
 			final String lineEnding = context.getSettings().getLineEndings();
 
@@ -83,12 +83,12 @@ final class StaticContentRenderer implements Renderer {
 
 	private static final class MultiLineNoIndentRenderer extends MultiLineNoIndentNoLastRenderer {
 
-		public MultiLineNoIndentRenderer(final ParsedLine[] lines) {
+		MultiLineNoIndentRenderer(final ParsedLine[] lines) {
 			super(lines);
 		}
 
 		@Override
-		public void render(final RenderContext context, final Writer writer) throws IOException {
+		void render(final RenderContext context, final Writer writer) throws IOException {
 			super.render(context, writer);
 
 			// Skip line ending on the last line
@@ -98,16 +98,16 @@ final class StaticContentRenderer implements Renderer {
 
 	}
 
-	private static class MultiLineNoLastRenderer implements Renderer {
+	private static class MultiLineNoLastRenderer extends Renderer {
 
 		protected final ParsedLine[] lines;
 
-		public MultiLineNoLastRenderer(final ParsedLine[] lines) {
+		MultiLineNoLastRenderer(final ParsedLine[] lines) {
 			this.lines = lines;
 		}
 
 		@Override
-		public void render(final RenderContext context, final Writer writer) throws IOException {
+		void render(final RenderContext context, final Writer writer) throws IOException {
 			final String indentation = context.getIndentation().peek();
 			final String lineEnding = context.getSettings().getLineEndings();
 
@@ -128,12 +128,12 @@ final class StaticContentRenderer implements Renderer {
 
 	private static final class MultiLineRenderer extends MultiLineNoLastRenderer {
 
-		public MultiLineRenderer(final ParsedLine[] lines) {
+		MultiLineRenderer(final ParsedLine[] lines) {
 			super(lines);
 		}
 
 		@Override
-		public void render(final RenderContext context, final Writer writer) throws IOException {
+		void render(final RenderContext context, final Writer writer) throws IOException {
 			super.render(context, writer);
 
 			// Skip line ending on the last line
@@ -170,7 +170,7 @@ final class StaticContentRenderer implements Renderer {
 	}
 
 	@Override
-	public void render(final RenderContext context, final Writer writer) throws IOException {
+	void render(final RenderContext context, final Writer writer) throws IOException {
 		final Renderer replacementAction;
 		final int size = lines.size();
 		final int offset;

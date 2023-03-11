@@ -23,31 +23,20 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
 
-import horseshoe.Settings.ContextAccess;
-
 import org.junit.jupiter.api.Test;
 
 class TemplateTests {
 
 	private static final String LS = System.lineSeparator();
 
-	private static final class ErrorLogger extends Logger {
-		private final ArrayList<Throwable> errors = new ArrayList<>();
-
-		@Override
-		public void log(Level level, Throwable error, String message, Object... params) {
-			errors.add(error);
-		}
-	}
-
 	@Test
 	void testBackreach() throws IOException, LoadException {
 		assertEquals("Original String" + LS, new TemplateLoader().load("Backreach", "{{# \"Original String\" }}\n{{# charAt(1) }}\n{{..}}\n{{/}}\n{{/}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 		assertEquals("Original String" + LS, new TemplateLoader().load("Backreach", "{{# \"Original String\" }}\n{{# charAt(1) }}\n{{ ../toString() }}\n{{/}}\n{{/}}").render(Collections.<String, Object>emptyMap(), new java.io.StringWriter()).toString());
 
-		final ErrorLogger errorLogger = new ErrorLogger();
-		Template.load("{{# \"Original String\" }}\n{{ ../../toString() }}\n{{/}}").render(new Settings().setLogger(errorLogger), null, new java.io.StringWriter());
-		assertTrue(errorLogger.errors.stream().anyMatch(t -> t instanceof IndexOutOfBoundsException));
+		final ArrayList<Throwable> errors = new ArrayList<>();
+		Template.load("{{# \"Original String\" }}\n{{ ../../toString() }}\n{{/}}").render(new Settings().setLogger((level, error, message, params) -> errors.add(error)), null, new java.io.StringWriter());
+		assertTrue(errors.stream().anyMatch(t -> t instanceof IndexOutOfBoundsException));
 	}
 
 	@Test
@@ -131,7 +120,7 @@ class TemplateTests {
 		assertThrows(LoadException.class, () -> new TemplateLoader().load("Bad Else Test", "{{# 5 }}{{^^ 6 }}{{/}}"));
 	}
 
-	private static final class CountingLogger extends Logger {
+	private static final class CountingLogger implements Logger {
 
 		private int count = 0;
 
@@ -186,13 +175,13 @@ class TemplateTests {
 
 		final StackTraceElement expressionElement = new StackTraceElement(Expression.class.getName(), "methodName", "fileName", 0);
 		final StackTraceElement emptyElement = new StackTraceElement("declaringClass", "methodName", "fileName", 0);
-		final Logger.StoredError error = new Logger.StoredError(new StackTraceThrowable(null, expressionElement, emptyElement));
-		final Logger.StoredError errorSame = new Logger.StoredError(new StackTraceThrowable(null, expressionElement, emptyElement));
-		final Logger.StoredError errorDifferent = new Logger.StoredError(new StackTraceThrowable(null, expressionElement, emptyElement, expressionElement));
+		final ThrowableComparator error = new ThrowableComparator(new StackTraceThrowable(null, expressionElement, emptyElement));
+		final ThrowableComparator errorSame = new ThrowableComparator(new StackTraceThrowable(null, expressionElement, emptyElement));
+		final ThrowableComparator errorDifferent = new ThrowableComparator(new StackTraceThrowable(null, expressionElement, emptyElement, expressionElement));
 
 		assertFalse(error.equals(new Object()));
-		assertFalse(error.equals(new Logger.StoredError(new Throwable())));
-		assertFalse(error.equals(new Logger.StoredError(new StackTraceThrowable("Different Message", expressionElement, emptyElement))));
+		assertFalse(error.equals(new ThrowableComparator(new Throwable())));
+		assertFalse(error.equals(new ThrowableComparator(new StackTraceThrowable("Different Message", expressionElement, emptyElement))));
 		assertTrue(error.equals(errorSame));
 		assertTrue(errorSame.equals(error));
 		assertFalse(error.equals(errorDifferent));

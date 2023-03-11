@@ -13,9 +13,9 @@ final class TemplateLoadState {
 
 	private static final ParsedLine EMPTY_LINE = new ParsedLine("", "");
 
-	public static final int TAG_CAN_BE_STANDALONE = 0;
-	public static final int TAG_CANT_BE_STANDALONE = 1;
-	public static final int TAG_CHECK_TAIL_STANDALONE = 2;
+	static final int TAG_CAN_BE_STANDALONE = 0;
+	static final int TAG_CANT_BE_STANDALONE = 1;
+	static final int TAG_CHECK_TAIL_STANDALONE = 2;
 
 	private final Loader loader;
 	private final Template template;
@@ -37,7 +37,7 @@ final class TemplateLoadState {
 		final String end;
 		final String unescapedEnd;
 
-		public Delimiter(final String start, final String end) {
+		Delimiter(final String start, final String end) {
 			this.start = start;
 			this.end = end;
 			this.unescapedEnd = "}" + end;
@@ -45,7 +45,7 @@ final class TemplateLoadState {
 
 	}
 
-	public TemplateLoadState(final Loader loader, final Template template) {
+	TemplateLoadState(final Loader loader, final Template template) {
 		this.loader = loader;
 		this.template = template;
 		templateBindings.push(template.getBindings());

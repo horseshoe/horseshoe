@@ -13,7 +13,8 @@ import java.util.logging.Level;
 import horseshoe.Utilities.Range;
 
 /**
- * Loaders are used to parse {@link Template}s. It keeps track of the current state of the internal reader used to load the template text.
+ * {@link Loader}s are used to parse {@link Template}s.
+ * They keep track of the current state of the internal reader used to load the template text.
  */
 public final class Loader implements AutoCloseable {
 
@@ -33,16 +34,16 @@ public final class Loader implements AutoCloseable {
 		private int line;
 		private int index;
 
-		public Location(final int line, final int index) {
+		Location(final int line, final int index) {
 			this.line = line;
 			this.index = index;
 		}
 
-		public Location() {
+		Location() {
 			this(1, 0);
 		}
 
-		public void set(final Location other) {
+		void set(final Location other) {
 			line = other.line;
 			index = other.index;
 		}

@@ -20,7 +20,8 @@ import horseshoe.Utilities.TrimmedString;
 import horseshoe.util.Identifier;
 
 /**
- * The TemplateLoader class is used to load any number of {@link Template}s before rendering. Various properties can be configured to load templates with different settings.
+ * The {@link TemplateLoader} class is used to load any number of {@link Template}s before rendering.
+ * Various properties can be configured to load templates with different settings.
  */
 public class TemplateLoader {
 
@@ -45,12 +46,12 @@ public class TemplateLoader {
 		private final Template template;
 		private final Loader loader;
 
-		public Loadable(final Template template, final Loader loader) {
+		Loadable(final Template template, final Loader loader) {
 			this.template = template;
 			this.loader = loader;
 		}
 
-		public Template load() throws IOException, LoadException {
+		Template load() throws IOException, LoadException {
 			try {
 				return loadTemplate(template, loader, new Stack<>());
 			} finally {

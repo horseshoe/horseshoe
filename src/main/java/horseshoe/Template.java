@@ -11,7 +11,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Templates represent parsed and resolved Horseshoe template files. They are loaded using the {@link TemplateLoader} class. An example of how to load and render a template is given below:
+ * {@link Template}s represent parsed and resolved Horseshoe template files.
+ * They are loaded using the {@link TemplateLoader} class.
+ * An example of how to load and render a template is given below:
  * <pre>{@code
  * final horseshoe.Template template = new horseshoe.TemplateLoader().load("Hello World", "{{{ salutation }}}, {{ recipient }}!");
  *

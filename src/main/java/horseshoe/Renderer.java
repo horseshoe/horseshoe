@@ -3,7 +3,7 @@ package horseshoe;
 import java.io.IOException;
 import java.io.Writer;
 
-public interface Renderer {
+abstract class Renderer {
 
 	/**
 	 * Renders text using the context and the writer.
@@ -12,6 +12,6 @@ public interface Renderer {
 	 * @param writer the writer to use for rendering
 	 * @throws IOException if an error occurs while writing to the writer
 	 */
-	void render(final RenderContext context, final Writer writer) throws IOException;
+	abstract void render(final RenderContext context, final Writer writer) throws IOException;
 
 }

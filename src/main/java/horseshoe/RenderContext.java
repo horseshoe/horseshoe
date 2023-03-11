@@ -6,6 +6,10 @@ import java.util.Map;
 
 import horseshoe.util.SectionRenderData;
 
+/**
+ * A {@link RenderContext} is the context object used during the {@link Template} rendering process.
+ * It is created and populated by the user prior to rendering.
+ */
 public final class RenderContext {
 
 	private final Settings settings;
