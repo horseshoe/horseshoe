@@ -92,7 +92,7 @@ public final class AnnotationHandlers {
 		private static Writer createWriter(final File file, final Charset charset, final FileModification modificationSetting) throws IOException {
 			final File directory = file.getParentFile();
 
-			if (directory != null && !directory.isDirectory() && !directory.mkdirs()) {
+			if (directory != null && !directory.isDirectory() && !directory.mkdirs() && !directory.isDirectory()) { // Additional directory check at end in case it was created by another thread or process
 				throw new IOException("Failed to create directory " + directory.toString());
 			}
 
