@@ -736,7 +736,7 @@ public class TemplateLoader {
 				if (state.getSections().size() <= 1) { // There should always be at least one section on the stack (the template root section)
 					throw new LoadException(loaders, "Section close tag without matching section start tag");
 				} else if ((!expression.string.isEmpty() || !extensions.contains(Extension.EMPTY_END_TAGS)) && !expression.string.equals(section.getName()) &&
-						(section.getName().isEmpty() || !expression.string.equals(section.getExpression().getCallName()))) {
+						(section.getName().isEmpty() || section.getExpression() == null || !expression.string.equals(section.getExpression().getCallName()))) {
 					if (!expression.string.isEmpty() && extensions.contains(Extension.SMART_END_TAGS)) {
 						break;
 					}

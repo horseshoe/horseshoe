@@ -40,6 +40,11 @@ class TemplateTests {
 	}
 
 	@Test
+	void testBadCloseTag() {
+		assertThrows(LoadException.class, () -> new TemplateLoader().load("ClassLoading", "{{< p(a) }}{{# @Stdout('b') }}{{/ @Stdout }}{{/ @Stdout }}"));
+	}
+
+	@Test
 	void testClassLoading() throws IOException, LoadException {
 		assertEquals("Good, Good, 73.7", new TemplateLoader().load("ClassLoading", "{{# classes }}{{^ ~@./getName() }}Bad, {{/}}{{/}}{{# ~@'Blah' }}Bad, {{/}}{{# ~@'NonExistantClass' }}Bad, {{/}}{{# ~@'java.lang.System' }}Bad, {{/}}{{# ~@'System' }}Bad, {{/}}{{# ~@'ClassLoader' }}Good, {{/}}{{# ~@'" + TemplateTests.class.getName() + "' }}Good, {{/}}{{ ~@Integer.parseInt('67') + ~@'Double'.parseDouble('6.7') }}").render(new Settings().addLoadableClasses(Integer.class, TemplateTests.class).addLoadableClasses(Arrays.asList(ClassLoader.class)), Collections.<String, Object>singletonMap("classes", new Settings().getLoadableClasses()), new java.io.StringWriter()).toString());
 		assertEquals(", Good", new TemplateLoader().load("ClassLoading", "{{ ~@'String'?.valueOf('Good') }}, {{ ~@'java.lang.String'?.valueOf('Good') }}").render(new Settings().setAllowUnqualifiedClassNames(false), null, new java.io.StringWriter()).toString());
