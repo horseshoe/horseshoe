@@ -2,6 +2,7 @@ package horseshoe;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
@@ -20,6 +21,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Random;
 import java.util.Set;
 import java.util.Spliterators;
 import java.util.concurrent.ConcurrentHashMap;
@@ -140,21 +142,21 @@ public class Settings {
 
 	static {
 		final HashSet<Class<?>> defaultLoadableClasses = new HashSet<>(Arrays.asList(
-				Integer.class,
-				Byte.class,
-				Short.class,
-				Long.class,
-				BigInteger.class,
-				Float.class,
-				Double.class,
 				BigDecimal.class,
-				Character.class,
+				BigInteger.class,
 				Boolean.class,
+				Byte.class,
+				Character.class,
+				Double.class,
+				Float.class,
+				Integer.class,
+				Long.class,
+				Short.class,
 
-				Object.class,
-				Math.class,
-				StrictMath.class,
 				Enum.class,
+				Math.class,
+				Object.class,
+				StrictMath.class,
 				String.class,
 
 				Arrays.class,
@@ -165,24 +167,27 @@ public class Settings {
 				Date.class,
 				EnumSet.class,
 				GregorianCalendar.class,
-				Objects.class,
 				Matcher.class,
+				Objects.class,
 				Pattern.class,
+				Random.class,
 
-				Instant.class,
+				SecureRandom.class,
+
+				Collector.class,
+				Collectors.class,
+				DoubleStream.class,
 				Duration.class,
+				Instant.class,
+				IntStream.class,
+				LongStream.class,
 				Optional.class,
 				OptionalDouble.class,
 				OptionalInt.class,
 				OptionalLong.class,
 				Spliterators.class,
-				StreamSupport.class,
 				Stream.class,
-				DoubleStream.class,
-				IntStream.class,
-				LongStream.class,
-				Collector.class,
-				Collectors.class));
+				StreamSupport.class));
 
 		DEFAULT_LOADABLE_CLASSES = Collections.unmodifiableSet(defaultLoadableClasses);
 	}
