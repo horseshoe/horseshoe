@@ -82,10 +82,16 @@ class LoadExceptionTests {
 	@Test
 	void testSectionCloseError() throws IOException {
 		try {
-			new TemplateLoader().setExtensions(EnumSet.complementOf(EnumSet.of(Extension.SMART_END_TAGS))).load("Close Section", "{{# Test }}\n test\n{{/ Bad }}\n{{#}}\n{{/}}").render(Collections.emptyMap(), new java.io.StringWriter());
+			Template.load("{{# Test }}\n test\n{{/Bad}}\n{{/ Bad }}\n{{#}}\n{{/}}");
 			fail();
 		} catch (final LoadException e) {
-			System.err.println(e.getMessage());
+			assertEquals(4, e.getLoaders().get(0).getLine());
+			assertEquals(2, e.getLoaders().get(0).getIndex());
+		}
+		try {
+			new TemplateLoader().setExtensions(EnumSet.complementOf(EnumSet.of(Extension.SMART_END_TAGS))).load("Close Section", "{{# Test }}\n test\n{{/Bad}}\n{{/ Bad }}\n{{#}}\n{{/}}");
+			fail();
+		} catch (final LoadException e) {
 			assertEquals(3, e.getLoaders().get(0).getLine());
 			assertEquals(2, e.getLoaders().get(0).getIndex());
 		}

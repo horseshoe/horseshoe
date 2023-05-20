@@ -159,7 +159,7 @@ class RunnerTests {
 
 		try (final ByteArrayInputStream in = new ByteArrayInputStream("{{# ['blue', 'red'] }}\n{{.}}{{# a }}: {{ blah }}{{/}}{{# .hasNext }},{{/}}\n{{/}}\n".getBytes(StandardCharsets.UTF_8))) {
 			System.setIn(in);
-			Runner.main(new String[] { "--output", "out2.test", "-Da=true", "-Dblah=blah", "--output-charset=UTF-16BE", "--access=CURRENT", "-" });
+			Runner.main(new String[] { "--output", "out2.test", "-Da=true", "-Dblah=blah", "--output-charset=UTF-16BE", "--access=CURRENT", "--disable-extensions=" + Extension.ANNOTATIONS + "," + Extension.SMART_END_TAGS, "-" });
 		} finally {
 			System.setIn(originalIn);
 		}

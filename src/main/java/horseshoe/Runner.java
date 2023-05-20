@@ -19,6 +19,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,7 +39,7 @@ public class Runner {
 			CommandLineOption.ofName('h', "help", "Displays usage and lists all options."),
 			CommandLineOption.ofName('v', "version", "Displays the Horseshoe version and exits."),
 			CommandLineOption.ofNameWithArgument('l', "log-level", "level", "Sets the logging <level> for the Horseshoe logger. Valid values are " + join(", ", Level.class.getFields()) + "."),
-			CommandLineOption.ofName("disable-extensions", "Disables all Horseshoe extensions."),
+			CommandLineOption.ofNameWithOptionalArgument("disable-extensions", "extensions", "Disables Horseshoe extensions."),
 			CommandLineOption.ofName("html", "Enables HTML escaping of rendered content."),
 			CommandLineOption.ofNameWithArgument("add-class", "class", "Adds <class> as a loadable class in the template using the ~@'java.lang.System'.currentTimeMillis() syntax."),
 			CommandLineOption.ofNameWithArgument("access", "level", "Changes the access to <level>. Valid values are " + join(", ", ContextAccess.class.getEnumConstants()) + ". The default value is " + new Settings().getContextAccess() + "."),
@@ -410,6 +411,20 @@ public class Runner {
 	}
 
 	/**
+	 * Removes the specified enum values from a set.
+	 *
+	 * @param set the initial set of values
+	 * @param toRemove the strings to remove from the set
+	 * @return the result of removing the strings from the set
+	 */
+	private static <E extends Enum<E>> Set<E> removeAll(final Class<E> type, final Set<E> set, final String[] toRemove) {
+		for (final String e : toRemove) {
+			set.remove(Enum.valueOf(type, e.replace('-', '_').toUpperCase()));
+		}
+		return set;
+	}
+
+	/**
 	 * Gets the list of character set names.
 	 *
 	 * @return the list of character set names
@@ -533,7 +548,7 @@ public class Runner {
 						Template.LOGGER.setLevel(Level.parse(pair.argument));
 						break;
 					case "disable-extensions":
-						loader.setExtensions(EnumSet.noneOf(Extension.class));
+						loader.setExtensions(pair.argument == null ? EnumSet.noneOf(Extension.class) : removeAll(Extension.class, loader.getExtensions(), pair.argument.split("[,; ]+")));
 						break;
 					case "html":
 						settings.setEscapeFunction(Settings.HTML_ESCAPE_FUNCTION);

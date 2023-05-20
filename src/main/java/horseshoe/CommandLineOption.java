@@ -147,7 +147,7 @@ final class CommandLineOption {
 						return new ArgumentPair(option, arg.substring(separator + 1));
 					} else if (!option.hasArgument) { // "--option"
 						if (separator >= 0) {
-							throw new IllegalArgumentException("Option " + option + " has unexpected argument: " + arg.substring(separator + 1));
+							throw new IllegalArgumentException("Option " + option + " has an unexpected argument: " + arg.substring(separator + 1));
 						} else {
 							return new ArgumentPair(option, null);
 						}

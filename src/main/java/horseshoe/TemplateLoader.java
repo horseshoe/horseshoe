@@ -737,7 +737,7 @@ public class TemplateLoader {
 					throw new LoadException(loaders, "Section close tag without matching section start tag");
 				} else if ((!expression.string.isEmpty() || !extensions.contains(Extension.EMPTY_END_TAGS)) && !expression.string.equals(section.getName()) &&
 						(section.getName().isEmpty() || section.getExpression() == null || !expression.string.equals(section.getExpression().getCallName()))) {
-					if (!expression.string.isEmpty() && extensions.contains(Extension.SMART_END_TAGS)) {
+					if (!expression.string.isEmpty() && extensions.contains(Extension.SMART_END_TAGS) && !Character.isWhitespace(tag.charAt(1))) {
 						break;
 					}
 
