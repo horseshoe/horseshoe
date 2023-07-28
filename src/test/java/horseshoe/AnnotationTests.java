@@ -257,7 +257,7 @@ class AnnotationTests {
 	@Test
 	void testFileUpdateAnnotation() throws IOException, LoadException, InterruptedException {
 		final Path path = Paths.get("DELETE_ME.test");
-		final Path path2 = Paths.get("TEMP_DIR", "DELETE_ME.test");
+		final Path path2 = Paths.get("TEMP_DIR", "1", "2", "DELETE_ME.test");
 		final Path path3 = Paths.get("3");
 
 		try (final WatchService watcher = FileSystems.getDefault().newWatchService()) {
@@ -305,6 +305,8 @@ class AnnotationTests {
 			Files.deleteIfExists(path);
 			Files.deleteIfExists(path2);
 			Files.deleteIfExists(path2.getParent());
+			Files.deleteIfExists(path2.getParent().getParent());
+			Files.deleteIfExists(path2.getParent().getParent().getParent());
 			Files.deleteIfExists(path3);
 		}
 	}
