@@ -92,7 +92,7 @@ public final class AnnotationHandlers {
 		private static Writer createWriter(final File file, final Charset charset, final FileModification modificationSetting) throws IOException {
 			final File directory = file.getParentFile();
 
-			if (directory != null && !directory.isDirectory() && !directory.mkdirs() && !directory.isDirectory()) { // Additional directory check at end in case it was created by another thread or process
+			if (directory != null && !makeDirectories(directory)) {
 				throw new IOException("Failed to create directory " + directory.toString());
 			}
 
@@ -146,6 +146,23 @@ public final class AnnotationHandlers {
 	}
 
 	private AnnotationHandlers() { }
+
+	/**
+	 * Creates the directory named by {@code file}, including any necessary but nonexistent parent directories. Note that if this operation fails it may have succeeded in creating some of the necessary parent directories.
+	 *
+	 * @param file the directory to create, if it does not exist
+	 * @return <code>true</code> if the directory and all necessary parent directories were created or already existed; <code>false</code> otherwise
+	 * @throws IOException if an I/O error occurs
+	 */
+	private static boolean makeDirectories(final File file) throws IOException {
+		if (file.isDirectory() || file.mkdir()) {
+			return true;
+		}
+
+		final File canonicalFile = file.getCanonicalFile();
+
+		return makeDirectories(canonicalFile.getParentFile()) && (canonicalFile.mkdir() || canonicalFile.isDirectory());
+	}
 
 	/**
 	 * Creates an annotation handler that sends all output to a print stream using a specific character set.
