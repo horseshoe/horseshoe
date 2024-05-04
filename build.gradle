@@ -33,6 +33,8 @@ test {
 dependencies {
 	testImplementation 'org.junit.jupiter:junit-jupiter:5.+'
 	testImplementation 'org.yaml:snakeyaml:1.+'
+
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.withType(JavaCompile) {

@@ -21,60 +21,19 @@ import org.junit.jupiter.api.Test;
 
 class RunnerTests {
 
-	interface ThrowingExecutable<T extends Throwable> {
-		void run() throws T;
-	}
+	private static class IntCollector implements java.util.function.IntConsumer {
+		Integer value;
 
-	private static class ExitException extends SecurityException {
-		private static final long serialVersionUID = 1L;
-
-		final int status;
-
-		private ExitException(final int status) {
-			this.status = status;
+		@Override
+		public void accept(int value) {
+			this.value = value;
 		}
-	}
 
-	/**
-	 * Asserts that System.exit() is called with the specified value.
-	 *
-	 * @param <T> the type of throwable allowed by the executable
-	 * @param expectedStatus the expected status the System.exit() will be called using
-	 * @param executable the executable that will call System.exit()
-	 * @throws T if the executable throws a throwable
-	 */
-	public static <T extends Throwable> void assertExits(final int expectedStatus, final ThrowingExecutable<T> executable) throws T {
-		final SecurityManager originalSecurityManager = System.getSecurityManager();
+		static <T> IntCollector runWith(final java.util.function.Consumer<IntCollector> runable) {
+			final IntCollector errorCode = new IntCollector();
 
-		System.setSecurityManager(new SecurityManager() {
-			@Override
-			public void checkPermission(final Permission perm) {
-				if (originalSecurityManager != null) {
-					originalSecurityManager.checkPermission(perm);
-				}
-			}
-
-			@Override
-			public void checkPermission(final Permission perm, final Object context) {
-				if (originalSecurityManager != null) {
-					originalSecurityManager.checkPermission(perm, context);
-				}
-			}
-
-			@Override
-			public void checkExit(final int status) {
-				super.checkExit(status);
-				throw new ExitException(status);
-			}
-		});
-
-		try {
-			executable.run();
-			fail("Expected System.exit(" + expectedStatus + "), but System.exit() wasn't called");
-		} catch (final ExitException e) {
-			assertEquals(expectedStatus, e.status, "Expected System.exit(" + expectedStatus + "), but System.exit(" + e.status + ") was called");
-		} finally {
-			System.setSecurityManager(originalSecurityManager);
+			runable.accept(errorCode);
+			return errorCode;
 		}
 	}
 
@@ -101,7 +60,7 @@ class RunnerTests {
 
 	@Test
 	void testBadArgument() {
-		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "arg1", "arg2", "arg3", "arg4", "arg5", "arg6", "arg7", "arg8", "arg9" }));
+		assertEquals(Runner.ERROR_EXIT_CODE, IntCollector.runWith(onError -> Runner.run(new String[] { "arg1", "arg2", "arg3", "arg4", "arg5", "arg6", "arg7", "arg8", "arg9" }, onError)).value);
 	}
 
 	@Test
@@ -118,27 +77,27 @@ class RunnerTests {
 
 	@Test
 	void testBadOption() {
-		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "--bad-option" }));
+		assertEquals(Runner.ERROR_EXIT_CODE, IntCollector.runWith(onError -> Runner.run(new String[] { "--bad-option" }, onError)).value);
 	}
 
 	@Test
 	void testBadOption2() {
-		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "-9" }));
+		assertEquals(Runner.ERROR_EXIT_CODE, IntCollector.runWith(onError -> Runner.run(new String[] { "-9" }, onError)).value);
 	}
 
 	@Test
 	void testBadOptionArgument() {
-		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "--help=yes" }));
+		assertEquals(Runner.ERROR_EXIT_CODE, IntCollector.runWith(onError -> Runner.run(new String[] { "--help=yes" }, onError)).value);
 	}
 
 	@Test
 	void testBadOptionArgument2() {
-		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "--log-level" }));
+		assertEquals(Runner.ERROR_EXIT_CODE, IntCollector.runWith(onError -> Runner.run(new String[] { "--log-level" }, onError)).value);
 	}
 
 	@Test
 	void testBadOptionArgument3() {
-		assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "-l" }));
+		assertEquals(Runner.ERROR_EXIT_CODE, IntCollector.runWith(onError -> Runner.run(new String[] { "-l" }, onError)).value);
 	}
 
 	@Test
@@ -147,7 +106,7 @@ class RunnerTests {
 
 		try (final ByteArrayInputStream in = new ByteArrayInputStream("{{ test }}\n".getBytes(StandardCharsets.UTF_8))) {
 			System.setIn(in);
-			assertExits(Runner.ERROR_EXIT_CODE, () -> Runner.main(new String[] { "-oa/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z.out" }));
+			assertEquals(Runner.ERROR_EXIT_CODE, IntCollector.runWith(onError -> Runner.run(new String[] { "-oa/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z.out" }, onError)).value);
 		} finally {
 			System.setIn(originalIn);
 		}

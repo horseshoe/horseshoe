@@ -469,11 +469,21 @@ public class Runner {
 	 * @param args the arguments used when rendering the template
 	 */
 	public static void main(final String[] args) {
+		run(args, System::exit);
+	}
+
+	/**
+	 * Renders a template using Horseshoe.
+	 *
+	 * @param args the arguments used when rendering the template
+	 * @param onError a callback function invoked when an error is encountered with an error code
+	 */
+	static void run(final String[] args, final java.util.function.IntConsumer onError) {
 		try {
 			renderTemplate(args);
 		} catch (final Throwable t) {
 			Template.LOGGER.log(Level.SEVERE, t, () -> "Failed to render template: " + t.getMessage());
-			System.exit(ERROR_EXIT_CODE);
+			onError.accept(ERROR_EXIT_CODE);
 		}
 	}
 
