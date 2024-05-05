@@ -262,10 +262,12 @@ public class Settings {
 				}
 
 				@Override
-				public synchronized void remove() {
-					iterator.remove();
-					qualifiedNameLookup.remove(currentItem.getName());
-					unqualifiedNameLookup.remove(currentItem.getSimpleName());
+				public void remove() {
+					synchronized (ClassMap.this) {
+						iterator.remove();
+						qualifiedNameLookup.remove(currentItem.getName());
+						unqualifiedNameLookup.remove(currentItem.getSimpleName());
+					}
 				}
 			};
 		}

@@ -136,6 +136,10 @@ public class BufferedFileUpdateStream extends OutputStream {
 	 * @throws IOException if an exception occurs while opening the file
 	 */
 	public BufferedFileUpdateStream(final File file, final FileModification modificationSetting, int bufferSize) throws IOException {
+		if (bufferSize <= 0) {
+			throw new IllegalArgumentException("bufferSize must be > 0");
+		}
+
 		this.buffer = new byte[bufferSize];
 
 		try {
@@ -164,7 +168,7 @@ public class BufferedFileUpdateStream extends OutputStream {
 	@Override
 	public void close() throws IOException {
 		if (count > 0) {
-			writeBufferedBytes();
+			flushBufferedData();
 		}
 
 		outputStream.close();
@@ -173,7 +177,7 @@ public class BufferedFileUpdateStream extends OutputStream {
 	@Override
 	public void flush() throws IOException {
 		if (count > 0) {
-			writeBufferedBytes();
+			flushBufferedData();
 		}
 
 		outputStream.flush();
@@ -182,7 +186,7 @@ public class BufferedFileUpdateStream extends OutputStream {
 	@Override
 	public void write(final int b) throws IOException {
 		if (count >= buffer.length) {
-			writeBufferedBytes();
+			flushBufferedData(); // Resets count to 0
 		}
 
 		buffer[count++] = (byte)b;
@@ -195,7 +199,7 @@ public class BufferedFileUpdateStream extends OutputStream {
 			count += len;
 		} else if (len > buffer.length) {
 			if (count != 0) {
-				writeBufferedBytes();
+				flushBufferedData();
 			}
 
 			outputStream.write(b, off, len);
@@ -212,7 +216,7 @@ public class BufferedFileUpdateStream extends OutputStream {
 	/**
 	 * Writes the buffered bytes to the output stream and resets the buffer.
 	 */
-	private void writeBufferedBytes() throws IOException {
+	private void flushBufferedData() throws IOException {
 		outputStream.write(buffer, 0, count);
 		count = 0;
 	}
