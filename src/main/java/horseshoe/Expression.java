@@ -1485,11 +1485,7 @@ public final class Expression {
 		} catch (final HaltRenderingException e) {
 			throw e;
 		} catch (final Exception | LinkageError e) { // Don't let any exceptions escape
-			if (e.getMessage() == null) {
-				context.getSettings().getLogger().log(Level.WARNING, e, "Failed to evaluate expression \"{0}\" ({1})", originalString, location);
-			} else {
-				context.getSettings().getLogger().log(Level.WARNING, e, "Failed to evaluate expression \"{0}\" ({1}): {2}", originalString, location, e.getMessage());
-			}
+			context.getSettings().getErrorHandler().onError(e, () -> "Failed to evaluate expression \"" + originalString + "\" (" + location + (e.getMessage() == null ? ")" : "): " + e.getMessage()), this);
 		}
 
 		return null;

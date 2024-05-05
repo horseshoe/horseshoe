@@ -41,6 +41,11 @@ import java.util.stream.StreamSupport;
 public class Settings {
 
 	/**
+	 * The error handler that ignores all errors.
+	 */
+	public static final ErrorHandler EMPTY_ERROR_HANDLER = (error, messageSupplier, context) -> { /* Intentionally left empty */ };
+
+	/**
 	 * The logger that sends messages to the {@link Template} class logger.
 	 */
 	public static final Logger DEFAULT_LOGGER = Logger.wrap(Template.LOGGER);
@@ -134,6 +139,8 @@ public class Settings {
 	public static final Set<Class<?>> DEFAULT_LOADABLE_CLASSES;
 
 	private ContextAccess contextAccess = ContextAccess.CURRENT_AND_ROOT;
+	private final ErrorHandler loggingErrorHandler = (error, messageSupplier, context) -> getLogger().log(java.util.logging.Level.WARNING, messageSupplier.get(), error);
+	private ErrorHandler errorHandler = getLoggingErrorHandler();
 	private Logger logger = DEFAULT_LOGGER;
 	private EscapeFunction escapeFunction = EMPTY_ESCAPE_FUNCTION;
 	private String lineEndings = DEFAULT_LINE_ENDINGS;
@@ -328,6 +335,15 @@ public class Settings {
 	}
 
 	/**
+	 * Gets the error handler used by the rendering process.
+	 *
+	 * @return the error handler used by the rendering process
+	 */
+	public ErrorHandler getErrorHandler() {
+		return errorHandler;
+	}
+
+	/**
 	 * Gets the escape function used by the rendering process.
 	 *
 	 * @return the escape function used by the rendering process.
@@ -374,6 +390,15 @@ public class Settings {
 	}
 
 	/**
+	 * Gets the error handler that logs rendering errors as warnings.
+	 *
+	 * @return the error handler that logs rendering errors as warnings
+	 */
+	public ErrorHandler getLoggingErrorHandler() {
+		return loggingErrorHandler;
+	}
+
+	/**
 	 * Sets whether or not unqualified class names can be used to load classes by the rendering process.
 	 *
 	 * @param allowUnqualifiedClassNames true if unqualified class names can be used to load classes by the rendering process, otherwise false
@@ -392,6 +417,17 @@ public class Settings {
 	 */
 	public Settings setContextAccess(final ContextAccess contextAccess) {
 		this.contextAccess = contextAccess;
+		return this;
+	}
+
+	/**
+	 * Sets the error handler used by the rendering process.
+	 *
+	 * @param errorHandler the error handler used by the rendering process. If null, the error handler will be set to the empty error handler.
+	 * @return this object
+	 */
+	public Settings setErrorHandler(final ErrorHandler errorHandler) {
+		this.errorHandler = (errorHandler == null ? EMPTY_ERROR_HANDLER : errorHandler);
 		return this;
 	}
 

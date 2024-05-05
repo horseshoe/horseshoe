@@ -55,6 +55,15 @@ class SettingsTests {
 	}
 
 	@Test
+	void testErrorHandlerAccess() {
+		final Settings settings = new Settings();
+		assertEquals(settings.getLoggingErrorHandler(), settings.getErrorHandler());
+		assertEquals(settings.getLoggingErrorHandler(), settings.setErrorHandler(settings.getLoggingErrorHandler()).getErrorHandler());
+		assertEquals(Settings.EMPTY_ERROR_HANDLER, new Settings().setErrorHandler(Settings.EMPTY_ERROR_HANDLER).getErrorHandler());
+		assertEquals(Settings.EMPTY_ERROR_HANDLER, new Settings().setErrorHandler(null).getErrorHandler());
+	}
+
+	@Test
 	void testEscapeFunctionAccess() {
 		assertEquals(Settings.EMPTY_ESCAPE_FUNCTION, new Settings().getEscapeFunction());
 		assertEquals(Settings.HTML_ESCAPE_FUNCTION, new Settings().setEscapeFunction(Settings.HTML_ESCAPE_FUNCTION).getEscapeFunction());

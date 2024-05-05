@@ -19,7 +19,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.logging.Level;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -70,23 +70,23 @@ class ExpressionTests {
 	 * @throws Throwable an exception thrown by the evaluated {@code Expression}
 	 */
 	private static Object evaluateExpression(final Expression expression, final Map<String, Object> context) throws Throwable {
-		class ThrowableLogger implements Logger {
+		class ThrowableErrorHandler implements ErrorHandler {
 			private Throwable lastError;
 
 			@Override
-			public void log(final Level level, final Throwable error, final String message, final Object... params) {
+			public void onError(Throwable error, Supplier<String> messageSupplier, Object context) {
 				if (error != null) {
 					lastError = error;
 				}
 			}
 		}
 
-		final ThrowableLogger logger = new ThrowableLogger();
-		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT).setLogger(logger);
+		final ThrowableErrorHandler errorHandler = new ThrowableErrorHandler();
+		final Settings settings = new Settings().setContextAccess(ContextAccess.CURRENT).setErrorHandler(errorHandler);
 		final Object result = expression.evaluate(new RenderContext(settings, context));
 
 		if (result == null) {
-			throw logger.lastError;
+			throw errorHandler.lastError;
 		}
 
 		return result;

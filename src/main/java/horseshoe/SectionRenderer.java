@@ -110,7 +110,7 @@ public class SectionRenderer extends Renderer {
 		try {
 			annotationWriter = data.handler.getWriter(writer, data.args);
 		} catch (final Exception e) {
-			context.getSettings().getLogger().log(Level.WARNING, "Encountered exception with annotation section " + section, e);
+			context.getSettings().getErrorHandler().onError(e, () -> "Encountered exception with annotation section " + section, data.handler);
 			renderInverted(context, writer);
 			return;
 		}
@@ -536,8 +536,8 @@ public class SectionRenderer extends Renderer {
 			try {
 				writer.close();
 			} catch (final IOException e) {
-				if (renderException == null) { // Log only when there is no causing exception to prevent confusion
-					context.getSettings().getLogger().log(Level.WARNING, "Failed to close writer for section " + section, e);
+				if (renderException == null) { // Report the error only when there is no causing exception to prevent confusion
+					context.getSettings().getErrorHandler().onError(e, () -> "Failed to close writer for section " + section, writer);
 				} else { // If there is a causing exception, add this one as a suppressed exception
 					renderException.addSuppressed(e);
 				}
