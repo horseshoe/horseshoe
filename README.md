@@ -49,7 +49,9 @@ Other differences include a complex expression syntax ("interpolation" in Mustac
 ### Does Horseshoe support Mustache lambdas?
 
 Horseshoe does not support Mustache lambdas.
-It foregoes lambdas in favor of an expression syntax that supports method calls and [anonymous partials](#section-partials). [Expressions](#expressions) can be named and reused to support similar functionality to Mustache lambdas. [Anonymous partials](#section-partials) are used to support rendering nested sections by applying a partial template.
+It foregoes lambdas in favor of an expression syntax that supports method calls and [anonymous partials](#section-partials).
+[Expressions](#expressions) can be named and reused to support similar functionality to Mustache lambdas.
+[Anonymous partials](#section-partials) are used to support rendering nested sections by applying a partial template.
 
 ### What literal types are supported in Horseshoe expressions?
 
@@ -91,7 +93,8 @@ More details can be found in the [Tags](#tags) section.
 
 ## Code Example
 
-The following example demonstrates how to use the Horseshoe library from within Java code. [Template examples](#template-examples) are located in a separate section.
+The following example demonstrates how to use the Horseshoe library from within Java code.
+[Template examples](#template-examples) are located in a separate section.
 
 First, a template is loaded using the template loader class.
 Templates can be loaded from a string, a file, or a reader.
@@ -192,7 +195,8 @@ The partial template is loaded either from the specified filename or the corresp
 If the lookup name is not known until render-time, its value can be computed with an [expression](#expressions) surrounded by parentheses (`{{> (expression) }}`).
 Once loaded, the partial is expanded into the current template.
 
-If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template. <b>Using a double arrow partial tag (`{{>> partial }}`) will avoid applying the indentation to every line but will ignore the trailing whitespace and newline after the partial.</b>
+If a partial tag is a stand-alone tag, the indentation of the partial tag will be prepended to every line of the partial template.
+**Using a double arrow partial tag (`{{>> partial }}`) will avoid applying the indentation to every line but will ignore the trailing whitespace and newline after the partial.**
 
 #### Set Delimiter (`{{=<% %>=}}`)
 
@@ -286,7 +290,9 @@ For example,
 
 Annotations (`{{# @Annotation("Param1": false, "Param2") }}`) are identifiers that begin with an at sign (`@`) and are used to redirect the output of a section.
 If the annotation does not exist, then the resulting value is `null`.
-Otherwise, the arguments are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler (`null` if the parentheses and argument list are omitted), which returns a new writer. <b>A `null` annotation or one that returns a `null` writer will cause the corresponding [inverted section](#inverted-sections) to be rendered, if it exists.</b> Annotations do not affect the context stack, and output redirection only occurs for the scope of a section.
+Otherwise, the arguments are parsed as a [Horseshoe expression](#expressions) and passed to the annotation handler (`null` if the parentheses and argument list are omitted), which returns a new writer.
+**A `null` annotation or one that returns a `null` writer will cause the corresponding [inverted section](#inverted-sections) to be rendered, if it exists.**
+Annotations do not affect the context stack, and output redirection only occurs for the scope of a section.
 
 Built-in annotations include the following:
 
@@ -295,7 +301,7 @@ Built-in annotations include the following:
 | `@Null` | Discards rendered output. |
 | `@StdErr` | Sends rendered output to stderr using the default system character encoding. |
 | `@StdOut` | Sends rendered output to stdout using the default system character encoding. |
-| `@File('name': [filename], 'encoding': 'UTF-8', 'overwrite': false, 'append': false)` | Sends rendered output to the file with the specified name, using the specified encoding (defaults to 'UTF-8'). <b>If overwrite is false (or omitted) then the file is only modified if the rendered output is different from the current contents of the file.</b> If append is specified as true then the rendered output is appended to the file. |
+| `@File('name': [filename], 'encoding': 'UTF-8', 'overwrite': false, 'append': false)` | Sends rendered output to the file with the specified name, using the specified encoding (defaults to 'UTF-8'). **If overwrite is false (or omitted) then the file is only modified if the rendered output is different from the current contents of the file.** If append is specified as true then the rendered output is appended to the file. |
 
 #### Inverted Sections
 
@@ -304,8 +310,8 @@ Inverted sections are only rendered when a section tag with the given expression
 Null objects, numeric zero values, `false`, as well as empty lists or arrays (see [Truthiness](#truthiness)) are several examples of values that will cause an inverted section to be rendered.
 No value will be pushed onto the context stack in these situations.
 
-An inverted section tag may start with a `#` (`{{^# condition }}`) to indicate an alternate condition or foreach section that will be evaluated when all conditionals associated with previous sections evaluate to false ("if-then-else" chaining).
-An inverted section tag can be left empty (`{{^}}`) to indicate that the inverted section will be rendered when all conditionals associated with previous sections evaluate to false.
+An inverted section tag may start with a `#` (`{{^# condition }}`) to indicate an alternate condition or foreach section that will be evaluated when all conditionals associated with previous sections evaluate to `false` ("if-then-else" chaining).
+An inverted section tag can be left empty (`{{^}}`) to indicate that the inverted section will be rendered when all conditionals associated with previous sections evaluate to `false`.
 For example,
 
 ```horseshoe
@@ -342,7 +348,8 @@ Inline partials inherit the scope of the template in which they are declared, so
 Inline partials can have named parameters ([template bindings](#template-bindings)).
 The first parameter can be specified as a literal `.` since the first parameter will always be pushed onto the context stack when the partial is included.
 
-<b>Closing tags for inline partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows inline partials to end without a trailing newline and not cause an output line in the current template.
+**Closing tags for inline partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.**
+This allows inline partials to end without a trailing newline and not cause an output line in the current template.
 
 Inline partials can be expanded using a [partial tag](#partials).
 An inline partial from an external template can be expanded by specifying the name of the external template followed by a `/` before the name of the inline partial.
@@ -370,11 +377,15 @@ For example,
 ---{{>}}---{{/}}
 {{#> dash }}a{{/}}, {{#> dash }}b{{/}}, {{#> dash }}c{{/}}
 ```
+
 results in
 
-<pre>---a---, ---b---, ---c---</pre>
+```text
+---a---, ---b---, ---c---
+```
 
-<b>Closing tags for section partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.</b> This allows section partials to end without a trailing newline and not cause an output line in the current template.
+**Closing tags for section partials are always considered stand-alone tags for trailing whitespace purposes even if other content precedes them.**
+This allows section partials to end without a trailing newline and not cause an output line in the current template.
 
 ### Expressions
 
@@ -388,6 +399,7 @@ A trailing semicolon at the end of the expression is not needed.
 A comma (`,`) is used to separate method parameters and list or map entries.
 
 #### Truthiness
+
 Truthiness in Horseshoe is dependent on the type of the object being coerced to a Boolean value.
 For Booleans, no coersion is needed.
 For numeric or character primitives, `true` is coerced for non-zero values.
@@ -403,7 +415,7 @@ Any list or set that contains a colon (`:`) separator is treated as a map.
 Entries in a map literal without a colon are treated as if the given item is used as both the key and the value.
 
 Commas can be used anywhere within an expression.
-If a comma is used in a context where a comma is unexpected (e.g. `{{ 4, 5 }}`) the result is interpreted as if it were wrapped in `[]` to form a list or map.
+If a comma is used in a context where a comma is unexpected (e.g., `{{ 4, 5 }}`) the result is interpreted as if it were wrapped in `[]` to form a list or map.
 These are considered auto-converted lists and maps.
 
 Lists, maps, and sets can be added and subtracted to form new lists, maps, and sets (`[1, 2] + {2, 3, 4} - [3]`).
@@ -485,27 +497,27 @@ Literal forward slashes can be escaped using a preceding backslash (`~/."\/'\./`
 
 | Precedence | Operators | Associativity |
 | ---------- | --------- | ------------- |
-| 0 | <code>\{</code> a\* <code>\}</code> \(Set / Map Literal\), <br><code>\[</code> a\* <code>\]</code> \(List / Map Literal\), <br><code>\[:\]</code> \(Empty Map\), <br>a <code>\[</code> b <code>\]</code> \(Lookup\), <br>a <code>?\[</code> b <code>\]</code> \(Safe Lookup\), <br>a <code>\[?</code> b <code>\]</code> \(Nullable Lookup\), <br>a <code>\(</code> b\* <code>\)</code> \(Call Method\), <br><code>\(</code> a <code>\)</code> \(Parentheses\), <br><code>\~@</code> a \(Get Class\), <br>a <code>\.</code> b \(Navigate\), <br>a <code>?\.</code> b \(Safe Navigate\), <br>a <code>\.?</code> b \(Nullable Navigate\) | Left&nbsp;to&nbsp;right |
-| 1 | a <code>\*\*</code> b \(Exponentiate\) | Left&nbsp;to&nbsp;right |
-| 2 | <code>\+</code> a \(Unary Plus\), <br><code>\-</code> a \(Unary Minus\), <br><code>\~</code> a \(Bitwise Negate\), <br><code>\!</code> a \(Logical Negate\) | Right&nbsp;to&nbsp;left |
-| 3 | a <code>\.\.</code> b \(Integer Range\), <br>a <code>\.\.&lt;</code> b \(Exclusive Integer Range\) | Left&nbsp;to&nbsp;right |
-| 4 | a <code>\*</code> b \(Multiply\), <br>a <code>/</code> b \(Divide\), <br>a <code>%</code> b \(Modulus\) | Left&nbsp;to&nbsp;right |
-| 5 | a <code>\+</code> b \(Add\), <br>a <code>\-</code> b \(Subtract\) | Left&nbsp;to&nbsp;right |
-| 6 | a <code>&lt;&lt;</code> b \(Bitwise Shift Left\), <br>a <code>&gt;&gt;</code> b \(Bitwise Shift Right Sign Extend\), <br>a <code>&gt;&gt;&gt;</code> b \(Bitwise Shift Right Zero Extend\) | Left&nbsp;to&nbsp;right |
-| 7 | a <code>&lt;=&gt;</code> b \(Three\-way Comparison\) | Left&nbsp;to&nbsp;right |
-| 8 | a <code>&lt;=</code> b \(Less Than or Equal\), <br>a <code>&gt;=</code> b \(Greater Than or Equal\), <br>a <code>&lt;</code> b \(Less Than\), <br>a <code>&gt;</code> b \(Greater Than\), <br>a <code>in</code> b \(Is In\) | Left&nbsp;to&nbsp;right |
-| 9 | a <code>==</code> b \(Equal\), <br>a <code>\!=</code> b \(Not Equal\), <br>a <code>=\~</code> b \(Find Pattern\), <br>a <code>==\~</code> b \(Match Pattern\) | Left&nbsp;to&nbsp;right |
-| 10 | a <code>&amp;</code> b \(Bitwise And\) | Left&nbsp;to&nbsp;right |
-| 11 | a <code>^</code> b \(Bitwise Xor\) | Left&nbsp;to&nbsp;right |
-| 12 | a <code>&#124;</code> b \(Bitwise Or\) | Left&nbsp;to&nbsp;right |
-| 13 | a <code>&amp;&amp;</code> b \(Logical And\) | Left&nbsp;to&nbsp;right |
-| 14 | a <code>&#124;&#124;</code> b \(Logical Or\) | Left&nbsp;to&nbsp;right |
-| 15 | a <code>?:</code> b \(Elvis\), <br>a <code>??</code> b \(Null Coalescing\), <br>a <code>\!:</code> b \(Inverted Elvis\), <br>a <code>\!?</code> b \(Non\-null Coalescing\), <br>a <code>?</code> b \(Ternary\), <br>a <code>:</code> b \(Pair / Range\), <br>a <code>:&lt;</code> \(Backward Range\) | Right&nbsp;to&nbsp;left |
-| 16 | <code>☠</code> a \(Die\), <br><code>\~:&lt;</code> a \(Die \- Alternate\), <br><code>\#^</code> a \(Return\) | Left&nbsp;to&nbsp;right |
-| 17 | a <code>\#&gt;</code> b \(Streaming Remap\), <br>a <code>\#\.</code> b \(Streaming Remap \- Alternate\), <br>a <code>\#&#124;</code> b \(Streaming Flatten Remap\), <br>a <code>\#?</code> b \(Streaming Filter\), <br>a <code>\#&lt;</code> b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
-| 18 | a <code>=</code> b \(Bind Local Name\) | Right&nbsp;to&nbsp;left |
-| 19 | a <code>,</code> b\* \(Item Separator\) | Left&nbsp;to&nbsp;right |
-| 20 | a <code>;</code> b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
+| 0 | `{` a\* `}` \(Set / Map Literal\), <br>`[` a\* `]` \(List / Map Literal\), <br>`[:]` \(Empty Map\), <br>a `[` b `]` \(Lookup\), <br>a `?[` b `]` \(Safe Lookup\), <br>a `[?` b `]` \(Nullable Lookup\), <br>a `(` b\* `)` \(Call Method\), <br>`(` a `)` \(Parentheses\), <br>`~@` a \(Get Class\), <br>a `.` b \(Navigate\), <br>a `?.` b \(Safe Navigate\), <br>a `.?` b \(Nullable Navigate\) | Left&nbsp;to&nbsp;right |
+| 1 | a `**` b \(Exponentiate\) | Left&nbsp;to&nbsp;right |
+| 2 | `+` a \(Unary Plus\), <br>`-` a \(Unary Minus\), <br>`~` a \(Bitwise Negate\), <br>`!` a \(Logical Negate\) | Right&nbsp;to&nbsp;left |
+| 3 | a `..` b \(Integer Range\), <br>a `..<` b \(Exclusive Integer Range\) | Left&nbsp;to&nbsp;right |
+| 4 | a `*` b \(Multiply\), <br>a `/` b \(Divide\), <br>a `%` b \(Modulus\) | Left&nbsp;to&nbsp;right |
+| 5 | a `+` b \(Add\), <br>a `-` b \(Subtract\) | Left&nbsp;to&nbsp;right |
+| 6 | a `<<` b \(Bitwise Shift Left\), <br>a `>>` b \(Bitwise Shift Right Sign Extend\), <br>a `>>>` b \(Bitwise Shift Right Zero Extend\) | Left&nbsp;to&nbsp;right |
+| 7 | a `<=>` b \(Three\-way Comparison\) | Left&nbsp;to&nbsp;right |
+| 8 | a `<=` b \(Less Than or Equal\), <br>a `>=` b \(Greater Than or Equal\), <br>a `<` b \(Less Than\), <br>a `>` b \(Greater Than\), <br>a `in` b \(Is In\) | Left&nbsp;to&nbsp;right |
+| 9 | a `==` b \(Equal\), <br>a `!=` b \(Not Equal\), <br>a `=~` b \(Find Pattern\), <br>a `==~` b \(Match Pattern\) | Left&nbsp;to&nbsp;right |
+| 10 | a `&` b \(Bitwise And\) | Left&nbsp;to&nbsp;right |
+| 11 | a `^` b \(Bitwise Xor\) | Left&nbsp;to&nbsp;right |
+| 12 | a `\|` b \(Bitwise Or\) | Left&nbsp;to&nbsp;right |
+| 13 | a `&&` b \(Logical And\) | Left&nbsp;to&nbsp;right |
+| 14 | a `\|\|` b \(Logical Or\) | Left&nbsp;to&nbsp;right |
+| 15 | a `?:` b \(Elvis\), <br>a `??` b \(Null Coalescing\), <br>a `!:` b \(Inverted Elvis\), <br>a `!?` b \(Non\-null Coalescing\), <br>a `?` b \(Ternary\), <br>a `:` b \(Pair / Range\), <br>a `:<` \(Backward Range\) | Right&nbsp;to&nbsp;left |
+| 16 | `☠` a \(Die\), <br>`~:<` a \(Die \- Alternate\), <br>`#^` a \(Return\) | Left&nbsp;to&nbsp;right |
+| 17 | a `#>` b \(Streaming Remap\), <br>a `#.` b \(Streaming Remap \- Alternate\), <br>a `#\|` b \(Streaming Flatten Remap\), <br>a `#?` b \(Streaming Filter\), <br>a `#<` b \(Streaming Reduction\) | Left&nbsp;to&nbsp;right |
+| 18 | a `=` b \(Bind Local Name\) | Right&nbsp;to&nbsp;left |
+| 19 | a `,` b\* \(Item Separator\) | Left&nbsp;to&nbsp;right |
+| 20 | a `;` b \(Statement Separator\) | Left&nbsp;to&nbsp;right |
 
 Many operators support more operand types than traditional programming languages.
 Addition and subtraction can be applied to lists, maps, and sets as well as numeric primitives.
@@ -576,16 +588,16 @@ Streaming operations can be used in expressions to transform (`#>`, `#.`, `#|`),
 They are followed by an optional identifier and arrow (`value ->`, `->`, and \[empty\] are all allowed) and can be used to stream iterables, arrays, or individual objects.
 Individual objects with `null` values are treated as absent.
 
-Streaming transformations (`{{ a `<b>`#>`</b>` i -> transform(i) }}`) allow data to be remapped into a new form.
+Streaming transformations (<code>{{ a **#>** i -> transform(i) }}</code>) allow data to be remapped into a new form.
 The original item is replaced with the transformed item.
 Transformations can be used to consolidate section tags or to chain with filters and reductions to derive new data.
 The new list is the result of the operator.
-Flattening transformations (`{{# [[1, 2], null, [3, 4]] `<b>`#|`</b>` i -> i // [1, 2, 3, 4] }}`) allow lists to be combined.
+Flattening transformations (<code>{{ [1, null, 3] **#|** i -> i !? [i, i + 1] // 1: [1, 2], null: null, 3: [3, 4] -> [1, 2, 3, 4] }}</code>) allow lists to be combined.
 
-Streaming filters (`{{# names `<b>`#?`</b>` name -> /* Find names with initials. */ ~/\b.[.]/.matcher(name).find() }}`) are used to filter out unneeded items.
+Streaming filters (<code>{{# names **#?** name -> /\* Find names with initials. \*/ ~/\b.[.]/.matcher(name).find() }}</code>) are used to filter out unneeded items.
 The new list is the result of the operator.
 
-Streaming reductions (`{{ sum = 0; values `<b>`#<`</b>` value -> sum = sum + value }}`) allow a stream to be reduced to a single value.
+Streaming reductions (<code>{{ sum = 0; values **#&lt;** value -> sum = sum + value }}</code>) allow a stream to be reduced to a single value.
 The result of the last iteration is the result of the operator.
 
 ### Named Expressions
@@ -606,7 +618,9 @@ For example,
 
 results in
 
-<pre>  ORIGINAL STRING-original string</pre>
+```text
+  ORIGINAL STRING-original string
+```
 
 The first argument to a named expression is pushed onto the context stack.
 (If no first argument is given, the context stack is not modified.)
@@ -636,10 +650,12 @@ For example,
 
 results in
 
-<pre>  Hello!</pre>
+```text
+  Hello!
+```
 
 This output is produced because `func()` is inherited by the partial `b`.
-However, the named expression `func` would <b>not</b> be accessible from an external template included using a [partial tag](#partials).
+However, the named expression `func` would **not** be accessible from an external template included using a [partial tag](#partials).
 
 ### Template Bindings
 

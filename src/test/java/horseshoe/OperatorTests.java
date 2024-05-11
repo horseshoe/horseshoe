@@ -29,6 +29,10 @@ class OperatorTests {
 		return escapeHTML(value).replaceAll("[-\\\\`*_{}\\[\\]()+.!|~]|(?<!&)#", "\\\\$0");
 	}
 
+	private static String escapeMarkdownTable(final String value) {
+		return value.replaceAll("[\\\\`|]", "\\\\$0");
+	}
+
 	@Test
 	void generateOperatorTable() throws Exception {
 		final String tableHeader = "| Precedence | Operators | Associativity |";
@@ -44,7 +48,7 @@ class OperatorTests {
 
 			while (true) {
 				final Operator operator = nextOperator;
-				final String operatorOutput = "<code>" + escapeMarkdown(operator.getString()) + "</code>";
+				final String operatorOutput = "`" + escapeMarkdownTable(operator.getString()) + "`";
 				sb.append(separator);
 
 				if (operator.has(LEFT_EXPRESSION) || operator.has(CALL)) {
@@ -64,7 +68,7 @@ class OperatorTests {
 				}
 
 				if (operator.getClosingString() != null) {
-					sb.append(" <code>").append(escapeMarkdown(operator.getClosingString())).append("</code>");
+					sb.append(" `").append(escapeMarkdownTable(operator.getClosingString())).append("`");
 				}
 
 				sb.append(" \\(").append(escapeMarkdown(operator.getDescription())).append("\\)");
