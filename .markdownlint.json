@@ -1,0 +1,5 @@
+{
+	"line-length": { "line_length": 250, "code_blocks": false, "tables": false },
+	"no-hard-tabs": { "code_blocks": false },
+	"no-inline-html": { "allowed_elements": ["code", "br"] }
+}
