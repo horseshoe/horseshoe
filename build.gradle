@@ -59,6 +59,21 @@ jacocoTestReport {
 	}
 }
 
+task markdownLintConfiguration {
+	doLast {
+		final Object markdownlintData = new groovy.json.JsonSlurper(type: groovy.json.JsonParserType.LAX).parseText(file('.markdownlint.jsonc').text)
+		final String markdownlintJson = groovy.json.JsonOutput.toJson(markdownlintData)
+		final String markdownlintOldJson = file('.markdownlint.json').text
+		file('.markdownlint.json').text = markdownlintJson
+
+		if (markdownlintJson != markdownlintOldJson) {
+			throw new InvalidUserDataException('Commit file .markdownlint.json containing updated configuration')
+		}
+	}
+}
+
+check.dependsOn markdownLintConfiguration
+
 def getVersion = { ->
 	def stdout = new ByteArrayOutputStream()
 	def result = exec {
