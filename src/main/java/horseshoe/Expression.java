@@ -1468,7 +1468,7 @@ public final class Expression {
 	@Override
 	public boolean equals(final Object obj) {
 		return this == obj ||
-			(obj instanceof Expression && originalString.equals(((Expression) obj).originalString) && Objects.equals(location, ((Expression) obj).location));
+				(obj instanceof Expression && originalString.equals(((Expression) obj).originalString) && Objects.equals(location, ((Expression) obj).location));
 	}
 
 	/**

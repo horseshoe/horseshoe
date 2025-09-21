@@ -1,1 +1,1 @@
-$AirpowerPackages = 'git', 'jdk:11'
+$AirpowerPackages = 'git', 'jdk:17'

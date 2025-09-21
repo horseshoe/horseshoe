@@ -390,7 +390,7 @@ public class SectionRenderer extends Renderer {
 			unwrappedData = data;
 		}
 
-		if (unwrappedData == null) {
+		if (unwrappedData == null || (unwrappedData instanceof CharSequence && ((CharSequence) unwrappedData).length() == 0)) {
 			renderInverted(context, writer);
 		} else if (dispatchPrimitiveData(context, unwrappedData, writer)) {
 			// Matched primitive data, so no additional dispatching is needed.

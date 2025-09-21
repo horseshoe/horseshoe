@@ -4,7 +4,7 @@ plugins {
 	id 'jacoco'
 	id 'maven-publish'
 	id 'signing'
-	id 'org.sonarqube' version '5.0.0.4638'
+	id 'org.sonarqube' version '7.2.2.6593'
 }
 
 repositories {
@@ -13,12 +13,13 @@ repositories {
 
 checkstyle {
 	configDirectory = file("${projectDir}/config/checkstyle")
-	toolVersion = '10.7.0'
+	toolVersion = '12.3.1'
 }
 
 compileJava {
 	sourceCompatibility = JavaVersion.VERSION_1_8
 	targetCompatibility = JavaVersion.VERSION_1_8
+	options.compilerArgs += ['-Xlint:-options']
 }
 
 test {
@@ -26,7 +27,7 @@ test {
 	useJUnitPlatform()
 
 	testLogging {
-		exceptionFormat "full"
+		exceptionFormat = "full"
 	}
 }
 
@@ -75,16 +76,14 @@ task markdownLintConfiguration {
 check.dependsOn markdownLintConfiguration
 
 def getVersion = { ->
-	def stdout = new ByteArrayOutputStream()
-	def result = exec {
+	def result = project.providers.exec {
 		commandLine 'git', 'describe', '--tags', '--match', 'v[0-9]*'
-		standardOutput = stdout
-		ignoreExitValue true
+		ignoreExitValue = true
 	}
-	if (result.getExitValue() != 0) {
+	if (result.result.get().exitValue != 0) {
 		return 'unspecified'
 	}
-	return stdout.toString().trim().substring(1)
+	return result.standardOutput.asText.get().trim().substring(1)
 }
 
 // Run gradle with "-Dsnapshot=true" to enable snapshots

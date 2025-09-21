@@ -28,6 +28,7 @@ FROM scratch AS jre-scratch-alpine
 
 COPY --from=jdk-alpine /etc/passwd /etc/group /etc/
 COPY --from=jdk-alpine /lib/ld-*.so* /lib/libc.*.so* /lib/libz.so* /lib/
+COPY --from=jdk-alpine /usr/lib/libz.so* /usr/lib/
 COPY --from=jdk-alpine /opt/jre/ /usr/
 ENV LD_LIBRARY_PATH=/lib:/usr/lib:/usr/lib/jli
 

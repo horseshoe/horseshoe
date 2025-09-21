@@ -6,12 +6,10 @@ It uses a Mustache-like syntax and extended expressions for dynamic data manipul
 ![Build](https://github.com/horseshoe/horseshoe/workflows/Build/badge.svg)
 [![Codacy](https://app.codacy.com/project/badge/Grade/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Grade)
 [![Coverage](https://app.codacy.com/project/badge/Coverage/56988d0f17184c56bd1877a0c02002e1)](https://www.codacy.com/gh/horseshoe/horseshoe?utm_source=github.com&utm_medium=referral&utm_content=horseshoe/horseshoe&utm_campaign=Badge_Coverage)
-[![Coverity](https://scan.coverity.com/projects/21451/badge.svg)](https://scan.coverity.com/projects/horseshoe)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=security_rating)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=bugs)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=sqale_rating)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=horseshoe_horseshoe&metric=alert_status)](https://sonarcloud.io/dashboard?id=horseshoe_horseshoe)
 [![license](https://img.shields.io/github/license/horseshoe/horseshoe?label=License&logo=github)](https://github.com/horseshoe/horseshoe/blob/main/LICENSE)
 
 ## Goals
