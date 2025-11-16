@@ -562,6 +562,13 @@ public class TemplateLoader {
 			}
 		}
 
+		// Remove the last static content if it follows a standalone tag and is empty
+		final ArrayList<Renderer> renderList = state.getRenderLists().peek();
+
+		if (((StaticContentRenderer) renderList.get(renderList.size() - 1)).followsStandaloneTag() && lines.size() == 2 && lines.get(1).getLine().isEmpty()) {
+			renderList.remove(renderList.size() - 1);
+		}
+
 		// Pop off the top section (should be the template root section) and verify that the section stack is empty
 		final Section topSection = state.getSections().pop();
 

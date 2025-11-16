@@ -95,6 +95,26 @@ class PartialsTests {
 	}
 
 	@Test
+	void testFilePartial3() throws IOException, LoadException {
+		final Path path = Paths.get("DELETE_ME.test");
+		final Path path2 = Paths.get("DELETE_ME2.test");
+		final Path path3 = Paths.get("DELETE_ME3.test");
+
+		try {
+			Files.write(path, ("{{> " + path2.toAbsolutePath() + " | PrintValue() }}" + LS + "{{ PrintValue() }}" + LS + "Line 2" + LS + "{{> " + path3.toAbsolutePath() + " | PrintValue2() }}" + LS + "{{ PrintValue2() }}" + LS + "Line 4" + LS).getBytes(StandardCharsets.UTF_16BE));
+			Files.write(path2, ("{{ PrintValue() -> 'Value' }}" + LS + "{{ DoNothing() -> '' }}" + LS).getBytes(StandardCharsets.UTF_8));
+			Files.write(path3, ("{{ PrintValue2() -> 'Value2' }}" + LS + "{{ DoNothing2() -> '' }}" + LS + "-" + LS).getBytes(StandardCharsets.UTF_8));
+			final TemplateLoader loader = new TemplateLoader();
+			loader.put(loader.load(path.toAbsolutePath().normalize(), StandardCharsets.UTF_16BE));
+			assertEquals("\tValue" + LS + "\tLine 2" + LS + "\t-" + LS + "\tValue2" + LS + "\tLine 4" + LS, loader.load("\t{{> " + path.toAbsolutePath() + " }}").render(Collections.emptyMap(), new StringWriter()).toString());
+		} finally {
+			Files.delete(path);
+			Files.delete(path2);
+			Files.delete(path3);
+		}
+	}
+
+	@Test
 	void testFilePartialBad() throws IOException, LoadException {
 		Files.createDirectories(Paths.get("DELETE_ME"));
 		final Path path = Paths.get("DELETE_ME/DELETE_ME.test");
