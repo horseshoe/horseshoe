@@ -17,7 +17,9 @@ jobs:
         distribution: "zulu"
 
     - name: Publish with Gradle
-      run: ./gradlew publish
+      run: |
+        ./gradlew publish
+        curl -X POST -H "Authorization: Bearer $(echo -n "$SONATYPE_USER:$SONATYPE_PASSWORD" | base64)" "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/com.github.horseshoe"
       env:
         PGP_SIGNING_KEY: ${{ secrets.PGP_SIGNING_KEY }}
         PGP_SIGNING_PASSWORD: ${{ secrets.PGP_SIGNING_PASSWORD }}
